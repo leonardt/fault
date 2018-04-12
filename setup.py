@@ -12,6 +12,6 @@ setup(
     license='BSD License',
     url='https://github.com/leonardt/fault',
     author='Leonard Truong',
-    author_email='lenny@cs.stanford.edu'
+    author_email='lenny@cs.stanford.edu',
     python_requires='>=3.6'
 )
