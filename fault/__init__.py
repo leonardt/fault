@@ -78,6 +78,8 @@ class CoreIRSimulatorRewrite(ast.NodeTransformer):
         if attr == "eval":
             node.attr = "evaluate"
             return node
+        elif attr == "next":
+            return node
         return ast.parse(f"{self.sim_object}.get_value('{attr}', Scope())").body[0].value
 
     def visit_FunctionDef(self, node):
@@ -99,13 +101,20 @@ class FaultSimulator:
     def get_value(self, port, scope):
         return self.coreir_sim.get_value(getattr(self.circuit, port), scope)
 
+    def next(self):
+        self.coreir_sim.advance(2)
 
-def test_case(combinational=False, random_strategy : RandomStrategy = None,
+
+def test_case(__fn=None, combinational=False, random_strategy : RandomStrategy = None,
               num_tests=16):
-    def test_wrapper(fn):
+    def wrap(fn):
         stack = inspect.stack()
-        defn_locals = stack[1].frame.f_locals
-        defn_globals = stack[1].frame.f_globals
+        if __fn is None:
+            defn_locals = stack[2].frame.f_locals
+            defn_globals = stack[2].frame.f_globals
+        else:
+            defn_locals = stack[2].frame.f_locals
+            defn_globals = stack[2].frame.f_globals
         tree = get_ast(fn)
         type_table = collect_types(tree, defn_globals, defn_locals)
         tree.body[0].decorator_list = []
@@ -117,7 +126,7 @@ def test_case(combinational=False, random_strategy : RandomStrategy = None,
                            range(num_tests)])
             else:
                 arg = f"[{value}]"
-                defn_globals[str(value)] = FaultSimulator(value, None)
+                defn_globals[str(value)] = FaultSimulator(value, None if combinational else value.CLK)
                 sim_object = str(value)
             tree.body[0].decorator_list.append(
                 ast.parse(
@@ -134,7 +143,12 @@ def test_case(combinational=False, random_strategy : RandomStrategy = None,
         defn_globals["Scope"] = Scope
         result = exec(compile(tree, filename="<ast>", mode="exec"), defn_globals, defn_locals)
         return functools.wraps(fn)(eval(fn.__name__, defn_globals, defn_locals))
-    return test_wrapper
+    if __fn is None:
+        def test_wrapper(fn):
+            return wrap(fn)
+        return test_wrapper
+    else:
+        return wrap(__fn)
 
 def pytest_generate_tests(metafunc):
     pass
