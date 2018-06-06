@@ -11,7 +11,7 @@ def ref_add(I0, I1, width):
 
 # def test_add_random(I0 : fault.Random(BitVector(width)), I1 : fault.Random(BitVector(width))):
 width = 16
-@fault.test_case(combinational=True, random_strategy=fault.Uniform, num_tests=1)
+@fault.test_case(combinational=True, num_tests=1)
 def test_add_random(Add : mantle.DefineAdd(width),
                     I0  : fault.Random(width),
                     I1  : fault.Random(width)):
