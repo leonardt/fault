@@ -20,8 +20,9 @@ def get_ast(obj):
 class Type:
     pass
 
-class Random(Type):
+class Random(BitVector):
     def __init__(self, width):
+        super().__init__(random.randint(0, 1 << width - 1), width)
         self.width = width
 
 
@@ -70,19 +71,25 @@ class CoreIRSimulatorRewrite(ast.NodeTransformer):
         self.sim_object = sim_object
 
     def visit_Assign(self, node):
-        target = node.targets[0].attr
-        return ast.parse(f"{self.sim_object}.set_value('{target}', {astor.to_source(node.value).rstrip()}, Scope())").body[0]
+        if isinstance(node.targets[0], ast.Attribute):
+            target = node.targets[0].attr
+            return ast.parse(f"{self.sim_object}.set_value('{target}', {astor.to_source(node.value).rstrip()}, scope)").body[0]
+        return node
 
     def visit_Attribute(self, node):
         attr = node.attr
         if attr == "eval":
             node.attr = "evaluate"
             return node
-        elif attr == "next":
+        elif attr in {"next", "advance"}:
             return node
-        return ast.parse(f"{self.sim_object}.get_value('{attr}', Scope())").body[0].value
+        return ast.parse(f"{self.sim_object}.get_value('{attr}', scope)").body[0].value
 
     def visit_FunctionDef(self, node):
+        node.body = [self.visit(s) for s in node.body]
+        return node
+
+    def visit_For(self, node):
         node.body = [self.visit(s) for s in node.body]
         return node
 
@@ -103,6 +110,9 @@ class FaultSimulator:
 
     def next(self):
         self.coreir_sim.advance(2)
+
+    def advance(self, n=1):
+        self.coreir_sim.advance(n)
 
 
 def test_case(__fn=None, combinational=False, random_strategy : RandomStrategy = None,
@@ -140,7 +150,7 @@ def test_case(__fn=None, combinational=False, random_strategy : RandomStrategy =
         print(astor.to_source(tree))
         defn_globals["pytest"] = pytest
         defn_globals["BitVector"] = BitVector
-        defn_globals["Scope"] = Scope
+        defn_globals["scope"] = Scope()
         result = exec(compile(tree, filename="<ast>", mode="exec"), defn_globals, defn_locals)
         return functools.wraps(fn)(eval(fn.__name__, defn_globals, defn_locals))
     if __fn is None:
@@ -152,4 +162,3 @@ def test_case(__fn=None, combinational=False, random_strategy : RandomStrategy =
 
 def pytest_generate_tests(metafunc):
     pass
-

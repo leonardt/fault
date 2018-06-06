@@ -3,6 +3,7 @@ os.environ["MANTLE_TARGET"] = "coreir"
 import magma as m
 import mantle
 import fault
+from bit_vector import BitVector
 
 def ref_add(I0, I1, width):
     return I0 + I1
@@ -44,3 +45,54 @@ def test_tff(TFF : TFF):
     for i in range(0, 8):
         assert TFF.O == i % 2
         TFF.next()
+
+from abc import ABC, abstractmethod
+class Memory(ABC):
+    @abstractmethod
+    def read(self, addr):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def write(self, addr, data):
+        raise NotImplementedError()
+
+class SRAM(Memory):
+    def __init__(self, address_width):
+        self.mem = [BitVector(width) for _ in range(1 << address_width)]
+
+    def read(self, addr):
+        return self.mem[addr]
+
+    def write(self, addr, data):
+        self.mem[addr] = data
+
+def check_memory_address(memory, addr, expected):
+    memory.RADDR = addr
+    memory.advance(2)
+    assert memory.RDATA == expected
+
+@fault.test_case
+def test_RAM(RAM : mantle.coreir.memory.DefineRAM(height=4, width=4)):
+    expected = {}
+    for i in range(4):
+        addr = BitVector(i, 2)
+        data = fault.Random(width=4)
+        expected[addr.as_int()] = data
+        RAM.WDATA = data
+        RAM.WADDR = addr
+        RAM.WE = 1
+        RAM.next()
+        RAM.WE = 0
+
+        # check_memory_address(RAM, addr, data)
+        RAM.RADDR = addr
+        RAM.next()
+        assert RAM.RDATA == data, dict(iter=i, rdata=RAM.RDATA, data=data)
+
+    print(expected)
+
+    for addr, data in expected.items():
+        # check_RAM(RAM, addr, data)
+        RAM.RADDR = BitVector(addr, 2)
+        RAM.next()
+        assert RAM.RDATA == data, dict(iter=addr, rdata=RAM.RDATA, data=data)
