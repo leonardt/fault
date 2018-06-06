@@ -89,8 +89,6 @@ def test_RAM(RAM : mantle.coreir.memory.DefineRAM(height=4, width=4)):
         RAM.next()
         assert RAM.RDATA == data, dict(iter=i, rdata=RAM.RDATA, data=data)
 
-    print(expected)
-
     for addr, data in expected.items():
         # check_RAM(RAM, addr, data)
         RAM.RADDR = BitVector(addr, 2)

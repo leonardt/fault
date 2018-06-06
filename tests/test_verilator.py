@@ -40,9 +40,3 @@ def test_memory():
 
     for addr, data in expected.items():
         check_memory_address(memory, addr, data)
-
-
-@fault.test_harness
-def test_cgra(input_file):
-    with open(input_file, "rb") as file:
-        input_image = file.read()
