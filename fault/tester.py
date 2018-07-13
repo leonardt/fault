@@ -27,7 +27,7 @@ class Tester:
                 self.clock_index = i
         # Initialize first test vector to all Nones
         self.test_vectors.append(
-            [BitVector(None, 1 if isinstance(port, m.BitType) else len(port))
+            [BitVector(None, 1 if isinstance(port, m._BitType) else len(port))
              for port in self.ports.values()])
 
     def get_index(self, port):
@@ -49,6 +49,10 @@ class Tester:
         self.test_vectors.append(self.test_vectors[-1][:])
 
     def step(self):
+        if self.clock_index is None:
+            raise RuntimeError(
+                "Stepping tester without a clock (did you specify a clock "
+                "during initialization?)"
+            )
         self.eval()
         self.test_vectors[-1][self.clock_index] ^= BitVector(1, 1)
-        self.eval()
