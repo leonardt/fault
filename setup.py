@@ -9,6 +9,9 @@ setup(
     packages=[
         "fault",
     ],
+    install_requires=[
+        "astor"
+    ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
     author='Leonard Truong',
