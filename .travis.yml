@@ -1,0 +1,18 @@
+language: python
+addons:
+  apt:
+    packages:
+    - verilator
+python:
+    - "3.6"
+
+install:
+    - pip install python-coveralls
+    - pip install pytest-cov pytest-pep8
+    - pip install -e .
+
+script:
+    - pytest --cov fault --pep8 fault -v --cov-report term-missing tests
+
+after_success:
+    - coveralls
