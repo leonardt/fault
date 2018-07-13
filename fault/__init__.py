@@ -10,6 +10,8 @@ from magma.scope import Scope
 from bit_vector import BitVector
 import random
 
+from .tester import Tester
+
 global_type_table = {}
 
 def get_ast(obj):

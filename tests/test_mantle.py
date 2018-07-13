@@ -46,26 +46,6 @@ def test_tff(TFF : TFF):
         assert TFF.O == i % 2
         TFF.next()
 
-from abc import ABC, abstractmethod
-class Memory(ABC):
-    @abstractmethod
-    def read(self, addr):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def write(self, addr, data):
-        raise NotImplementedError()
-
-class SRAM(Memory):
-    def __init__(self, address_width):
-        self.mem = [BitVector(width) for _ in range(1 << address_width)]
-
-    def read(self, addr):
-        return self.mem[addr]
-
-    def write(self, addr, data):
-        self.mem[addr] = data
-
 def check_memory_address(memory, addr, expected):
     memory.RADDR = addr
     memory.advance(2)
@@ -94,3 +74,60 @@ def test_RAM(RAM : mantle.coreir.memory.DefineRAM(height=4, width=4)):
         RAM.RADDR = BitVector(addr, 2)
         RAM.next()
         assert RAM.RDATA == data, dict(iter=addr, rdata=RAM.RDATA, data=data)
+
+from abc import ABC, abstractmethod
+class Memory(ABC):
+    @abstractmethod
+    def read(self, addr):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def write(self, addr, data):
+        raise NotImplementedError()
+
+class RAMModel(Memory):
+    def __init__(self, height, width):
+        self.mem = [BitVector(width) for _ in range(height)]
+
+    def read(self, addr):
+        return self.mem[addr]
+
+    def write(self, addr, data):
+        self.mem[addr] = data
+
+class RAM(Memory):
+    def __init__(self, ram):
+        self.ram = ram
+
+    def read(self, addr):
+        self.ram.RADDR = addr
+        self.next()
+        return self.ram.RDATA
+
+    def write(self, addr, data):
+        RAM.WDATA = data
+        RAM.WADDR = addr
+        RAM.WE = 1
+        RAM.next()
+        RAM.WE = 0
+
+# @fault.test_case
+# def test_RAM_raw(ram : RAM(mantle.coreir.memory.DefineRAM(height=4, width=4)),
+#                  ram_model : RAMModel(4, 4),
+#                  addr : fault.Random(2),
+#                  data : fault.Random(4)):
+#     ram_model.write(addr, data)
+#     ram.write(addr, data)
+#     assert ram.read(addr) == ram_model.read(addr) == data
+#
+# @fault.test_case
+# def test_RAM_raw_x2(ram : RAM(mantle.coreir.memory.DefineRAM(height=4, width=4)),
+#                     ram_model : RAMModel(4, 4),
+#                     addr : fault.Random(2),
+#                     data0 : fault.Random(4),
+#                     data1 : fault.Random(4)):
+#     ram_model.write(addr, data0)
+#     ram.write(addr, data0)
+#     ram_model.write(addr, data1)
+#     ram.write(addr, data1)
+#     assert ram.read(addr) == ram_model.read(addr) == data1
