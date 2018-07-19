@@ -1,7 +1,7 @@
 from bit_vector import BitVector
 import magma as m
 import functools
-import magma.testing.verilator
+from .verilator_target import VerilatorTarget
 
 
 def convert_value(fn):
@@ -58,13 +58,10 @@ class Tester:
         self.eval()
         self.test_vectors[-1][self.clock_index] ^= BitVector(1, 1)
 
-    def compile_and_run(self, directory="build", target="verilator", flags=[]):
+    def compile_and_run(self, target="verilator", **kwargs):
         if target == "verilator":
-            magma.testing.verilator.compile(
-                f"{directory}/test_{self.circuit.name}.cpp", self.circuit,
-                self.test_vectors)
-            magma.testing.verilator.run_verilator_test(
-                self.circuit.name, f"test_{self.circuit.name}",
-                self.circuit.name, flags, build_dir=directory)
+            target = VerilogTarget(self.circuit, self.test_vectors, **kwargs)
         else:
             raise NotImplementedError(target)
+
+        target.run()
