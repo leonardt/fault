@@ -26,7 +26,12 @@ def harness(circuit, tests):
 
     assert len(circuit.interface.ports.keys()) == len(tests[0])
 
-    test_vector_length = len(tests[0])
+    test_vector_length = 0
+    for item in tests[0]:
+        if isinstance(item, Array):
+            test_vector_length += item.flattened_length
+        else:
+            test_vector_length += 1
 
     source = '''\
 #include "V{name}.h"
