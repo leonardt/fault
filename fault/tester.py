@@ -52,10 +52,7 @@ class Tester:
     def get_index(self, port):
         return self.port_index_mapping[port]
 
-    @convert_value
-    def poke(self, port, value):
-        if port.isinput():
-            raise ValueError(f"Can only poke an input: {port} {type(port)}")
+    def add_test_vector(self, port, value):
         if isinstance(port.name, m.ref.ArrayRef):
             parent = port
             indices = []
@@ -71,10 +68,16 @@ class Tester:
             self.test_vectors[-1][self.get_index(port)] = value
 
     @convert_value
+    def poke(self, port, value):
+        if port.isinput():
+            raise ValueError(f"Can only poke an input: {port} {type(port)}")
+        self.add_test_vector(port, value)
+
+    @convert_value
     def expect(self, port, value):
         if port.isoutput():
             raise ValueError(f"Can only expect an output: {port} {type(port)}")
-        self.test_vectors[-1][self.get_index(port)] = value
+        self.add_test_vector(port, value)
 
     def eval(self):
         self.test_vectors.append(copy.deepcopy(self.test_vectors[-1]))

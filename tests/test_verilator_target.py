@@ -2,6 +2,8 @@ import tempfile
 import magma as m
 import fault
 from bit_vector import BitVector
+import common
+import random
 
 
 def test_verilator_target():
@@ -24,4 +26,22 @@ def test_verilator_target():
         test_vectors = [[BitVector(0, 1), BitVector(0, 1)]]
         target = fault.verilator_target.VerilatorTarget(
             Foo, test_vectors, directory=f"{tempdir}/")
+        target.run()
+
+
+def test_tester_nested_arrays():
+    circ = common.TestNestedArraysCircuit
+    tester = fault.Tester(circ)
+    for i in range(3):
+        val = random.randint(0, (1 << 4) - 1)
+        tester.poke(circ.I[i], val)
+        tester.expect(circ.O[i], val)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
+        with open(f"{tempdir}/{circ.name}.v", "r") as f:
+            print(f.read())
+
+        target = fault.verilator_target.VerilatorTarget(
+            circ, tester.test_vectors, directory=f"{tempdir}/")
         target.run()

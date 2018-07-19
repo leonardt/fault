@@ -118,10 +118,18 @@ int main(int argc, char **argv, char **env) {{
 '''
                 i += 1
         else:
-            output_str += f'''\
+            if isinstance(port, m.ArrayType) and \
+                    not isinstance(port.T, m._BitType):
+                for _name in flattened_names(port):
+                    output_str += f'''\
+        check(\"{name}{_name}\", top->{name}{_name}, test[{i}], i);
+'''
+                    i += 1
+            else:
+                output_str += f'''\
         check(\"{name}\", top->{name}, test[{i}], i);
 '''
-            i += 1
+                i += 1
 
     source += f'''\
         std::cout << std::endl;
@@ -153,6 +161,7 @@ def compile_verilator_harness(basename, circuit, tests, input_ranges=None):
     if callable(tests):
         tests = testvectors(circuit, tests, input_ranges)
     verilatorcpp = harness(circuit, tests)
+    print(verilatorcpp)
 
     with open(filename, "w") as f:
         f.write(verilatorcpp)
