@@ -7,6 +7,20 @@ import subprocess
 import magma as m
 
 
+def flattened_names(arr):
+    if isinstance(arr.T, m.ArrayKind):
+        names = [f"_{i}" for i in range(len(arr))]
+        prod_names = []
+        for name_0 in flattened_names(arr.T):
+            for name_1 in names:
+                prod_names.append(f"{name_1}{name_0}")
+        return prod_names
+
+    elif not isinstance(arr.T, m._BitKind):
+        raise NotImplementedError()
+    return [""]
+
+
 def harness(circuit, tests):
 
     assert len(circuit.interface.ports.keys()) == len(tests[0])
@@ -43,7 +57,8 @@ int main(int argc, char **argv, char **env) {{
     value_t tests[{}][{}] = {{
 '''.format(len(tests), test_vector_length)
 
-    for test in tests:
+    for i, test in enumerate(tests):
+        testvector = []
 
         def to_string(t):
             if t is None or t._value is None:
@@ -54,11 +69,26 @@ int main(int argc, char **argv, char **env) {{
                 X = "false"
             return f"{{{val}, {X}}}"
 
-        testvector = ', '.join([to_string(t) for t in test])
+        for t in test:
+            if isinstance(t, Array):
+                testvector.extend(t.flattened())
+            else:
+                testvector.append(t)
+        names = []
+        for name, port in circuit.interface.ports.items():
+            if isinstance(port, m.ArrayType):
+                names.extend(f"{name}{x}" for x in flattened_names(port))
+            else:
+                names.append(name)
+        testvector = '\n            '.join(
+            [f"{to_string(t)},  // {name}"
+             for t, name in zip(testvector, names)])
         # testvector += ', {}'.format(int(func(*test[:nargs])))
-        source += '''\
-        {{ {} }},
-'''.format(testvector)
+        source += f'''\
+        {{  // {i}
+            {testvector}
+        }},
+'''
     source += '''\
     };
 '''
@@ -69,24 +99,35 @@ int main(int argc, char **argv, char **env) {{
 '''.format(len(tests))
 
     i = 0
+    output_str = ""
     for name, port in circuit.interface.ports.items():
         if port.isoutput():
-            source += f'''\
+            if isinstance(port, m.ArrayType) and \
+                    not isinstance(port.T, m._BitType):
+                for _name in flattened_names(port):
+                    source += f'''\
+        top->{name}{_name} = test[{i}].value;
+        std::cout << "top->{name}{_name} = " << test[{i}].value << ", ";
+'''
+                    i += 1
+
+            else:
+                source += f'''\
         top->{name} = test[{i}].value;
+        std::cout << "top->{name} = " << test[{i}].value << ", ";
 '''
-        i += 1
-
-    source += '''\
-        top->eval();
-'''
-
-    i = 0
-    for name, port in circuit.interface.ports.items():
-        if port.isinput():
-            source += f'''\
+                i += 1
+        else:
+            output_str += f'''\
         check(\"{name}\", top->{name}, test[{i}], i);
 '''
-        i += 1
+            i += 1
+
+    source += f'''\
+        std::cout << std::endl;
+        top->eval();
+{output_str}
+'''
     source += '''\
     }
 '''
