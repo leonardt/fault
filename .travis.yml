@@ -10,6 +10,7 @@ install:
     # - wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
     # - source install_coreir.sh
 
+    # FIXME: Workaround until coreir bug where top module is missing is fixed
     - wget https://github.com/rdaly525/coreir/releases/download/v0.0.12/coreir.tar.gz
     - mkdir coreir_release;
     - tar -xf coreir.tar.gz -C coreir_release --strip-components 1;

@@ -167,7 +167,6 @@ def compile_verilator_harness(basename, circuit, tests, input_ranges=None):
     if callable(tests):
         tests = testvectors(circuit, tests, input_ranges)
     verilatorcpp = harness(circuit, tests)
-    print(verilatorcpp)
 
     with open(filename, "w") as f:
         f.write(verilatorcpp)

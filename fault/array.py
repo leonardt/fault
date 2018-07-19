@@ -23,6 +23,6 @@ class Array:
 
     def flattened(self):
         if isinstance(self.value, Array):
-            return self.value.flattened
+            return self.value.flattened()
         else:
             return self.value
