@@ -11,12 +11,7 @@ def harness(circuit, tests):
 
     assert len(circuit.interface.ports.keys()) == len(tests[0])
 
-    test_vector_length = 0
-    for item in tests[0]:
-        if isinstance(item, Array):
-            test_vector_length += item.flattened_length
-        else:
-            test_vector_length += 1
+    test_vector_length = len(tests[0])
 
     source = '''\
 #include "V{name}.h"
@@ -49,7 +44,6 @@ int main(int argc, char **argv, char **env) {{
 '''.format(len(tests), test_vector_length)
 
     for test in tests:
-        testvector = []
 
         def to_string(t):
             if t is None or t._value is None:
@@ -60,12 +54,7 @@ int main(int argc, char **argv, char **env) {{
                 X = "false"
             return f"{{{val}, {X}}}"
 
-        for t in test:
-            if isinstance(t, Array):
-                testvector.extend(t.flattened())
-            else:
-                testvector.append(t)
-        testvector = ', '.join([to_string(t) for t in testvector])
+        testvector = ', '.join([to_string(t) for t in test])
         # testvector += ', {}'.format(int(func(*test[:nargs])))
         source += '''\
         {{ {} }},
@@ -82,10 +71,7 @@ int main(int argc, char **argv, char **env) {{
     i = 0
     for name, port in circuit.interface.ports.items():
         if port.isoutput():
-            if isinstance(port, m.ArrayType):
-                raise NotImplementedError()
-            else:
-                source += f'''\
+            source += f'''\
         top->{name} = test[{i}].value;
 '''
         i += 1
