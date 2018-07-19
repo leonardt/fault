@@ -4,7 +4,6 @@ import magma.config as config
 import inspect
 import os
 import subprocess
-from fault.array import Array
 import magma as m
 
 
