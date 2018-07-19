@@ -16,7 +16,7 @@ def test_verilator_target():
     # TODO(rsetaluri): Make this part of the target itself.
     m.compile("build/Foo", Foo, output="verilog")
 
-    test_vectors = [[BitVector(0,1), BitVector(0, 1)]]
+    test_vectors = [[BitVector(0, 1), BitVector(0, 1)]]
     target = fault.verilator_target.VerilatorTarget(
         Foo, test_vectors, directory="build/")
     target.run()
