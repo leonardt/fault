@@ -5,6 +5,7 @@ import inspect
 import os
 import subprocess
 import magma as m
+from .array import Array
 
 
 def flattened_names(arr):

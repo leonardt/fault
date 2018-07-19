@@ -39,8 +39,6 @@ def test_tester_nested_arrays():
 
     with tempfile.TemporaryDirectory() as tempdir:
         m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
-        with open(f"{tempdir}/{circ.name}.v", "r") as f:
-            print(f.read())
 
         target = fault.verilator_target.VerilatorTarget(
             circ, tester.test_vectors, directory=f"{tempdir}/")
