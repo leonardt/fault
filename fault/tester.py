@@ -60,7 +60,7 @@ class Tester:
 
     def compile_and_run(self, target="verilator", **kwargs):
         if target == "verilator":
-            target = VerilogTarget(self.circuit, self.test_vectors, **kwargs)
+            target = VerilatorTarget(self.circuit, self.test_vectors, **kwargs)
         else:
             raise NotImplementedError(target)
 
