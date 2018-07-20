@@ -26,13 +26,13 @@ class PythonSimulatorTarget(Target):
                     if tv_index == 0:
                         clock_val = val
                     elif val != clock_val:
-                        print ("Advancing clock")
+                        print("Advancing clock")
                         simulator.advance(2)
                 elif port.isoutput():
-                    print (f"Setting {self._circuit.name}.{name} to {val}")
+                    print(f"Setting {self._circuit.name}.{name} to {val}")
                     simulator.set_value(port, val)
                 elif port.isinput():
-                    print (f"Asserting {self._circuit.name}.{name} is {val}")
+                    print(f"Asserting {self._circuit.name}.{name} is {val}")
                     sim_val = simulator.get_value(port)
                     assert sim_val == val
                 else:
