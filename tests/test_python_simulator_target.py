@@ -21,8 +21,8 @@ def test_python_simulator_target():
         return BitVector(val, 1)
 
     test_vectors = [
-        [bit(0), bit(0),],
-        [bit(1), bit(1),],
+        [bit(0), bit(0)],
+        [bit(1), bit(1)],
     ]
     target = fault.python_simulator_target.PythonSimulatorTarget(
         Foo, test_vectors, None)
