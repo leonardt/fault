@@ -9,6 +9,7 @@ python:
 install:
     - wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
     - source install_coreir.sh
+
     - pip install python-coveralls
     - pip install pytest-cov pytest-pep8
     - pip install -r requirements.txt
