@@ -1,7 +1,3 @@
-"""
-Note(rsetaluri): This file is taken almost verbatim from magma/magma/logging.py.
-"""
-
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -14,22 +10,6 @@ import sys
 log = logging.getLogger("fault")
 
 
-def get_original_wire_call_stack_frame():
-    for frame in inspect.stack():
-        if sys.version_info < (3, 5):
-            function = inspect.getframeinfo(frame[0]).function
-        else:
-            function = frame.function
-        if function not in ["wire", "connect",
-                            "get_original_wire_call_stack_frame",
-                            "error", "warn"]:
-            break
-    if sys.version_info < (3, 5):
-        return frame[0]
-    else:
-        return frame.frame
-
-
 def info(message, *args, **kwargs):
     log.info(message, *args, **kwargs)
 
@@ -38,13 +18,5 @@ def warning(message, *args, **kwargs):
     log.warning(message, *args, **kwargs)
 
 
-def error(message, include_wire_traceback=False, *args, **kwargs):
-    if include_wire_traceback:
-        sys.stderr.write("="*80 + "\n")
-        stack_frame = get_original_wire_call_stack_frame()
-        traceback.print_stack(f=stack_frame, limit=10, file=sys.stderr)
-    # FIXME: In python 2, log.error doesn't go to stderr by default
-    # log.error(message, *args, **kwargs)
-    print(message, file=sys.stderr, *args, **kwargs)
-    if include_wire_traceback:
-        sys.stderr.write("="*80 + "\n")
+def error(message, *args, **kwargs):
+    log.error(message, *args, **kwargs)
