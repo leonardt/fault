@@ -1,29 +1,40 @@
-import tempfile
+import random
 import magma as m
-import fault.python_simulator_target
+import common
+from fault.python_simulator_target import *
 from bit_vector import BitVector
-import mantle
 
 
-def test_python_simulator_target():
+def test_python_simulator_target_basic():
     """
-    Test basic python simulator workflow with a simple circuit.
+    Test basic python simuilator workflow with a simple circuit.
     """
-
-    class Foo(m.Circuit):
-        IO = ["I", m.In(m.Bit), "O", m.Out(m.Bit)]
-
-        @classmethod
-        def definition(io):
-            m.wire(io.I, io.O)
-
-    def bit(val):
-        return BitVector(val, 1)
-
+    circ = common.TestBasicCircuit
     test_vectors = [
-        [bit(0), bit(0)],
-        [bit(1), bit(1)],
+        [BitVector(0, 1), BitVector(0, 1)],
+        [BitVector(1, 1), BitVector(1, 1)]
     ]
-    target = fault.python_simulator_target.PythonSimulatorTarget(
-        Foo, test_vectors, None)
+    target = PythonSimulatorTarget(circ, test_vectors, None)
+    target.run()
+
+
+def test_python_simulator_target_nested_arrays():
+    circ = common.TestNestedArraysCircuit
+    tester = fault.Tester(circ)
+    for i in range(3):
+        val = random.randint(0, (1 << 4) - 1)
+        tester.poke(circ.I[i], val)
+        tester.expect(circ.O[i], val)
+
+    target = PythonSimulatorTarget(circ, tester.test_vectors, None)
+    target.run()
+
+
+def test_python_simulator_target_clock():
+    circ = common.TestBasicClkCircuit
+    test_vectors = [
+        [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
+        [BitVector(0, 1), BitVector(0, 1), BitVector(1, 1)]
+    ]
+    target = PythonSimulatorTarget(circ, test_vectors, circ.CLK)
     target.run()

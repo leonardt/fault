@@ -14,6 +14,10 @@ def info(message, *args, **kwargs):
     log.info(message, *args, **kwargs)
 
 
+def debug(message, *args, **kwargs):
+    log.debug(message, *args, **kwargs)
+
+
 def warning(message, *args, **kwargs):
     log.warning(message, *args, **kwargs)
 
