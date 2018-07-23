@@ -6,10 +6,7 @@ import common
 
 
 def test_tester_basic():
-    circ = m.DefineCircuit("test_circuit", "I", m.In(m.Bit), "O",
-                           m.Out(m.Bit))
-    m.wire(circ.I, circ.O)
-    m.EndDefine()
+    circ = common.TestBasicCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
@@ -20,10 +17,7 @@ def test_tester_basic():
 
 
 def test_tester_clock():
-    circ = m.DefineCircuit("test_circuit_clock", "I", m.In(m.Bit), "O",
-                           m.Out(m.Bit), "CLK", m.In(m.Clock))
-    m.wire(circ.I, circ.O)
-    m.EndDefine()
+    circ = common.TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)

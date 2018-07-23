@@ -1,9 +1,21 @@
 import magma as m
 
 
-class TestNestedArraysCircuit(m.Circuit):
-    IO = ["I", m.In(m.Array(3, m.Bits(4))), "O", m.Out(m.Array(3, m.Bits(4)))]
+def define_simple_circuit(T, circ_name, has_clk=False):
+    class _Circuit(m.Circuit):
+        name = circ_name
+        IO = ["I", m.In(T), "O", m.Out(T)]
+        if has_clk:
+            IO += ["CLK", m.In(m.Clock)]
 
-    @classmethod
-    def definition(io):
-        m.wire(io.I, io.O)
+        @classmethod
+        def definition(io):
+            m.wire(io.I, io.O)
+
+    return _Circuit
+
+
+TestBasicCircuit = define_simple_circuit(m.Bit, "BasicCircuit")
+TestNestedArraysCircuit = define_simple_circuit(m.Array(3, m.Bits(4)),
+                                                "NestedArraysCircuit")
+TestBasicClkCircuit = define_simple_circuit(m.Bit, "BasicClkCircuit", True)
