@@ -22,7 +22,8 @@ def check(circuit, func):
 
 
 @pytest.mark.skip(reason="Not a test")
-def function_test_vectors(circuit, func, input_ranges=None, mode='complete'):
+def generate_function_test_vectors(circuit, func, input_ranges=None,
+                                   mode='complete'):
     check(circuit, func)
 
     args = []
@@ -39,7 +40,7 @@ def function_test_vectors(circuit, func, input_ranges=None, mode='complete'):
                         input_range = input_ranges[i]
                 else:
                     if input_ranges is None:
-                        input_range = range(1<<num_bits)
+                        input_range = range(1 << num_bits)
                     else:
                         input_range = input_ranges[i]
                 args.append(input_range)
@@ -61,7 +62,7 @@ def function_test_vectors(circuit, func, input_ranges=None, mode='complete'):
     return tests
 
 
-def python_simulator_test_vectors(circuit, input_ranges=None, mode='complete'):
+def generate_simulator_test_vectors(circuit, input_ranges=None, mode='complete'):
     ntest = len(circuit.interface.ports.items())
 
     simulator = PythonSimulator(circuit)

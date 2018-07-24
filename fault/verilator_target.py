@@ -1,5 +1,5 @@
 from .target import Target
-from magma.testing.function import testvectors
+from fault.test_vectors import generate_function_test_vectors
 import magma.config as config
 import inspect
 import os
@@ -165,7 +165,7 @@ def compile_verilator_harness(basename, circuit, tests, input_ranges=None):
         filename = basename
 
     if callable(tests):
-        tests = testvectors(circuit, tests, input_ranges)
+        tests = generate_function_test_vectors(circuit, tests, input_ranges)
     verilatorcpp = harness(circuit, tests)
 
     with open(filename, "w") as f:
