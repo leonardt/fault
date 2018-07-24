@@ -47,8 +47,6 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
             else:
                 assert True, "can't test Tuples"
 
-    nargs = len(args)
-
     tests = []
     for test in product(*args):
         test = list(test)
