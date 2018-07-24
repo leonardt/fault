@@ -1,5 +1,4 @@
 import magma as m
-import pytest
 
 
 def define_simple_circuit(T, circ_name, has_clk=False):
