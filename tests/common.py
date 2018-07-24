@@ -17,6 +17,7 @@ def define_simple_circuit(T, circ_name, has_clk=False):
 
 
 TestBasicCircuit = define_simple_circuit(m.Bit, "BasicCircuit")
+TestArrayCircuit = define_simple_circuit(m.Array(3, m.Bit), "ArrayCircuit")
 TestNestedArraysCircuit = define_simple_circuit(m.Array(3, m.Bits(4)),
                                                 "NestedArraysCircuit")
 TestBasicClkCircuit = define_simple_circuit(m.Bit, "BasicClkCircuit", True)
