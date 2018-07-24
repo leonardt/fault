@@ -62,7 +62,8 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
     return tests
 
 
-def generate_simulator_test_vectors(circuit, input_ranges=None, mode='complete'):
+def generate_simulator_test_vectors(circuit, input_ranges=None,
+                                    mode='complete'):
     ntest = len(circuit.interface.ports.items())
 
     simulator = PythonSimulator(circuit)
