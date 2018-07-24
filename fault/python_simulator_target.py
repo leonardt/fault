@@ -70,7 +70,8 @@ class PythonSimulatorTarget(Target):
         self.init_simulator()
         ports = self._circuit.interface.ports
         test_vector_length = len(self._test_vectors[0])
-        assert len(ports.keys()) == test_vector_length
+        assert len(ports.keys()) == test_vector_length, \
+            "Expected len(test_vector) == len(ports.keys())"
         for tv in self._test_vectors:
             (inputs, steps, outputs) = self.__parse_tv(tv)
             self.__process_inputs(inputs)
