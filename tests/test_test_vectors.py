@@ -1,10 +1,11 @@
 from fault.test_vectors import generate_function_test_vectors, \
     generate_simulator_test_vectors
-from common import TestBasicCircuit, TestArrayCircuit
+from common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit
 import pytest
 
 
-@pytest.mark.parametrize("Circuit", [TestBasicCircuit, TestArrayCircuit])
+@pytest.mark.parametrize("Circuit", [TestBasicCircuit, TestArrayCircuit,
+                                     TestSIntCircuit])
 def test_circuit(Circuit):
     def fn(I):
         return I

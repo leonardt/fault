@@ -114,7 +114,7 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
             # circuit defn input is an input of the definition
             if port.isinput():
                 val = simulator.get_value(getattr(circuit, name))
-                val = int(val) if isinstance(val, bool) else seq2int(val)
+                val = BitVector(val, signed=isinstance(port, SIntType)).as_int()
                 testv[i] = val
 
         tests.append(testv)
