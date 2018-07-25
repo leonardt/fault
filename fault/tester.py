@@ -31,14 +31,17 @@ class Tester:
         # Initialize first test vector to all Nones
         initial_vector = []
         for port in self.ports.values():
-            if isinstance(port, m._BitType):
-                val = BitVector(None, 1)
-            elif isinstance(port, m.ArrayType):
-                val = self.get_array_val(port)
-            else:
-                raise NotImplementedError(port)
+            val = self.get_initial_value(port)
             initial_vector.append(val)
         self.test_vectors.append(initial_vector)
+
+    def get_initial_value(self, port):
+        if isinstance(port, m._BitType):
+            return BitVector(None, 1)
+        elif isinstance(port, m.ArrayType):
+            return self.get_array_val(port)
+        else:
+            raise NotImplementedError(port)
 
     def get_array_val(self, arr):
         if isinstance(arr.T, m._BitKind):
@@ -80,7 +83,17 @@ class Tester:
         self.add_test_vector(port, value)
 
     def eval(self):
+        """
+        Finalize the current test vector by making a copy
+        For the new test vector,
+            (1) Set all inputs to retain their previous value
+            (2) Set all expected outputs to None (X) for the new test vector
+        """
         self.test_vectors.append(copy.deepcopy(self.test_vectors[-1]))
+        for port in self.ports.values():
+            if port.isinput():
+                self.test_vectors[-1][self.get_index(port)] = \
+                    self.get_initial_value(port)
 
     def step(self):
         if self.clock_index is None:

@@ -139,8 +139,8 @@ int main(int argc, char **argv, char **env) {{
 
     source += f'''\
         std::cout << std::endl;
-        top->eval();
 {output_str}
+        top->eval();
 '''
     source += '''\
     }

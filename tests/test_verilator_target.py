@@ -25,9 +25,11 @@ def test_verilator_target_basic():
 def test_tester_nested_arrays():
     circ = common.TestNestedArraysCircuit
     tester = fault.Tester(circ)
-    for i in range(3):
-        val = random.randint(0, (1 << 4) - 1)
+    expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
+    for i, val in enumerate(expected):
         tester.poke(circ.I[i], val)
+    tester.eval()
+    for i, val in enumerate(expected):
         tester.expect(circ.O[i], val)
 
     with tempfile.TemporaryDirectory() as tempdir:

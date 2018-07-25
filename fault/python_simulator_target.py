@@ -76,6 +76,6 @@ class PythonSimulatorTarget(Target):
             (inputs, steps, outputs) = self.__parse_tv(tv)
             self.__process_inputs(inputs)
             evaluate = self.__process_clock(steps)
+            self.__process_outputs(outputs)
             if evaluate:
                 self._simulator.evaluate()
-            self.__process_outputs(outputs)

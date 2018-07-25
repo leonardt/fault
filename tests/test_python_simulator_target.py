@@ -1,8 +1,8 @@
 import random
-import magma as m
 import common
-from fault.python_simulator_target import *
+from fault.python_simulator_target import PythonSimulatorTarget
 from bit_vector import BitVector
+import fault
 
 
 def test_python_simulator_target_basic():
@@ -21,9 +21,11 @@ def test_python_simulator_target_basic():
 def test_python_simulator_target_nested_arrays():
     circ = common.TestNestedArraysCircuit
     tester = fault.Tester(circ)
-    for i in range(3):
-        val = random.randint(0, (1 << 4) - 1)
+    expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
+    for i, val in enumerate(expected):
         tester.poke(circ.I[i], val)
+    tester.eval()
+    for i, val in enumerate(expected):
         tester.expect(circ.O[i], val)
 
     target = PythonSimulatorTarget(circ, tester.test_vectors, None)
