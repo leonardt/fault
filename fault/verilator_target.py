@@ -128,6 +128,7 @@ int main(int argc, char **argv, char **env) {{
                     not isinstance(port.T, m._BitType):
                 for _name in flattened_names(port):
                     output_str += f'''\
+        std::cout << "top->{name} = " << test[{i}].value << ", ";
         check(\"{name}{_name}\", top->{name}{_name}, test[{i}], i);
 '''
                     i += 1
@@ -140,6 +141,7 @@ int main(int argc, char **argv, char **env) {{
     source += f'''\
         std::cout << std::endl;
 {output_str}
+        std::cout << std::endl;
         top->eval();
 '''
     source += '''\
