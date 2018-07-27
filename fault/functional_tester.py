@@ -1,4 +1,5 @@
 import fault
+from fault.common import get_renamed_port
 
 
 class FunctionalTester(fault.Tester):
@@ -6,6 +7,11 @@ class FunctionalTester(fault.Tester):
         super().__init__(circuit, clock)
         self.functional_model = functional_model
         self.input_mapping = input_mapping
+
+    def expect(self, port, value):
+        raise RuntimeError("Cannot call expect on FunctionTester, expectations"
+                           " are automatically generated based on the"
+                           " functional model")
 
     def eval(self):
         super().eval()
@@ -16,4 +22,8 @@ class FunctionalTester(fault.Tester):
                 inputs.append(value)
         if self.input_mapping:
             inputs = self.input_mapping(*inputs)
-        self.functional_model(*inputs)
+        for name, port in self.circuit.interface.ports.items():
+            if port.isinput():
+                fn_model_port = get_renamed_port(self.circuit, name)
+                super().expect(port, getattr(self.functional_model,
+                                             fn_model_port))
