@@ -49,7 +49,7 @@ void check(const char* port, int a, value_t b, int i) {{
         std::cerr << port << "=" << b.value << ", ";
     }}
     if (!b.is_x && !(a == b.value)) {{
-        std::cout << std::endl;  // end the current line
+        std::cerr << std::endl;  // end the current line
         std::cerr << \"Got      : \" << a << std::endl;
         std::cerr << \"Expected : \" << b.value << std::endl;
         std::cerr << \"i        : \" << i << std::endl;
