@@ -1,5 +1,5 @@
 import fault
-from common.random import random_bv, random_bit
+from fault.random import random_bv, random_bit
 import magma as m
 from bit_vector import BitVector
 
