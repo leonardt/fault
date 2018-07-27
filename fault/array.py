@@ -3,6 +3,9 @@ class Array:
         self.value = value
         self.N = N
 
+    def __getitem__(self, index):
+        return self.value[index]
+
     def __setitem__(self, index, value):
         self.value[index] = value
 

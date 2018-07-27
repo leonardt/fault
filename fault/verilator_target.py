@@ -45,11 +45,16 @@ typedef struct {{
 }} value_t;
 
 void check(const char* port, int a, value_t b, int i) {{
+    if (!b.is_x) {{
+        std::cerr << port << "=" << b.value << ", ";
+    }}
     if (!b.is_x && !(a == b.value)) {{
+        std::cout << std::endl;  // end the current line
         std::cerr << \"Got      : \" << a << std::endl;
         std::cerr << \"Expected : \" << b.value << std::endl;
         std::cerr << \"i        : \" << i << std::endl;
         std::cerr << \"Port     : \" << port << std::endl;
+
         exit(1);
     }}
 }}
@@ -102,6 +107,8 @@ int main(int argc, char **argv, char **env) {{
     source += '''
     for(int i = 0; i < {}; i++) {{
         value_t* test = tests[i];
+
+        std::cerr << "Inputs: ";
 '''.format(len(tests))
 
     i = 0
@@ -113,14 +120,14 @@ int main(int argc, char **argv, char **env) {{
                 for _name in flattened_names(port):
                     source += f'''\
         top->{name}{_name} = test[{i}].value;
-        std::cout << "top->{name}{_name} = " << test[{i}].value << ", ";
+        std::cerr << "top->{name}{_name} = " << test[{i}].value << ", ";
 '''
                     i += 1
 
             else:
                 source += f'''\
         top->{name} = test[{i}].value;
-        std::cout << "top->{name} = " << test[{i}].value << ", ";
+        std::cerr << "top->{name} = " << test[{i}].value << ", ";
 '''
                 i += 1
         else:
@@ -128,7 +135,6 @@ int main(int argc, char **argv, char **env) {{
                     not isinstance(port.T, m._BitType):
                 for _name in flattened_names(port):
                     output_str += f'''\
-        std::cout << "top->{name} = " << test[{i}].value << ", ";
         check(\"{name}{_name}\", top->{name}{_name}, test[{i}], i);
 '''
                     i += 1
@@ -139,10 +145,12 @@ int main(int argc, char **argv, char **env) {{
                 i += 1
 
     source += f'''\
-        std::cout << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "Checking Outputs: ";
 {output_str}
-        std::cout << std::endl;
+        std::cerr << std::endl;
         top->eval();
+        std::cerr << "{"="*80}" << std::endl;
 '''
     source += '''\
     }
