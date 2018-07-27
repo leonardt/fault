@@ -17,4 +17,3 @@ class FunctionalTester(fault.Tester):
         if self.input_mapping:
             inputs = self.input_mapping(*inputs)
         self.functional_model(*inputs)
-
