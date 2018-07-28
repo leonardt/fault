@@ -23,6 +23,7 @@ class Tester:
         self.test_vectors = []
         self.port_index_mapping = {}
         self.ports = self.circuit.interface.ports
+        self.clock = clock
         self.clock_index = None
         for i, (key, value) in enumerate(self.ports.items()):
             self.port_index_mapping[value] = i
