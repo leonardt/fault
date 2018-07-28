@@ -15,13 +15,6 @@ class FunctionalTester(fault.Tester):
 
     def eval(self):
         super().eval()
-        inputs = []
-        for value, port in zip(self.test_vectors[-2],
-                               self.circuit.interface.ports.values()):
-            if port.isoutput():
-                inputs.append(value)
-        if self.input_mapping:
-            inputs = self.input_mapping(*inputs)
         for name, port in self.circuit.interface.ports.items():
             if port.isinput():
                 fn_model_port = get_renamed_port(self.circuit, name)
