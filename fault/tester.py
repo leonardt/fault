@@ -44,9 +44,9 @@ class Tester:
         else:
             raise NotImplementedError(port)
 
-    def get_array_val(self, arr):
+    def get_array_val(self, arr, val=None):
         if isinstance(arr.T, m._BitKind):
-            val = BitVector(None, len(arr))
+            val = BitVector(val, len(arr))
         elif isinstance(arr, m.ArrayType) and isinstance(arr.T, m.ArrayKind):
             val = Array([self.get_array_val(x) for x in arr], len(arr))
         else:
@@ -115,5 +115,8 @@ class Tester:
 
     def zero_inputs(self):
         for port in self.ports.values():
-            if port.isinput():
-                self.poke(port, 0)
+            if port.isoutput():
+                val = 0
+                if isinstance(port, m.ArrayType):
+                    val = self.get_array_val(port, 0)
+                self.poke(port, val)
