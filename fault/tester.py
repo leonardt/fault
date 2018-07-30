@@ -112,3 +112,8 @@ class Tester:
             raise NotImplementedError(target)
 
         target.run()
+
+    def zero_inputs(self):
+        for port in self.ports.values():
+            if port.isinput():
+                self.poke(port, 0)
