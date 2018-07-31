@@ -1,10 +1,10 @@
-from magma import BitType, ArrayType, SIntType
-from magma.simulator.python_simulator import PythonSimulator
-from magma.bitutils import seq2int
-from bit_vector import BitVector
 from inspect import signature
 from itertools import product
 import pytest
+from bit_vector import BitVector, UIntVector, SIntVector
+from magma import BitType, ArrayType, BitsType, UIntType, SIntType
+from magma.simulator.python_simulator import PythonSimulator
+from magma.bitutils import seq2int
 
 
 # check that number of function arguments equals number of circuit inputs
@@ -20,52 +20,7 @@ def check(circuit, func):
 
     assert nfuncargs == ncircargs
 
-
-@pytest.mark.skip(reason="Not a test")
-def generate_function_test_vectors(circuit, func, input_ranges=None,
-                                   mode='complete'):
-    check(circuit, func)
-
-    args = []
-    for i, (name, port) in enumerate(circuit.interface.ports.items()):
-        if port.isoutput():
-            if isinstance(port, BitType):
-                args.append([0, 1])
-            elif isinstance(port, ArrayType):
-                num_bits = type(port).N
-                if isinstance(port, SIntType):
-                    if input_ranges is None:
-                        input_range = range(-2**(num_bits-1), 2**(num_bits-1))
-                    else:
-                        input_range = input_ranges[i]
-                else:
-                    if input_ranges is None:
-                        input_range = range(1 << num_bits)
-                    else:
-                        input_range = input_ranges[i]
-                args.append(input_range)
-            else:
-                assert True, "can't test Tuples"
-
-    tests = []
-    for test in product(*args):
-        test = list(test)
-        result = func(*test)
-        if isinstance(result, tuple):
-            test.extend(result)
-        else:
-            test.append(result)
-        tests.append(test)
-
-    return tests
-
-
-def generate_simulator_test_vectors(circuit, input_ranges=None,
-                                    mode='complete'):
-    ntest = len(circuit.interface.ports.items())
-
-    simulator = PythonSimulator(circuit)
-
+def generate_args(circuit, input_ranges, strategy='complete'):
     args = []
     for i, (name, port) in enumerate(circuit.interface.ports.items()):
         if port.isoutput():
@@ -81,17 +36,51 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
                         input_range = range(start, end)
                     else:
                         input_range = input_ranges[i]
-                    args.append([BitVector(x, num_bits=num_bits, signed=True)
+                    args.append([SintVector(x, num_bits=num_bits)
                                  for x in input_range])
-                else:
+                elif isinstance(port, (UIntType, BitsType)):
                     if input_ranges is None:
                         input_range = range(1 << num_bits)
                     else:
                         input_range = input_ranges[i]
-                    args.append([BitVector(x, num_bits=num_bits)
+                    if isinstance(port, UIntType):
+                        args.append([UIntVector(x, num_bits=num_bits)
+                                 for x in input_range])
+                    else:
+                        args.append([BitVector(x, num_bits=num_bits)
                                  for x in input_range])
             else:
                 assert True, "can't test Tuples"
+    return args
+
+
+@pytest.mark.skip(reason="Not a test")
+def generate_function_test_vectors(circuit, func, input_ranges=None,
+                                   strategy='complete'):
+    check(circuit, func)
+
+    args = generate_args(circuit, input_ranges, strategy=strategy)
+
+    tests = []
+    for test in product(*args):
+        test = list(test)
+        result = func(*test)
+        if isinstance(result, tuple):
+            test.extend(result)
+        else:
+            test.append(result)
+        tests.append(test)
+
+    return tests
+
+
+def generate_simulator_test_vectors(circuit, input_ranges=None,
+                                    strategy='complete'):
+    ntest = len(circuit.interface.ports.items())
+
+    args = generate_args(circuit, input_ranges, strategy=strategy)
+
+    simulator = PythonSimulator(circuit)
 
     tests = []
     for test in product(*args):
@@ -114,8 +103,14 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
             # circuit defn input is an input of the definition
             if port.isinput():
                 val = simulator.get_value(getattr(circuit, name))
-                val = BitVector(val, signed=isinstance(port, SIntType)).as_int()
-                testv[i] = val
+                # check for other types
+                if isinstance(port, (BitsType, BitType)):
+                    val = BitVector(val)
+                elif isinstance(port, UIntType):
+                    val = UIntVector(val)
+                elif isinstance(port, SIntType):
+                    val = SIntVector(val)
+                testv[i] = int(val)
 
         tests.append(testv)
 
