@@ -2,6 +2,7 @@ import fault.logging
 from .target import Target
 from magma.simulator.python_simulator import PythonSimulator
 from fault.array import Array
+from bit_vector import BitVector
 
 
 def convert_value(val):
@@ -30,7 +31,20 @@ class PythonSimulatorTarget(Target):
                             f"is {expected_val}")
         sim_val = self._simulator.get_value(port)
         expected_val = convert_value(expected_val)
-        assert sim_val == expected_val
+        assert self.__check(sim_val, expected_val), \
+            f"Expected {expected_val}, got {sim_val}"
+
+    def __check(self, sim_val, expected_val):
+        if expected_val is None:
+            # Expected None, skipping
+            return True
+        if isinstance(sim_val, list):
+            if isinstance(expected_val, BitVector):
+                return expected_val.__class__(sim_val) == expected_val
+            assert isinstance(expected_val, list)
+            return all(self.__check(x, y)
+                       for x, y in zip(sim_val, expected_val))
+        return sim_val == expected_val
 
     def __parse_tv(self, tv):
         inputs = {}

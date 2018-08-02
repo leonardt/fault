@@ -1,7 +1,7 @@
 from magma import BitType, ArrayType, SIntType
 from magma.simulator.python_simulator import PythonSimulator
 from magma.bitutils import seq2int
-from bit_vector import BitVector
+from bit_vector import BitVector, SIntVector
 from inspect import signature
 from itertools import product
 import pytest
@@ -81,7 +81,7 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
                         input_range = range(start, end)
                     else:
                         input_range = input_ranges[i]
-                    args.append([BitVector(x, num_bits=num_bits, signed=True)
+                    args.append([SIntVector(x, num_bits=num_bits)
                                  for x in input_range])
                 else:
                     if input_ranges is None:
@@ -101,7 +101,10 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         for i, (name, port) in enumerate(circuit.interface.ports.items()):
             # circuit defn output is an input to the idefinition
             if port.isoutput():
-                testv[i] = test[j].as_int()
+                if isinstance(port, SIntType):
+                    testv[i] = test[j].as_sint()
+                else:
+                    testv[i] = test[j].as_uint()
                 val = test[j].as_bool_list()
                 if len(val) == 1:
                     val = val[0]
@@ -114,7 +117,10 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
             # circuit defn input is an input of the definition
             if port.isinput():
                 val = simulator.get_value(getattr(circuit, name))
-                val = BitVector(val, signed=isinstance(port, SIntType)).as_int()
+                if isinstance(port, SIntType):
+                    val = SIntVector(val).as_sint()
+                else:
+                    val = BitVector(val).as_uint()
                 testv[i] = val
 
         tests.append(testv)

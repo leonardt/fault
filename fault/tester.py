@@ -39,7 +39,7 @@ class Tester:
 
     def get_initial_value(self, port):
         if isinstance(port, m._BitType):
-            return BitVector(None, 1)
+            return None
         elif isinstance(port, m.ArrayType):
             return self.get_array_val(port)
         else:
@@ -47,7 +47,8 @@ class Tester:
 
     def get_array_val(self, arr, val=None):
         if isinstance(arr.T, m._BitKind):
-            val = BitVector(val, len(arr))
+            if val is not None:
+                val = BitVector(val, len(arr))
         elif isinstance(arr, m.ArrayType) and isinstance(arr.T, m.ArrayKind):
             val = Array([self.get_array_val(x) for x in arr], len(arr))
         else:
