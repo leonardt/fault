@@ -96,14 +96,15 @@ class Tester:
                 self.test_vectors[-1][self.get_index(port)] = \
                     self.get_initial_value(port)
 
-    def step(self):
+    def step(self, num=1):
         if self.clock_index is None:
             raise RuntimeError(
                 "Stepping tester without a clock (did you specify a clock "
                 "during initialization?)"
             )
-        self.eval()
-        self.test_vectors[-1][self.clock_index] ^= BitVector(1, 1)
+        for i in range(num):
+            self.eval()
+            self.test_vectors[-1][self.clock_index] ^= BitVector(1, 1)
 
     def compile_and_run(self, target="verilator", **kwargs):
         if target == "verilator":
