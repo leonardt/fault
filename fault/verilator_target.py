@@ -6,6 +6,7 @@ import os
 import subprocess
 import magma as m
 from .array import Array
+from .values import AnyValue
 
 
 def flattened_names(arr):
@@ -41,14 +42,14 @@ def harness(circuit, tests):
 
 typedef struct {{
     unsigned int value;
-    bool is_x;
+    bool is_any_value;
 }} value_t;
 
 void check(const char* port, int a, value_t b, int i) {{
-    if (!b.is_x) {{
+    if (!b.is_any_value) {{
         std::cerr << port << "=" << b.value << ", ";
     }}
-    if (!b.is_x && !(a == b.value)) {{
+    if (!b.is_any_value && !(a == b.value)) {{
         std::cerr << std::endl;  // end the current line
         std::cerr << \"Got      : \" << a << std::endl;
         std::cerr << \"Expected : \" << b.value << std::endl;
@@ -72,13 +73,13 @@ int main(int argc, char **argv, char **env) {{
         testvector = []
 
         def to_string(t):
-            if t is None or t._value is None:
+            if t is AnyValue:
                 val = "0"
-                X = "true"
+                is_any_value = "true"
             else:
                 val = t.as_binary_string()
-                X = "false"
-            return f"{{{val}, {X}}}"
+                is_any_value = "false"
+            return f"{{{val}, {is_any_value}}}"
 
         for t in test:
             if isinstance(t, Array):
