@@ -11,7 +11,7 @@ def convert_value(val):
 
 
 class PythonSimulatorTarget(Target):
-    def __init__(self, circuit, test_vectors, clock):
+    def __init__(self, circuit, test_vectors, clock=None):
         super().__init__(circuit, test_vectors)
         self._clock = clock
         self._simulator = None

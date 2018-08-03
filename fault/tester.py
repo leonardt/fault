@@ -2,6 +2,7 @@ from bit_vector import BitVector
 import magma as m
 import functools
 from .verilator_target import VerilatorTarget
+from .python_simulator_target import PythonSimulatorTarget
 from fault.array import Array
 import copy
 
@@ -109,6 +110,8 @@ class Tester:
     def compile_and_run(self, target="verilator", **kwargs):
         if target == "verilator":
             target = VerilatorTarget(self.circuit, self.test_vectors, **kwargs)
+        elif target == "python":
+            target = PythonSimulatorTarget(self.circuit, self.test_vectors, **kwargs)
         else:
             raise NotImplementedError(target)
 
