@@ -111,7 +111,8 @@ class Tester:
         if target == "verilator":
             target = VerilatorTarget(self.circuit, self.test_vectors, **kwargs)
         elif target == "python":
-            target = PythonSimulatorTarget(self.circuit, self.test_vectors, **kwargs)
+            target = PythonSimulatorTarget(self.circuit, self.test_vectors,
+                                           **kwargs)
         else:
             raise NotImplementedError(target)
 
