@@ -3,7 +3,7 @@ from .target import Target
 from magma.simulator.python_simulator import PythonSimulator
 from fault.array import Array
 from bit_vector import BitVector
-from fault.values import AnyValue
+from fault.value import Value
 
 
 def convert_value(val):
@@ -36,8 +36,8 @@ class PythonSimulatorTarget(Target):
             f"Expected {expected_val}, got {sim_val}"
 
     def __check(self, sim_val, expected_val):
-        if expected_val is AnyValue:
-            # Anything is equal to AnyValue
+        if expected_val is Value.Any:
+            # Anything is equal to Value.Any
             return True
         if isinstance(sim_val, list):
             if isinstance(expected_val, BitVector):

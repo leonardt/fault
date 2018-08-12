@@ -4,7 +4,7 @@ import functools
 from .verilator_target import VerilatorTarget
 from .python_simulator_target import PythonSimulatorTarget
 from fault.array import Array
-from .values import AnyValue
+from .value import Value
 import copy
 
 
@@ -40,15 +40,15 @@ class Tester:
 
     def get_initial_value(self, port):
         if isinstance(port, m._BitType):
-            return AnyValue
+            return Value.Any
         elif isinstance(port, m.ArrayType):
             return self.get_array_val(port)
         else:
             raise NotImplementedError(port)
 
-    def get_array_val(self, arr, val=AnyValue):
+    def get_array_val(self, arr, val=Value.Any):
         if isinstance(arr.T, m._BitKind):
-            if val is not AnyValue:
+            if val is not Value.Any:
                 val = BitVector(val, len(arr))
         elif isinstance(arr, m.ArrayType) and isinstance(arr.T, m.ArrayKind):
             val = Array([self.get_array_val(x) for x in arr], len(arr))

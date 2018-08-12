@@ -6,7 +6,7 @@ import os
 import subprocess
 import magma as m
 from .array import Array
-from .values import AnyValue
+from .value import Value
 
 
 def flattened_names(arr):
@@ -73,9 +73,11 @@ int main(int argc, char **argv, char **env) {{
         testvector = []
 
         def to_string(t):
-            if t is AnyValue:
+            if t is Value.Any:
                 val = "0"
                 is_any_value = "true"
+            elif t is Value.Unknown:
+                raise NotImplementedError("Does verilator have support for X?")
             else:
                 val = t.as_binary_string()
                 is_any_value = "false"
