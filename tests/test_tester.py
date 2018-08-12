@@ -13,7 +13,7 @@ def test_tester_basic():
     assert tester.test_vectors == [[BitVector(0, 1), BitVector(0, 1)]]
     tester.eval()
     assert tester.test_vectors == [[BitVector(0, 1), BitVector(0, 1)],
-                                   [BitVector(0, 1), BitVector(0, 1)]]
+                                   [BitVector(0, 1), fault.AnyValue]]
 
 
 def test_tester_clock():
@@ -22,7 +22,7 @@ def test_tester_clock():
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
     assert tester.test_vectors == [
-        [BitVector(0, 1), BitVector(0, 1), BitVector(None, 1)]
+        [BitVector(0, 1), BitVector(0, 1), fault.AnyValue]
     ]
     tester.poke(circ.CLK, 0)
     assert tester.test_vectors == [
@@ -31,7 +31,7 @@ def test_tester_clock():
     tester.step()
     assert tester.test_vectors == [
         [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
-        [BitVector(0, 1), BitVector(0, 1), BitVector(1, 1)]
+        [BitVector(0, 1), fault.AnyValue, BitVector(1, 1)]
     ]
 
 
