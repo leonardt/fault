@@ -4,7 +4,7 @@ import functools
 from .verilator_target import VerilatorTarget
 from .python_simulator_target import PythonSimulatorTarget
 from fault.array import Array
-from .value import Value
+from .value import AnyValue
 import copy
 
 
@@ -40,15 +40,15 @@ class Tester:
 
     def get_initial_value(self, port):
         if isinstance(port, m._BitType):
-            return Value.Any
+            return AnyValue
         elif isinstance(port, m.ArrayType):
             return self.get_array_val(port)
         else:
             raise NotImplementedError(port)
 
-    def get_array_val(self, arr, val=Value.Any):
+    def get_array_val(self, arr, val=AnyValue):
         if isinstance(arr.T, m._BitKind):
-            if val is not Value.Any:
+            if val is not AnyValue:
                 val = BitVector(val, len(arr))
         elif isinstance(arr, m.ArrayType) and isinstance(arr.T, m.ArrayKind):
             val = Array([self.get_array_val(x) for x in arr], len(arr))
@@ -120,10 +120,24 @@ class Tester:
 
         target.run()
 
+    # Flipped because by default this uses the "definition" view, so an input
+    # port is an output within a definition
+    def input_ports(self):
+        return [port for port in self.ports.values() if port.isoutput()]
+
+    def output_ports(self):
+        return [port for port in self.ports.values() if port.isinput()]
+
     def zero_inputs(self):
-        for port in self.ports.values():
-            if port.isoutput():
-                val = 0
-                if isinstance(port, m.ArrayType):
-                    val = self.get_array_val(port, 0)
-                self.poke(port, val)
+        for port in self.input_ports():
+            val = 0
+            if isinstance(port, m.ArrayType):
+                val = self.get_array_val(port, val)
+            self.poke(port, val)
+
+    def expect_any_outputs(self):
+        for port in self.output_ports():
+            val = AnyValue
+            if isinstance(port, m.ArrayType):
+                val = self.get_array_val(port, val)
+            self.expect(port, val)
