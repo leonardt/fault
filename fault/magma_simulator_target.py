@@ -96,8 +96,8 @@ class MagmaSimulatorTarget(Target):
             "Expected len(test_vector) == len(ports.keys())"
         for tv in self._test_vectors:
             (inputs, steps, outputs) = self.__parse_tv(tv)
-            self.__process_inputs(inputs)
-            evaluate = self.__process_clock(steps)
             self.__process_outputs(outputs)
+            evaluate = self.__process_clock(steps)
+            self.__process_inputs(inputs)
             if evaluate:
                 self._simulator.evaluate()
