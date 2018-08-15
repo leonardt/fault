@@ -30,7 +30,7 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
     for i, (name, port) in enumerate(circuit.interface.ports.items()):
         if port.isoutput():
             if isinstance(port, BitType):
-                args.append([0, 1])
+                args.append([BitVector(0), BitVector(1)])
             elif isinstance(port, ArrayType):
                 num_bits = type(port).N
                 if isinstance(port, SIntType):
@@ -38,12 +38,15 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
                         input_range = range(-2**(num_bits-1), 2**(num_bits-1))
                     else:
                         input_range = input_ranges[i]
+                    args.append([SIntVector(x, num_bits=num_bits)
+                                 for x in input_range])
                 else:
                     if input_ranges is None:
                         input_range = range(1 << num_bits)
                     else:
                         input_range = input_ranges[i]
-                args.append(input_range)
+                    args.append([BitVector(x, num_bits=num_bits)
+                                 for x in input_range])
             else:
                 assert True, "can't test Tuples"
 
