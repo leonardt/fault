@@ -1,6 +1,6 @@
 import random
 import common
-from fault.python_simulator_target import PythonSimulatorTarget
+from fault.magma_simulator_target import MagmaSimulatorTarget
 from bit_vector import BitVector
 import fault
 
@@ -14,7 +14,7 @@ def test_python_simulator_target_basic():
         [BitVector(0, 1), BitVector(0, 1)],
         [BitVector(1, 1), BitVector(1, 1)]
     ]
-    target = PythonSimulatorTarget(circ, test_vectors, None)
+    target = MagmaSimulatorTarget(circ, test_vectors, None)
     target.run()
 
 
@@ -28,7 +28,7 @@ def test_python_simulator_target_nested_arrays():
     for i, val in enumerate(expected):
         tester.expect(circ.O[i], val)
 
-    target = PythonSimulatorTarget(circ, tester.test_vectors, None)
+    target = MagmaSimulatorTarget(circ, tester.test_vectors, None)
     target.run()
 
 
@@ -38,5 +38,5 @@ def test_python_simulator_target_clock():
         [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
         [BitVector(0, 1), BitVector(0, 1), BitVector(1, 1)]
     ]
-    target = PythonSimulatorTarget(circ, test_vectors, circ.CLK)
+    target = MagmaSimulatorTarget(circ, test_vectors, circ.CLK)
     target.run()

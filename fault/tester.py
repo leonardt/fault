@@ -2,7 +2,7 @@ from bit_vector import BitVector
 import magma as m
 import functools
 from .verilator_target import VerilatorTarget
-from .python_simulator_target import PythonSimulatorTarget
+from .magma_simulator_target import MagmaSimulatorTarget
 from fault.array import Array
 from .value import AnyValue
 import copy
@@ -113,8 +113,11 @@ class Tester:
         if target == "verilator":
             target = VerilatorTarget(self.circuit, self.test_vectors, **kwargs)
         elif target == "python":
-            target = PythonSimulatorTarget(self.circuit, self.test_vectors,
-                                           **kwargs)
+            target = MagmaSimulatorTarget(self.circuit, self.test_vectors,
+                                          backend='python', **kwargs)
+        elif target == "coreir":
+            target = MagmaSimulatorTarget(self.circuit, self.test_vectors,
+                                          backend='coreir', **kwargs)
         else:
             raise NotImplementedError(target)
 

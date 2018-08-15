@@ -1,6 +1,7 @@
 import fault.logging
 from .target import Target
 from magma.simulator.python_simulator import PythonSimulator
+from magma.simulator.coreir_simulator import CoreIRSimulator
 from fault.array import Array
 from bit_vector import BitVector
 from fault.value import Value
@@ -12,14 +13,20 @@ def convert_value(val):
     return val
 
 
-class PythonSimulatorTarget(Target):
-    def __init__(self, circuit, test_vectors, clock=None):
+class MagmaSimulatorTarget(Target):
+    def __init__(self, circuit, test_vectors, clock=None, backend="python"):
         super().__init__(circuit, test_vectors)
         self._clock = clock
         self._simulator = None
+        if backend == "python":
+            self.backend = PythonSimulator
+        elif backend == "coreir":
+            self.backend = CoreIRSimulator
+        else:
+            raise NotImplementedError(backend)
 
     def init_simulator(self):
-        self._simulator = PythonSimulator(self._circuit, self._clock)
+        self._simulator = self.backend(self._circuit, self._clock)
 
     def __set_value(self, port, val):
         fault.logging.debug(f"Setting {self._circuit.name}.{port.name.name} to "
