@@ -1,6 +1,5 @@
-from magma import BitType, ArrayType, SIntType
+from magma import BitKind, ArrayKind, SIntKind, TupleKind
 from magma.simulator.python_simulator import PythonSimulator
-from magma.bitutils import seq2int
 from bit_vector import BitVector, SIntVector
 from inspect import signature
 from itertools import product
@@ -14,8 +13,8 @@ def check(circuit, func):
 
     # count circuit inputs
     ncircargs = 0
-    for name, port in circuit.interface.ports.items():
-        if port.isoutput():
+    for name, port in circuit.IO.items():
+        if port.isinput():
             ncircargs += 1
 
     assert nfuncargs == ncircargs
@@ -27,13 +26,13 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
     check(circuit, func)
 
     args = []
-    for i, (name, port) in enumerate(circuit.interface.ports.items()):
-        if port.isoutput():
-            if isinstance(port, BitType):
+    for i, (name, port) in enumerate(circuit.IO.items()):
+        if port.isinput():
+            if isinstance(port, BitKind):
                 args.append([BitVector(0), BitVector(1)])
-            elif isinstance(port, ArrayType):
-                num_bits = type(port).N
-                if isinstance(port, SIntType):
+            elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
+                num_bits = port.N
+                if isinstance(port, SIntKind):
                     if input_ranges is None:
                         input_range = range(-2**(num_bits-1), 2**(num_bits-1))
                     else:
@@ -48,7 +47,7 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
                     args.append([BitVector(x, num_bits=num_bits)
                                  for x in input_range])
             else:
-                assert True, "can't test Tuples"
+                raise NotImplementedError(type(port))
 
     tests = []
     for test in product(*args):
@@ -70,13 +69,13 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
     simulator = PythonSimulator(circuit)
 
     args = []
-    for i, (name, port) in enumerate(circuit.interface.ports.items()):
-        if port.isoutput():
-            if isinstance(port, BitType):
+    for i, (name, port) in enumerate(circuit.IO.items()):
+        if port.isinput():
+            if isinstance(port, BitKind):
                 args.append([BitVector(0), BitVector(1)])
-            elif isinstance(port, ArrayType):
-                num_bits = type(port).N
-                if isinstance(port, SIntType):
+            elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
+                num_bits = port.N
+                if isinstance(port, SIntKind):
                     if input_ranges is None:
                         start = -2**(num_bits - 1)
                         # We don't subtract one because range end is exclusive
@@ -101,10 +100,9 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         test = list(test)
         testv = ntest*[0]
         j = 0
-        for i, (name, port) in enumerate(circuit.interface.ports.items()):
-            # circuit defn output is an input to the idefinition
-            if port.isoutput():
-                if isinstance(port, SIntType):
+        for i, (name, port) in enumerate(circuit.IO.items()):
+            if port.isinput():
+                if isinstance(port, SIntKind):
                     testv[i] = test[j].as_sint()
                 else:
                     testv[i] = test[j].as_uint()
@@ -116,11 +114,10 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
 
         simulator.evaluate()
 
-        for i, (name, port) in enumerate(circuit.interface.ports.items()):
-            # circuit defn input is an input of the definition
-            if port.isinput():
+        for i, (name, port) in enumerate(circuit.IO.items()):
+            if port.isoutput():
                 val = simulator.get_value(getattr(circuit, name))
-                if isinstance(port, SIntType):
+                if isinstance(port, SIntKind):
                     val = SIntVector(val).as_sint()
                 else:
                     val = BitVector(val).as_uint()
