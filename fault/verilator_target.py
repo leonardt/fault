@@ -1,219 +1,99 @@
-from .target import Target
-from fault.test_vectors import generate_function_test_vectors
-import magma.config as config
-import inspect
-import os
 import subprocess
-import magma as m
-from .array import Array
-from .value import Value
+from pathlib import Path
+import magma
+from fault.target import Target
+import fault.verilator_utils as verilator_utils
+import fault.actions as actions
 
 
-def flattened_names(arr):
-    if isinstance(arr.T, m.ArrayKind):
-        names = [f"_{i}" for i in range(len(arr))]
-        prod_names = []
-        for name_0 in flattened_names(arr.T):
-            for name_1 in names:
-                prod_names.append(f"{name_1}{name_0}")
-        return prod_names
+src_tpl = """\
+{includes}
 
-    elif not isinstance(arr.T, m._BitKind):
-        raise NotImplementedError()
-    return [""]
-
-
-def harness(circuit, tests):
-
-    assert len(circuit.interface.ports.keys()) == len(tests[0])
-
-    test_vector_length = 0
-    for item in tests[0]:
-        if isinstance(item, Array):
-            test_vector_length += item.flattened_length
-        else:
-            test_vector_length += 1
-
-    source = '''\
-#include "V{name}.h"
-#include "verilated.h"
-#include <cassert>
-#include <iostream>
-
-typedef struct {{
-    unsigned int value;
-    bool is_any_value;
-}} value_t;
-
-void check(const char* port, int a, value_t b, int i) {{
-    if (!b.is_any_value) {{
-        std::cerr << port << "=" << b.value << ", ";
-    }}
-    if (!b.is_any_value && !(a == b.value)) {{
+void my_assert(unsigned int got, unsigned int expected, int i, const char* port) {{
+    if (got != expected) {{
         std::cerr << std::endl;  // end the current line
-        std::cerr << \"Got      : \" << a << std::endl;
-        std::cerr << \"Expected : \" << b.value << std::endl;
+        std::cerr << \"Got      : \" << got << std::endl;
+        std::cerr << \"Expected : \" << expected << std::endl;
         std::cerr << \"i        : \" << i << std::endl;
         std::cerr << \"Port     : \" << port << std::endl;
-
         exit(1);
     }}
 }}
 
-int main(int argc, char **argv, char **env) {{
+int main(int argc, char **argv) {{
     Verilated::commandArgs(argc, argv);
-    V{name}* top = new V{name};
-'''.format(name=circuit.__name__)
+    V{circuit_name}* top = new V{circuit_name};
 
-    source += '''
-    value_t tests[{}][{}] = {{
-'''.format(len(tests), test_vector_length)
+{main_body}
 
-    for i, test in enumerate(tests):
-        testvector = []
-
-        def to_string(t):
-            if t is Value.Any:
-                val = "0"
-                is_any_value = "true"
-            elif t is Value.Unknown:
-                raise NotImplementedError("Does verilator have support for X?")
-            else:
-                val = t.as_binary_string()
-                is_any_value = "false"
-            return f"{{{val}, {is_any_value}}}"
-
-        for t in test:
-            if isinstance(t, Array):
-                testvector.extend(t.flattened())
-            else:
-                testvector.append(t)
-        names = []
-        for name, port in circuit.interface.ports.items():
-            if isinstance(port, m.ArrayType):
-                names.extend(f"{name}{x}" for x in flattened_names(port))
-            else:
-                names.append(name)
-        testvector = '\n            '.join(
-            [f"{to_string(t)},  // {name}"
-             for t, name in zip(testvector, names)])
-        # testvector += ', {}'.format(int(func(*test[:nargs])))
-        source += f'''\
-        {{  // {i}
-            {testvector}
-        }},
-'''
-    source += '''\
-    };
-'''
-
-    source += '''
-    for(int i = 0; i < {}; i++) {{
-        value_t* test = tests[i];
-
-        std::cerr << "Inputs: ";
-'''.format(len(tests))
-
-    i = 0
-    output_str = ""
-    for name, port in circuit.interface.ports.items():
-        if port.isoutput():
-            if isinstance(port, m.ArrayType) and \
-                    not isinstance(port.T, m._BitType):
-                for _name in flattened_names(port):
-                    source += f'''\
-        top->{name}{_name} = test[{i}].value;
-        std::cerr << "top->{name}{_name} = " << test[{i}].value << ", ";
-'''
-                    i += 1
-
-            else:
-                source += f'''\
-        top->{name} = test[{i}].value;
-        std::cerr << "top->{name} = " << test[{i}].value << ", ";
-'''
-                i += 1
-        else:
-            if isinstance(port, m.ArrayType) and \
-                    not isinstance(port.T, m._BitType):
-                for _name in flattened_names(port):
-                    output_str += f'''\
-        check(\"{name}{_name}\", top->{name}{_name}, test[{i}], i);
-'''
-                    i += 1
-            else:
-                output_str += f'''\
-        check(\"{name}\", top->{name}, test[{i}], i);
-'''
-                i += 1
-
-    source += f'''\
-        std::cerr << std::endl;
-        std::cerr << "Checking Outputs: ";
-{output_str}
-        std::cerr << std::endl;
-        top->eval();
-        std::cerr << "{"="*80}" << std::endl;
-'''
-    source += '''\
-    }
-'''
-
-    source += '''
-    delete top;
-    std::cout << "Success" << std::endl;
-    exit(0);
-}'''
-
-    return source
-
-
-def compile_verilator_harness(basename, circuit, tests, input_ranges=None):
-    if config.get_compile_dir() == 'callee_file_dir':
-        (_, filename, _, _, _, _) = \
-            inspect.getouterframes(inspect.currentframe())[1]
-        file_path = os.path.dirname(filename)
-        filename = os.path.join(file_path, basename)
-    else:
-        filename = basename
-
-    if callable(tests):
-        tests = generate_function_test_vectors(circuit, tests, input_ranges)
-    verilatorcpp = harness(circuit, tests)
-
-    with open(filename, "w") as f:
-        f.write(verilatorcpp)
-
-
-def run_verilator_test(verilog_file_name, driver_name, top_module,
-                       verilator_flags="", build_dir="build"):
-    if isinstance(verilator_flags, list):
-        if not all(isinstance(flag, str) for flag in verilator_flags):
-            raise ValueError("verilator_flags should be a str or list of strs")
-        verilator_flags = " ".join(verilator_flags)
-    assert not subprocess.call(
-        f'verilator -Wall -Wno-INCABSPATH -Wno-DECLFILENAME {verilator_flags}'
-        f' --cc {verilog_file_name}.v --exe {driver_name}.cpp'
-        f' --top-module {top_module}',
-        cwd=build_dir, shell=True
-    )
-    assert not subprocess.call(
-        f'make -C obj_dir -j -f V{top_module}.mk V{top_module}', cwd=build_dir,
-        shell=True)
-    assert not subprocess.call('./obj_dir/V{}'.format(top_module),
-                               cwd=build_dir, shell=True)
+}}
+"""
 
 
 class VerilatorTarget(Target):
-    def __init__(self, circuit, test_vectors, directory="build/", flags=[]):
-        super().__init__(circuit, test_vectors)
-        self._directory = directory
-        self._flags = flags
+    def __init__(self, circuit, actions, directory="build/", flags=[]):
+        super().__init__(circuit, actions)
+        self.directory = Path(directory)
+        self.flags = flags
+
+    @staticmethod
+    def generate_action_code(i, action):
+        if isinstance(action, actions.Poke):
+            return [f"top->{action.port.name} = {action.value};"]
+        if isinstance(action,actions.Expect):
+            return [f"my_assert(top->{action.port.name}, "
+                    f"{action.value}, "
+                    f"{i}, \"{action.port.name}\");"]
+        if isinstance(action, actions.Eval):
+            return ["top->eval();"]
+        if isinstance(action, actions.Step):
+            return []
+        raise NotImplementedError(action)
+
+    def generate_code(self):
+        circuit_name = self.circuit.name
+        includes = [
+            f'"V{circuit_name}.h"',
+            '"verilated.h"',
+            '<iostream>',
+        ]
+
+        main_body = ""
+        for i, action in enumerate(self.actions):
+            code = VerilatorTarget.generate_action_code(i, action)
+            for line in code:
+                main_body += f"    {line}\n"
+
+        includes_src = "\n".join(["#include " + i for i in includes])
+        src = src_tpl.format(
+            includes=includes_src,
+            main_body=main_body,
+            circuit_name=circuit_name,
+        )
+
+        return src
+
+    def run_from_directory(self, cmd):
+        return subprocess.call(cmd, cwd=self.directory, shell=True)
 
     def run(self):
-        compile_verilator_harness(
-            f"{self._directory}/test_{self._circuit.name}.cpp", self._circuit,
-            self._test_vectors)
-        run_verilator_test(
-            self._circuit.name, f"test_{self._circuit.name}",
-            self._circuit.name, self._flags, build_dir=self._directory)
+        verilog_file = self.directory / Path(f"{self.circuit.name}.v")
+        driver_file = self.directory / Path(f"{self.circuit.name}_driver.cpp")
+        top = self.circuit.name
+        # Compile this module to verilog first.
+        prefix = str(verilog_file)[:-2]
+        magma.compile(prefix, self.circuit, output="verilog")
+        assert verilog_file.is_file()
+        # Write the verilator driver to file.
+        src = self.generate_code()
+        with open(driver_file, "w") as f:
+            f.write(src)
+        # Run a series of commands: compile the design using 'verilator', run
+        # the Makefile output by verilator, and finally run the executable
+        # created by verilator.
+        verilator_cmd = verilator_utils.verilator_cmd(
+            top, verilog_file.name, driver_file.name, self.flags)
+        assert not self.run_from_directory(verilator_cmd)
+        verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
+        assert not self.run_from_directory(verilator_make_cmd)
+        assert not self.run_from_directory(f"./obj_dir/V{top}")

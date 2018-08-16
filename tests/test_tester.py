@@ -10,9 +10,9 @@ def test_tester_basic():
     tester = fault.Tester(circ)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
-    assert tester.test_vectors == [[BitVector(0, 1), BitVector(0, 1)]]
+    assert tester.serialize() == [[BitVector(0, 1), BitVector(0, 1)]]
     tester.eval()
-    assert tester.test_vectors == [[BitVector(0, 1), BitVector(0, 1)],
+    assert tester.serialize() == [[BitVector(0, 1), BitVector(0, 1)],
                                    [BitVector(0, 1), fault.AnyValue]]
 
 
@@ -21,15 +21,15 @@ def test_tester_clock():
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
-    assert tester.test_vectors == [
+    assert tester.serialize() == [
         [BitVector(0, 1), BitVector(0, 1), fault.AnyValue]
     ]
     tester.poke(circ.CLK, 0)
-    assert tester.test_vectors == [
+    assert tester.serialize() == [
         [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)]
     ]
     tester.step()
-    assert tester.test_vectors == [
+    assert tester.serialize() == [
         [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
         [BitVector(0, 1), fault.AnyValue, BitVector(1, 1)]
     ]
@@ -44,6 +44,6 @@ def test_tester_nested_arrays():
         tester.poke(circ.I[i], val)
         tester.expect(circ.O[i], val)
         expected.append(val)
-    assert tester.test_vectors == [
+    assert tester.serialize() == [
          [fault.array.Array(expected, 3), fault.array.Array(expected, 3)]
     ]
