@@ -31,18 +31,21 @@ int main(int argc, char **argv) {{
 
 
 class VerilatorTarget(Target):
-    def __init__(self, circuit, actions, directory="build/", flags=[]):
+    def __init__(self, circuit, actions, directory="build/",
+                 flags=[], skip_compile=False):
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
+        self.skip_compile = skip_compile
 
     @staticmethod
     def generate_action_code(i, action):
         if isinstance(action, actions.Poke):
-            return [f"top->{action.port.name} = {action.value};"]
+            name = verilator_utils.verilator_name(action.port.name)
+            return [f"top->{name} = {action.value};"]
         if isinstance(action,actions.Expect):
-            return [f"my_assert(top->{action.port.name}, "
-                    f"{action.value}, "
+            name = verilator_utils.verilator_name(action.port.name)
+            return [f"my_assert(top->{name}, {action.value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
             return ["top->eval();"]
@@ -80,9 +83,10 @@ class VerilatorTarget(Target):
         verilog_file = self.directory / Path(f"{self.circuit.name}.v")
         driver_file = self.directory / Path(f"{self.circuit.name}_driver.cpp")
         top = self.circuit.name
-        # Compile this module to verilog first.
-        prefix = str(verilog_file)[:-2]
-        magma.compile(prefix, self.circuit, output="verilog")
+        # Optionally compile this module to verilog first.
+        if not self.skip_compile:
+            prefix = str(verilog_file)[:-2]
+            magma.compile(prefix, self.circuit, output="verilog")
         assert verilog_file.is_file()
         # Write the verilator driver to file.
         src = self.generate_code()

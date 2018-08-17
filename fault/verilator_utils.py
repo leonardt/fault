@@ -1,3 +1,4 @@
+import magma
 import fault.actions as actions
 
 
@@ -18,3 +19,12 @@ def verilator_cmd(top, verilog_filename, driver_filename, verilator_flags):
 
 def verilator_make_cmd(top):
     return f"make -C obj_dir -j -f V{top}.mk V{top}"
+
+
+def verilator_name(name):
+    if isinstance(name, magma.ref.DefnRef):
+        return str(name)
+    if isinstance(name, magma.ref.ArrayRef):
+        array_name = verilator_name(name.array.name)
+        return f"{array_name}_{name.index}"
+    raise NotImplementedError(name, type(name))
