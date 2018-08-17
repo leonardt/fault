@@ -1,6 +1,7 @@
 import magma
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
+from fault.logging import warning
 from fault.test_vector_builder import TestVectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
@@ -17,12 +18,13 @@ class Tester:
     def make_target(self, target, **kwargs):
         if target == "verilator":
             return VerilatorTarget(self.circuit, self.actions, **kwargs)
-        if target == "python":
-            return MagmaSimulatorTarget(self.circuit, self.actions,
-                                        backend='python', **kwargs)
         if target == "coreir":
             return MagmaSimulatorTarget(self.circuit, self.actions,
                                         backend='coreir', **kwargs)
+        if target == "python":
+            warning("Python simulator is not actively supported")
+            return MagmaSimulatorTarget(self.circuit, self.actions,
+                                        backend='python', **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
