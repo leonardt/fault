@@ -18,7 +18,7 @@ class Expect(Action):
     def __init__(self, port, value):
         super().__init__()
         if port.isoutput():
-            raise ValueError(f"Can only poke outputs: {port} {type(port)}")
+            raise ValueError(f"Can only expect on outputs: {port} {type(port)}")
         self.port = port
         self.value = value
 
