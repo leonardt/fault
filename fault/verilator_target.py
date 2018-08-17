@@ -50,7 +50,12 @@ class VerilatorTarget(Target):
         if isinstance(action, actions.Eval):
             return ["top->eval();"]
         if isinstance(action, actions.Step):
-            return []
+            name = verilator_utils.verilator_name(action.clock.name)
+            code = []
+            for step in range(action.steps):
+                code.append("top->eval();")
+                code.append(f"top->{name} ^= 1;")
+            return code
         raise NotImplementedError(action)
 
     def generate_code(self):
