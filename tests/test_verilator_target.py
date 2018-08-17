@@ -4,6 +4,15 @@ import fault
 from bit_vector import BitVector
 import common
 import random
+from fault.actions import Poke, Expect, Eval
+
+
+def run(circ, actions):
+    with tempfile.TemporaryDirectory() as tempdir:
+        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
+        target = fault.verilator_target.VerilatorTarget(
+            circ, actions, directory=f"{tempdir}/", skip_compile=True)
+        target.run()
 
 
 def test_verilator_target_basic():
@@ -11,30 +20,17 @@ def test_verilator_target_basic():
     Test basic verilator workflow with a simple circuit.
     """
     circ = common.TestBasicCircuit
-    with tempfile.TemporaryDirectory() as tempdir:
-        # Compile to verilog.
-        # TODO(rsetaluri): Make this part of the target itself.
-        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
-
-        test_vectors = [[BitVector(0, 1), BitVector(0, 1)]]
-        target = fault.verilator_target.VerilatorTarget(
-            circ, test_vectors, directory=f"{tempdir}/")
-        target.run()
+    actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 0))
+    run(circ, actions)
 
 
-def test_tester_nested_arrays():
+def test_verilator_target_nested_arrays():
     circ = common.TestNestedArraysCircuit
-    tester = fault.Tester(circ)
     expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
+    actions = []
     for i, val in enumerate(expected):
-        tester.poke(circ.I[i], val)
-    tester.eval()
+        actions.append(Poke(circ.I[i], val))
+    actions.append(Eval())
     for i, val in enumerate(expected):
-        tester.expect(circ.O[i], val)
-
-    with tempfile.TemporaryDirectory() as tempdir:
-        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
-
-        target = fault.verilator_target.VerilatorTarget(
-            circ, tester.test_vectors, directory=f"{tempdir}/")
-        target.run()
+        actions.append(Expect(circ.O[i], val))
+    run(circ, actions)
