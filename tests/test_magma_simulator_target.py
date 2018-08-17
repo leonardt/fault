@@ -1,51 +1,65 @@
 import random
-import common
-from fault.magma_simulator_target import MagmaSimulatorTarget
 from bit_vector import BitVector
-import fault
+import common
+from fault.actions import Poke, Expect, Eval, Step
+from fault.magma_simulator_target import MagmaSimulatorTarget
 
 
+# NOTE(rsetaluri): The python simulator backend is not tested since it is not
+# being actively supported currently. If it is updated, we should add it the
+# test fixtures.
 def pytest_generate_tests(metafunc):
     if 'backend' in metafunc.fixturenames:
-        metafunc.parametrize("backend", ["python", "coreir"])
+        metafunc.parametrize("backend", ["coreir"])
 
 
-def test_python_simulator_target_basic(backend):
+def run(circ, actions, clock, backend):
+    target = MagmaSimulatorTarget(circ, actions, clock, backend=backend)
+    target.run()
+
+
+def test_magma_simulator_target_basic(backend):
     """
-    Test basic python simuilator workflow with a simple circuit.
+    Test basic python simulator workflow with a simple circuit.
     """
     circ = common.TestBasicCircuit
-    test_vectors = [
-        [BitVector(0, 1), BitVector(0, 1)],
-        [BitVector(1, 1), BitVector(0, 1)],
-        [BitVector(0, 1), BitVector(1, 1)],
-        [BitVector(0, 1), BitVector(0, 1)]
+    actions = [
+        Poke(circ.I, BitVector(0, 1)),
+        Expect(circ.O, BitVector(0, 1)),
+        Eval(),
+        Poke(circ.I, BitVector(1, 1)),
+        Expect(circ.O, BitVector(0, 1)),
+        Eval(),
+        Poke(circ.I, BitVector(0, 1)),
+        Expect(circ.O, BitVector(1, 1)),
+        Eval(),
+        Expect(circ.O, BitVector(0, 1)),
     ]
-    target = MagmaSimulatorTarget(circ, test_vectors, None, backend=backend)
-    target.run()
+    run(circ, actions, None, backend)
 
 
-def test_python_simulator_target_nested_arrays(backend):
+def test_magma_simulator_target_nested_arrays(backend):
+    def _BV(val):
+        return BitVector(val, num_bits=4)
     circ = common.TestNestedArraysCircuit
-    tester = fault.Tester(circ)
-    expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
+    expected = [_BV(random.randint(0, (1 << 4) - 1)) for i in range(3)]
+    actions = []
     for i, val in enumerate(expected):
-        tester.poke(circ.I[i], val)
-    tester.eval()
+        actions.append(Poke(circ.I[i], val))
+    actions.append(Eval())
     for i, val in enumerate(expected):
-        tester.expect(circ.O[i], val)
-
-    target = MagmaSimulatorTarget(circ, tester.test_vectors, None,
-                                  backend=backend)
-    target.run()
+        actions.append(Expect(circ.O[i], val))
+    run(circ, actions, None, backend)
 
 
-def test_python_simulator_target_clock(backend):
+def test_magma_simulator_target_clock(backend):
     circ = common.TestBasicClkCircuit
-    test_vectors = [
-        [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
-        [BitVector(0, 1), BitVector(0, 1), BitVector(1, 1)]
+    actions = [
+        Poke(circ.I, BitVector(0, 1)),
+        Expect(circ.O, BitVector(0, 1)),
+        # TODO(rsetaluri): Figure out how to set clock value directly with the
+        # coreir simulator. Currently it does not allow this.
+        # Poke(circ.CLK, BitVector(0, 1)),
+        Step(1, circ.CLK),
     ]
-    target = MagmaSimulatorTarget(circ, test_vectors, circ.CLK,
-                                  backend=backend)
-    target.run()
+    run(circ, actions, circ.CLK, backend)
