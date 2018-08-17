@@ -19,6 +19,26 @@ class TestVectorBuilder:
         ports = self.circuit.interface.ports
         return [make_value(port, AnyValue) for port in ports.values()]
 
+    def __indices(self, port):
+        if port in self.port_to_index:
+            return (self.port_to_index[port],)
+        if isinstance(port.name, magma.ref.ArrayRef):
+            indices = self.__indices(port.name.array)
+            return (*indices, port.name.index)
+        raise NotImplementedError(port, type(port))
+
+    def __get(self, indices):
+        out = self.vectors[-1]
+        for idx in indices:
+            out = out[idx]
+        return out
+
+    def __set(self, indices, value):
+        parent = self.vectors[-1]
+        for idx in indices[:-1]:
+            parent = parent[idx]
+        parent[indices[-1]] = value
+
     def __eval(self):
         self.vectors.append(self.vectors[-1].copy())
         for port in self.circuit.interface.ports.values():
@@ -28,15 +48,17 @@ class TestVectorBuilder:
 
     def process(self, action):
         if isinstance(action, (actions.Poke, actions.Expect)):
-            index = self.port_to_index[action.port]
-            self.vectors[-1][index] = action.value
+            indices = self.__indices(action.port)
+            self.__set(indices, action.value)
         elif isinstance(action, actions.Eval):
             self.__eval()
         elif isinstance(action, actions.Step):
-            index = self.port_to_index[action.clock]
+            indices = self.__indices(action.clock)
+            val = self.__get(indices)
             for step in range(action.steps):
+                val ^= BitVector(1, 1)
                 self.__eval()
-                self.vectors[-1][index] ^= BitVector(1, 1)
+                self.__set(indices, val)
         else:
             raise NotImplementedError(action)
 
@@ -45,8 +67,8 @@ class Tester:
     def __init__(self, circuit, clock=None):
         self.circuit = circuit
         self.actions = []
-        if clock is not None and not isinstance(clock, magma.ClockKind):
-            raise TypeError(f"Expected clock port: {clock}")
+        if clock is not None and not isinstance(clock, magma.ClockType):
+            raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
 
     def make_target(self, target, **kwargs):
