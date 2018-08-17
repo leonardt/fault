@@ -1,7 +1,20 @@
+import magma as m
+import mantle
 from fault.test_vectors import generate_function_test_vectors, \
     generate_simulator_test_vectors
 from common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit
 import pytest
+
+import shutil
+import os
+
+
+def setup_function():
+    os.mkdir("tests/build")
+
+
+def teardown_function():
+    shutil.rmtree("tests/build")
 
 
 @pytest.mark.parametrize("Circuit", [TestBasicCircuit, TestArrayCircuit,
@@ -18,9 +31,6 @@ def test_basic_circuit():
     def f(a, b, c):
         return (a & b) ^ c
 
-    import magma as m
-    import mantle
-
     class main(m.Circuit):
         IO = ["a", m.In(m.Bit), "b", m.In(m.Bit), "c", m.In(m.Bit),
               "d", m.Out(m.Bit)]
@@ -28,15 +38,10 @@ def test_basic_circuit():
         @classmethod
         def definition(io):
             m.wire(f(io.a, io.b, io.c), io.d)
-
-    import shutil
-    import os
-    os.mkdir("build")
-    m.compile("build/main", main, "coreir-verilog")
+    m.compile("tests/build/main", main, "coreir-verilog")
 
     from fault.verilator_target import VerilatorTarget
 
     test_vectors = generate_function_test_vectors(main, f)
 
-    VerilatorTarget(main, test_vectors).run()
-    shutil.rmtree("build")
+    VerilatorTarget(main, test_vectors, "tests/build").run()
