@@ -5,7 +5,7 @@ from fault.value_utils import make_value
 from fault.value import AnyValue
 
 
-class TestVectorBuilder:
+class VectorBuilder:
     def __init__(self, circuit):
         self.circuit = circuit
         self.port_to_index = {}

@@ -2,7 +2,7 @@ import magma
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.logging import warning
-from fault.test_vector_builder import TestVectorBuilder
+from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 
@@ -45,7 +45,7 @@ class Tester:
         self.actions.append(actions.Step(steps, self.clock))
 
     def serialize(self):
-        builder = TestVectorBuilder(self.circuit)
+        builder = VectorBuilder(self.circuit)
         for action in self.actions:
             builder.process(action)
         return builder.vectors

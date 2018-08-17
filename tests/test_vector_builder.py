@@ -4,12 +4,12 @@ import fault
 import common
 from fault.actions import Poke, Expect, Eval, Step
 from fault.array import Array
-from fault.test_vector_builder import TestVectorBuilder
+from fault.vector_builder import VectorBuilder
 
 
 def test_tester_basic():
     circ = common.TestBasicCircuit
-    builder = TestVectorBuilder(circ)
+    builder = VectorBuilder(circ)
     builder.process(Poke(circ.I, BitVector(0, 1)))
     builder.process(Expect(circ.O, BitVector(0, 1)))
     assert builder.vectors == [[BitVector(0, 1), BitVector(0, 1)]]
@@ -20,7 +20,7 @@ def test_tester_basic():
 
 def test_tester_clock():
     circ = common.TestBasicClkCircuit
-    builder = TestVectorBuilder(circ)
+    builder = VectorBuilder(circ)
     builder.process(Poke(circ.I, BitVector(0, 1)))
     builder.process(Expect(circ.O, BitVector(0, 1)))
     assert builder.vectors == [
@@ -39,7 +39,7 @@ def test_tester_clock():
 
 def test_tester_nested_arrays():
     circ = common.TestNestedArraysCircuit
-    builder = TestVectorBuilder(circ)
+    builder = VectorBuilder(circ)
     expected = []
     for i in range(3):
         val = random.randint(0, (1 << 4) - 1)
