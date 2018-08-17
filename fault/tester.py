@@ -1,3 +1,4 @@
+import magma
 from bit_vector import BitVector
 import fault.actions as actions
 from fault.verilator_target import VerilatorTarget
@@ -44,6 +45,8 @@ class Tester:
     def __init__(self, circuit, clock=None):
         self.circuit = circuit
         self.actions = []
+        if clock is not None and not isinstance(clock, magma.ClockKind):
+            raise TypeError(f"Expected clock port: {clock}")
         self.clock = clock
 
     def make_target(self, target, **kwargs):
