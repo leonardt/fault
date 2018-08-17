@@ -15,6 +15,7 @@ class Foo(m.Circuit):
 
 def test_all():
     # Bit type.
+    assert make_value(Foo.a, BitVector(0, 1)) == BitVector(0, 1)
     assert make_value(Foo.a, 0) == BitVector(0, 1)
     assert make_value(Foo.a, 1) == BitVector(1, 1)
     assert make_value(Foo.a, AnyValue) == AnyValue
@@ -28,11 +29,13 @@ def test_all():
     # into the bit-vectors. The tests should pass for any number.
 
     # Bits type.
+    assert make_value(Foo.b, BitVector(5, 8)) == BitVector(5, 8)
     assert make_value(Foo.b, 17) == BitVector(17, 8)
     assert make_value(Foo.b, AnyValue) == AnyValue
     assert make_value(Foo.b, UnknownValue) == UnknownValue
 
     # Array(Bit) type. Should be the same as above.
+    assert make_value(Foo.c, BitVector(83, 12)) == BitVector(83, 12)
     assert make_value(Foo.c, 23) == BitVector(23, 12)
     assert make_value(Foo.c, AnyValue) == AnyValue
     assert make_value(Foo.c, UnknownValue) == UnknownValue

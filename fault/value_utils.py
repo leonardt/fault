@@ -14,6 +14,8 @@ def make_value(port, value):
 
 def make_bit(value):
     # TODO(rsetaluri): Use bit_vector.Bit when implemented.
+    if isinstance(value, BitVector) and value.num_bits == 1:
+        return value
     if value == 0 or value == 1:
         return BitVector(value, 1)
     if value is AnyValue or value is UnknownValue:
@@ -32,6 +34,8 @@ def make_array(T, N, value):
 
 def make_bit_vector(N, value):
     assert isinstance(N, int)
+    if isinstance(value, BitVector) and N == value.num_bits:
+        return value
     if isinstance(value, int):
         return BitVector(value, N)
     if value is AnyValue or value is UnknownValue:
