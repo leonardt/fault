@@ -43,7 +43,7 @@ class VerilatorTarget(Target):
         if isinstance(action, actions.Poke):
             name = verilator_utils.verilator_name(action.port.name)
             return [f"top->{name} = {action.value};"]
-        if isinstance(action,actions.Expect):
+        if isinstance(action, actions.Expect):
             name = verilator_utils.verilator_name(action.port.name)
             return [f"my_assert(top->{name}, {action.value}, "
                     f"{i}, \"{action.port.name}\");"]
