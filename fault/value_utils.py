@@ -41,3 +41,11 @@ def make_bit_vector(N, value):
     if value is AnyValue or value is UnknownValue:
         return value
     raise NotImplementedError(N, value)
+
+
+def is_any(value):
+    if value is AnyValue:
+        return True
+    if isinstance(value, list):
+        return all([is_any(v) for v in value])
+    return False

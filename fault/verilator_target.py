@@ -1,9 +1,10 @@
-import subprocess
 from pathlib import Path
+import subprocess
 import magma
-from fault.target import Target
-import fault.verilator_utils as verilator_utils
 import fault.actions as actions
+from fault.target import Target
+import fault.value_utils as value_utils
+import fault.verilator_utils as verilator_utils
 
 
 src_tpl = """\
@@ -44,6 +45,10 @@ class VerilatorTarget(Target):
             name = verilator_utils.verilator_name(action.port.name)
             return [f"top->{name} = {action.value};"]
         if isinstance(action, actions.Expect):
+            # For verilator, if an expect is "AnyValue" we don't need to perform
+            # the expect.
+            if value_utils.is_any(action.value):
+                return []
             name = verilator_utils.verilator_name(action.port.name)
             return [f"my_assert(top->{name}, {action.value}, "
                     f"{i}, \"{action.port.name}\");"]
