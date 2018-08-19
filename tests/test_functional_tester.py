@@ -57,4 +57,4 @@ def test_configuration():
     tester.configure(1, 41)
     m.compile("tests/build/Configurable", Configurable, output="coreir-verilog")
     tester.compile_and_run(directory="tests/build", target="verilator",
-                           flags=["-Wno-fatal"])
+                           flags=["-Wno-fatal"], skip_compile=True)
