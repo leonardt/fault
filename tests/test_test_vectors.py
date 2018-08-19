@@ -15,7 +15,7 @@ from fault.verilator_target import VerilatorTarget
 @pytest.mark.parametrize("Circuit", [TestBasicCircuit, TestArrayCircuit,
                                      TestSIntCircuit])
 def test_circuit(Circuit):
-    def ff(I):
+    def fn(I):
         return I
     function_test_vectors = generate_function_test_vectors(Circuit, fn)
     simulator_test_vectors = generate_simulator_test_vectors(Circuit)
