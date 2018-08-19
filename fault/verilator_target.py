@@ -10,20 +10,24 @@ import fault.verilator_utils as verilator_utils
 src_tpl = """\
 {includes}
 
-void my_assert(unsigned int got, unsigned int expected, int i, const char* port) {{
-    if (got != expected) {{
-        std::cerr << std::endl;  // end the current line
-        std::cerr << \"Got      : \" << got << std::endl;
-        std::cerr << \"Expected : \" << expected << std::endl;
-        std::cerr << \"i        : \" << i << std::endl;
-        std::cerr << \"Port     : \" << port << std::endl;
-        exit(1);
-    }}
+void my_assert(
+    unsigned int got,
+    unsigned int expected,
+    int i,
+    const char* port) {{
+  if (got != expected) {{
+    std::cerr << std::endl;  // end the current line
+    std::cerr << \"Got      : \" << got << std::endl;
+    std::cerr << \"Expected : \" << expected << std::endl;
+    std::cerr << \"i        : \" << i << std::endl;
+    std::cerr << \"Port     : \" << port << std::endl;
+    exit(1);
+  }}
 }}
 
 int main(int argc, char **argv) {{
-    Verilated::commandArgs(argc, argv);
-    V{circuit_name}* top = new V{circuit_name};
+  Verilated::commandArgs(argc, argv);
+  V{circuit_name}* top = new V{circuit_name};
 
 {main_body}
 
@@ -75,7 +79,7 @@ class VerilatorTarget(Target):
         for i, action in enumerate(self.actions):
             code = VerilatorTarget.generate_action_code(i, action)
             for line in code:
-                main_body += f"    {line}\n"
+                main_body += f"  {line}\n"
 
         includes_src = "\n".join(["#include " + i for i in includes])
         src = src_tpl.format(
