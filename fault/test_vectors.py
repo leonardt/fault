@@ -60,7 +60,7 @@ def flatten_tests(tests):
 
 @pytest.mark.skip(reason="Not a test")
 def generate_function_test_vectors(circuit, func, input_ranges=None,
-                                   mode='complete'):
+                                   mode='complete', flatten=True):
     check(circuit, func)
 
     args = []
@@ -96,11 +96,15 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
         else:
             test[-1].append(result)
         tests.append(test)
-    return flatten_tests(tests)
+    if flatten:
+        tests = flatten_tests(tests)
+    else:
+        tests = [test[0] + test[1] for test in tests]
+    return tests
 
 
 def generate_simulator_test_vectors(circuit, input_ranges=None,
-                                    mode='complete'):
+                                    mode='complete', flatten=True):
     ntest = len(circuit.interface.ports.items())
 
     simulator = PythonSimulator(circuit)
@@ -153,4 +157,8 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
 
         tests.append(testv)
 
-    return flatten_tests(tests)
+    if flatten:
+        tests = flatten_tests(tests)
+    else:
+        tests = [test[0] + test[1] for test in tests]
+    return tests
