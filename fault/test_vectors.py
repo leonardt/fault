@@ -155,7 +155,8 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         for i, (name, port) in enumerate(circuit.IO.items()):
             if port.isoutput():
                 val = simulator.get_value(getattr(circuit, name))
-                if isinstance(port, ArrayKind) and not isinstance(port, (BitsKind, SIntKind, UIntKind)):
+                if isinstance(port, ArrayKind) and \
+                        not isinstance(port, (BitsKind, SIntKind, UIntKind)):
                     val = BitVector(val)
                 testv[1].append(val)
 
