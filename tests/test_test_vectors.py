@@ -1,20 +1,15 @@
+from itertools import product
+import pytest
+import tempfile
+from bit_vector import BitVector
 import magma as m
 import mantle
-from fault.test_vectors import generate_function_test_vectors, \
-    generate_simulator_test_vectors
 from common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit
-import pytest
-
-import shutil
-import os
-
-
-def setup_function():
-    os.mkdir("tests/build")
-
-
-def teardown_function():
-    shutil.rmtree("tests/build")
+from fault.test_vectors import \
+    generate_function_test_vectors, \
+    generate_simulator_test_vectors
+from fault.value import AnyValue
+from fault.verilator_target import VerilatorTarget
 
 
 @pytest.mark.parametrize("Circuit", [TestBasicCircuit, TestArrayCircuit,
@@ -27,21 +22,39 @@ def test_circuit(Circuit):
     assert function_test_vectors == simulator_test_vectors
 
 
-def test_basic_circuit():
+def test_combinational_circuit():
     def f(a, b, c):
         return (a & b) ^ c
 
     class main(m.Circuit):
-        IO = ["a", m.In(m.Bit), "b", m.In(m.Bit), "c", m.In(m.Bit),
+        IO = ["a", m.In(m.Bit),
+              "b", m.In(m.Bit),
+              "c", m.In(m.Bit),
               "d", m.Out(m.Bit)]
 
         @classmethod
         def definition(io):
             m.wire(f(io.a, io.b, io.c), io.d)
-    m.compile("tests/build/main", main, "coreir-verilog")
-
-    from fault.verilator_target import VerilatorTarget
 
     test_vectors = generate_function_test_vectors(main, f)
+    assert len(test_vectors) == 2 ** 3 + 1
 
-    VerilatorTarget(main, test_vectors, "tests/build").run()
+    # Check that vectors are as expected. The general pattern that we expect is
+    # that the outputs of the ith vector match f() evaluated on the inputs in
+    # the (i - 1)th vector. Also the order of the inputs matches the canonical
+    # order of the cartesian product.
+    for i, inputs in enumerate(product((0, 1), (0, 1), (0, 1))):
+        vec = test_vectors[i].test_vector
+        expected = [BitVector(x) for x in inputs]
+        assert vec[:3] == expected
+        if i == 0:
+            assert vec[3] == AnyValue
+            continue
+        prev_inputs = test_vectors[i - 1].test_vector[:3]
+        expected = BitVector(f(*prev_inputs), 1)
+        assert vec[3] == expected
+    # Checking the pattern above for the last vector.
+    vec = test_vectors[-1].test_vector
+    prev_inputs = test_vectors[-2].test_vector[:3]
+    expected = BitVector(f(*prev_inputs), 1)
+    assert vec[3] == expected

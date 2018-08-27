@@ -1,103 +1,40 @@
-import fault.logging
-from .target import Target
+from bit_vector import BitVector
 from magma.simulator.python_simulator import PythonSimulator
 from magma.simulator.coreir_simulator import CoreIRSimulator
-from fault.array import Array
-from bit_vector import BitVector
-from fault.value import Value
-
-
-def convert_value(val):
-    if isinstance(val, Array):
-        return val.value
-    return val
+import fault.actions as actions
+from fault.logging import warning
+from fault.target import Target
 
 
 class MagmaSimulatorTarget(Target):
-    def __init__(self, circuit, test_vectors, clock=None, backend="python"):
-        super().__init__(circuit, test_vectors)
-        self._clock = clock
-        self._simulator = None
+    def __init__(self, circuit, actions, clock=None, backend="coreir"):
+        super().__init__(circuit, actions)
+        self.clock = clock
+        self.backend_cls = MagmaSimulatorTarget.simulator_cls(backend)
+
+    def simulator_cls(backend):
+        if backend == "coreir":
+            return CoreIRSimulator
         if backend == "python":
-            self.backend = PythonSimulator
-        elif backend == "coreir":
-            self.backend = CoreIRSimulator
-        else:
-            raise NotImplementedError(backend)
-
-    def init_simulator(self):
-        self._simulator = self.backend(self._circuit, self._clock)
-
-    def __set_value(self, port, val):
-        fault.logging.debug(f"Setting {self._circuit.name}.{port.name.name} to "
-                            f"{val}")
-        val = convert_value(val)
-        self._simulator.set_value(port, val)
-
-    def __check_value(self, port, expected_val):
-        fault.logging.debug(f"Asserting {self._circuit.name}.{port.name.name} "
-                            f"is {expected_val}")
-        sim_val = self._simulator.get_value(port)
-        expected_val = convert_value(expected_val)
-        assert self.__check(sim_val, expected_val), \
-            f"Expected {expected_val}, got {sim_val}"
-
-    def __check(self, sim_val, expected_val):
-        if expected_val is Value.Any:
-            # Anything is equal to Value.Any
-            return True
-        if isinstance(sim_val, list):
-            if isinstance(expected_val, BitVector):
-                return expected_val.__class__(sim_val) == expected_val
-            assert isinstance(expected_val, list)
-            return all(self.__check(x, y)
-                       for x, y in zip(sim_val, expected_val))
-        return sim_val == expected_val
-
-    def __parse_tv(self, tv):
-        inputs = {}
-        steps = 0
-        outputs = {}
-        ports = self._circuit.interface.ports
-        for i, port in enumerate(ports.values()):
-            val = tv[i]
-            if val is None:
-                continue
-            if port is self._clock:
-                if self._simulator.get_value(self._clock) != val:
-                    steps += 1
-            elif port.isoutput():
-                inputs[port] = val
-            elif port.isinput():
-                outputs[port] = val
-            else:
-                raise NotImplementedError()
-        return (inputs, steps, outputs)
-
-    def __process_inputs(self, inputs):
-        for port, val in inputs.items():
-            self.__set_value(port, val)
-
-    def __process_clock(self, steps):
-        if steps == 0:
-            return True
-        self._simulator.advance(steps)
-        return False
-
-    def __process_outputs(self, outputs):
-        for port, val in outputs.items():
-            self.__check_value(port, val)
+            warning("Python simulator is not actively supported")
+            return PythonSimulator
+        raise NotImplementedError(backend)
 
     def run(self):
-        self.init_simulator()
-        ports = self._circuit.interface.ports
-        test_vector_length = len(self._test_vectors[0])
-        assert len(ports.keys()) == test_vector_length, \
-            "Expected len(test_vector) == len(ports.keys())"
-        for tv in self._test_vectors:
-            (inputs, steps, outputs) = self.__parse_tv(tv)
-            self.__process_outputs(outputs)
-            evaluate = self.__process_clock(steps)
-            self.__process_inputs(inputs)
-            if evaluate:
-                self._simulator.evaluate()
+        simulator = self.backend_cls(self.circuit, self.clock)
+        for action in self.actions:
+            if isinstance(action, actions.Poke):
+                simulator.set_value(action.port, action.value)
+            elif isinstance(action, actions.Expect):
+                got = BitVector(simulator.get_value(action.port))
+                expected = action.value
+                assert got == expected, f"Got {got}, expected {expected}"
+            elif isinstance(action, actions.Eval):
+                simulator.evaluate()
+            elif isinstance(action, actions.Step):
+                if self.clock is not action.clock:
+                    raise RuntimeError(f"Using different clocks: {self.clock}, "
+                                       f"{action.clock}")
+                simulator.advance_cycle(action.steps)
+            else:
+                raise NotImplementedError(action)
