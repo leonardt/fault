@@ -1,6 +1,6 @@
-from magma import BitKind, ArrayKind, SIntKind
+from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
 from magma.simulator.python_simulator import PythonSimulator
-from bit_vector import BitVector, SIntVector
+from bit_vector import BitVector, SIntVector, UIntVector
 from inspect import signature
 from itertools import product
 import pytest
@@ -28,6 +28,12 @@ class TestVector:
 
     def __iter__(self):
         return iter(self.test_vector)
+
+    def __str__(self):
+        return str(self.test_vector)
+
+    def __repr__(self):
+        return repr(self.test_vector)
 
 
 # check that number of function arguments equals number of circuit inputs
@@ -149,7 +155,9 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         for i, (name, port) in enumerate(circuit.IO.items()):
             if port.isoutput():
                 val = simulator.get_value(getattr(circuit, name))
-                testv[1].append(BitVector(val))
+                if isinstance(port, ArrayKind) and not isinstance(port, (BitsKind, SIntKind, UIntKind)):
+                    val = BitVector(val)
+                testv[1].append(val)
 
         tests.append(testv)
 
