@@ -1,8 +1,8 @@
-import random
 from bit_vector import BitVector
 import common
 from fault.actions import Poke, Expect, Eval, Step
 from fault.magma_simulator_target import MagmaSimulatorTarget
+from fault.random import random_bv
 
 
 # NOTE(rsetaluri): The python simulator backend is not tested since it is not
@@ -39,10 +39,8 @@ def test_magma_simulator_target_basic(backend):
 
 
 def test_magma_simulator_target_nested_arrays(backend):
-    def _BV(val):
-        return BitVector(val, num_bits=4)
     circ = common.TestNestedArraysCircuit
-    expected = [_BV(random.randint(0, (1 << 4) - 1)) for i in range(3)]
+    expected = [random_bv(4) for i in range(3)]
     actions = []
     for i, val in enumerate(expected):
         actions.append(Poke(circ.I[i], val))
