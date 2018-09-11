@@ -7,14 +7,6 @@ import os
 import shutil
 
 
-def setup_function():
-    os.mkdir("tests/build")
-
-
-def teardown_function():
-    shutil.rmtree("tests/build")
-
-
 def test_configuration():
     class ConfigurationTester(FunctionalTester):
         def configure(self, addr, data):
