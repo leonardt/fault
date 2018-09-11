@@ -38,10 +38,10 @@ class Eval(Action):
 
 
 class Step(Action):
-    def __init__(self, steps, clock):
+    def __init__(self, clock, steps):
         super().__init__()
-        self.steps = steps
         self.clock = clock
+        self.steps = steps
 
     def __str__(self):
-        return f"Step({self.steps}, {self.clock.debug_name})"
+        return f"Step({self.clock.debug_name}, steps={self.steps})"

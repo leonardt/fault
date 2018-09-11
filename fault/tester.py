@@ -1,4 +1,4 @@
-import magma
+iclockmport magma
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.logging import warning
@@ -42,7 +42,7 @@ class Tester:
         if self.clock is None:
             raise RuntimeError("Stepping tester without a clock (did you "
                                "specify a clock during initialization?)")
-        self.actions.append(actions.Step(steps, self.clock))
+        self.actions.append(actions.Step(self.clock, steps))
 
     def serialize(self):
         builder = VectorBuilder(self.circuit)
