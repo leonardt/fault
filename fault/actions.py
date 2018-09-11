@@ -13,6 +13,9 @@ class Poke(Action):
         self.port = port
         self.value = value
 
+    def __str__(self):
+        return f"Poke({self.port.debug_name}, {self.value})"
+
 
 class Expect(Action):
     def __init__(self, port, value):
@@ -22,14 +25,23 @@ class Expect(Action):
         self.port = port
         self.value = value
 
+    def __str__(self):
+        return f"Expect({self.port.debug_name}, {self.value})"
+
 
 class Eval(Action):
     def __init__(self):
         super().__init__()
 
+    def __str__(self):
+        return f"Eval()"
+
 
 class Step(Action):
-    def __init__(self, steps, clock):
+    def __init__(self, clock, steps):
         super().__init__()
-        self.steps = steps
         self.clock = clock
+        self.steps = steps
+
+    def __str__(self):
+        return f"Step({self.clock.debug_name}, steps={self.steps})"
