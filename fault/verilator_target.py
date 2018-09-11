@@ -37,11 +37,12 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
-                 flags=[], skip_compile=False):
+                 flags=[], skip_compile=False, include_verilog=None):
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
         self.skip_compile = skip_compile
+        self.include_verilog = include_verilog
 
     @staticmethod
     def generate_action_code(i, action):
@@ -102,6 +103,12 @@ class VerilatorTarget(Target):
             prefix = str(verilog_file)[:-2]
             magma.compile(prefix, self.circuit, output="verilog")
         assert verilog_file.is_file()
+        if self.include_verilog:
+            with open(verilog_file, "r") as f:
+                contents = f.read()
+            with open(verilog_file, "w") as f:
+                f.write(self.include_verilog)
+                f.write(contents)
         # Write the verilator driver to file.
         src = self.generate_code()
         with open(driver_file, "w") as f:
