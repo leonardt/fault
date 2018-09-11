@@ -46,3 +46,32 @@ def test_tester_nested_arrays():
         expected.append(Expect(circ.O[i], val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
+
+
+def test_copy_tester():
+    circ = common.TestBasicClkCircuit
+    expected = [
+        Poke(circ.I, 0),
+        Expect(circ.O, 0),
+        Poke(circ.CLK, 0),
+        Step(1, circ.CLK)
+    ]
+    tester = fault.Tester(circ, circ.CLK)
+    tester.poke(circ.I, 0)
+    tester.expect(circ.O, 0)
+    tester.poke(circ.CLK, 0)
+    tester.step()
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+
+
+    circ_copy = common.TestBasicClkCircuitCopy
+    copy = tester.copy(circ_copy, circ_copy.CLK)
+    copy_expected = [
+        Poke(circ_copy.I, 0),
+        Expect(circ_copy.O, 0),
+        Poke(circ_copy.CLK, 0),
+        Step(1, circ_copy.CLK)
+    ]
+    for i, exp in enumerate(copy_expected):
+        check(copy.actions[i], exp)
