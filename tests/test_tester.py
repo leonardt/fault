@@ -64,7 +64,6 @@ def test_copy_tester():
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 
-
     circ_copy = common.TestBasicClkCircuitCopy
     copy = tester.copy(circ_copy, circ_copy.CLK)
     copy_expected = [

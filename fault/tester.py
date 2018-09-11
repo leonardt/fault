@@ -65,8 +65,8 @@ class Tester:
                 raise ValueError(f"New circuit does not have port {name}")
             old_kind = type(type(getattr(old_circuit, name)))
             new_kind = type(type(getattr(new_circuit, name)))
-            if not (issubclass(new_kind, old_kind) or \
-                issubclass(old_kind, new_kind)):
+            if not (issubclass(new_kind, old_kind) or
+                    issubclass(old_kind, new_kind)):
                 raise ValueError("Types don't match")
 
     def copy(self, new_circuit, clock=None):
@@ -79,7 +79,8 @@ class Tester:
         for old_action in self.actions:
             new_action = copy.copy(old_action)
             if isinstance(new_action, (Poke, Expect)):
-                new_action.port = getattr(new_circuit, str(old_action.port.name))
+                new_action.port = getattr(new_circuit,
+                                          str(old_action.port.name))
             elif isinstance(new_action, Step):
                 new_action.clock = clock
             new_tester.actions.append(new_action)
