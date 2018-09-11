@@ -58,6 +58,6 @@ def test_magma_simulator_target_clock(backend):
         # TODO(rsetaluri): Figure out how to set clock value directly with the
         # coreir simulator. Currently it does not allow this.
         # Poke(circ.CLK, BitVector(0, 1)),
-        Step(1, circ.CLK),
+        Step(circ.CLK, 1),
     ]
     run(circ, actions, circ.CLK, backend)

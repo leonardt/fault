@@ -30,7 +30,7 @@ def test_tester_clock():
     assert builder.vectors == [
         [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)]
     ]
-    builder.process(Step(1, circ.CLK))
+    builder.process(Step(circ.CLK, 1))
     assert builder.vectors == [
         [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
         [BitVector(0, 1), fault.AnyValue, BitVector(1, 1)]
