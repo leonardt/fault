@@ -1,4 +1,5 @@
 from bit_vector import BitVector
+import magma as m
 from magma.simulator.python_simulator import PythonSimulator
 from magma.simulator.coreir_simulator import CoreIRSimulator
 import fault.actions as actions
@@ -24,7 +25,13 @@ class MagmaSimulatorTarget(Target):
         simulator = self.backend_cls(self.circuit, self.clock)
         for action in self.actions:
             if isinstance(action, actions.Poke):
-                simulator.set_value(action.port, action.value)
+                value = action.value
+                # Python simulator does not support setting Bit with
+                # BitVector(1), so do conversion here
+                if isinstance(action.port, m.BitType) and \
+                        isinstance(value, BitVector):
+                    value = value.as_uint()
+                simulator.set_value(action.port, value)
             elif isinstance(action, actions.Expect):
                 got = BitVector(simulator.get_value(action.port))
                 expected = action.value
