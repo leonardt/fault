@@ -1,4 +1,3 @@
-iclockmport magma
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.logging import warning
