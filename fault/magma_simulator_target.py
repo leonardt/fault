@@ -28,7 +28,8 @@ class MagmaSimulatorTarget(Target):
                 value = action.value
                 # Python simulator does not support setting Bit with
                 # BitVector(1), so do conversion here
-                if isinstance(action.port, m.BitType) and isinstance(value, BitVector):
+                if isinstance(action.port, m.BitType) and \
+                        isinstance(value, BitVector):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
             elif isinstance(action, actions.Expect):
