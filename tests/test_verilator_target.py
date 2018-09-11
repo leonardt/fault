@@ -43,6 +43,6 @@ def test_verilator_target_clock():
         Poke(circ.I, 0),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
-        Step(1, circ.CLK),
+        Step(circ.CLK, 1),
     ]
     run(circ, actions, flags=["-Wno-lint"])

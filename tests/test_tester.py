@@ -31,7 +31,7 @@ def test_tester_clock():
     tester.poke(circ.CLK, 0)
     check(tester.actions[2], Poke(circ.CLK, 0))
     tester.step()
-    check(tester.actions[3], Step(1, circ.CLK))
+    check(tester.actions[3], Step(circ.CLK, 1))
 
 
 def test_tester_nested_arrays():
