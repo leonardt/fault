@@ -2,7 +2,8 @@ import magma
 import fault.actions as actions
 
 
-def verilator_cmd(top, verilog_filename, driver_filename, verilator_flags):
+def verilator_cmd(top, verilog_filename, include_verilog_files, driver_filename,
+                  verilator_flags):
     DEFAULT_FLAGS = [
         "-Wall",
         "-Wno-INCABSPATH",
@@ -11,8 +12,10 @@ def verilator_cmd(top, verilog_filename, driver_filename, verilator_flags):
     flags = DEFAULT_FLAGS
     flags.extend(verilator_flags)
     flag_str = " ".join(flags)
+    include_str = ' '.join(f'-v {file_}' for file_ in include_verilog_files)
     return (f"verilator {flag_str} "
             f"--cc {verilog_filename} "
+            f"{include_str} "
             f"--exe {driver_filename} "
             f"--top-module {top}")
 

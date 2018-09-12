@@ -37,12 +37,12 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
-                 flags=[], skip_compile=False, include_verilog=None):
+                 flags=[], skip_compile=False, include_verilog_files=[]):
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
         self.skip_compile = skip_compile
-        self.include_verilog = include_verilog
+        self.include_verilog_files = include_verilog_files
 
     @staticmethod
     def generate_action_code(i, action):
@@ -103,12 +103,6 @@ class VerilatorTarget(Target):
             prefix = str(verilog_file)[:-2]
             magma.compile(prefix, self.circuit, output="verilog")
         assert verilog_file.is_file()
-        if self.include_verilog:
-            with open(verilog_file, "r") as f:
-                contents = f.read()
-            with open(verilog_file, "w") as f:
-                f.write(self.include_verilog)
-                f.write(contents)
         # Write the verilator driver to file.
         src = self.generate_code()
         with open(driver_file, "w") as f:
@@ -117,7 +111,8 @@ class VerilatorTarget(Target):
         # the Makefile output by verilator, and finally run the executable
         # created by verilator.
         verilator_cmd = verilator_utils.verilator_cmd(
-            top, verilog_file.name, driver_file.name, self.flags)
+            top, verilog_file.name, self.include_verilog_files,
+            driver_file.name, self.flags)
         assert not self.run_from_directory(verilator_cmd)
         verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
         assert not self.run_from_directory(verilator_make_cmd)

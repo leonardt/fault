@@ -1,11 +1,9 @@
 import fault
 import magma as m
+import shutil
 
 
 def test_include_verilog():
-    with open("tests/cells_sim.v") as f:
-        ice40_verilog_sim = f.read()
-
     SB_DFF = m.DeclareCircuit('SB_DFF', "D", m.In(m.Bit), "Q", m.Out(m.Bit),
                               "C", m.In(m.Clock))
     main = m.DefineCircuit('main', "I", m.In(m.Bit), "O", m.Out(m.Bit),
@@ -22,4 +20,4 @@ def test_include_verilog():
     tester.step(2)
     tester.expect(main.O, 1)
     tester.compile_and_run(target="verilator", directory="tests/build",
-                           include_verilog=ice40_verilog_sim)
+                           include_verilog_files=["../sb_dff_sim.v"])
