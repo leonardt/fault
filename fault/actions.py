@@ -17,23 +17,28 @@ class PortAction(Action):
         self.value = value
 
     def __str__(self):
-        return f"{type(self).__name__}({self.port.debug_name}, {self.value})"
+        type_name = type(self).__name__
+        return f"{type_name}({self.port.debug_name}, {self.value})"
 
     def retarget(self, new_circuit, clock):
-        return type(self)(getattr(new_circuit, str(self.port.name)), self.value)
+        cls = type(self)
+        new_port = new_circuit.interface.ports[str(self.port.name)]
+        return cls(new_port, self.value)
 
 
 class Poke(PortAction):
     def __init__(self, port, value):
         if port.isinput():
-            raise ValueError(f"Can only poke inputs: {port} {type(port)}")
+            raise ValueError(f"Can only poke inputs: {port.debug_name} "
+                             f"{type(port)}")
         super().__init__(port, value)
 
 
 class Expect(PortAction):
     def __init__(self, port, value):
         if port.isoutput():
-            raise ValueError(f"Can only expect on outputs: {port} {type(port)}")
+            raise ValueError(f"Can only expect on outputs: {port.debug_name} "
+                             f"{type(port)}")
         super().__init__(port, value)
 
 
@@ -42,7 +47,7 @@ class Eval(Action):
         super().__init__()
 
     def __str__(self):
-        return f"Eval()"
+        return "Eval()"
 
     def retarget(self, new_circuit, clock):
         return Eval()
@@ -51,6 +56,7 @@ class Eval(Action):
 class Step(Action):
     def __init__(self, clock, steps):
         super().__init__()
+        # TODO(rsetaluri): Check if `clock` is a clock type?
         self.clock = clock
         self.steps = steps
 
