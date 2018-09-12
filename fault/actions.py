@@ -2,31 +2,39 @@ from abc import ABC, abstractmethod
 
 
 class Action(ABC):
-    pass
+    @abstractmethod
+    def retarget(self, new_circuit, clock):
+        """
+        Create a copy of the action for `new_circuit` with `clock`
+        """
+        raise NotImplementedError()
 
 
-class Poke(Action):
+class PortAction(Action):
     def __init__(self, port, value):
         super().__init__()
+        self.port = port
+        self.value = value
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.port.debug_name}, {self.value})"
+
+    def retarget(self, new_circuit, clock):
+        return type(self)(getattr(new_circuit, str(self.port.name)), self.value)
+
+
+class Poke(PortAction):
+    def __init__(self, port, value):
         if port.isinput():
             raise ValueError(f"Can only poke inputs: {port} {type(port)}")
-        self.port = port
-        self.value = value
-
-    def __str__(self):
-        return f"Poke({self.port.debug_name}, {self.value})"
+        super().__init__(port, value)
 
 
-class Expect(Action):
+class Expect(PortAction):
     def __init__(self, port, value):
-        super().__init__()
         if port.isoutput():
             raise ValueError(f"Can only expect on outputs: {port} {type(port)}")
-        self.port = port
-        self.value = value
-
-    def __str__(self):
-        return f"Expect({self.port.debug_name}, {self.value})"
+        super().__init__(port, value)
 
 
 class Eval(Action):
@@ -35,6 +43,9 @@ class Eval(Action):
 
     def __str__(self):
         return f"Eval()"
+
+    def retarget(self, new_circuit, clock):
+        return Eval()
 
 
 class Step(Action):
@@ -45,3 +56,6 @@ class Step(Action):
 
     def __str__(self):
         return f"Step({self.clock.debug_name}, steps={self.steps})"
+
+    def retarget(self, new_circuit, clock):
+        return Step(clock, self.steps)

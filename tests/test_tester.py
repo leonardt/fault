@@ -54,23 +54,24 @@ def test_copy_tester():
         Poke(circ.I, 0),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
-        Step(1, circ.CLK)
+        Step(circ.CLK, 1)
     ]
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
     tester.poke(circ.CLK, 0)
     tester.step()
+    print(tester.actions)
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 
     circ_copy = common.TestBasicClkCircuitCopy
-    copy = tester.copy(circ_copy, circ_copy.CLK)
+    copy = tester.retarget(circ_copy, circ_copy.CLK)
     copy_expected = [
         Poke(circ_copy.I, 0),
         Expect(circ_copy.O, 0),
         Poke(circ_copy.CLK, 0),
-        Step(1, circ_copy.CLK)
+        Step(circ_copy.CLK, 1)
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)

@@ -6,6 +6,7 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.actions import Poke, Expect, Step
+from fault.circuit_utils import check_interface_is_subset
 import copy
 
 
@@ -58,30 +59,17 @@ class Tester:
         target_inst = self.make_target(target, **kwargs)
         target_inst.run()
 
-    def __check_interfaces_match(self, old_circuit, new_circuit):
-        old_port_names = old_circuit.interface.ports.keys()
-        for name in old_port_names:
-            if not hasattr(new_circuit, name):
-                raise ValueError(f"New circuit does not have port {name}")
-            old_kind = type(type(getattr(old_circuit, name)))
-            new_kind = type(type(getattr(new_circuit, name)))
-            if not (issubclass(new_kind, old_kind) or
-                    issubclass(old_kind, new_kind)):
-                raise ValueError("Types don't match")
+    def retarget(self, new_circuit, clock=None):
+        """
+        Generates a new instance of the Tester object that targets
+        `new_circuit`. This allows you to copy a set of actions for a new
+        circuit with the same interface (or an interface that is a super set of
+        self.circuit)
+        """
+        # Check that the interface of self.circuit is a subset of new_circuit
+        check_interface_is_subset(self.circuit, new_circuit)
 
-    def copy(self, new_circuit, clock=None):
-        """
-        Generates a copy of the tester for new_circuit
-        Checks that new_circut has exactly the same interface as self.circuit
-        """
-        self.__check_interfaces_match(self.circuit, new_circuit)
         new_tester = Tester(new_circuit, clock)
-        for old_action in self.actions:
-            new_action = copy.copy(old_action)
-            if isinstance(new_action, (Poke, Expect)):
-                new_action.port = getattr(new_circuit,
-                                          str(old_action.port.name))
-            elif isinstance(new_action, Step):
-                new_action.clock = clock
-            new_tester.actions.append(new_action)
+        new_tester.actions = [action.retarget(new_circuit, clock) for action in
+                              self.actions]
         return new_tester
