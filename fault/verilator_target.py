@@ -37,11 +37,12 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
-                 flags=[], skip_compile=False):
+                 flags=[], skip_compile=False, include_verilog_files=[]):
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
         self.skip_compile = skip_compile
+        self.include_verilog_files = include_verilog_files
 
     @staticmethod
     def generate_action_code(i, action):
@@ -110,7 +111,8 @@ class VerilatorTarget(Target):
         # the Makefile output by verilator, and finally run the executable
         # created by verilator.
         verilator_cmd = verilator_utils.verilator_cmd(
-            top, verilog_file.name, driver_file.name, self.flags)
+            top, verilog_file.name, self.include_verilog_files,
+            driver_file.name, self.flags)
         assert not self.run_from_directory(verilator_cmd)
         verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
         assert not self.run_from_directory(verilator_make_cmd)

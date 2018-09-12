@@ -5,14 +5,7 @@ import magma as m
 import mantle
 import os
 import shutil
-
-
-def setup_function():
-    os.mkdir("tests/build")
-
-
-def teardown_function():
-    shutil.rmtree("tests/build")
+import tempfile
 
 
 def test_configuration():
@@ -55,6 +48,8 @@ def test_configuration():
     tester.configure(1, 32)
     tester.configure(0, 23)
     tester.configure(1, 41)
-    m.compile("tests/build/Configurable", Configurable, output="coreir-verilog")
-    tester.compile_and_run(directory="tests/build", target="verilator",
-                           flags=["-Wno-fatal"], skip_compile=True)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        m.compile(f"{tmp_dir}/Configurable", Configurable,
+                  output="coreir-verilog")
+        tester.compile_and_run(directory=tmp_dir, target="verilator",
+                               flags=["-Wno-fatal"], skip_compile=True)
