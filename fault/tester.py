@@ -11,13 +11,13 @@ import copy
 
 
 class Tester:
-    def __init__(self, circuit, clock=None, default_peek_format_str="%x"):
+    def __init__(self, circuit, clock=None, default_print_format_str="%x"):
         self.circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, magma.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
-        self.default_peek_format_str = default_peek_format_str
+        self.default_print_format_str = default_print_format_str
 
     def make_target(self, target, **kwargs):
         if target == "verilator":
@@ -37,9 +37,9 @@ class Tester:
         value = make_value(port, value)
         self.actions.append(actions.Poke(port, value))
 
-    def peek(self, port, format_str=None):
+    def print(self, port, format_str=None):
         if format_str is None:
-            format_str = self.default_peek_format_str
+            format_str = self.default_print_format_str
         self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
@@ -75,7 +75,7 @@ class Tester:
         # Check that the interface of self.circuit is a subset of new_circuit
         check_interface_is_subset(self.circuit, new_circuit)
 
-        new_tester = Tester(new_circuit, clock, self.default_peek_format_str)
+        new_tester = Tester(new_circuit, clock, self.default_print_format_str)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
                               self.actions]
         return new_tester
