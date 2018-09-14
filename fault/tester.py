@@ -75,7 +75,7 @@ class Tester:
         # Check that the interface of self.circuit is a subset of new_circuit
         check_interface_is_subset(self.circuit, new_circuit)
 
-        new_tester = Tester(new_circuit, clock)
+        new_tester = Tester(new_circuit, clock, self.default_peek_format_str)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
                               self.actions]
         return new_tester

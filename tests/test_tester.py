@@ -50,29 +50,36 @@ def test_tester_nested_arrays():
         check(tester.actions[i], exp)
 
 
-def test_copy_tester():
+def test_retarget_tester():
     circ = common.TestBasicClkCircuit
     expected = [
         Poke(circ.I, 0),
+        Eval(),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
-        Step(circ.CLK, 1)
+        Step(circ.CLK, 1),
+        Peek(circ.O, "%08x")
     ]
-    tester = fault.Tester(circ, circ.CLK)
+    tester = fault.Tester(circ, circ.CLK, default_peek_format_str="%08x")
     tester.poke(circ.I, 0)
+    tester.eval()
     tester.expect(circ.O, 0)
     tester.poke(circ.CLK, 0)
     tester.step()
+    tester.peek(circ.O)
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 
     circ_copy = common.TestBasicClkCircuitCopy
     copy = tester.retarget(circ_copy, circ_copy.CLK)
+    assert copy.default_peek_format_str == "%08x"
     copy_expected = [
         Poke(circ_copy.I, 0),
+        Eval(),
         Expect(circ_copy.O, 0),
         Poke(circ_copy.CLK, 0),
-        Step(circ_copy.CLK, 1)
+        Step(circ_copy.CLK, 1),
+        Peek(circ_copy.O, "%08x")
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)
