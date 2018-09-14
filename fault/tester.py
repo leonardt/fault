@@ -5,18 +5,19 @@ from fault.logging import warning
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
-from fault.actions import Poke, Expect, Step
+from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
 import copy
 
 
 class Tester:
-    def __init__(self, circuit, clock=None):
+    def __init__(self, circuit, clock=None, default_print_format_str="%x"):
         self.circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, magma.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
+        self.default_print_format_str = default_print_format_str
 
     def make_target(self, target, **kwargs):
         if target == "verilator":
@@ -35,6 +36,11 @@ class Tester:
     def poke(self, port, value):
         value = make_value(port, value)
         self.actions.append(actions.Poke(port, value))
+
+    def print(self, port, format_str=None):
+        if format_str is None:
+            format_str = self.default_print_format_str
+        self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
         value = make_value(port, value)
@@ -69,7 +75,7 @@ class Tester:
         # Check that the interface of self.circuit is a subset of new_circuit
         check_interface_is_subset(self.circuit, new_circuit)
 
-        new_tester = Tester(new_circuit, clock)
+        new_tester = Tester(new_circuit, clock, self.default_print_format_str)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
                               self.actions]
         return new_tester

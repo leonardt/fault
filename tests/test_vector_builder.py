@@ -2,7 +2,7 @@ import random
 from bit_vector import BitVector
 import fault
 import common
-from fault.actions import Poke, Expect, Eval, Step
+from fault.actions import Poke, Expect, Eval, Step, Print
 from fault.array import Array
 from fault.vector_builder import VectorBuilder
 
@@ -22,6 +22,7 @@ def test_tester_clock():
     circ = common.TestBasicClkCircuit
     builder = VectorBuilder(circ)
     builder.process(Poke(circ.I, BitVector(0, 1)))
+    builder.process(Print(circ.O))
     builder.process(Expect(circ.O, BitVector(0, 1)))
     assert builder.vectors == [
         [BitVector(0, 1), BitVector(0, 1), fault.AnyValue]
