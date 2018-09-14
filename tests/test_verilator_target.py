@@ -4,7 +4,7 @@ import fault
 from bit_vector import BitVector
 import common
 import random
-from fault.actions import Poke, Expect, Eval, Step
+from fault.actions import Poke, Expect, Eval, Step, Peek
 
 
 def run(circ, actions, flags=[]):
@@ -37,12 +37,18 @@ def test_verilator_target_nested_arrays():
     run(circ, actions)
 
 
-def test_verilator_target_clock():
+def test_verilator_target_clock(capfd):
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
+        Peek(circ.O),
         Step(circ.CLK, 1),
+        Poke(circ.I, BitVector(1, 1)),
+        Eval(),
+        Peek(circ.O),
     ]
     run(circ, actions, flags=["-Wno-lint"])
+    out, err = capfd.readouterr()
+    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", "Peek output incorrect"

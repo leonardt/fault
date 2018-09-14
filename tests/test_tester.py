@@ -1,7 +1,7 @@
 import random
 from bit_vector import BitVector
 import fault
-from fault.actions import Poke, Expect, Eval, Step
+from fault.actions import Poke, Expect, Eval, Step, Peek
 import common
 
 
@@ -15,10 +15,12 @@ def test_tester_basic():
     tester = fault.Tester(circ)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
+    tester.peek(circ.O, "%08x")
     check(tester.actions[0], Poke(circ.I, 0))
     check(tester.actions[1], Expect(circ.O, 0))
+    check(tester.actions[2], Peek(circ.O, "%08x"))
     tester.eval()
-    check(tester.actions[2], Eval())
+    check(tester.actions[3], Eval())
 
 
 def test_tester_clock():
@@ -61,7 +63,6 @@ def test_copy_tester():
     tester.expect(circ.O, 0)
     tester.poke(circ.CLK, 0)
     tester.step()
-    print(tester.actions)
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 

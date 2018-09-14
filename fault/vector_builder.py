@@ -57,5 +57,8 @@ class VectorBuilder:
                 val ^= BitVector(1, 1)
                 self.__eval()
                 self.__set(indices, val)
+        elif isinstance(action, actions.Peek):
+            # Skip Peek actions for test vectors
+            return
         else:
             raise NotImplementedError(action)

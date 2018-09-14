@@ -1,6 +1,6 @@
 from bit_vector import BitVector
 import common
-from fault.actions import Poke, Expect, Eval, Step
+from fault.actions import Poke, Expect, Eval, Step, Peek
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv
 
@@ -50,7 +50,7 @@ def test_magma_simulator_target_nested_arrays(backend):
     run(circ, actions, None, backend)
 
 
-def test_magma_simulator_target_clock(backend):
+def test_magma_simulator_target_clock(backend, capfd):
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, BitVector(0, 1)),
@@ -59,5 +59,10 @@ def test_magma_simulator_target_clock(backend):
         # coreir simulator. Currently it does not allow this.
         # Poke(circ.CLK, BitVector(0, 1)),
         Step(circ.CLK, 1),
+        Poke(circ.I, BitVector(1, 1)),
+        Eval(),
+        Peek(circ.O),
     ]
     run(circ, actions, circ.CLK, backend)
+    out, err = capfd.readouterr()
+    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", "Peek output incorrect"
