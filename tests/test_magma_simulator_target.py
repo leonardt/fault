@@ -1,6 +1,6 @@
 from bit_vector import BitVector
 import common
-from fault.actions import Poke, Expect, Eval, Step, Peek
+from fault.actions import Poke, Expect, Eval, Step, Print
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv
 
@@ -61,9 +61,9 @@ def test_magma_simulator_target_clock(backend, capfd):
         Step(circ.CLK, 1),
         Poke(circ.I, BitVector(1, 1)),
         Eval(),
-        Peek(circ.O),
+        Print(circ.O),
     ]
     run(circ, actions, circ.CLK, backend)
     out, err = capfd.readouterr()
     assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", \
-        "Peek output incorrect"
+        "Print output incorrect"

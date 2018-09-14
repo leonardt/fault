@@ -32,7 +32,7 @@ class MagmaSimulatorTarget(Target):
                         isinstance(value, BitVector):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
-            elif isinstance(action, actions.Peek):
+            elif isinstance(action, actions.Print):
                 got = BitVector(simulator.get_value(action.port))
                 print(f'{action.port.debug_name} = {action.format_str}' %
                       got.as_uint())

@@ -5,7 +5,7 @@ from fault.logging import warning
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
-from fault.actions import Poke, Expect, Step, Peek
+from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
 import copy
 
@@ -40,7 +40,7 @@ class Tester:
     def peek(self, port, format_str=None):
         if format_str is None:
             format_str = self.default_peek_format_str
-        self.actions.append(actions.Peek(port, format_str))
+        self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
         value = make_value(port, value)

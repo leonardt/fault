@@ -34,7 +34,7 @@ class Poke(PortAction):
         super().__init__(port, value)
 
 
-class Peek(Action):
+class Print(Action):
     def __init__(self, port, format_str="%x"):
         if port.isoutput():
             raise ValueError(f"Can only peek outputs: {port.debug_name} "
@@ -44,7 +44,7 @@ class Peek(Action):
         self.format_str = format_str
 
     def __str__(self):
-        return f"Peek({self.port.debug_name}, \"{self.format_str}\")"
+        return f"Print({self.port.debug_name}, \"{self.format_str}\")"
 
     def retarget(self, new_circuit, clock):
         cls = type(self)

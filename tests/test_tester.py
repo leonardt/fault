@@ -1,7 +1,7 @@
 import random
 from bit_vector import BitVector
 import fault
-from fault.actions import Poke, Expect, Eval, Step, Peek
+from fault.actions import Poke, Expect, Eval, Step, Print
 import common
 
 
@@ -18,7 +18,7 @@ def test_tester_basic():
     tester.peek(circ.O, "%08x")
     check(tester.actions[0], Poke(circ.I, 0))
     check(tester.actions[1], Expect(circ.O, 0))
-    check(tester.actions[2], Peek(circ.O, "%08x"))
+    check(tester.actions[2], Print(circ.O, "%08x"))
     tester.eval()
     check(tester.actions[3], Eval())
 
@@ -58,7 +58,7 @@ def test_retarget_tester():
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
         Step(circ.CLK, 1),
-        Peek(circ.O, "%08x")
+        Print(circ.O, "%08x")
     ]
     tester = fault.Tester(circ, circ.CLK, default_peek_format_str="%08x")
     tester.poke(circ.I, 0)
@@ -79,7 +79,7 @@ def test_retarget_tester():
         Expect(circ_copy.O, 0),
         Poke(circ_copy.CLK, 0),
         Step(circ_copy.CLK, 1),
-        Peek(circ_copy.O, "%08x")
+        Print(circ_copy.O, "%08x")
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)

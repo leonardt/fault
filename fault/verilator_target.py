@@ -49,7 +49,7 @@ class VerilatorTarget(Target):
         if isinstance(action, actions.Poke):
             name = verilator_utils.verilator_name(action.port.name)
             return [f"top->{name} = {action.value};"]
-        if isinstance(action, actions.Peek):
+        if isinstance(action, actions.Print):
             name = verilator_utils.verilator_name(action.port.name)
             return [f'printf("{action.port.debug_name} = '
                     f'{action.format_str}\\n", top->{name});']
