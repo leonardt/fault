@@ -51,4 +51,5 @@ def test_verilator_target_clock(capfd):
     ]
     run(circ, actions, flags=["-Wno-lint"])
     out, err = capfd.readouterr()
-    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", "Peek output incorrect"
+    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", \
+        "Peek output incorrect"

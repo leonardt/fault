@@ -65,4 +65,5 @@ def test_magma_simulator_target_clock(backend, capfd):
     ]
     run(circ, actions, circ.CLK, backend)
     out, err = capfd.readouterr()
-    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", "Peek output incorrect"
+    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", \
+        "Peek output incorrect"
