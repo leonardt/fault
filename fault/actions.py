@@ -52,7 +52,6 @@ class Peek(Action):
         return cls(new_port, self.format_str)
 
 
-
 class Expect(PortAction):
     def __init__(self, port, value):
         if port.isoutput():
