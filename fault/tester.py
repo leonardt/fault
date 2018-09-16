@@ -79,3 +79,8 @@ class Tester:
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
                               self.actions]
         return new_tester
+
+    def zero_inputs(self):
+        for name, port in self.circuit.IO.ports.items():
+            if port.isinput():
+                self.poke(getattr(self.circuit, name), 0)
