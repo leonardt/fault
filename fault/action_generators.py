@@ -1,8 +1,9 @@
 import fault
 from fault.common import get_renamed_port
 
+
 def generate_actions_from_streams(circuit, functional_model, streams,
-                                       num_vectors=10, input_mapping=None):
+                                  num_vectors=10, input_mapping=None):
     tester = fault.Tester(circuit)
 
     for i in range(num_vectors):
