@@ -1,4 +1,5 @@
 import magma
+import magma as m
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.logging import warning
@@ -33,18 +34,33 @@ class Tester:
                                         **kwargs)
         raise NotImplementedError(target)
 
+    def make_array_action(self, port, value, action):
+        for i in range(port.N):
+            action(port[i], value[i])
+
     def poke(self, port, value):
         value = make_value(port, value)
-        self.actions.append(actions.Poke(port, value))
+        if isinstance(port, m.ArrayType) and \
+                not isinstance(port.T, m.BitKind):
+            self.make_array_action(port, value, self.poke)
+        else:
+            self.actions.append(actions.Poke(port, value))
 
     def print(self, port, format_str=None):
+        if isinstance(port, m.ArrayType) and \
+                not isinstance(port.T, m.BitKind):
+            raise NotImplementedError("Printing nested arrays")
         if format_str is None:
             format_str = self.default_print_format_str
         self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
         value = make_value(port, value)
-        self.actions.append(actions.Expect(port, value))
+        if isinstance(port, m.ArrayType) and \
+                not isinstance(port.T, m.BitKind):
+            self.make_array_action(port, value, self.expect)
+        else:
+            self.actions.append(actions.Expect(port, value))
 
     def eval(self):
         self.actions.append(actions.Eval())
