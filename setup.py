@@ -3,7 +3,7 @@ import sys
 
 setup(
     name='fault',
-    version='0.22',
+    version='0.23',
     description='A Python package for testing hardware (part of the magma ecosystem)',
     scripts=[],
     packages=[
