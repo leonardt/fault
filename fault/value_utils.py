@@ -5,9 +5,9 @@ from fault.array import Array
 
 
 def make_value(port, value):
-    if isinstance(port, magma._BitType):
+    if isinstance(port, (magma._BitType, magma._BitKind)):
         return make_bit(value)
-    if isinstance(port, magma.ArrayType):
+    if isinstance(port, (magma.ArrayType, magma.ArrayKind)):
         return make_array(port.T, port.N, value)
     raise NotImplementedError(port, value)
 

@@ -13,14 +13,16 @@ def check(got, expected):
 def test_tester_basic():
     circ = common.TestBasicCircuit
     tester = fault.Tester(circ)
-    tester.poke(circ.I, 0)
+    tester.zero_inputs()
+    check(tester.actions[0], Poke(circ.I, 0))
+    tester.poke(circ.I, 1)
     tester.expect(circ.O, 0)
     tester.print(circ.O, "%08x")
-    check(tester.actions[0], Poke(circ.I, 0))
-    check(tester.actions[1], Expect(circ.O, 0))
-    check(tester.actions[2], Print(circ.O, "%08x"))
+    check(tester.actions[1], Poke(circ.I, 1))
+    check(tester.actions[2], Expect(circ.O, 0))
+    check(tester.actions[3], Print(circ.O, "%08x"))
     tester.eval()
-    check(tester.actions[3], Eval())
+    check(tester.actions[4], Eval())
 
 
 def test_tester_clock():
