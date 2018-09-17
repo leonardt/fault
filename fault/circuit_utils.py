@@ -15,4 +15,6 @@ def check_interface_is_subset(circuit1, circuit2):
         # Check that the type of one could be converted to the other
         if not (issubclass(circuit2_kind, circuit1_kind) or
                 issubclass(circuit1_kind, circuit2_kind)):
-            raise ValueError("Types don't match")
+            raise ValueError(f"Port {name} types don't match:"
+                             f" Type0={circuit1_kind},"
+                             f" Type1={circuit2_kind}")
