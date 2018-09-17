@@ -36,9 +36,6 @@ class Poke(PortAction):
 
 class Print(Action):
     def __init__(self, port, format_str="%x"):
-        if port.isoutput():
-            raise ValueError(f"Can only peek outputs: {port.debug_name} "
-                             f"{type(port)}")
         super().__init__()
         self.port = port
         self.format_str = format_str

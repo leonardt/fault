@@ -41,6 +41,7 @@ def test_verilator_target_clock(capfd):
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
+        Print(circ.I),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
         Print(circ.O),
@@ -51,5 +52,8 @@ def test_verilator_target_clock(capfd):
     ]
     run(circ, actions, flags=["-Wno-lint"])
     out, err = capfd.readouterr()
-    assert out.splitlines()[-1] == "BasicClkCircuit.O = 1", \
-        "Print output incorrect"
+    lines = out.splitlines()
+
+    assert lines[-3] == "BasicClkCircuit.I = 0", "Print output incorrect"
+    assert lines[-2] == "BasicClkCircuit.O = 0", "Print output incorrect"
+    assert lines[-1] == "BasicClkCircuit.O = 1", "Print output incorrect"
