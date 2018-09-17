@@ -49,7 +49,8 @@ def test_verilator_target_nested_arrays_bulk():
 
 def test_verilator_target_double_nested_arrays_bulk():
     circ = common.TestDoubleNestedArraysCircuit
-    expected = [[random.randint(0, (1 << 4) - 1) for i in range(3)] for _ in range(2)]
+    expected = [[random.randint(0, (1 << 4) - 1) for i in range(3)]
+                for _ in range(2)]
     actions = []
     actions.append(Poke(circ.I, expected))
     actions.append(Eval())

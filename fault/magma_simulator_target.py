@@ -23,9 +23,9 @@ class MagmaSimulatorTarget(Target):
 
     @staticmethod
     def check(got, port, expected):
-        if isinstance(port, (m.ArrayType, m.ArrayKind)) and \
-                isinstance(port.T, (m._BitType, m._BitKind)) and \
-                not isinstance(port, (m.BitsType, m.BitsKind)):
+        if isinstance(port, m.ArrayType) and \
+                isinstance(port.T, m._BitType) and \
+                not isinstance(port, m.BitsType):
             if isinstance(expected, BitVector):
                 # Python simulator will return a list of bools
                 expected = expected.as_bool_list()
@@ -48,10 +48,10 @@ class MagmaSimulatorTarget(Target):
                 simulator.set_value(action.port, value)
             elif isinstance(action, actions.Print):
                 got = simulator.get_value(action.port)
-                if isinstance(action.port, (m.ArrayType, m.ArrayKind)) and \
+                if isinstance(action.port, m.ArrayType) and \
                         isinstance(action.port.T, (m._BitType, m._BitKind)):
                     got = BitVector(got).as_uint()
-                elif isinstance(action.port, (m.ArrayType, m.ArrayKind)):
+                elif isinstance(action.port, m.ArrayType):
                     raise NotImplementedError("Printing complex nested arrays")
                 print(f'{action.port.debug_name} = {action.format_str}' %
                       got)
