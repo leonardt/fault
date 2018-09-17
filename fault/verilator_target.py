@@ -1,7 +1,6 @@
 from .array import Array
 from pathlib import Path
 import subprocess
-import magma
 import magma as m
 import fault.actions as actions
 from fault.target import Target
@@ -127,7 +126,7 @@ class VerilatorTarget(Target):
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
             prefix = str(verilog_file)[:-2]
-            magma.compile(prefix, self.circuit, output=self.magma_output)
+            m.compile(prefix, self.circuit, output=self.magma_output)
         assert verilog_file.is_file()
         # Write the verilator driver to file.
         src = self.generate_code()
