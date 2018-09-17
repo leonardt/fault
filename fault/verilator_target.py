@@ -39,6 +39,16 @@ class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="verilog"):
+        """
+        Params:
+            `include_verilog_libraries`: a list of verilog libraries to include
+            with the -v flag.  From the verilator docs:
+                -v <filename>              Verilog library
+
+            `include_directories`: a list of directories to include using the
+            -I flag. From the the verilator docs:
+                -I<dir>                    Directory to search for includes
+        """
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
