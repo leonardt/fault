@@ -51,6 +51,8 @@ class MagmaSimulatorTarget(Target):
                 if isinstance(action.port, (m.ArrayType, m.ArrayKind)) and \
                         isinstance(action.port.T, (m._BitType, m._BitKind)):
                     got = BitVector(got).as_uint()
+                else if isinstance(action.port, (m.ArrayType, m.ArrayKind)):
+                    raise NotImplementedError("Printing complex nested arrays")
                 print(f'{action.port.debug_name} = {action.format_str}' %
                       got)
             elif isinstance(action, actions.Expect):
