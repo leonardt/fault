@@ -27,7 +27,10 @@ class MagmaSimulatorTarget(Target):
                 isinstance(port.T, m._BitType) and \
                 not isinstance(port, m.BitsType) and \
                 isinstance(expected, BitVector):
-            # Python simulator will return a list of bools
+            # If port is an Array(N, Bit) and **not** a Bits(N), then the
+            # Python simulator will return a list of bools. So, if the user
+            # provided a BitVector, we unpack it here so the equality check
+            # works
             expected = expected.as_bool_list()
         if isinstance(port, m.ArrayType):
             for i in range(port.N):
