@@ -25,15 +25,15 @@ class MagmaSimulatorTarget(Target):
     def check(got, port, expected):
         if isinstance(port, m.ArrayType) and \
                 isinstance(port.T, m._BitType) and \
-                not isinstance(port, m.BitsType):
-            if isinstance(expected, BitVector):
-                # Python simulator will return a list of bools
-                expected = expected.as_bool_list()
-        if isinstance(port, (m.ArrayType, m.ArrayKind)):
-            for g, t, e in zip(got, port, expected):
-                MagmaSimulatorTarget.check(g, t, e)
-        else:
-            assert got == expected, f"Got {got}, expected {expected}"
+                not isinstance(port, m.BitsType) and \
+                isinstance(expected, BitVector):
+            # Python simulator will return a list of bools
+            expected = expected.as_bool_list()
+        if isinstance(port, m.ArrayType):
+            for i in range(port.N):
+                MagmaSimulatorTarget.check(got[i], port[i], expected[i])
+            return
+        assert got == expected, f"Got {got}, expected {expected}"
 
     def run(self):
         simulator = self.backend_cls(self.circuit, self.clock)
