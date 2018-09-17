@@ -2,6 +2,7 @@ import pathlib
 import tempfile
 import fault
 import magma as m
+import os
 
 
 def test_include_verilog():
@@ -24,3 +25,10 @@ def test_include_verilog():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tester.compile_and_run(target="verilator", directory=tmp_dir,
                                include_verilog_libraries=[sb_dff_filename])
+
+    # Should work by including the tests/ directory which contains the verilog
+    # file SB_DFF.v
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tester.compile_and_run(target="verilator", directory=tmp_dir,
+                               include_directories=[dir_path])
