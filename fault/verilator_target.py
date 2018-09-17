@@ -52,7 +52,7 @@ class VerilatorTarget(Target):
         self.magma_output = magma_output
 
     @staticmethod
-    def make_array_action_code(i, action):
+    def generate_array_action_code(i, action):
         return flatten([
             VerilatorTarget.generate_action_code(
                 i, type(action)(action.port[j], action.value[j])
@@ -64,7 +64,7 @@ class VerilatorTarget(Target):
         if isinstance(action, actions.Poke):
             if isinstance(action.port, m.ArrayType) and \
                     not isinstance(action.port.T, m.BitKind):
-                return VerilatorTarget.make_array_action_code(i, action)
+                return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
             return [f"top->{name} = {action.value};"]
         if isinstance(action, actions.Print):
@@ -78,7 +78,7 @@ class VerilatorTarget(Target):
                 return []
             if isinstance(action.port, m.ArrayType) and \
                     not isinstance(action.port.T, m.BitKind):
-                return VerilatorTarget.make_array_action_code(i, action)
+                return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
             return [f"my_assert(top->{name}, {action.value}, "
                     f"{i}, \"{action.port.name}\");"]
