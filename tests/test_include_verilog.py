@@ -23,4 +23,4 @@ def test_include_verilog():
     sb_dff_filename = pathlib.Path("tests/sb_dff_sim.v").resolve()
     with tempfile.TemporaryDirectory() as tmp_dir:
         tester.compile_and_run(target="verilator", directory=tmp_dir,
-                               include_verilog_files=[sb_dff_filename])
+                               include_verilog_libraries=[sb_dff_filename])

@@ -37,7 +37,7 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
-                 flags=[], skip_compile=False, include_verilog_files=[],
+                 flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="verilog"):
         super().__init__(circuit, actions)
         self.directory = Path(directory)
