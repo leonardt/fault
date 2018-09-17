@@ -54,9 +54,11 @@ class VerilatorTarget(Target):
 
     @staticmethod
     def make_array_action_code(i, action):
-        return flatten([VerilatorTarget.generate_action_code(i,
-            type(action)(action.port[j], action.value[j])
-        ) for j in range(action.port.N)])
+        return flatten([
+            VerilatorTarget.generate_action_code(
+                i, type(action)(action.port[j], action.value[j])
+            ) for j in range(action.port.N)
+        ])
 
     @staticmethod
     def generate_action_code(i, action):
