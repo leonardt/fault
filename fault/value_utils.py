@@ -28,10 +28,7 @@ def make_array(T, N, value):
     if isinstance(T, magma._BitKind):
         return make_bit_vector(N, value)
     if isinstance(T, magma.ArrayKind):
-        if isinstance(value, list):
-            return Array([make_array(T.T, T.N, value[i]) for i in range(N)], N)
-        else:
-            return Array([make_array(T.T, T.N, value) for _ in range(N)], N)
+        return Array([make_array(T.T, T.N, value) for _ in range(N)], N)
     raise NotImplementedError(T, N, value)
 
 

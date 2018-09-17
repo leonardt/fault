@@ -52,22 +52,6 @@ def test_tester_nested_arrays():
         check(tester.actions[i], exp)
 
 
-def test_tester_nested_arrays_list_of_vals():
-    circ = common.TestNestedArraysCircuit
-    tester = fault.Tester(circ)
-    expected = []
-    for i in range(3):
-        val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
-        tester.poke(circ.I, val)
-        tester.expect(circ.O, val)
-        for i in range(3):
-            expected.append(Poke(circ.I[i], val[i]))
-        for i in range(3):
-            expected.append(Expect(circ.O[i], val[i]))
-    for i, exp in enumerate(expected):
-        check(tester.actions[i], exp)
-
-
 def test_retarget_tester():
     circ = common.TestBasicClkCircuit
     expected = [

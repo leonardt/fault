@@ -9,9 +9,6 @@ class Action(ABC):
         """
         raise NotImplementedError()
 
-    def __repr__(self):
-        return str(self)
-
 
 class PortAction(Action):
     def __init__(self, port, value):
