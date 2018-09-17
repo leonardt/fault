@@ -37,13 +37,24 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
-                 flags=[], skip_compile=False, include_verilog_files=[],
-                 magma_output="verilog"):
+                 flags=[], skip_compile=False, include_verilog_libraries=[],
+                 include_directories=[], magma_output="verilog"):
+        """
+        Params:
+            `include_verilog_libraries`: a list of verilog libraries to include
+            with the -v flag.  From the verilator docs:
+                -v <filename>              Verilog library
+
+            `include_directories`: a list of directories to include using the
+            -I flag. From the the verilator docs:
+                -I<dir>                    Directory to search for includes
+        """
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
         self.skip_compile = skip_compile
-        self.include_verilog_files = include_verilog_files
+        self.include_verilog_libraries = include_verilog_libraries
+        self.include_directories = include_directories
         self.magma_output = magma_output
 
     @staticmethod
@@ -117,8 +128,8 @@ class VerilatorTarget(Target):
         # the Makefile output by verilator, and finally run the executable
         # created by verilator.
         verilator_cmd = verilator_utils.verilator_cmd(
-            top, verilog_file.name, self.include_verilog_files,
-            driver_file.name, self.flags)
+            top, verilog_file.name, self.include_verilog_libraries,
+            self.include_directories, driver_file.name, self.flags)
         assert not self.run_from_directory(verilator_cmd)
         verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
         assert not self.run_from_directory(verilator_make_cmd)
