@@ -37,12 +37,14 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(Target):
     def __init__(self, circuit, actions, directory="build/",
-                 flags=[], skip_compile=False, include_verilog_files=[]):
+                 flags=[], skip_compile=False, include_verilog_files=[],
+                 magma_output="verilog"):
         super().__init__(circuit, actions)
         self.directory = Path(directory)
         self.flags = flags
         self.skip_compile = skip_compile
         self.include_verilog_files = include_verilog_files
+        self.magma_output = magma_output
 
     @staticmethod
     def generate_action_code(i, action):
@@ -105,7 +107,7 @@ class VerilatorTarget(Target):
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
             prefix = str(verilog_file)[:-2]
-            magma.compile(prefix, self.circuit, output="verilog")
+            magma.compile(prefix, self.circuit, output=self.magma_output)
         assert verilog_file.is_file()
         # Write the verilator driver to file.
         src = self.generate_code()
