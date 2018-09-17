@@ -21,6 +21,20 @@ class MagmaSimulatorTarget(Target):
             return PythonSimulator
         raise NotImplementedError(backend)
 
+    @staticmethod
+    def check(got, port, expected):
+        if isinstance(port, (m.ArrayType, m.ArrayKind)) and \
+                isinstance(port.T, (m._BitType, m._BitKind)) and \
+                not isinstance(port, (m.BitsType, m.BitsKind)):
+            if isinstance(expected, BitVector):
+                # Python simulator will return a list of bools
+                expected = expected.as_bool_list()
+        if isinstance(port, (m.ArrayType, m.ArrayKind)):
+            for g, t, e in zip(got, port, expected):
+                MagmaSimulatorTarget.check(g, t, e)
+        else:
+            assert got == expected, f"Got {got}, expected {expected}"
+
     def run(self):
         simulator = self.backend_cls(self.circuit, self.clock)
         for action in self.actions:
@@ -33,13 +47,15 @@ class MagmaSimulatorTarget(Target):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
             elif isinstance(action, actions.Print):
-                got = BitVector(simulator.get_value(action.port))
+                got = simulator.get_value(action.port)
+                if isinstance(action.port, (m.ArrayType, m.ArrayKind)) and \
+                        isinstance(action.port.T, (m._BitType, m._BitKind)):
+                    got = BitVector(got).as_uint()
                 print(f'{action.port.debug_name} = {action.format_str}' %
-                      got.as_uint())
+                      got)
             elif isinstance(action, actions.Expect):
-                got = BitVector(simulator.get_value(action.port))
-                expected = action.value
-                assert got == expected, f"Got {got}, expected {expected}"
+                got = simulator.get_value(action.port)
+                MagmaSimulatorTarget.check(got, action.port, action.value)
             elif isinstance(action, actions.Eval):
                 simulator.evaluate()
             elif isinstance(action, actions.Step):
