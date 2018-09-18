@@ -13,7 +13,8 @@ def verilator_cmd(top, verilog_filename, include_verilog_libraries,
     flags.extend(verilator_flags)
     flag_str = " ".join(flags)
     include_str = ' '.join(f'-v {file_}' for file_ in include_verilog_libraries)
-    include_str += " -I" + " -I".join(dir_ for dir_ in include_directories)
+    if include_directories:
+        include_str += " " + " ".join(f"-I{dir_}" for dir_ in include_directories)
     return (f"verilator {flag_str} "
             f"--cc {verilog_filename} "
             f"{include_str} "
