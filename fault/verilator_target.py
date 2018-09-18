@@ -1,10 +1,15 @@
+from .array import Array
 from pathlib import Path
 import subprocess
-import magma
+import magma as m
 import fault.actions as actions
 from fault.target import Target
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
 
 
 src_tpl = """\
@@ -58,8 +63,19 @@ class VerilatorTarget(Target):
         self.magma_output = magma_output
 
     @staticmethod
+    def generate_array_action_code(i, action):
+        return flatten([
+            VerilatorTarget.generate_action_code(
+                i, type(action)(action.port[j], action.value[j])
+            ) for j in range(action.port.N)
+        ])
+
+    @staticmethod
     def generate_action_code(i, action):
         if isinstance(action, actions.Poke):
+            if isinstance(action.port, m.ArrayType) and \
+                    not isinstance(action.port.T, m.BitKind):
+                return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
             return [f"top->{name} = {action.value};"]
         if isinstance(action, actions.Print):
@@ -71,6 +87,9 @@ class VerilatorTarget(Target):
             # the expect.
             if value_utils.is_any(action.value):
                 return []
+            if isinstance(action.port, m.ArrayType) and \
+                    not isinstance(action.port.T, m.BitKind):
+                return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
             return [f"my_assert(top->{name}, {action.value}, "
                     f"{i}, \"{action.port.name}\");"]
@@ -118,7 +137,7 @@ class VerilatorTarget(Target):
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
             prefix = str(verilog_file)[:-2]
-            magma.compile(prefix, self.circuit, output=self.magma_output)
+            m.compile(prefix, self.circuit, output=self.magma_output)
         assert verilog_file.is_file()
         # Write the verilator driver to file.
         src = self.generate_code()

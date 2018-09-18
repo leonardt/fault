@@ -38,7 +38,7 @@ def test_magma_simulator_target_basic(backend):
     run(circ, actions, None, backend)
 
 
-def test_magma_simulator_target_nested_arrays(backend):
+def test_magma_simulator_target_nested_arrays_by_element(backend):
     circ = common.TestNestedArraysCircuit
     expected = [random_bv(4) for i in range(3)]
     actions = []
@@ -47,6 +47,16 @@ def test_magma_simulator_target_nested_arrays(backend):
     actions.append(Eval())
     for i, val in enumerate(expected):
         actions.append(Expect(circ.O[i], val))
+    run(circ, actions, None, backend)
+
+
+def test_magma_simulator_target_nested_arrays_bulk(backend):
+    circ = common.TestNestedArraysCircuit
+    expected = [random_bv(4) for i in range(3)]
+    actions = []
+    actions.append(Poke(circ.I, expected))
+    actions.append(Eval())
+    actions.append(Expect(circ.O, expected))
     run(circ, actions, None, backend)
 
 

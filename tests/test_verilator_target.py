@@ -25,7 +25,7 @@ def test_verilator_target_basic():
     run(circ, actions)
 
 
-def test_verilator_target_nested_arrays():
+def test_verilator_target_nested_arrays_by_element():
     circ = common.TestNestedArraysCircuit
     expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
     actions = []
@@ -34,6 +34,27 @@ def test_verilator_target_nested_arrays():
     actions.append(Eval())
     for i, val in enumerate(expected):
         actions.append(Expect(circ.O[i], val))
+    run(circ, actions)
+
+
+def test_verilator_target_nested_arrays_bulk():
+    circ = common.TestNestedArraysCircuit
+    expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
+    actions = []
+    actions.append(Poke(circ.I, expected))
+    actions.append(Eval())
+    actions.append(Expect(circ.O, expected))
+    run(circ, actions)
+
+
+def test_verilator_target_double_nested_arrays_bulk():
+    circ = common.TestDoubleNestedArraysCircuit
+    expected = [[random.randint(0, (1 << 4) - 1) for i in range(3)]
+                for _ in range(2)]
+    actions = []
+    actions.append(Poke(circ.I, expected))
+    actions.append(Eval())
+    actions.append(Expect(circ.O, expected))
     run(circ, actions)
 
 

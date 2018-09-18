@@ -38,7 +38,7 @@ def test_tester_clock():
     check(tester.actions[3], Step(circ.CLK, 1))
 
 
-def test_tester_nested_arrays():
+def test_tester_nested_arrays_by_element():
     circ = common.TestNestedArraysCircuit
     tester = fault.Tester(circ)
     expected = []
@@ -48,6 +48,19 @@ def test_tester_nested_arrays():
         tester.expect(circ.O[i], val)
         expected.append(Poke(circ.I[i], val))
         expected.append(Expect(circ.O[i], val))
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+
+
+def test_tester_nested_arrays_bulk():
+    circ = common.TestNestedArraysCircuit
+    tester = fault.Tester(circ)
+    expected = []
+    val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
+    tester.poke(circ.I, val)
+    tester.expect(circ.O, val)
+    expected.append(Poke(circ.I, fault.array.Array(val, 3)))
+    expected.append(Expect(circ.O, fault.array.Array(val, 3)))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 

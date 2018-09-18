@@ -21,6 +21,23 @@ class MagmaSimulatorTarget(Target):
             return PythonSimulator
         raise NotImplementedError(backend)
 
+    @staticmethod
+    def check(got, port, expected):
+        if isinstance(port, m.ArrayType) and \
+                isinstance(port.T, m._BitType) and \
+                not isinstance(port, m.BitsType) and \
+                isinstance(expected, BitVector):
+            # If port is an Array(N, Bit) and **not** a Bits(N), then the
+            # Python simulator will return a list of bools. So, if the user
+            # provided a BitVector, we unpack it here so the equality check
+            # works
+            expected = expected.as_bool_list()
+        if isinstance(port, m.ArrayType):
+            for i in range(port.N):
+                MagmaSimulatorTarget.check(got[i], port[i], expected[i])
+            return
+        assert got == expected, f"Got {got}, expected {expected}"
+
     def run(self):
         simulator = self.backend_cls(self.circuit, self.clock)
         for action in self.actions:
@@ -33,13 +50,17 @@ class MagmaSimulatorTarget(Target):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
             elif isinstance(action, actions.Print):
-                got = BitVector(simulator.get_value(action.port))
+                got = simulator.get_value(action.port)
+                if isinstance(action.port, m.ArrayType) and \
+                        isinstance(action.port.T, (m._BitType, m._BitKind)):
+                    got = BitVector(got).as_uint()
+                elif isinstance(action.port, m.ArrayType):
+                    raise NotImplementedError("Printing complex nested arrays")
                 print(f'{action.port.debug_name} = {action.format_str}' %
-                      got.as_uint())
+                      got)
             elif isinstance(action, actions.Expect):
-                got = BitVector(simulator.get_value(action.port))
-                expected = action.value
-                assert got == expected, f"Got {got}, expected {expected}"
+                got = simulator.get_value(action.port)
+                MagmaSimulatorTarget.check(got, action.port, action.value)
             elif isinstance(action, actions.Eval):
                 simulator.evaluate()
             elif isinstance(action, actions.Step):
