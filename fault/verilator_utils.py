@@ -33,4 +33,7 @@ def verilator_name(name):
     if isinstance(name, magma.ref.ArrayRef):
         array_name = verilator_name(name.array.name)
         return f"{array_name}_{name.index}"
+    if isinstance(name, magma.ref.TupleRef):
+        tuple_name = verilator_name(name.tuple.name)
+        return f"{tuple_name}_{name.index}"
     raise NotImplementedError(name, type(name))
