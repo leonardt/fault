@@ -78,3 +78,14 @@ def test_verilator_target_clock(capfd):
     assert lines[-3] == "BasicClkCircuit.I = 0", "Print output incorrect"
     assert lines[-2] == "BasicClkCircuit.O = 0", "Print output incorrect"
     assert lines[-1] == "BasicClkCircuit.O = 1", "Print output incorrect"
+
+def test_verilator_target_tuple():
+    circ = common.TestTupleCircuit
+    actions = [
+        Poke(circ.I.a, 5),
+        Poke(circ.I.b, 11),
+        Eval(),
+        Expect(circ.O.a, 5),
+        Expect(circ.O.b, 11),
+    ]
+    run(circ, actions)
