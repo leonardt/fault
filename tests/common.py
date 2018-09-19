@@ -26,3 +26,5 @@ TestDoubleNestedArraysCircuit = define_simple_circuit(
 TestBasicClkCircuit = define_simple_circuit(m.Bit, "BasicClkCircuit", True)
 TestBasicClkCircuitCopy = define_simple_circuit(m.Bit, "BasicClkCircuitCopy",
                                                 True)
+TestTupleCircuit = define_simple_circuit(m.Tuple(a=m.Bit, b=m.Bit),
+                                         "TupleCircuit")
