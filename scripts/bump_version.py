@@ -12,7 +12,7 @@ with open("VERSION", "r") as f:
     version = f.read().split(".")
 
 branch = delegator.run("git symbolic-ref --short HEAD").out.rstrip()
-assert branch in ["master", "dev"]
+assert branch in ["master", "dev"], branch
 
 if branch == "master":
     version[1] = str(int(version[1]) + 1)
