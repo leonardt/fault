@@ -12,6 +12,7 @@ import copy
 
 class Tester:
     __test__ = False
+
     def __init__(self, circuit, clock=None, default_print_format_str="%x"):
         self.circuit = circuit
         self.actions = []
