@@ -9,4 +9,5 @@ git add VERSION
 git add PYVERSION
 git commit --message "Travis build: $TRAVIS_BUILD_NUMBER"
 
+git remote set-url origin https://${GH_TOKEN}@github.com/leonardt/fault.git
 git push --quiet 
