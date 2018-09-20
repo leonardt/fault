@@ -1,9 +1,12 @@
 from setuptools import setup
 import sys
 
+with open("PYVERSION", "r") as f:
+    version = f.read()
+
 setup(
     name='fault',
-    version='0.26',
+    version=version,
     description='A Python package for testing hardware (part of the magma ecosystem)',
     scripts=[],
     packages=[

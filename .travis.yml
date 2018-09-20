@@ -4,19 +4,30 @@ addons:
     packages:
     - verilator
 python:
-    - "3.6"
-
+- '3.6'
 install:
-    - wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
-    - source install_coreir.sh
-
-    - pip install python-coveralls
-    - pip install pytest-cov pytest-pep8
-    - pip install -r requirements.txt
-    - pip install -e .
-
+- wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
+- source install_coreir.sh
+- pip install python-coveralls
+- pip install pytest-cov pytest-pep8
+- pip install delegator.py
+- pip install -r requirements.txt
+- pip install -e .
 script:
-    - pytest --cov fault --pep8 fault -v --cov-report term-missing tests
-
+- pytest --cov fault --pep8 fault -v --cov-report term-missing tests
 after_success:
-    - coveralls
+- coveralls
+before_deploy:
+- python ./scripts/bump_version.py
+deploy:
+  provider: pypi
+  user: leonardt
+  password:
+    secure: GYDJsrk6zWnrRBDgSkqRn9sUDJgHi2KDlSVLM9dkbz5qiD2/oZHREHokXQLAUuI1wIGcBCi4N3Kkmj8u0T+Icu6BkwfKRPLYXjRNVUgR6qZPu+byTRHcw1Q0h8Y2DxtexcnruyfYXv7Qab/GmF+a6oYc3UDo6ekOAo+tvHjdsTCkJ9OmCcTOVAamUhKb8X5V64zCx5ob2aBGzi1CEhyIh7Bdrl6u9IpdY9wTHFvHJLyPr5s0eDvWpzIhsvqG+Kw4K0J2yVKXoQVNVcwjSmCHmqQFBlM2BwjAaULnX9ycGTcViUYpCQSkE8g38hGETvjSZWV1e9cBhTUWyJMEu74DlwvGUgdcpQ+9ihDnlTRw8ALclKGZvKOX5ZJuuTXmYB19XKn1b0Qqgau5pzYocyBqNdtX5QM9LRqmARIsnTboKgvsFvYNCsZM+kW5CW9DLHzQXjmEcsqMgLxXCs2Ahd7qdoEN1NKS1Gq4z2/96jZJXRqute9cBmyqmQ8356tRiNmZ0Jk8b58xLmggexikt+/ZwP9CoyLlnkTCUhijes6kq3n8B7A15SkcJVFKxLc1CJyVm8D5L7av8mqJwrX/HtAU9QNBj+lKUbw2sU5XVAWPlaYt3k+pdzuwGp2h2m29UqBMYEQfnWmTKtzsWSYRqzNG1qIz3Pglk+0J1t9nKEUHy2Q=
+  on:
+    all_branches: true
+    # https://docs.travis-ci.com/user/deployment#conditional-releases-with-on
+    condition: $TRAVIS_BRANCH =~ ^master|dev$
+  distributions: "sdist bdist_wheel"
+after_deployg:
+- ./scripts/push_version.sh
