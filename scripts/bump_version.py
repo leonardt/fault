@@ -11,7 +11,13 @@ import delegator
 with open("VERSION", "r") as f:
     version = f.read().split(".")
 
-branch = delegator.run("git symbolic-ref --short HEAD").out.rstrip()
+travis_branch = os.environ.get("TRAVIS_BRANCH", None)
+
+if travis_branch is not None:
+    branch = travis_branch
+else:
+    branch = delegator.run("git symbolic-ref --short HEAD").out.rstrip()
+
 assert branch in ["master", "dev"], branch
 
 if branch == "master":
