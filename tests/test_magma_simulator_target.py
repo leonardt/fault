@@ -14,8 +14,8 @@ def pytest_generate_tests(metafunc):
 
 
 def run(circ, actions, clock, backend):
-    target = MagmaSimulatorTarget(circ, actions, clock, backend=backend)
-    target.run()
+    target = MagmaSimulatorTarget(circ, clock, backend=backend)
+    target.run(actions)
 
 
 def test_magma_simulator_target_basic(backend):

@@ -11,9 +11,9 @@ def run(circ, actions, flags=[]):
     with tempfile.TemporaryDirectory() as tempdir:
         m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
         target = fault.verilator_target.VerilatorTarget(
-            circ, actions, directory=f"{tempdir}/",
+            circ, directory=f"{tempdir}/",
             flags=flags, skip_compile=True)
-        target.run()
+        target.run(actions)
 
 
 def test_verilator_target_basic():
