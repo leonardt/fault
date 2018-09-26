@@ -98,3 +98,12 @@ def test_retarget_tester():
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)
+
+
+def test_run_error():
+    try:
+        circ = common.TestBasicCircuit
+        fault.Tester(circ).run("bad_target")
+        assert False, "Should raise an exception"
+    except Exception as e:
+        assert str(e) == f"Could not find target=bad_target, did you compile it first?"  # noqa
