@@ -3,6 +3,7 @@ from bit_vector import BitVector
 import fault
 from fault.actions import Poke, Expect, Eval, Step, Print
 import common
+import tempfile
 
 
 def check(got, expected):
@@ -23,7 +24,8 @@ def test_tester_basic():
     check(tester.actions[3], Print(circ.O, "%08x"))
     tester.eval()
     check(tester.actions[4], Eval())
-    tester.compile_and_run("verilator")
+    with tempfile.TemporaryDirectory() as _dir:
+        tester.compile_and_run("verilator", directory=_dir)
     tester.compile_and_run("coreir")
     tester.clear()
     assert tester.actions == []
