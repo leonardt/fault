@@ -69,7 +69,8 @@ class Tester:
         try:
             self.targets[target].run(self.actions)
         except KeyError:
-            raise Exception(f"Could not find target={target}, did you compile it first?")
+            raise Exception(f"Could not find target={target}, did you compile"
+                            " it first?")
 
     def compile_and_run(self, target="verilator", **kwargs):
         self.compile(target, **kwargs)

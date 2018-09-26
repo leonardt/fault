@@ -73,8 +73,9 @@ class VerilatorTarget(Target):
         # Compile the design using `verilator`
         driver_file = self.directory / Path(f"{self.circuit.name}_driver.cpp")
         verilator_cmd = verilator_utils.verilator_cmd(
-            self.circuit.name, verilog_file.name, self.include_verilog_libraries,
-            self.include_directories, driver_file.name, self.flags)
+            self.circuit.name, verilog_file.name,
+            self.include_verilog_libraries, self.include_directories,
+            driver_file.name, self.flags)
         if self.run_from_directory(verilator_cmd):
             raise Exception(f"Running verilator cmd {verilator_cmd} failed")
 
