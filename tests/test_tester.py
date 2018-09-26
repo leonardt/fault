@@ -25,6 +25,8 @@ def test_tester_basic():
     check(tester.actions[4], Eval())
     tester.compile_and_run("verilator")
     tester.compile_and_run("coreir")
+    tester.clear()
+    assert tester.actions == []
 
 
 def test_tester_clock():
