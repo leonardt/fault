@@ -4,7 +4,8 @@ import fault
 from bit_vector import BitVector
 import common
 import random
-from fault.actions import Poke, Expect, Eval, Step, Print
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
+from fault.random import random_bv
 import copy
 
 
@@ -23,6 +24,17 @@ def test_verilator_target_basic():
     """
     circ = common.TestBasicCircuit
     actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 0))
+    run(circ, actions)
+
+
+def test_verilator_target_peek():
+    circ = common.TestPeekCircuit
+    actions = []
+    for i in range(3):
+        x = random_bv(3)
+        actions.append(Poke(circ.I, x))
+        actions.append(Eval())
+        actions.append(Expect(circ.O0, Peek(circ.O1)))
     run(circ, actions)
 
 
@@ -76,9 +88,9 @@ def test_verilator_target_clock(capfd):
     out, err = capfd.readouterr()
     lines = out.splitlines()
 
-    assert lines[-3] == "global_BasicClkCircuit.I = 0", "Print output incorrect"
-    assert lines[-2] == "global_BasicClkCircuit.O = 0", "Print output incorrect"
-    assert lines[-1] == "global_BasicClkCircuit.O = 1", "Print output incorrect"
+    assert lines[-3] == "BasicClkCircuit.I = 0", "Print output incorrect"
+    assert lines[-2] == "BasicClkCircuit.O = 0", "Print output incorrect"
+    assert lines[-1] == "BasicClkCircuit.O = 1", "Print output incorrect"
 
 
 def test_verilator_target_tuple():

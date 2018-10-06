@@ -70,6 +70,9 @@ class Peek(Action):
         new_port = new_circuit.interface.ports[str(self.port.name)]
         return cls(new_port)
 
+    def __str__(self):
+        return f"Peek({self.port.debug_name})"
+
 
 class Eval(Action):
     def __init__(self):

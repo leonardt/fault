@@ -38,6 +38,9 @@ class Tester:
         value = make_value(port, value)
         self.actions.append(actions.Poke(port, value))
 
+    def peek(self, port):
+        return actions.Peek(port)
+
     def print(self, port, format_str=None):
         if format_str is None:
             format_str = self.default_print_format_str

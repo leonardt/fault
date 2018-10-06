@@ -112,7 +112,10 @@ class VerilatorTarget(Target):
                     not isinstance(action.port.T, m.BitKind):
                 return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
-            return [f"my_assert(top->{name}, {action.value}, "
+            value = action.value
+            if isinstance(value, actions.Peek):
+                value = f"top->{value.port.name}"
+            return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
             return ["top->eval();"]

@@ -28,3 +28,13 @@ TestBasicClkCircuitCopy = define_simple_circuit(m.Bit, "BasicClkCircuitCopy",
                                                 True)
 TestTupleCircuit = define_simple_circuit(m.Tuple(a=m.Bit, b=m.Bit),
                                          "TupleCircuit")
+
+T = m.Bits(3)
+class TestPeekCircuit(m.Circuit):
+    __test__ = False   # Disable pytest discovery
+    IO = ["I", m.In(T), "O0", m.Out(T), "O1", m.Out(T)]
+
+    @classmethod
+    def definition(io):
+        m.wire(io.I, io.O0)
+        m.wire(io.I, io.O1)
