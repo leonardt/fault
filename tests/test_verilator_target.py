@@ -5,14 +5,15 @@ from bit_vector import BitVector
 import common
 import random
 from fault.actions import Poke, Expect, Eval, Step, Print
+import copy
 
 
 def run(circ, actions, flags=[]):
     with tempfile.TemporaryDirectory() as tempdir:
-        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
+        m.compile(f"{tempdir}/global_{circ.name}", circ, output="coreir-verilog")
         target = fault.verilator_target.VerilatorTarget(
             circ, directory=f"{tempdir}/",
-            flags=flags, skip_compile=True)
+            flags=flags, skip_compile=True, circuit_name="global_" + circ.name)
         target.run(actions)
 
 
@@ -75,9 +76,9 @@ def test_verilator_target_clock(capfd):
     out, err = capfd.readouterr()
     lines = out.splitlines()
 
-    assert lines[-3] == "BasicClkCircuit.I = 0", "Print output incorrect"
-    assert lines[-2] == "BasicClkCircuit.O = 0", "Print output incorrect"
-    assert lines[-1] == "BasicClkCircuit.O = 1", "Print output incorrect"
+    assert lines[-3] == "global_BasicClkCircuit.I = 0", "Print output incorrect"
+    assert lines[-2] == "global_BasicClkCircuit.O = 0", "Print output incorrect"
+    assert lines[-1] == "global_BasicClkCircuit.O = 1", "Print output incorrect"
 
 
 def test_verilator_target_tuple():

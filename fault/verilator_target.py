@@ -43,7 +43,8 @@ int main(int argc, char **argv) {{
 class VerilatorTarget(Target):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
-                 include_directories=[], magma_output="verilog"):
+                 include_directories=[], magma_output="verilog",
+                 circuit_name=None):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -61,6 +62,9 @@ class VerilatorTarget(Target):
         self.include_verilog_libraries = include_verilog_libraries
         self.include_directories = include_directories
         self.magma_output = magma_output
+        self.circuit_name = circuit_name
+        if circuit_name is None:
+            self.circuit_name = self.circuit.name
 
         verilog_file = self.directory / Path(f"{self.circuit.name}.v")
         # Optionally compile this module to verilog first.
@@ -121,8 +125,13 @@ class VerilatorTarget(Target):
             return code
         raise NotImplementedError(action)
 
+<<<<<<< HEAD
     def generate_code(self, actions):
         circuit_name = self.circuit.name
+=======
+    def generate_code(self):
+        circuit_name = self.circuit_name
+>>>>>>> Add global_ prefixes for coreir output name change
         includes = [
             f'"V{circuit_name}.h"',
             '"verilated.h"',

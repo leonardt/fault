@@ -48,8 +48,10 @@ def test_configuration():
     tester.configure(1, 32)
     tester.configure(0, 23)
     tester.configure(1, 41)
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        m.compile(f"{tmp_dir}/Configurable", Configurable,
-                  output="coreir-verilog")
-        tester.compile_and_run(directory=tmp_dir, target="verilator",
-                               flags=["-Wno-fatal"], skip_compile=True)
+    # with tempfile.TemporaryDirectory() as tmp_dir:
+    tmp_dir = "tmp"
+    m.compile(f"{tmp_dir}/global_Configurable", Configurable,
+              output="coreir-verilog")
+    tester.compile_and_run(directory=tmp_dir, target="verilator",
+                           flags=["-Wno-fatal"], skip_compile=True,
+                           circuit_name="global_Configurable")
