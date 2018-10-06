@@ -6,8 +6,10 @@ import mantle
 import os
 import shutil
 import tempfile
+import pytest
 
 
+@pytest.skip("Blocked by https://github.com/rdaly525/coreir/issues/627")
 def test_configuration():
     class ConfigurationTester(FunctionalTester):
         def configure(self, addr, data):
