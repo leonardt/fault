@@ -128,13 +128,8 @@ class VerilatorTarget(Target):
             return code
         raise NotImplementedError(action)
 
-<<<<<<< HEAD
-    def generate_code(self, actions):
-        circuit_name = self.circuit.name
-=======
     def generate_code(self):
         circuit_name = self.circuit_name
->>>>>>> Add global_ prefixes for coreir output name change
         includes = [
             f'"V{circuit_name}.h"',
             '"verilated.h"',
