@@ -47,7 +47,8 @@ class Tester:
         self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
-        value = make_value(port, value)
+        if not isinstance(value, actions.Peek):
+            value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
     def eval(self):

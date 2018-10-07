@@ -40,7 +40,7 @@ def test_tester_clock():
     check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
 
 
-def test_tester_clock():
+def test_tester_peek():
     circ = common.TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
