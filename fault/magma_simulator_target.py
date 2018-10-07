@@ -61,10 +61,10 @@ class MagmaSimulatorTarget(Target):
             elif isinstance(action, fault.actions.Expect):
                 got = simulator.get_value(action.port)
                 expected = action.value
-                if isinstance(expected, actions.Peek):
+                if isinstance(expected, fault.actions.Peek):
                     expected = simulator.get_value(expected.port)
                 MagmaSimulatorTarget.check(got, action.port, expected)
-            elif isinstance(action, actions.Eval):
+            elif isinstance(action, fault.actions.Eval):
                 simulator.evaluate()
             elif isinstance(action, fault.actions.Step):
                 if self.clock is not action.clock:

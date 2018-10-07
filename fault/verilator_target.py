@@ -66,7 +66,7 @@ class VerilatorTarget(Target):
         if circuit_name is None:
             self.circuit_name = self.circuit.name
 
-        verilog_file = self.directory / Path(f"{self.circuit.name}.v")
+        verilog_file = self.directory / Path(f"{self.circuit_name}.v")
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
             prefix = str(verilog_file)[:-2]
@@ -75,9 +75,9 @@ class VerilatorTarget(Target):
             raise Exception(f"Compiling {self.circuit} failed")
 
         # Compile the design using `verilator`
-        driver_file = self.directory / Path(f"{self.circuit.name}_driver.cpp")
+        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         verilator_cmd = verilator_utils.verilator_cmd(
-            self.circuit.name, verilog_file.name,
+            self.circuit_name, verilog_file.name,
             self.include_verilog_libraries, self.include_directories,
             driver_file.name, self.flags)
         if self.run_from_directory(verilator_cmd):
@@ -155,9 +155,9 @@ class VerilatorTarget(Target):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
     def run(self, actions):
-        verilog_file = self.directory / Path(f"{self.circuit.name}.v")
-        driver_file = self.directory / Path(f"{self.circuit.name}_driver.cpp")
-        top = self.circuit.name
+        verilog_file = self.directory / Path(f"{self.circuit_name}.v")
+        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
+        top = self.circuit_name
         # Write the verilator driver to file.
         src = self.generate_code(actions)
         with open(driver_file, "w") as f:
