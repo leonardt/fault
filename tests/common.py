@@ -30,6 +30,8 @@ TestTupleCircuit = define_simple_circuit(m.Tuple(a=m.Bit, b=m.Bit),
                                          "TupleCircuit")
 
 T = m.Bits(3)
+
+
 class TestPeekCircuit(m.Circuit):
     __test__ = False   # Disable pytest discovery
     IO = ["I", m.In(T), "O0", m.Out(T), "O1", m.Out(T)]
