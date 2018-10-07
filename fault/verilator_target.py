@@ -128,7 +128,7 @@ class VerilatorTarget(Target):
             return code
         raise NotImplementedError(action)
 
-    def generate_code(self):
+    def generate_code(self, actions):
         circuit_name = self.circuit_name
         includes = [
             f'"V{circuit_name}.h"',
