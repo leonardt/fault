@@ -15,7 +15,9 @@ def flatten(l):
 src_tpl = """\
 {includes}
 
+#if VM_TRACE
 VerilatedVcdC* tracer;
+#endif
 
 void my_assert(
     unsigned int got,
@@ -28,7 +30,9 @@ void my_assert(
     std::cerr << \"Expected : \" << expected << std::endl;
     std::cerr << \"i        : \" << i << std::endl;
     std::cerr << \"Port     : \" << port << std::endl;
+#if VM_TRACE
     tracer->close();
+#endif
     exit(1);
   }}
 }}
@@ -36,19 +40,22 @@ void my_assert(
 int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
-  Verilated::traceEverOn(true);
 
+#if VM_TRACE
   vluint64_t main_time = 0;
 
+  Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
   top->trace(tracer, 99);
   Verilated::mkdir("logs");
   tracer->open("logs/vlt_dump.vcd");
+#endif
 
 {main_body}
 
+#if VM_TRACE
   tracer->close();
-
+#endif
 }}
 """
 
@@ -107,14 +114,16 @@ class VerilatorTarget(Target):
             return [f"my_assert(top->{name}, {action.value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
-            return ["top->eval();", "tracer->dump(main_time);", "main_time++;"]
+            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);", "main_time++;", "#endif"]
         if isinstance(action, actions.Step):
             name = verilator_utils.verilator_name(action.clock.name)
             code = []
             for step in range(action.steps):
                 code.append("top->eval();")
+                code.append("#if VM_TRACE")
                 code.append("tracer->dump(main_time);")
                 code.append("main_time++;")
+                code.append("#endif")
                 code.append(f"top->{name} ^= 1;")
             return code
         raise NotImplementedError(action)
