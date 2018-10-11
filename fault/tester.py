@@ -38,13 +38,17 @@ class Tester:
         value = make_value(port, value)
         self.actions.append(actions.Poke(port, value))
 
+    def peek(self, port):
+        return actions.Peek(port)
+
     def print(self, port, format_str=None):
         if format_str is None:
             format_str = self.default_print_format_str
         self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
-        value = make_value(port, value)
+        if not isinstance(value, actions.Peek):
+            value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
     def eval(self):

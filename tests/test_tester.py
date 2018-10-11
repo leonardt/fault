@@ -1,7 +1,7 @@
 import random
 from bit_vector import BitVector
 import fault
-from fault.actions import Poke, Expect, Eval, Step, Print
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
 import tempfile
 
@@ -32,6 +32,15 @@ def test_tester_basic():
 
 
 def test_tester_clock():
+    circ = common.TestPeekCircuit
+    tester = fault.Tester(circ)
+    tester.poke(circ.I, 0)
+    tester.expect(circ.O0, tester.peek(circ.O1))
+    check(tester.actions[0], Poke(circ.I, 0))
+    check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
+
+
+def test_tester_peek():
     circ = common.TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
