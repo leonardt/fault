@@ -11,11 +11,11 @@ import copy
 
 def run(circ, actions, flags=[]):
     with tempfile.TemporaryDirectory() as tempdir:
-        m.compile(f"{tempdir}/global_{circ.name}", circ,
+        m.compile(f"{tempdir}/{circ.name}", circ,
                   output="coreir-verilog")
         target = fault.verilator_target.VerilatorTarget(
             circ, directory=f"{tempdir}/",
-            flags=flags, skip_compile=True, circuit_name="global_" + circ.name)
+            flags=flags, skip_compile=True)
         target.run(actions)
 
 
