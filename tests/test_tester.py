@@ -1,8 +1,9 @@
 import random
 from bit_vector import BitVector
 import fault
-from fault.actions import Poke, Expect, Eval, Step, Print
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
+import tempfile
 
 
 def check(got, expected):
@@ -23,9 +24,23 @@ def test_tester_basic():
     check(tester.actions[3], Print(circ.O, "%08x"))
     tester.eval()
     check(tester.actions[4], Eval())
+    with tempfile.TemporaryDirectory() as _dir:
+        tester.compile_and_run("verilator", directory=_dir)
+    tester.compile_and_run("coreir")
+    tester.clear()
+    assert tester.actions == []
 
 
 def test_tester_clock():
+    circ = common.TestPeekCircuit
+    tester = fault.Tester(circ)
+    tester.poke(circ.I, 0)
+    tester.expect(circ.O0, tester.peek(circ.O1))
+    check(tester.actions[0], Poke(circ.I, 0))
+    check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
+
+
+def test_tester_peek():
     circ = common.TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
@@ -98,3 +113,12 @@ def test_retarget_tester():
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)
+
+
+def test_run_error():
+    try:
+        circ = common.TestBasicCircuit
+        fault.Tester(circ).run("bad_target")
+        assert False, "Should raise an exception"
+    except Exception as e:
+        assert str(e) == f"Could not find target=bad_target, did you compile it first?"  # noqa

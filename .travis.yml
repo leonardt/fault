@@ -1,8 +1,11 @@
 language: python
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
-    - verilator
+      - g++-4.9
+      - verilator
 python:
     - "3.6"
 

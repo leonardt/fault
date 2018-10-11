@@ -1,6 +1,6 @@
 from bit_vector import BitVector
 import common
-from fault.actions import Poke, Expect, Eval, Step, Print
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv
 
@@ -14,8 +14,8 @@ def pytest_generate_tests(metafunc):
 
 
 def run(circ, actions, clock, backend):
-    target = MagmaSimulatorTarget(circ, actions, clock, backend=backend)
-    target.run()
+    target = MagmaSimulatorTarget(circ, clock, backend=backend)
+    target.run(actions)
 
 
 def test_magma_simulator_target_basic(backend):
@@ -80,3 +80,14 @@ def test_magma_simulator_target_clock(backend, capfd):
 
     assert lines[-2] == "BasicClkCircuit.I = 0", "Print output incorrect"
     assert lines[-1] == "BasicClkCircuit.O = 1", "Print output incorrect"
+
+
+def test_magma_simulator_target_peek(backend):
+    circ = common.TestPeekCircuit
+    actions = []
+    for i in range(3):
+        x = random_bv(3)
+        actions.append(Poke(circ.I, x))
+        actions.append(Eval())
+        actions.append(Expect(circ.O0, Peek(circ.O1)))
+    run(circ, actions, None, backend)
