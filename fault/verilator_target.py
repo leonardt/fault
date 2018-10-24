@@ -138,7 +138,8 @@ class VerilatorTarget(Target):
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
-            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);", "main_time++;", "#endif"]
+            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
+                    "main_time++;", "#endif"]
         if isinstance(action, actions.Step):
             name = verilator_utils.verilator_name(action.clock.name)
             code = []
