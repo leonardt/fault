@@ -47,8 +47,8 @@ int main(int argc, char **argv) {{
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
   top->trace(tracer, 99);
-  Verilated::mkdir("logs");
-  tracer->open("logs/vlt_dump.vcd");
+  mkdir("logs", 777);
+  tracer->open("logs/{circuit_name}.vcd");
 #endif
 
 {main_body}
@@ -135,6 +135,7 @@ class VerilatorTarget(Target):
             '"verilated.h"',
             '<iostream>',
             '<verilated_vcd_c.h>',
+            '<sys/stat.h>',
         ]
 
         main_body = ""
