@@ -2,14 +2,14 @@ from bit_vector import BitVector
 import magma as m
 from magma.simulator.python_simulator import PythonSimulator
 from magma.simulator.coreir_simulator import CoreIRSimulator
-import fault.actions as actions
+import fault.actions
 from fault.logging import warning
 from fault.target import Target
 
 
 class MagmaSimulatorTarget(Target):
-    def __init__(self, circuit, actions, clock=None, backend="coreir"):
-        super().__init__(circuit, actions)
+    def __init__(self, circuit, clock=None, backend="coreir"):
+        super().__init__(circuit)
         self.clock = clock
         self.backend_cls = MagmaSimulatorTarget.simulator_cls(backend)
 
@@ -38,10 +38,10 @@ class MagmaSimulatorTarget(Target):
             return
         assert got == expected, f"Got {got}, expected {expected}"
 
-    def run(self):
+    def run(self, actions):
         simulator = self.backend_cls(self.circuit, self.clock)
-        for action in self.actions:
-            if isinstance(action, actions.Poke):
+        for action in actions:
+            if isinstance(action, fault.actions.Poke):
                 value = action.value
                 # Python simulator does not support setting Bit with
                 # BitVector(1), so do conversion here
@@ -49,7 +49,7 @@ class MagmaSimulatorTarget(Target):
                         isinstance(value, BitVector):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
-            elif isinstance(action, actions.Print):
+            elif isinstance(action, fault.actions.Print):
                 got = simulator.get_value(action.port)
                 if isinstance(action.port, m.ArrayType) and \
                         isinstance(action.port.T, (m._BitType, m._BitKind)):
@@ -58,12 +58,15 @@ class MagmaSimulatorTarget(Target):
                     raise NotImplementedError("Printing complex nested arrays")
                 print(f'{action.port.debug_name} = {action.format_str}' %
                       got)
-            elif isinstance(action, actions.Expect):
+            elif isinstance(action, fault.actions.Expect):
                 got = simulator.get_value(action.port)
-                MagmaSimulatorTarget.check(got, action.port, action.value)
-            elif isinstance(action, actions.Eval):
+                expected = action.value
+                if isinstance(expected, fault.actions.Peek):
+                    expected = simulator.get_value(expected.port)
+                MagmaSimulatorTarget.check(got, action.port, expected)
+            elif isinstance(action, fault.actions.Eval):
                 simulator.evaluate()
-            elif isinstance(action, actions.Step):
+            elif isinstance(action, fault.actions.Step):
                 if self.clock is not action.clock:
                     raise RuntimeError(f"Using different clocks: {self.clock}, "
                                        f"{action.clock}")

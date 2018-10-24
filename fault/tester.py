@@ -20,24 +20,26 @@ class Tester:
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
         self.default_print_format_str = default_print_format_str
+        self.targets = {}
 
     def make_target(self, target, **kwargs):
         if target == "verilator":
-            return VerilatorTarget(self.circuit, self.actions, **kwargs)
+            return VerilatorTarget(self.circuit, **kwargs)
         if target == "coreir":
-            return MagmaSimulatorTarget(self.circuit, self.actions,
-                                        clock=self.clock, backend='coreir',
-                                        **kwargs)
+            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+                                        backend='coreir', **kwargs)
         if target == "python":
             warning("Python simulator is not actively supported")
-            return MagmaSimulatorTarget(self.circuit, self.actions,
-                                        clock=self.clock, backend='python',
-                                        **kwargs)
+            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+                                        backend='python', **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
         value = make_value(port, value)
         self.actions.append(actions.Poke(port, value))
+
+    def peek(self, port):
+        return actions.Peek(port)
 
     def print(self, port, format_str=None):
         if format_str is None:
@@ -45,7 +47,8 @@ class Tester:
         self.actions.append(actions.Print(port, format_str))
 
     def expect(self, port, value):
-        value = make_value(port, value)
+        if not isinstance(value, actions.Peek):
+            value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
     def eval(self):
@@ -63,9 +66,19 @@ class Tester:
             builder.process(action)
         return builder.vectors
 
+    def compile(self, target="verilator", **kwargs):
+        self.targets[target] = self.make_target(target, **kwargs)
+
+    def run(self, target="verilator"):
+        try:
+            self.targets[target].run(self.actions)
+        except KeyError:
+            raise Exception(f"Could not find target={target}, did you compile"
+                            " it first?")
+
     def compile_and_run(self, target="verilator", **kwargs):
-        target_inst = self.make_target(target, **kwargs)
-        target_inst.run()
+        self.compile(target, **kwargs)
+        self.run(target)
 
     def retarget(self, new_circuit, clock=None):
         """
@@ -86,3 +99,10 @@ class Tester:
         for name, port in self.circuit.IO.ports.items():
             if port.isinput():
                 self.poke(self.circuit.interface.ports[name], 0)
+
+    def clear(self):
+        """
+        Reset the tester by removing any existing actions. Useful for reusing a
+        Tester (e.g. one with verilator already compiled).
+        """
+        self.actions = []

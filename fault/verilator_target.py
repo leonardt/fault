@@ -61,9 +61,10 @@ int main(int argc, char **argv) {{
 
 
 class VerilatorTarget(Target):
-    def __init__(self, circuit, actions, directory="build/",
+    def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
-                 include_directories=[], magma_output="verilog"):
+                 include_directories=[], magma_output="verilog",
+                 circuit_name=None):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -74,13 +75,33 @@ class VerilatorTarget(Target):
             -I flag. From the the verilator docs:
                 -I<dir>                    Directory to search for includes
         """
-        super().__init__(circuit, actions)
+        super().__init__(circuit)
         self.directory = Path(directory)
         self.flags = flags
         self.skip_compile = skip_compile
         self.include_verilog_libraries = include_verilog_libraries
         self.include_directories = include_directories
         self.magma_output = magma_output
+        self.circuit_name = circuit_name
+        if circuit_name is None:
+            self.circuit_name = self.circuit.name
+
+        verilog_file = self.directory / Path(f"{self.circuit_name}.v")
+        # Optionally compile this module to verilog first.
+        if not self.skip_compile:
+            prefix = str(verilog_file)[:-2]
+            m.compile(prefix, self.circuit, output=self.magma_output)
+        if not verilog_file.is_file():
+            raise Exception(f"Compiling {self.circuit} failed")
+
+        # Compile the design using `verilator`
+        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
+        verilator_cmd = verilator_utils.verilator_cmd(
+            self.circuit_name, verilog_file.name,
+            self.include_verilog_libraries, self.include_directories,
+            driver_file.name, self.flags)
+        if self.run_from_directory(verilator_cmd):
+            raise Exception(f"Running verilator cmd {verilator_cmd} failed")
 
     @staticmethod
     def generate_array_action_code(i, action):
@@ -111,10 +132,14 @@ class VerilatorTarget(Target):
                     not isinstance(action.port.T, m.BitKind):
                 return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
-            return [f"my_assert(top->{name}, {action.value}, "
+            value = action.value
+            if isinstance(value, actions.Peek):
+                value = f"top->{value.port.name}"
+            return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
-            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);", "main_time++;", "#endif"]
+            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
+                    "main_time++;", "#endif"]
         if isinstance(action, actions.Step):
             name = verilator_utils.verilator_name(action.clock.name)
             code = []
@@ -128,8 +153,8 @@ class VerilatorTarget(Target):
             return code
         raise NotImplementedError(action)
 
-    def generate_code(self):
-        circuit_name = self.circuit.name
+    def generate_code(self, actions):
+        circuit_name = self.circuit_name
         includes = [
             f'"V{circuit_name}.h"',
             '"verilated.h"',
@@ -139,7 +164,7 @@ class VerilatorTarget(Target):
         ]
 
         main_body = ""
-        for i, action in enumerate(self.actions):
+        for i, action in enumerate(actions):
             code = VerilatorTarget.generate_action_code(i, action)
             for line in code:
                 main_body += f"  {line}\n"
@@ -156,26 +181,16 @@ class VerilatorTarget(Target):
     def run_from_directory(self, cmd):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
-    def run(self):
-        verilog_file = self.directory / Path(f"{self.circuit.name}.v")
-        driver_file = self.directory / Path(f"{self.circuit.name}_driver.cpp")
-        top = self.circuit.name
-        # Optionally compile this module to verilog first.
-        if not self.skip_compile:
-            prefix = str(verilog_file)[:-2]
-            m.compile(prefix, self.circuit, output=self.magma_output)
-        assert verilog_file.is_file()
+    def run(self, actions):
+        verilog_file = self.directory / Path(f"{self.circuit_name}.v")
+        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
+        top = self.circuit_name
         # Write the verilator driver to file.
-        src = self.generate_code()
+        src = self.generate_code(actions)
         with open(driver_file, "w") as f:
             f.write(src)
-        # Run a series of commands: compile the design using 'verilator', run
-        # the Makefile output by verilator, and finally run the executable
-        # created by verilator.
-        verilator_cmd = verilator_utils.verilator_cmd(
-            top, verilog_file.name, self.include_verilog_libraries,
-            self.include_directories, driver_file.name, self.flags)
-        assert not self.run_from_directory(verilator_cmd)
+        # Run a series of commands: run the Makefile output by verilator, and
+        # finally run the executable created by verilator.
         verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
         assert not self.run_from_directory(verilator_make_cmd)
         assert not self.run_from_directory(f"./obj_dir/V{top}")

@@ -4,16 +4,19 @@ import fault
 from bit_vector import BitVector
 import common
 import random
-from fault.actions import Poke, Expect, Eval, Step, Print
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
+from fault.random import random_bv
+import copy
 
 
 def run(circ, actions, flags=[]):
     with tempfile.TemporaryDirectory() as tempdir:
-        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
+        m.compile(f"{tempdir}/{circ.name}", circ,
+                  output="coreir-verilog")
         target = fault.verilator_target.VerilatorTarget(
-            circ, actions, directory=f"{tempdir}/",
+            circ, directory=f"{tempdir}/",
             flags=flags, skip_compile=True)
-        target.run()
+        target.run(actions)
 
 
 def test_verilator_target_basic():
@@ -22,6 +25,17 @@ def test_verilator_target_basic():
     """
     circ = common.TestBasicCircuit
     actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 0))
+    run(circ, actions)
+
+
+def test_verilator_target_peek():
+    circ = common.TestPeekCircuit
+    actions = []
+    for i in range(3):
+        x = random_bv(3)
+        actions.append(Poke(circ.I, x))
+        actions.append(Eval())
+        actions.append(Expect(circ.O0, Peek(circ.O1)))
     run(circ, actions)
 
 
