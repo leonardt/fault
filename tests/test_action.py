@@ -1,4 +1,4 @@
-from fault.actions import Poke, Expect, Eval, Step, Print
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
 
 
@@ -9,3 +9,4 @@ def test_action_strs():
     assert str(Eval()) == 'Eval()'
     assert str(Step(circ.CLK, 1)) == 'Step(BasicClkCircuit.CLK, steps=1)'
     assert str(Print(circ.O, "%08x")) == 'Print(BasicClkCircuit.O, "%08x")'
+    assert str(Peek(circ.O)) == 'Peek(BasicClkCircuit.O)'

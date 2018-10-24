@@ -6,8 +6,10 @@ import mantle
 import os
 import shutil
 import tempfile
+import pytest
 
 
+@pytest.mark.skip("Blocked by https://github.com/rdaly525/coreir/issues/627")
 def test_configuration():
     class ConfigurationTester(FunctionalTester):
         def configure(self, addr, data):
@@ -52,4 +54,5 @@ def test_configuration():
         m.compile(f"{tmp_dir}/Configurable", Configurable,
                   output="coreir-verilog")
         tester.compile_and_run(directory=tmp_dir, target="verilator",
-                               flags=["-Wno-fatal"], skip_compile=True)
+                               flags=["-Wno-fatal"], skip_compile=True,
+                               circuit_name="Configurable")
