@@ -9,6 +9,7 @@ from fault.random import random_bv
 import copy
 import os.path
 
+
 def run(circ, actions, flags=[]):
     with tempfile.TemporaryDirectory() as tempdir:
         m.compile(f"{tempdir}/{circ.name}", circ,
@@ -105,6 +106,7 @@ def test_verilator_target_tuple():
     ]
     run(circ, actions)
 
+
 def test_verilator_trace():
     circ = common.TestBasicClkCircuit
     actions = [
@@ -118,14 +120,16 @@ def test_verilator_trace():
         Eval(),
         Print(circ.O),
     ]
-    flags=["-Wno-lint", "--trace"]
+    flags = ["-Wno-lint", "--trace"]
 
     with tempfile.TemporaryDirectory() as tempdir:
-        assert not os.path.isfile(f"{tempdir}/logs/BasicClkCircuit.vcd"), "Expected logs to be empty"
+        assert not os.path.isfile(f"{tempdir}/logs/BasicClkCircuit.vcd"), \
+            "Expected logs to be empty"
         m.compile(f"{tempdir}/{circ.name}", circ,
                   output="coreir-verilog")
         target = fault.verilator_target.VerilatorTarget(
             circ, directory=f"{tempdir}/",
             flags=flags, skip_compile=True)
         target.run(actions)
-        assert os.path.isfile(f"{tempdir}/logs/BasicClkCircuit.vcd"), "Expected VCD to exist"
+        assert os.path.isfile(f"{tempdir}/logs/BasicClkCircuit.vcd"), \
+            "Expected VCD to exist"
