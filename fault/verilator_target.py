@@ -15,6 +15,10 @@ def flatten(l):
 src_tpl = """\
 {includes}
 
+#if VM_TRACE
+VerilatedVcdC* tracer;
+#endif
+
 void my_assert(
     unsigned int got,
     unsigned int expected,
@@ -26,6 +30,9 @@ void my_assert(
     std::cerr << \"Expected : \" << expected << std::endl;
     std::cerr << \"i        : \" << i << std::endl;
     std::cerr << \"Port     : \" << port << std::endl;
+#if VM_TRACE
+    tracer->close();
+#endif
     exit(1);
   }}
 }}
@@ -34,8 +41,21 @@ int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
 
+#if VM_TRACE
+  vluint64_t main_time = 0;
+
+  Verilated::traceEverOn(true);
+  tracer = new VerilatedVcdC;
+  top->trace(tracer, 99);
+  mkdir("logs", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  tracer->open("logs/{circuit_name}.vcd");
+#endif
+
 {main_body}
 
+#if VM_TRACE
+  tracer->close();
+#endif
 }}
 """
 
@@ -118,12 +138,17 @@ class VerilatorTarget(Target):
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
-            return ["top->eval();"]
+            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
+                    "main_time++;", "#endif"]
         if isinstance(action, actions.Step):
             name = verilator_utils.verilator_name(action.clock.name)
             code = []
             for step in range(action.steps):
                 code.append("top->eval();")
+                code.append("#if VM_TRACE")
+                code.append("tracer->dump(main_time);")
+                code.append("main_time++;")
+                code.append("#endif")
                 code.append(f"top->{name} ^= 1;")
             return code
         raise NotImplementedError(action)
@@ -134,6 +159,9 @@ class VerilatorTarget(Target):
             f'"V{circuit_name}.h"',
             '"verilated.h"',
             '<iostream>',
+            '<verilated_vcd_c.h>',
+            '<sys/types.h>',
+            '<sys/stat.h>',
         ]
 
         main_body = ""
