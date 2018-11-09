@@ -7,6 +7,7 @@ from fault.target import Target
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 import math
+from bit_vector import BitVector
 
 
 def flatten(l):
@@ -119,7 +120,7 @@ class VerilatorTarget(Target):
                     not isinstance(action.port.T, m.BitKind):
                 return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
-            if action.value.num_bits > 32:
+            if isinstance(action.value, BitVector) and action.value.num_bits > 32:
                 asserts = []
                 for i in range(math.ceil(action.value.num_bits / 32)):
                     asserts += [f"top->{name}[{i}] = {action.value[i * 32:min((i+1) * 32, action.value.num_bits)]};"]
