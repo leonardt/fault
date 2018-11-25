@@ -95,6 +95,69 @@ def test_verilator_target_clock(capfd):
     assert lines[-1] == "BasicClkCircuit.O = 1", "Print output incorrect"
 
 
+def test_verilator_print_nested_arrays(capfd):
+    circ = common.TestNestedArraysCircuit
+    actions = [
+        Poke(circ.I, [BitVector(i, 4) for i in range(3)]),
+        Print(circ.I),
+        Eval(),
+        Expect(circ.O, [BitVector(i, 4) for i in range(3)]),
+        Print(circ.O),
+        Poke(circ.I, [BitVector(4 - i, 4) for i in range(3)]),
+        Eval(),
+        Print(circ.O),
+    ]
+    run(circ, actions, flags=["-Wno-lint"])
+    out, err = capfd.readouterr()
+    assert "\n".join(out.splitlines()[-9:]) == """\
+NestedArraysCircuit.I[0] = 0
+NestedArraysCircuit.I[1] = 1
+NestedArraysCircuit.I[2] = 2
+NestedArraysCircuit.O[0] = 0
+NestedArraysCircuit.O[1] = 1
+NestedArraysCircuit.O[2] = 2
+NestedArraysCircuit.O[0] = 4
+NestedArraysCircuit.O[1] = 3
+NestedArraysCircuit.O[2] = 2""", "Print output incorrect"
+
+
+def test_verilator_print_double_nested_arrays(capfd):
+    circ = common.TestDoubleNestedArraysCircuit
+    actions = [
+        Poke(circ.I, [[BitVector(i + j * 3, 4) for i in range(3)] for j in range(2)]),
+        Print(circ.I),
+        Eval(),
+        Expect(circ.O, [[BitVector(i + j * 3, 4) for i in range(3)] for j in range(2)]),
+        Print(circ.O),
+        Poke(circ.I, [[BitVector(i + (j + 1) * 3, 4) for i in range(3)] for j in range(2)]),
+        Eval(),
+        Print(circ.O),
+    ]
+    run(circ, actions, flags=["-Wno-lint"])
+    out, err = capfd.readouterr()
+    print(out)
+    assert "\n".join(out.splitlines()[-18:]) == """\
+DoubleNestedArraysCircuit.I[0][0] = 0
+DoubleNestedArraysCircuit.I[0][1] = 1
+DoubleNestedArraysCircuit.I[0][2] = 2
+DoubleNestedArraysCircuit.I[1][0] = 3
+DoubleNestedArraysCircuit.I[1][1] = 4
+DoubleNestedArraysCircuit.I[1][2] = 5
+DoubleNestedArraysCircuit.O[0][0] = 0
+DoubleNestedArraysCircuit.O[0][1] = 1
+DoubleNestedArraysCircuit.O[0][2] = 2
+DoubleNestedArraysCircuit.O[1][0] = 3
+DoubleNestedArraysCircuit.O[1][1] = 4
+DoubleNestedArraysCircuit.O[1][2] = 5
+DoubleNestedArraysCircuit.O[0][0] = 3
+DoubleNestedArraysCircuit.O[0][1] = 4
+DoubleNestedArraysCircuit.O[0][2] = 5
+DoubleNestedArraysCircuit.O[1][0] = 6
+DoubleNestedArraysCircuit.O[1][1] = 7
+DoubleNestedArraysCircuit.O[1][2] = 8\
+""", "Print output incorrect"
+
+
 def test_verilator_target_tuple():
     circ = common.TestTupleCircuit
     actions = [

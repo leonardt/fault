@@ -109,7 +109,7 @@ class VerilatorTarget(Target):
     def generate_array_action_code(i, action):
         return flatten([
             VerilatorTarget.generate_action_code(
-                i, type(action)(action.port[j], action.value[j])
+                i, type(action)(action.port[j], action.format_str if isinstance(action, actions.Print) else action.value[j])
             ) for j in range(action.port.N)
         ])
 
@@ -129,8 +129,12 @@ class VerilatorTarget(Target):
                 return [f"top->{name} = {action.value};"]
         if isinstance(action, actions.Print):
             name = verilator_utils.verilator_name(action.port.name)
-            return [f'printf("{action.port.debug_name} = '
-                    f'{action.format_str}\\n", top->{name});']
+            if isinstance(action.port, m.ArrayType) and \
+                    not isinstance(action.port.T, m.BitKind):
+                return VerilatorTarget.generate_array_action_code(i, action)
+            else:
+                return [f'printf("{action.port.debug_name} = '
+                        f'{action.format_str}\\n", top->{name});']
         if isinstance(action, actions.Expect):
             # For verilator, if an expect is "AnyValue" we don't need to perform
             # the expect.
