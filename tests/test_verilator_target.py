@@ -124,12 +124,15 @@ NestedArraysCircuit.O[2] = 2""", "Print output incorrect"
 def test_verilator_print_double_nested_arrays(capfd):
     circ = common.TestDoubleNestedArraysCircuit
     actions = [
-        Poke(circ.I, [[BitVector(i + j * 3, 4) for i in range(3)] for j in range(2)]),
+        Poke(circ.I, [[BitVector(i + j * 3, 4) for i in range(3)]
+                      for j in range(2)]),
         Print(circ.I),
         Eval(),
-        Expect(circ.O, [[BitVector(i + j * 3, 4) for i in range(3)] for j in range(2)]),
+        Expect(circ.O, [[BitVector(i + j * 3, 4) for i in range(3)]
+                        for j in range(2)]),
         Print(circ.O),
-        Poke(circ.I, [[BitVector(i + (j + 1) * 3, 4) for i in range(3)] for j in range(2)]),
+        Poke(circ.I, [[BitVector(i + (j + 1) * 3, 4) for i in range(3)]
+                      for j in range(2)]),
         Eval(),
         Print(circ.O),
     ]

@@ -107,11 +107,17 @@ class VerilatorTarget(Target):
 
     @staticmethod
     def generate_array_action_code(i, action):
-        return flatten([
-            VerilatorTarget.generate_action_code(
-                i, type(action)(action.port[j], action.format_str if isinstance(action, actions.Print) else action.value[j])
-            ) for j in range(action.port.N)
-        ])
+        result = []
+        for j in range(action.port.N):
+            if isinstance(action, actions.Print):
+                value = action.format_str
+            else:
+                value = action.value[j]
+            result += [
+                VerilatorTarget.generate_action_code(
+                    i, type(action)(action.port[j], value)
+                )]
+        return flatten(result)
 
     @staticmethod
     def generate_action_code(i, action):
@@ -120,10 +126,13 @@ class VerilatorTarget(Target):
                     not isinstance(action.port.T, m.BitKind):
                 return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
-            if isinstance(action.value, BitVector) and action.value.num_bits > 32:
+            if isinstance(action.value, BitVector) and \
+                    action.value.num_bits > 32:
                 asserts = []
                 for i in range(math.ceil(action.value.num_bits / 32)):
-                    asserts += [f"top->{name}[{i}] = {action.value[i * 32:min((i+1) * 32, action.value.num_bits)]};"]
+                    value = action.value[i * 32:min(
+                        (i+1) * 32, action.value.num_bits)]
+                    asserts += [f"top->{name}[{i}] = {value};"]
                 return asserts
             else:
                 return [f"top->{name} = {action.value};"]
