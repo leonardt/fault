@@ -17,6 +17,16 @@ def flatten(l):
 src_tpl = """\
 {includes}
 
+// Based on https://www.veripool.org/projects/verilator/wiki/Manual-verilator#CONNECTING-TO-C
+vluint64_t main_time = 0;       // Current simulation time
+// This is a 64-bit integer to reduce wrap over issues and
+// allow modulus.  You can also use a double, if you wish.
+
+double sc_time_stamp () {{       // Called by $time in Verilog
+    return main_time;           // converts to double, to match
+                                // what SystemC does
+}}
+
 #if VM_TRACE
 VerilatedVcdC* tracer;
 #endif
@@ -44,8 +54,6 @@ int main(int argc, char **argv) {{
   V{circuit_name}* top = new V{circuit_name};
 
 #if VM_TRACE
-  vluint64_t main_time = 0;
-
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
   top->trace(tracer, 99);
@@ -159,16 +167,16 @@ class VerilatorTarget(Target):
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
-            return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
-                    "main_time++;", "#endif"]
+            return ["top->eval();", "main_time++;", "#if VM_TRACE",
+                    "tracer->dump(main_time);", "#endif"]
         if isinstance(action, actions.Step):
             name = verilator_utils.verilator_name(action.clock.name)
             code = []
             for step in range(action.steps):
                 code.append("top->eval();")
+                code.append("main_time++;")
                 code.append("#if VM_TRACE")
                 code.append("tracer->dump(main_time);")
-                code.append("main_time++;")
                 code.append("#endif")
                 code.append(f"top->{name} ^= 1;")
             return code
