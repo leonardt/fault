@@ -159,8 +159,8 @@ class VerilatorTarget(Target):
                 return [f'printf("{action.port.debug_name} = '
                         f'{action.format_str}\\n", top->{name});']
         if isinstance(action, actions.Expect):
-            # For verilator, if an expect is "AnyValue" we don't need to perform
-            # the expect.
+            # For verilator, if an expect is "AnyValue" we don't need to
+            # perform the expect.
             if value_utils.is_any(action.value):
                 return []
             if isinstance(action.port, m.ArrayType) and \
@@ -171,8 +171,8 @@ class VerilatorTarget(Target):
             if isinstance(value, actions.Peek):
                 value = f"top->{value.port.name}"
             elif isinstance(action.port, m.SIntType) and value < 0:
-                # Handle sign extension for verilator since it expects and unsigned
-                # c type
+                # Handle sign extension for verilator since it expects and
+                # unsigned c type
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
 
