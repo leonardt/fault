@@ -162,20 +162,23 @@ class VerilatorTarget(Target):
                 return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
             value = action.value
-            # Handle sign extension for verilator since it expects and unsigned
-            # c type
-            if isinstance(action.port, m.SIntType):
-                if len(action.port) <= 8:
-                    value = SIntVector(value, 8).as_uint()
-                elif len(action.port) <= 16:
-                    value = SIntVector(value, 16).as_uint()
-                elif len(action.port) <= 32:
-                    value = SIntVector(value, 32).as_uint()
-                else:
-                    raise NotImplementedError()
-
             if isinstance(value, actions.Peek):
                 value = f"top->{value.port.name}"
+            elif isinstance(action.port, m.SIntType) and value < 0:
+                # Handle sign extension for verilator since it expects and unsigned
+                # c type
+                port_len = len(action.port)
+                value = BitVector(value, port_len)
+                if len(action.port) <= 8:
+                    width = 8
+                elif len(action.port) <= 16:
+                    width = 16
+                elif len(action.port) <= 32:
+                    width = 32
+                else:
+                    raise NotImplementedError()
+                mask = ((1 << (width - port_len)) - 1) << port_len
+                value = BitVector(value, width) | mask
 
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
