@@ -174,6 +174,9 @@ class VerilatorTarget(Target):
                 else:
                     raise NotImplementedError()
 
+            if isinstance(value, actions.Peek):
+                value = f"top->{value.port.name}"
+
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):
