@@ -7,7 +7,7 @@ from fault.target import Target
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 import math
-from bit_vector import BitVector
+from bit_vector import BitVector, SIntVector
 
 
 def flatten(l):
@@ -162,8 +162,18 @@ class VerilatorTarget(Target):
                 return VerilatorTarget.generate_array_action_code(i, action)
             name = verilator_utils.verilator_name(action.port.name)
             value = action.value
-            if isinstance(value, actions.Peek):
-                value = f"top->{value.port.name}"
+            # Handle sign extension for verilator since it expects and unsigned
+            # c type
+            if isinstance(action.port, m.SIntType):
+                if len(action.port) <= 8:
+                    value = SIntVector(value, 8).as_uint()
+                elif len(action.port) <= 16:
+                    value = SIntVector(value, 16).as_uint()
+                elif len(action.port) <= 32:
+                    value = SIntVector(value, 32).as_uint()
+                else:
+                    raise NotImplementedError()
+
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
         if isinstance(action, actions.Eval):

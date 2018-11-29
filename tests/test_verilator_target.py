@@ -8,6 +8,7 @@ from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.random import random_bv
 import copy
 import os.path
+import pytest
 
 
 def run(circ, actions, flags=[]):
@@ -199,3 +200,15 @@ def test_verilator_trace():
         target.run(actions)
         assert os.path.isfile(f"{tempdir}/logs/BasicClkCircuit.vcd"), \
             "Expected VCD to exist"
+
+
+# @pytest.mark.parametrize("width", range(1, 33))
+@pytest.mark.parametrize("width", [1, 4, 5, 7, 8, 11, 13, 16, 19, 22, 24, 27, 31, 32])
+def test_verilator_target_sint_sign_extend(width):
+    circ = common.define_simple_circuit(m.SInt(width), f"test_verilator_target_sint_sign_extend_{width}")
+    actions = [
+        Poke(circ.I, -2),
+        Eval(),
+        Expect(circ.O, -2),
+    ]
+    run(circ, actions)
