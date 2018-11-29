@@ -106,3 +106,11 @@ class Tester:
         Tester (e.g. one with verilator already compiled).
         """
         self.actions = []
+
+
+    def __str__(self):
+        s = object.__str__(self) + "\n"
+        s += "Actions:\n"
+        for i, action in enumerate(self.actions):
+            s += f"    {i}: {action}\n"
+        return s
