@@ -38,9 +38,9 @@ void my_assert(
     const char* port) {{
   if (got != expected) {{
     std::cerr << std::endl;  // end the current line
-    std::cerr << \"Got      : \" << got << std::endl;
-    std::cerr << \"Expected : \" << expected << std::endl;
-    std::cerr << \"i        : \" << i << std::endl;
+    std::cerr << \"Got      : 0x\" << std::hex << got << std::endl;
+    std::cerr << \"Expected : 0x\" << std::hex << expected << std::endl;
+    std::cerr << \"i        : \" << std::dec << i << std::endl;
     std::cerr << \"Port     : \" << port << std::endl;
 #if VM_TRACE
     tracer->close();
@@ -143,7 +143,13 @@ class VerilatorTarget(Target):
                     asserts += [f"top->{name}[{i}] = {value};"]
                 return asserts
             else:
-                return [f"top->{name} = {action.value};"]
+                value = action.value
+                if isinstance(action.port, m.SIntType) and value < 0:
+                    # Handle sign extension for verilator since it expects and unsigned
+                    # c type
+                    port_len = len(action.port)
+                    value = BitVector(value, port_len).as_uint()
+                return [f"top->{name} = {value};"]
         if isinstance(action, actions.Print):
             name = verilator_utils.verilator_name(action.port.name)
             if isinstance(action.port, m.ArrayType) and \
@@ -168,17 +174,7 @@ class VerilatorTarget(Target):
                 # Handle sign extension for verilator since it expects and unsigned
                 # c type
                 port_len = len(action.port)
-                value = BitVector(value, port_len)
-                if len(action.port) <= 8:
-                    width = 8
-                elif len(action.port) <= 16:
-                    width = 16
-                elif len(action.port) <= 32:
-                    width = 32
-                else:
-                    raise NotImplementedError()
-                mask = ((1 << (width - port_len)) - 1) << port_len
-                value = BitVector(value, width) | mask
+                value = BitVector(value, port_len).as_uint()
 
             return [f"my_assert(top->{name}, {value}, "
                     f"{i}, \"{action.port.name}\");"]
