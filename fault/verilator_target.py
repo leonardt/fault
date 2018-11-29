@@ -67,7 +67,7 @@ int main(int argc, char **argv) {{
   tracer->close();
 #endif
 }}
-"""
+"""  # nopep8
 
 
 class VerilatorTarget(Target):
