@@ -145,8 +145,8 @@ class VerilatorTarget(Target):
             else:
                 value = action.value
                 if isinstance(action.port, m.SIntType) and value < 0:
-                    # Handle sign extension for verilator since it expects and unsigned
-                    # c type
+                    # Handle sign extension for verilator since it expects and
+                    # unsigned c type
                     port_len = len(action.port)
                     value = BitVector(value, port_len).as_uint()
                 return [f"top->{name} = {value};"]
