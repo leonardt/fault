@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import magma as m
 import fault.actions as actions
-from fault.target import Target
+from fault.verilog_target import VerilogTarget
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 import math
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {{
 """  # nopep8
 
 
-class VerilatorTarget(Target):
+class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="verilog",
@@ -85,29 +85,16 @@ class VerilatorTarget(Target):
             -I flag. From the the verilator docs:
                 -I<dir>                    Directory to search for includes
         """
-        super().__init__(circuit)
-        self.directory = Path(directory)
+        super().__init__(circuit, circuit_name, directory, skip_compile,
+                         magma_output)
         self.flags = flags
-        self.skip_compile = skip_compile
         self.include_verilog_libraries = include_verilog_libraries
         self.include_directories = include_directories
-        self.magma_output = magma_output
-        self.circuit_name = circuit_name
-        if circuit_name is None:
-            self.circuit_name = self.circuit.name
-
-        verilog_file = self.directory / Path(f"{self.circuit_name}.v")
-        # Optionally compile this module to verilog first.
-        if not self.skip_compile:
-            prefix = str(verilog_file)[:-2]
-            m.compile(prefix, self.circuit, output=self.magma_output)
-        if not verilog_file.is_file():
-            raise Exception(f"Compiling {self.circuit} failed")
 
         # Compile the design using `verilator`
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         verilator_cmd = verilator_utils.verilator_cmd(
-            self.circuit_name, verilog_file.name,
+            self.circuit_name, self.verilog_file.name,
             self.include_verilog_libraries, self.include_directories,
             driver_file.name, self.flags)
         if self.run_from_directory(verilator_cmd):
