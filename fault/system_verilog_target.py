@@ -49,7 +49,7 @@ class SystemVerilogTarget(VerilogTarget):
                     # unsigned c type
                     port_len = len(action.port)
                     value = BitVector(value, port_len).as_uint()
-                return [f"{name} = {value};"]
+                return [f"{name} = {value};", "#1"]
         if isinstance(action, actions.Print):
             name = verilator_utils.verilator_name(action.port.name)
             if isinstance(action.port, m.ArrayType) and \
@@ -76,7 +76,7 @@ class SystemVerilogTarget(VerilogTarget):
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
 
-            return [f"assert(top->{name} == {value}) else $error(\"Failed on iteration=%d chekcing port {action.port.name}\");"]
+            return [f"if ({name} != {value}) $error(\"Failed on iteration={i} checking port {action.port.name}\");"]
         if isinstance(action, actions.Eval):
             # Eval implicit in SV simulations
             return []
@@ -101,7 +101,13 @@ class SystemVerilogTarget(VerilogTarget):
             width_str = ""
             if isinstance(value, m.ArrayType) and isinstance(value.T, m.BitKind):
                 width_str = f"[{len(value) - 1}:0] "
-            declarations += f"    wire {width_str}{name};\n"
+            if value.isoutput():
+                t = "wire"
+            elif value.isinput():
+                t = "reg"
+            else:
+                raise NotImplementedError()
+            declarations += f"    {t} {width_str}{name};\n"
             port_list.append(f".{name}({name})")
 
         for i, action in enumerate(actions):
@@ -119,10 +125,11 @@ class SystemVerilogTarget(VerilogTarget):
         return src
 
     def run(self, actions):
-        test_bench_file = self.directory / Path(f"{self.circuit_name}_tb.v")
+        test_bench_file = self.directory / Path(f"{self.circuit_name}_tb.sv")
         # Write the verilator driver to file.
         src = self.generate_code(actions)
         with open(test_bench_file, "w") as f:
+            print(src)
             f.write(src)
         cmd_file = self.directory / Path(f"{self.circuit_name}_cmd.tcl")
         with open(cmd_file, "w") as f:
@@ -132,14 +139,8 @@ probe -create -all -vcd -depth all
 run 10000ns
 quit
 """)
-
-        # Run a series of commands: run the Makefile output by verilator, and
-        # finally run the executable created by verilator.
-        # top = self.circuit_name
-        # verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
-        # assert not self.run_from_directory(verilator_make_cmd)
-        # assert not self.run_from_directory(f"./obj_dir/V{top}")
         cmd = f"""\
-irun -top {self.circuit_name} -timescale 1ns/1ps -l {self.circuit_name}_irun.log -access +rwc -notimingchecks -input {self.circuit_name}_cmd.tcl {self.verilog_file}
+irun -top {self.circuit_name}_tb -timescale 1ns/1ps -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file}
 """  # nopep8
+        print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)

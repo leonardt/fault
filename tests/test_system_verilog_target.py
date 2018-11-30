@@ -23,5 +23,5 @@ def test_verilator_target_basic():
     Test basic verilator workflow with a simple circuit.
     """
     circ = common.TestBasicCircuit
-    actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 1))
+    actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 0))
     run(circ, actions)
