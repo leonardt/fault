@@ -27,6 +27,8 @@ def verilator_make_cmd(top):
     return f"make -C obj_dir -j -f V{top}.mk V{top}"
 
 
+# TODO: This should be renamed to `verilog_name`, it just defines the mapping
+# from coreir types to verilog (rather than being verilator specific)
 def verilator_name(name):
     if isinstance(name, magma.ref.DefnRef):
         return str(name)

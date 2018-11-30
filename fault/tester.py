@@ -5,6 +5,7 @@ from fault.logging import warning
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
+from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
 import copy

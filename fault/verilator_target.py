@@ -182,9 +182,8 @@ class VerilatorTarget(VerilogTarget):
         raise NotImplementedError(action)
 
     def generate_code(self, actions):
-        circuit_name = self.circuit_name
         includes = [
-            f'"V{circuit_name}.h"',
+            f'"V{self.circuit_name}.h"',
             '"verilated.h"',
             '<iostream>',
             '<verilated_vcd_c.h>',
@@ -202,7 +201,7 @@ class VerilatorTarget(VerilogTarget):
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
-            circuit_name=circuit_name,
+            circuit_name=self.circuit_name,
         )
 
         return src
@@ -211,15 +210,14 @@ class VerilatorTarget(VerilogTarget):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
     def run(self, actions):
-        verilog_file = self.directory / Path(f"{self.circuit_name}.v")
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
-        top = self.circuit_name
         # Write the verilator driver to file.
         src = self.generate_code(actions)
         with open(driver_file, "w") as f:
             f.write(src)
         # Run a series of commands: run the Makefile output by verilator, and
         # finally run the executable created by verilator.
-        verilator_make_cmd = verilator_utils.verilator_make_cmd(top)
+        verilator_make_cmd = verilator_utils.verilator_make_cmd(
+            self.circuit_name)
         assert not self.run_from_directory(verilator_make_cmd)
-        assert not self.run_from_directory(f"./obj_dir/V{top}")
+        assert not self.run_from_directory(f"./obj_dir/V{self.circuit_name}")
