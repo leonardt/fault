@@ -161,4 +161,4 @@ Actions:
     1: Eval()
     2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector(0, 4), BitVector(1, 4), BitVector(2, 4)], 3), Array([BitVector(3, 4), BitVector(4, 4), BitVector(5, 4)], 3)], 2))
     3: Print(DoubleNestedArraysCircuit.O, "%08x")
-"""
+"""  # nopep8
