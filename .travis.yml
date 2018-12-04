@@ -23,3 +23,12 @@ script:
 
 after_success:
     - coveralls
+
+deploy:
+  provider: pypi
+  user: leonardt
+  password:
+    secure: EMYqO+p8gN4aKv6dwaF9YVoheoyYQ+DFYkrUUU7T0LF/q3E4cR514ENS92LhaaISjbecfhbinMEgPUNsswTzT9c0RCO3BsrcPEhHWSistFtXcLIbAz0gw9ARcNGs+TElA71V7gUeCPtNUD1Inw8+Dp9B7zKuUKabsOnvWQ6bCeaPiWTnAfbzXq0yK+njjEEPo510bQ4U8IR0NfJxyR/6TDPkMNsvV0M/jCJcmukNDnT2PnSpSuqNOec+5Nv4xJT1Ub2J6SPPEyG1IFWMjmd2jYlfbj8lIXFv1+FwWivAsfEsSyf3ZQyWBSlqc1Hjo8mbiu2p2nOuAj+zCDLf2ySkyXxKMPFq917osyyrohqLo6p2s6GPWCelWTywbD31ZdfpDh8f0abfEMc/d7RgVZjmzrczYny2x++asqkOnnP9paYKoydqHPeXOnSKeNsfgBVZT4JDpnp7FPtbyoPEjeQhN/+dSIoXEAs9zsAiumPPrc3i5TbvdYWROOULFCR+CSAvphKMuEefnYiAMJGrVgQ15D04ww9qCvmCI5oySv1xsDI0FRVVA6NlBD2rx1F5XPX9i66ga9o0UUgQwc4wgctowxgePvPvPgvFW+UQ5IjwQtUwVoV0AuULBl4qsGLdkUtHjhSyTYytoFDhV8tnwscwYzGhCaSVCOni30o2d1A3xV8=
+  on:
+    tags: true
+    branch: master
