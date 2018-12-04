@@ -144,3 +144,21 @@ Actions:
     4: Step(BasicClkCircuit.CLK, steps=1)
     5: Print(BasicClkCircuit.O, "%08x")
 """
+
+
+def test_print_arrays(capsys):
+    circ = common.TestDoubleNestedArraysCircuit
+    tester = fault.Tester(circ, default_print_format_str="%08x")
+    tester.poke(circ.I, [[0, 1, 2], [3, 4, 5]])
+    tester.eval()
+    tester.expect(circ.O, [[0, 1, 2], [3, 4, 5]])
+    tester.print(circ.O)
+    print(tester)
+    out, err = capsys.readouterr()
+    assert "\n".join(out.splitlines()[1:]) == """\
+Actions:
+    0: Poke(DoubleNestedArraysCircuit.I, Array([Array([BitVector(0, 4), BitVector(1, 4), BitVector(2, 4)], 3), Array([BitVector(3, 4), BitVector(4, 4), BitVector(5, 4)], 3)], 2))
+    1: Eval()
+    2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector(0, 4), BitVector(1, 4), BitVector(2, 4)], 3), Array([BitVector(3, 4), BitVector(4, 4), BitVector(5, 4)], 3)], 2))
+    3: Print(DoubleNestedArraysCircuit.O, "%08x")
+"""

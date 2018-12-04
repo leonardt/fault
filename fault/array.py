@@ -29,3 +29,9 @@ class Array:
             return self.value.flattened()
         else:
             return self.value
+
+    def __str__(self):
+        return f"Array({self.value}, {self.N})"
+
+    def __repr__(self):
+        return f"Array({self.value}, {self.N})"
