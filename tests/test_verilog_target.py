@@ -14,7 +14,7 @@ import pytest
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [fault.verilator_target.VerilatorTarget]
-        if os.getenv("TRAVIS", False):
+        if not os.getenv("TRAVIS", False):
             targets.append(fault.system_verilog_target.SystemVerilogTarget)
         metafunc.parametrize("target", targets)
 
