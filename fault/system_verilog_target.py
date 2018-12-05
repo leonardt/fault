@@ -10,8 +10,6 @@ from fault.util import flatten
 
 
 src_tpl = """\
-`timescale 1ns/1ns
-
 module {circuit_name}_tb;
 {declarations}
     initial begin
@@ -24,6 +22,13 @@ module {circuit_name}_tb;
     );
 
 endmodule
+"""
+
+ncsim_cmd_string = """\
+database -open -vcd vcddb -into verilog.vcd -default -timescale ps
+probe -create -all -vcd -depth all
+run 10000ns
+quit
 """
 
 
@@ -173,7 +178,10 @@ class SystemVerilogTarget(VerilogTarget):
 
         return src
 
-    def run(self, actions):
+    def run(self, actions, timescale="1ns/1ns", simulator="ncsim"):
+        """
+        Supported simulators: "ncsim", "vcs"
+        """
         test_bench_file = self.directory / Path(f"{self.circuit_name}_tb.sv")
         # Write the verilator driver to file.
         src = self.generate_code(actions)
@@ -181,15 +189,19 @@ class SystemVerilogTarget(VerilogTarget):
             print(src)
             f.write(src)
         cmd_file = self.directory / Path(f"{self.circuit_name}_cmd.tcl")
-        with open(cmd_file, "w") as f:
-            f.write("""\
-database -open -vcd vcddb -into verilog.vcd -default -timescale ps
-probe -create -all -vcd -depth all
-run 10000ns
-quit
-""")
-        cmd = f"""\
-irun -top {self.circuit_name}_tb -timescale 1ns/1ps -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file}
+        if simulator == "ncsim":
+            with open(cmd_file, "w") as f:
+                f.write(ncsim_cmd_string)
+            cmd = f"""\
+irun -top {self.circuit_name}_tb -timescale {timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file}
 """  # nopep8
+        else:
+            cmd = f"""\
+vcs -sverilog -full64 +v2k -timescale={timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file}
+"""  # nopep8
+
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
+        if simulator == "vcs":
+            print(f"Running command: {cmd}")
+            assert not subprocess.call("./simv", cwd=self.directory, shell=True)
