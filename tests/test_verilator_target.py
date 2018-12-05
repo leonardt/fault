@@ -11,7 +11,6 @@ import os.path
 import pytest
 
 
-
 def test_verilator_trace():
     circ = common.TestBasicClkCircuit
     actions = [
