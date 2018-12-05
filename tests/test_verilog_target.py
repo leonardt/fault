@@ -13,8 +13,10 @@ import pytest
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
-        metafunc.parametrize("target", [fault.verilator_target.VerilatorTarget,
-                                        fault.system_verilog_target.SystemVerilogTarget])
+        targets = [fault.verilator_target.VerilatorTarget]
+        if os.getenv(TRAVIS, False):
+            targets.append(fault.system_verilog_target.SystemVerilogTarget])
+        metafunc.parametrize("target", targets)
 
 
 def run(circ, actions, target, flags=[]):
@@ -194,5 +196,21 @@ def test_target_tuple(target):
         Eval(),
         Expect(circ.O.a, 5),
         Expect(circ.O.b, 11),
+    ]
+    run(circ, actions, target)
+
+
+# @pytest.mark.parametrize("width", range(1, 33))
+# Select random subset of range to speed up test, TODO: Maybe actually make
+# this random
+@pytest.mark.parametrize("width", [1, 4, 5, 7, 8, 11, 13, 16, 19, 22, 24, 27,
+                                   31, 32])
+def test_target_sint_sign_extend(width, target):
+    circ = common.define_simple_circuit(
+        m.SInt(width), f"test_target_sint_sign_extend_{width}")
+    actions = [
+        Poke(circ.I, -2),
+        Eval(),
+        Expect(circ.O, -2),
     ]
     run(circ, actions, target)
