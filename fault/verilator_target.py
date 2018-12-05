@@ -8,10 +8,7 @@ import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 import math
 from bit_vector import BitVector, SIntVector
-
-
-def flatten(l):
-    return [item for sublist in l for item in sublist]
+from fault.util import flatten
 
 
 src_tpl = """\
