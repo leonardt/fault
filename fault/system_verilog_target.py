@@ -91,7 +91,9 @@ class SystemVerilogTarget(VerilogTarget):
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
 
-            return [f"if ({name} != {value}) $error(\"Failed on action={i} checking port {action.port.name}. Expected %x, got %x\", {value}, {name});"]
+            return [f"if ({name} != {value}) $error(\"Failed on action={i}"
+                    f" checking port {action.port.name}. Expected %x, got %x\""
+                    f", {value}, {name});"]
         if isinstance(action, actions.Eval):
             # Eval implicit in SV simulations
             return []
@@ -130,13 +132,15 @@ class SystemVerilogTarget(VerilogTarget):
 
     @staticmethod
     def generate_port_code(name, type_):
-        if (isinstance(type_, m.ArrayKind) and not isinstance(type_.T, m.BitKind)) or \
+        if (isinstance(type_, m.ArrayKind) and
+                not isinstance(type_.T, m.BitKind)) or \
                 isinstance(type_, m.TupleKind):
             return SystemVerilogTarget.generate_recursive_port_code(name, type_)
         else:
             width_str = ""
             print(type_)
-            if isinstance(type_, m.ArrayKind) and isinstance(type_.T, m.BitKind):
+            if isinstance(type_, m.ArrayKind) and \
+                    isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
             if type_.isoutput():
                 t = "wire"
