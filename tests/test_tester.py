@@ -40,7 +40,7 @@ def test_tester_basic(target, simulator):
     check(tester.actions[5], Eval())
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            tester.compile_and_run(target, directory=_dir)
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
     tester.compile_and_run("coreir")
@@ -57,7 +57,7 @@ def test_tester_clock(target, simulator):
     check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            tester.compile_and_run(target, directory=_dir)
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
@@ -75,7 +75,7 @@ def test_tester_peek(target, simulator):
     check(tester.actions[3], Step(circ.CLK, 1))
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            tester.compile_and_run(target, directory=_dir)
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
@@ -96,7 +96,7 @@ def test_tester_nested_arrays_by_element(target, simulator):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            tester.compile_and_run(target, directory=_dir)
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
@@ -116,7 +116,7 @@ def test_tester_nested_arrays_bulk(target, simulator):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            tester.compile_and_run(target, directory=_dir)
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
@@ -156,7 +156,7 @@ def test_retarget_tester(target, simulator):
         check(copy.actions[i], exp)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            copy.compile_and_run(target, directory=_dir)
+            copy.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             copy.compile_and_run(target, directory=_dir, simulator=simulator)
 
