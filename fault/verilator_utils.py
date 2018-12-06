@@ -25,15 +25,3 @@ def verilator_cmd(top, verilog_filename, include_verilog_libraries,
 
 def verilator_make_cmd(top):
     return f"make -C obj_dir -j -f V{top}.mk V{top}"
-
-
-def verilator_name(name):
-    if isinstance(name, magma.ref.DefnRef):
-        return str(name)
-    if isinstance(name, magma.ref.ArrayRef):
-        array_name = verilator_name(name.array.name)
-        return f"{array_name}_{name.index}"
-    if isinstance(name, magma.ref.TupleRef):
-        tuple_name = verilator_name(name.tuple.name)
-        return f"{tuple_name}_{name.index}"
-    raise NotImplementedError(name, type(name))

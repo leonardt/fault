@@ -5,6 +5,7 @@ from fault.logging import warning
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
+from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
 import copy
@@ -25,13 +26,15 @@ class Tester:
     def make_target(self, target, **kwargs):
         if target == "verilator":
             return VerilatorTarget(self.circuit, **kwargs)
-        if target == "coreir":
+        elif target == "coreir":
             return MagmaSimulatorTarget(self.circuit, clock=self.clock,
                                         backend='coreir', **kwargs)
-        if target == "python":
+        elif target == "python":
             warning("Python simulator is not actively supported")
             return MagmaSimulatorTarget(self.circuit, clock=self.clock,
                                         backend='python', **kwargs)
+        elif target == "system-verilog":
+            return SystemVerilogTarget(self.circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
