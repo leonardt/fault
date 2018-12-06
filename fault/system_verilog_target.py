@@ -34,6 +34,26 @@ class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, magma_output="coreir-verilog",
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5):
+        """
+        circuit: a magma circuit
+
+        circuit_name: the name of the circuit (default is circuit.name)
+
+        directory: directory to use for generating collateral, buildling, and
+                   running simulator
+
+        skip_compile: (boolean) whether or not to compile the magma circuit
+
+        magma_output: Set the output parameter to m.compile
+                      (default coreir-verilog)
+        simulator: "ncsim" or "vcs"
+
+        timescale: Set the timescale for the verilog simulation
+                   (default 1ns/1ns)
+
+        clock_step_delay: Set the number of steps to delay for each step of the
+                          clock
+        """
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          magma_output)
         if simulator is None:
