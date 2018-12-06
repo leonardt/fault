@@ -15,8 +15,10 @@ def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [(fault.verilator_target.VerilatorTarget, None)]
         if not os.getenv("TRAVIS", False):
-            targets.append((fault.system_verilog_target.SystemVerilogTarget, "ncsim"))
-            targets.append((fault.system_verilog_target.SystemVerilogTarget, "vcs"))
+            targets.append(
+                (fault.system_verilog_target.SystemVerilogTarget, "ncsim"))
+            targets.append(
+                (fault.system_verilog_target.SystemVerilogTarget, "vcs"))
         metafunc.parametrize("target,simulator", targets)
 
 
@@ -121,6 +123,8 @@ def test_target_clock(capfd, target, simulator):
             assert lines[-9] == "BasicClkCircuit.I = 0", out
             assert lines[-8] == "BasicClkCircuit.O = 0", out
             assert lines[-7] == "BasicClkCircuit.O = 1", out
+        else:
+            raise NotImplementedError(f"Unsupported simulator: {simulator}")
 
 
 def test_print_nested_arrays(capfd, target, simulator):
@@ -144,6 +148,8 @@ def test_print_nested_arrays(capfd, target, simulator):
             actual = "\n".join(out.splitlines()[-9 - 3: -3])
         elif simulator == "vcs":
             actual = "\n".join(out.splitlines()[-9 - 6: -6])
+        else:
+            raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
 NestedArraysCircuit.I[0] = 0
 NestedArraysCircuit.I[1] = 1
@@ -181,6 +187,8 @@ def test_print_double_nested_arrays(capfd, target, simulator):
             actual = "\n".join(out.splitlines()[-18 - 3: -3])
         elif simulator == "vcs":
             actual = "\n".join(out.splitlines()[-18 - 6: -6])
+        else:
+            raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
 DoubleNestedArraysCircuit.I[0][0] = 0
 DoubleNestedArraysCircuit.I[0][1] = 1
