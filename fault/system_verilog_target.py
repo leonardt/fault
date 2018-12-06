@@ -32,7 +32,8 @@ quit
 
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
-                 skip_compile=False, magma_output="coreir-verilog", simulator=None):
+                 skip_compile=False, magma_output="coreir-verilog",
+                 simulator=None, timescale="1ns/1ns", clock_step_delay=5):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          magma_output)
         if simulator is None:
@@ -41,9 +42,10 @@ class SystemVerilogTarget(VerilogTarget):
         if simulator not in ["vcs", "ncsim"]:
             raise ValueError(f"Unsupported simulator {simulator}")
         self.simulator = simulator
+        self.timescale = timescale
+        self.clock_step_delay = clock_step_delay
 
-    @classmethod
-    def make_poke(cls, i, action):
+    def make_poke(self, i, action):
         name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > 32:
@@ -55,16 +57,14 @@ class SystemVerilogTarget(VerilogTarget):
                 # unsigned c type
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
-            return [f"{name} = {value};", "#5"]
+            return [f"{name} = {value};", f"#{self.clock_step_delay}"]
 
-    @classmethod
-    def make_print(cls, i, action):
+    def make_print(self, i, action):
         name = verilog_name(action.port.name)
         return [f'$display("{action.port.debug_name} = '
                 f'{action.format_str}", {name});']
 
-    @classmethod
-    def make_expect(cls, i, action):
+    def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []
         name = verilog_name(action.port.name)
@@ -81,13 +81,11 @@ class SystemVerilogTarget(VerilogTarget):
                 f" checking port {action.port.name}. Expected %x, got %x\""
                 f", {value}, {name});"]
 
-    @classmethod
-    def make_eval(cls, i, action):
+    def make_eval(self, i, action):
         # Eval implicit in SV simulations
         return []
 
-    @classmethod
-    def make_step(cls, i, action):
+    def make_step(self, i, action):
         name = verilog_name(action.clock.name)
         code = []
         for step in range(action.steps):
@@ -109,7 +107,7 @@ class SystemVerilogTarget(VerilogTarget):
             for k, t in zip(type_.Ks, type_.Ts):
                 result = SystemVerilogTarget.generate_port_code(
                     name + "_" + str(k), t
-                )
+               )
                 declarations += result[0]
                 port_list.extend(result[1])
         return declarations, port_list
@@ -143,7 +141,7 @@ class SystemVerilogTarget(VerilogTarget):
             port_list.extend(result[1])
 
         for i, action in enumerate(actions):
-            code = SystemVerilogTarget.generate_action_code(i, action)
+            code = self.generate_action_code(i, action)
             for line in code:
                 initial_body += f"        {line}\n"
 
@@ -156,7 +154,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         return src
 
-    def run(self, actions, timescale="1ns/1ns"):
+    def run(self, actions):
         test_bench_file = self.directory / Path(f"{self.circuit_name}_tb.sv")
         # Write the verilator driver to file.
         src = self.generate_code(actions)
@@ -168,11 +166,11 @@ class SystemVerilogTarget(VerilogTarget):
             with open(cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
-irun -top {self.circuit_name}_tb -timescale {timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file}
+irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file}
 """  # nopep8
         else:
             cmd = f"""\
-vcs -sverilog -full64 +v2k -timescale={timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file}
+vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file}
 """  # nopep8
 
         print(f"Running command: {cmd}")

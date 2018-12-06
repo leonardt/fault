@@ -96,8 +96,7 @@ class VerilatorTarget(VerilogTarget):
         if self.run_from_directory(verilator_cmd):
             raise Exception(f"Running verilator cmd {verilator_cmd} failed")
 
-    @classmethod
-    def make_poke(cls, i, action):
+    def make_poke(self, i, action):
         name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > 32:
@@ -116,14 +115,12 @@ class VerilatorTarget(VerilogTarget):
                 value = BitVector(value, port_len).as_uint()
             return [f"top->{name} = {value};"]
 
-    @classmethod
-    def make_print(cls, i, action):
+    def make_print(self, i, action):
         name = verilog_name(action.port.name)
         return [f'printf("{action.port.debug_name} = '
                 f'{action.format_str}\\n", top->{name});']
 
-    @classmethod
-    def make_expect(cls, i, action):
+    def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
         # perform the expect.
         if value_utils.is_any(action.value):
@@ -141,13 +138,11 @@ class VerilatorTarget(VerilogTarget):
         return [f"my_assert(top->{name}, {value}, "
                 f"{i}, \"{action.port.name}\");"]
 
-    @classmethod
-    def make_eval(cls, i, action):
+    def make_eval(self, i, action):
         return ["top->eval();", "main_time++;", "#if VM_TRACE",
                 "tracer->dump(main_time);", "#endif"]
 
-    @classmethod
-    def make_step(cls, i, action):
+    def make_step(self, i, action):
         name = verilog_name(action.clock.name)
         code = []
         for step in range(action.steps):
