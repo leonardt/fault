@@ -26,13 +26,15 @@ class Tester:
     def make_target(self, target, **kwargs):
         if target == "verilator":
             return VerilatorTarget(self.circuit, **kwargs)
-        if target == "coreir":
+        elif target == "coreir":
             return MagmaSimulatorTarget(self.circuit, clock=self.clock,
                                         backend='coreir', **kwargs)
-        if target == "python":
+        elif target == "python":
             warning("Python simulator is not actively supported")
             return MagmaSimulatorTarget(self.circuit, clock=self.clock,
                                         backend='python', **kwargs)
+        elif target == "system-verilog":
+            return SystemVerilogTarget(self.circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):

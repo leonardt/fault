@@ -34,9 +34,15 @@ quit
 
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
-                 skip_compile=False, magma_output="verilog"):
+                 skip_compile=False, magma_output="coreir-verilog", simulator=None):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          magma_output)
+        if simulator is None:
+            raise ValueError("Must specify simulator when using system-verilog"
+                             " target")
+        if simulator not in ["vcs", "ncsim"]:
+            raise ValueError(f"Unsupported simulator {simulator}")
+        self.simulator = simulator
 
     @staticmethod
     def generate_array_action_code(i, action):
@@ -143,7 +149,6 @@ class SystemVerilogTarget(VerilogTarget):
             return SystemVerilogTarget.generate_recursive_port_code(name, type_)
         else:
             width_str = ""
-            print(type_)
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
@@ -178,10 +183,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         return src
 
-    def run(self, actions, timescale="1ns/1ns", simulator="ncsim"):
-        """
-        Supported simulators: "ncsim", "vcs"
-        """
+    def run(self, actions, timescale="1ns/1ns"):
         test_bench_file = self.directory / Path(f"{self.circuit_name}_tb.sv")
         # Write the verilator driver to file.
         src = self.generate_code(actions)
@@ -189,7 +191,7 @@ class SystemVerilogTarget(VerilogTarget):
             print(src)
             f.write(src)
         cmd_file = self.directory / Path(f"{self.circuit_name}_cmd.tcl")
-        if simulator == "ncsim":
+        if self.simulator == "ncsim":
             with open(cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
@@ -202,6 +204,6 @@ vcs -sverilog -full64 +v2k -timescale={timescale} -LDFLAGS -Wl,--no-as-needed  {
 
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
-        if simulator == "vcs":
+        if self.simulator == "vcs":
             print(f"Running command: {cmd}")
             assert not subprocess.call("./simv", cwd=self.directory, shell=True)

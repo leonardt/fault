@@ -24,18 +24,16 @@ def pytest_generate_tests(metafunc):
 
 def run(circ, actions, Target, simulator, flags=[]):
     with tempfile.TemporaryDirectory() as tempdir:
-        m.compile(f"{tempdir}/{circ.name}", circ,
-                  output="coreir-verilog")
         if Target == fault.verilator_target.VerilatorTarget:
             target = Target(
                 circ, directory=f"{tempdir}/",
-                flags=flags, skip_compile=True)
+                flags=flags)
         else:
             target = Target(
                 circ, directory=f"{tempdir}/",
-                skip_compile=True)
+                simulator=simulator)
         if Target == fault.system_verilog_target.SystemVerilogTarget:
-            target.run(actions, simulator=simulator)
+            target.run(actions)
         else:
             target.run(actions)
 

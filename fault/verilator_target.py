@@ -70,7 +70,7 @@ int main(int argc, char **argv) {{
 class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
-                 include_directories=[], magma_output="verilog",
+                 include_directories=[], magma_output="coreir-verilog",
                  circuit_name=None):
         """
         Params:

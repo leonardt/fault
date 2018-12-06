@@ -4,6 +4,18 @@ import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
 import tempfile
+import os
+
+
+def pytest_generate_tests(metafunc):
+    if "target" in metafunc.fixturenames:
+        targets = [("verilator", None)]
+        if not os.getenv("TRAVIS", False):
+            targets.append(
+                ("system-verilog", "ncsim"))
+            targets.append(
+                ("system-verilog", "vcs"))
+        metafunc.parametrize("target,simulator", targets)
 
 
 def check(got, expected):
@@ -11,36 +23,46 @@ def check(got, expected):
     assert got.__dict__ == expected.__dict__
 
 
-def test_tester_basic():
+def test_tester_basic(target, simulator):
     circ = common.TestBasicCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     check(tester.actions[0], Poke(circ.I, 0))
     tester.poke(circ.I, 1)
-    tester.expect(circ.O, 0)
+    tester.eval()
+    tester.expect(circ.O, 1)
     tester.print(circ.O, "%08x")
     check(tester.actions[1], Poke(circ.I, 1))
-    check(tester.actions[2], Expect(circ.O, 0))
-    check(tester.actions[3], Print(circ.O, "%08x"))
+    check(tester.actions[2], Eval())
+    check(tester.actions[3], Expect(circ.O, 1))
+    check(tester.actions[4], Print(circ.O, "%08x"))
     tester.eval()
-    check(tester.actions[4], Eval())
+    check(tester.actions[5], Eval())
     with tempfile.TemporaryDirectory() as _dir:
-        tester.compile_and_run("verilator", directory=_dir)
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir)
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
     tester.compile_and_run("coreir")
     tester.clear()
     assert tester.actions == []
 
 
-def test_tester_clock():
+def test_tester_clock(target, simulator):
     circ = common.TestPeekCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, 0)
     tester.expect(circ.O0, tester.peek(circ.O1))
     check(tester.actions[0], Poke(circ.I, 0))
     check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir)
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
-def test_tester_peek():
+def test_tester_peek(target, simulator):
     circ = common.TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
@@ -51,36 +73,55 @@ def test_tester_peek():
     check(tester.actions[2], Poke(circ.CLK, 0))
     tester.step()
     check(tester.actions[3], Step(circ.CLK, 1))
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir)
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
-def test_tester_nested_arrays_by_element():
+def test_tester_nested_arrays_by_element(target, simulator):
     circ = common.TestNestedArraysCircuit
     tester = fault.Tester(circ)
     expected = []
     for i in range(3):
         val = random.randint(0, (1 << 4) - 1)
         tester.poke(circ.I[i], val)
+        tester.eval()
         tester.expect(circ.O[i], val)
         expected.append(Poke(circ.I[i], val))
+        expected.append(Eval())
         expected.append(Expect(circ.O[i], val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir)
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
-def test_tester_nested_arrays_bulk():
+def test_tester_nested_arrays_bulk(target, simulator):
     circ = common.TestNestedArraysCircuit
     tester = fault.Tester(circ)
     expected = []
     val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
     tester.poke(circ.I, val)
+    tester.eval()
     tester.expect(circ.O, val)
     expected.append(Poke(circ.I, fault.array.Array(val, 3)))
+    expected.append(Eval())
     expected.append(Expect(circ.O, fault.array.Array(val, 3)))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir)
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
-def test_retarget_tester():
+def test_retarget_tester(target, simulator):
     circ = common.TestBasicClkCircuit
     expected = [
         Poke(circ.I, 0),
@@ -113,6 +154,11 @@ def test_retarget_tester():
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            copy.compile_and_run(target, directory=_dir)
+        else:
+            copy.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
 def test_run_error():

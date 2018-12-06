@@ -8,10 +8,13 @@ def define_simple_circuit(T, circ_name, has_clk=False):
         IO = ["I", m.In(T), "O", m.Out(T)]
         if has_clk:
             IO += ["CLK", m.In(m.Clock)]
+            IO += ["CLK_OUT", m.Out(m.Clock)]
 
         @classmethod
         def definition(io):
             m.wire(io.I, io.O)
+            if has_clk:
+                m.wire(io.CLK, io.CLK_OUT)
 
     return _Circuit
 
