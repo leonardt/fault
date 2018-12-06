@@ -3,12 +3,11 @@ from pathlib import Path
 import subprocess
 import magma as m
 import fault.actions as actions
-from fault.verilog_target import VerilogTarget
+from fault.verilog_target import VerilogTarget, verilog_name
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 import math
 from bit_vector import BitVector, SIntVector
-from fault.util import flatten
 
 
 src_tpl = """\
@@ -97,86 +96,68 @@ class VerilatorTarget(VerilogTarget):
         if self.run_from_directory(verilator_cmd):
             raise Exception(f"Running verilator cmd {verilator_cmd} failed")
 
-    @staticmethod
-    def generate_array_action_code(i, action):
-        result = []
-        for j in range(action.port.N):
-            if isinstance(action, actions.Print):
-                value = action.format_str
-            else:
-                value = action.value[j]
-            result += [
-                VerilatorTarget.generate_action_code(
-                    i, type(action)(action.port[j], value)
-                )]
-        return flatten(result)
-
-    @staticmethod
-    def generate_action_code(i, action):
-        if isinstance(action, actions.Poke):
-            if isinstance(action.port, m.ArrayType) and \
-                    not isinstance(action.port.T, m.BitKind):
-                return VerilatorTarget.generate_array_action_code(i, action)
-            name = verilator_utils.verilator_name(action.port.name)
-            if isinstance(action.value, BitVector) and \
-                    action.value.num_bits > 32:
-                asserts = []
-                for i in range(math.ceil(action.value.num_bits / 32)):
-                    value = action.value[i * 32:min(
-                        (i+1) * 32, action.value.num_bits)]
-                    asserts += [f"top->{name}[{i}] = {value};"]
-                return asserts
-            else:
-                value = action.value
-                if isinstance(action.port, m.SIntType) and value < 0:
-                    # Handle sign extension for verilator since it expects and
-                    # unsigned c type
-                    port_len = len(action.port)
-                    value = BitVector(value, port_len).as_uint()
-                return [f"top->{name} = {value};"]
-        if isinstance(action, actions.Print):
-            name = verilator_utils.verilator_name(action.port.name)
-            if isinstance(action.port, m.ArrayType) and \
-                    not isinstance(action.port.T, m.BitKind):
-                return VerilatorTarget.generate_array_action_code(i, action)
-            else:
-                return [f'printf("{action.port.debug_name} = '
-                        f'{action.format_str}\\n", top->{name});']
-        if isinstance(action, actions.Expect):
-            # For verilator, if an expect is "AnyValue" we don't need to
-            # perform the expect.
-            if value_utils.is_any(action.value):
-                return []
-            if isinstance(action.port, m.ArrayType) and \
-                    not isinstance(action.port.T, m.BitKind):
-                return VerilatorTarget.generate_array_action_code(i, action)
-            name = verilator_utils.verilator_name(action.port.name)
+    @classmethod
+    def make_poke(cls, i, action):
+        name = verilog_name(action.port.name)
+        if isinstance(action.value, BitVector) and \
+                action.value.num_bits > 32:
+            asserts = []
+            for i in range(math.ceil(action.value.num_bits / 32)):
+                value = action.value[i * 32:min(
+                    (i+1) * 32, action.value.num_bits)]
+                asserts += [f"top->{name}[{i}] = {value};"]
+            return asserts
+        else:
             value = action.value
-            if isinstance(value, actions.Peek):
-                value = f"top->{value.port.name}"
-            elif isinstance(action.port, m.SIntType) and value < 0:
+            if isinstance(action.port, m.SIntType) and value < 0:
                 # Handle sign extension for verilator since it expects and
                 # unsigned c type
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
+            return [f"top->{name} = {value};"]
 
-            return [f"my_assert(top->{name}, {value}, "
-                    f"{i}, \"{action.port.name}\");"]
-        if isinstance(action, actions.Eval):
-            return ["top->eval();", "main_time++;", "#if VM_TRACE",
-                    "tracer->dump(main_time);", "#endif"]
-        if isinstance(action, actions.Step):
-            name = verilator_utils.verilator_name(action.clock.name)
-            code = []
-            for step in range(action.steps):
-                code.append("top->eval();")
-                code.append("main_time++;")
-                code.append("#if VM_TRACE")
-                code.append("tracer->dump(main_time);")
-                code.append("#endif")
-                code.append(f"top->{name} ^= 1;")
-            return code
-        raise NotImplementedError(action)
+    @classmethod
+    def make_print(cls, i, action):
+        name = verilog_name(action.port.name)
+        return [f'printf("{action.port.debug_name} = '
+                f'{action.format_str}\\n", top->{name});']
+
+    @classmethod
+    def make_expect(cls, i, action):
+        # For verilator, if an expect is "AnyValue" we don't need to
+        # perform the expect.
+        if value_utils.is_any(action.value):
+            return []
+        name = verilog_name(action.port.name)
+        value = action.value
+        if isinstance(value, actions.Peek):
+            value = f"top->{value.port.name}"
+        elif isinstance(action.port, m.SIntType) and value < 0:
+            # Handle sign extension for verilator since it expects and
+            # unsigned c type
+            port_len = len(action.port)
+            value = BitVector(value, port_len).as_uint()
+
+        return [f"my_assert(top->{name}, {value}, "
+                f"{i}, \"{action.port.name}\");"]
+
+    @classmethod
+    def make_eval(cls, i, action):
+        return ["top->eval();", "main_time++;", "#if VM_TRACE",
+                "tracer->dump(main_time);", "#endif"]
+
+    @classmethod
+    def make_step(cls, i, action):
+        name = verilog_name(action.clock.name)
+        code = []
+        for step in range(action.steps):
+            code.append("top->eval();")
+            code.append("main_time++;")
+            code.append("#if VM_TRACE")
+            code.append("tracer->dump(main_time);")
+            code.append("#endif")
+            code.append(f"top->{name} ^= 1;")
+        return code
 
     def generate_code(self, actions):
         includes = [
@@ -190,7 +171,7 @@ class VerilatorTarget(VerilogTarget):
 
         main_body = ""
         for i, action in enumerate(actions):
-            code = VerilatorTarget.generate_action_code(i, action)
+            code = self.generate_action_code(i, action)
             for line in code:
                 main_body += f"  {line}\n"
 
