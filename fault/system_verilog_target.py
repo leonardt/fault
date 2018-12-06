@@ -107,7 +107,7 @@ class SystemVerilogTarget(VerilogTarget):
             for k, t in zip(type_.Ks, type_.Ts):
                 result = SystemVerilogTarget.generate_port_code(
                     name + "_" + str(k), t
-               )
+                )
                 declarations += result[0]
                 port_list.extend(result[1])
         return declarations, port_list
