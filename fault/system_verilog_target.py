@@ -46,6 +46,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         magma_output: Set the output parameter to m.compile
                       (default coreir-verilog)
+
         simulator: "ncsim" or "vcs"
 
         timescale: Set the timescale for the verilog simulation
