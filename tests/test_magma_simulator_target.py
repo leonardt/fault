@@ -5,12 +5,9 @@ from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv
 
 
-# NOTE(rsetaluri): The python simulator backend is not tested since it is not
-# being actively supported currently. If it is updated, we should add it the
-# test fixtures.
 def pytest_generate_tests(metafunc):
     if 'backend' in metafunc.fixturenames:
-        metafunc.parametrize("backend", ["coreir"])
+        metafunc.parametrize("backend", ["coreir", "python"])
 
 
 def run(circ, actions, clock, backend):
