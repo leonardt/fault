@@ -3,7 +3,6 @@ import magma as m
 from magma.simulator.python_simulator import PythonSimulator
 from magma.simulator.coreir_simulator import CoreIRSimulator
 import fault.actions
-from fault.logging import warning
 from fault.target import Target
 
 
@@ -17,7 +16,6 @@ class MagmaSimulatorTarget(Target):
         if backend == "coreir":
             return CoreIRSimulator
         if backend == "python":
-            warning("Python simulator is not actively supported")
             return PythonSimulator
         raise NotImplementedError(backend)
 
