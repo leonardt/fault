@@ -182,7 +182,8 @@ class SystemVerilogTarget(VerilogTarget):
         src = self.generate_code(actions)
         with open(test_bench_file, "w") as f:
             f.write(src)
-        verilog_libraries = ", ".join(str(x) for x in self.include_verilog_libraries)
+        verilog_libraries = ", ".join(str(x) for x in
+                                      self.include_verilog_libraries)
         cmd_file = self.directory / Path(f"{self.circuit_name}_cmd.tcl")
         if self.simulator == "ncsim":
             with open(cmd_file, "w") as f:

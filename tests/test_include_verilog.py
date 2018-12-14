@@ -39,11 +39,12 @@ def test_include_verilog(target, simulator):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         tester.compile_and_run(target=target, directory=tmp_dir,
-                               include_verilog_libraries=[sb_dff_filename], **kwargs)
+                               include_verilog_libraries=[sb_dff_filename],
+                               **kwargs)
 
     if target in ["verilator"]:
-        # Should work by including the tests/ directory which contains the verilog
-        # file SB_DFF.v
+        # Should work by including the tests/ directory which contains the
+        # verilog file SB_DFF.v
         dir_path = os.path.dirname(os.path.realpath(__file__))
         with tempfile.TemporaryDirectory() as tmp_dir:
             tester.compile_and_run(target=target, directory=tmp_dir,
