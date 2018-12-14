@@ -25,6 +25,7 @@ def test_include_verilog(target, simulator):
     m.EndDefine()
 
     tester = fault.Tester(main, main.CLK)
+    tester.poke(main.CLK, 0)
     tester.poke(main.I, 1)
     tester.eval()
     tester.expect(main.O, 0)
@@ -40,9 +41,10 @@ def test_include_verilog(target, simulator):
         tester.compile_and_run(target=target, directory=tmp_dir,
                                include_verilog_libraries=[sb_dff_filename], **kwargs)
 
-    # Should work by including the tests/ directory which contains the verilog
-    # file SB_DFF.v
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tester.compile_and_run(target=target, directory=tmp_dir,
-                               include_directories=[dir_path], **kwargs)
+    if target in ["verilator"]:
+        # Should work by including the tests/ directory which contains the verilog
+        # file SB_DFF.v
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tester.compile_and_run(target=target, directory=tmp_dir,
+                                   include_directories=[dir_path], **kwargs)

@@ -82,9 +82,8 @@ class VerilatorTarget(VerilogTarget):
                 -I<dir>                    Directory to search for includes
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         magma_output)
+                         include_verilog_libraries, magma_output)
         self.flags = flags
-        self.include_verilog_libraries = include_verilog_libraries
         self.include_directories = include_directories
 
         # Compile the design using `verilator`
