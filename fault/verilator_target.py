@@ -128,7 +128,7 @@ class VerilatorTarget(VerilogTarget):
         name = verilog_name(action.port.name)
         value = action.value
         if isinstance(value, actions.Peek):
-            value = f"top->{value.port.name}"
+            value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
