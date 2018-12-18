@@ -11,6 +11,21 @@ import os.path
 import pytest
 
 
+def test_verilator_peeks():
+    circ = common.TestBasicCircuit
+    actions = [
+        Poke(circ.I, 1),
+        Expect(circ.O, Peek(circ.O))
+    ]
+    flags = ["-Wno-lint"]
+    with tempfile.TemporaryDirectory() as tempdir:
+        m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
+        target = fault.verilator_target.VerilatorTarget(
+            circ, directory=f"{tempdir}/",
+            flags=flags, skip_compile=True)
+        target.run(actions)
+
+
 def test_verilator_trace():
     circ = common.TestBasicClkCircuit
     actions = [
