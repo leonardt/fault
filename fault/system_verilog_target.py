@@ -33,7 +33,8 @@ quit
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, magma_output="coreir-verilog",
-                 simulator=None, timescale="1ns/1ns", clock_step_delay=5):
+                 include_verilog_libraries=[], simulator=None,
+                 timescale="1ns/1ns", clock_step_delay=5):
         """
         circuit: a magma circuit
 
@@ -56,7 +57,7 @@ class SystemVerilogTarget(VerilogTarget):
                           clock
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         magma_output)
+                         include_verilog_libraries, magma_output)
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
@@ -180,18 +181,19 @@ class SystemVerilogTarget(VerilogTarget):
         # Write the verilator driver to file.
         src = self.generate_code(actions)
         with open(test_bench_file, "w") as f:
-            print(src)
             f.write(src)
+        verilog_libraries = " ".join(str(x) for x in
+                                     self.include_verilog_libraries)
         cmd_file = self.directory / Path(f"{self.circuit_name}_cmd.tcl")
         if self.simulator == "ncsim":
             with open(cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
-irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file}
+irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
         else:
             cmd = f"""\
-vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file}
+vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
 
         print(f"Running command: {cmd}")

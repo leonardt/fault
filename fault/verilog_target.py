@@ -23,7 +23,8 @@ class VerilogTarget(Target):
     Provides reuseable target logic for compiling circuits into verilog files.
     """
     def __init__(self, circuit, circuit_name=None, directory="build/",
-                 skip_compile=False, magma_output="verilog"):
+                 skip_compile=False, include_verilog_libraries=[],
+                 magma_output="verilog"):
         super().__init__(circuit)
 
         if circuit_name is None:
@@ -34,6 +35,8 @@ class VerilogTarget(Target):
         self.directory = Path(directory)
 
         self.skip_compile = skip_compile
+
+        self.include_verilog_libraries = include_verilog_libraries
 
         self.magma_output = magma_output
 
