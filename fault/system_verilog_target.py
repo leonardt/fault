@@ -177,16 +177,17 @@ class SystemVerilogTarget(VerilogTarget):
         return src
 
     def run(self, actions):
-        test_bench_file = self.directory / Path(f"{self.circuit_name}_tb.sv")
+        test_bench_file = Path(f"{self.circuit_name}_tb.sv")
+
         # Write the verilator driver to file.
         src = self.generate_code(actions)
-        with open(test_bench_file, "w") as f:
+        with open(self.directory / test_bench_file, "w") as f:
             f.write(src)
         verilog_libraries = " ".join(str(x) for x in
                                      self.include_verilog_libraries)
-        cmd_file = self.directory / Path(f"{self.circuit_name}_cmd.tcl")
+        cmd_file = Path(f"{self.circuit_name}_cmd.tcl")
         if self.simulator == "ncsim":
-            with open(cmd_file, "w") as f:
+            with open(self.directory / cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
 irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
