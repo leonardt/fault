@@ -40,12 +40,12 @@ class VerilogTarget(Target):
 
         self.magma_output = magma_output
 
-        self.verilog_file = self.directory / Path(f"{self.circuit_name}.v")
+        self.verilog_file = Path(f"{self.circuit_name}.v")
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
-            prefix = str(self.verilog_file)[:-2]
+            prefix = str(self.directory / self.verilog_file)[:-2]
             m.compile(prefix, self.circuit, output=self.magma_output)
-            if not self.verilog_file.is_file():
+            if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f"Compiling {self.circuit} failed")
 
     def generate_array_action_code(self, i, action):
