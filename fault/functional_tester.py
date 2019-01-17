@@ -4,6 +4,18 @@ from fault import AnyValue
 
 
 class FunctionalTester(fault.Tester):
+    """
+    This Tester provides a convenience mechanism for verifying a DUT against a
+    functional model.  The basic pattern is that every time `eval` is invoked
+    on the Tester, a check is done to verify that the current outputs of the
+    functional model are equivalent to the outputs of the DUT.  This pattern
+    works best with a model that is fairly low-level (e.g. cycle accurate). The
+    user has the flexibility to relax accuracy of the model by setting the
+    outputs of the functional model to be `fault.AnyValue`.  Anything is equal
+    to `fault.AnyValue`, so the user can manage when to actually perform the
+    consistency check by only updating `fault.AnyValue` at the appropriate
+    time.
+    """
     def __init__(self, circuit, clock, functional_model, input_mapping=None):
         super().__init__(circuit, clock)
         self.functional_model = functional_model
