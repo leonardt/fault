@@ -12,11 +12,11 @@ install:
 - wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
 - source install_coreir.sh
 - pip install python-coveralls
-- pip install pytest-cov pytest-pep8
+- pip install pytest-cov pytest-codestyle
 - pip install -r requirements.txt
 - pip install -e .
 script:
-- pytest --cov fault --pep8 fault -v --cov-report term-missing tests
+- pytest --cov fault --codestyle fault -v --cov-report term-missing tests
 after_success:
 - coveralls
 deploy:

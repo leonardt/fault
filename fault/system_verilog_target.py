@@ -136,9 +136,9 @@ class SystemVerilogTarget(VerilogTarget):
 
     @staticmethod
     def generate_port_code(name, type_):
-        if (isinstance(type_, m.ArrayKind) and
-                not isinstance(type_.T, m.BitKind)) or \
-                isinstance(type_, m.TupleKind):
+        is_array_of_bits = isinstance(type_, m.ArrayKind) and \
+            not isinstance(type_.T, m.BitKind)
+        if array_of_bits or isinstance(type_, m.TupleKind):
             return SystemVerilogTarget.generate_recursive_port_code(name, type_)
         else:
             width_str = ""
