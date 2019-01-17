@@ -102,7 +102,7 @@ class VerilatorTarget(VerilogTarget):
             asserts = []
             for i in range(math.ceil(action.value.num_bits / 32)):
                 value = action.value[i * 32:min(
-                    (i+1) * 32, action.value.num_bits)]
+                    (i + 1) * 32, action.value.num_bits)]
                 asserts += [f"top->{name}[{i}] = {value};"]
             return asserts
         else:

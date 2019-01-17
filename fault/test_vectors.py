@@ -78,7 +78,8 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
                 num_bits = port.N
                 if isinstance(port, SIntKind):
                     if input_ranges is None:
-                        input_range = range(-2**(num_bits-1), 2**(num_bits-1))
+                        input_range = range(-2**(num_bits - 1),
+                                            2**(num_bits - 1))
                     else:
                         input_range = input_ranges[i]
                     args.append([SIntVector(x, num_bits=num_bits)
