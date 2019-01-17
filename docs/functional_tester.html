@@ -28,6 +28,18 @@ from fault import AnyValue
 
 
 class FunctionalTester(fault.Tester):
+    &#34;&#34;&#34;
+    This Tester provides a convenience mechanism for verifying a DUT against a
+    functional model.  The basic pattern is that every time `eval` is invoked
+    on the Tester, a check is done to verify that the current outputs of the
+    functional model are equivalent to the outputs of the DUT.  This pattern
+    works best with a model that is fairly low-level (e.g. cycle accurate). The
+    user has the flexibility to relax accuracy of the model by setting the
+    outputs of the functional model to be `fault.AnyValue`.  Anything is equal
+    to `fault.AnyValue`, so the user can manage when to actually perform the
+    consistency check by only updating `fault.AnyValue` at the appropriate
+    time.
+    &#34;&#34;&#34;
     def __init__(self, circuit, clock, functional_model, input_mapping=None):
         super().__init__(circuit, clock)
         self.functional_model = functional_model
@@ -67,17 +79,34 @@ class FunctionalTester(fault.Tester):
 <span>(</span><span><small>ancestors:</small> <a title="fault.tester.Tester" href="tester.html#fault.tester.Tester">Tester</a>)</span>
 </code></dt>
 <dd>
-<p class="inheritance">
-<em>Inherited from:</em>
-<code><a title="fault.tester.Tester" href="tester.html#fault.tester.Tester">Tester</a></code>
-</p>
-<section class="desc inherited"><p>The fault <code>Tester</code> object provides a mechanism in Python to construct tests
-for magma circuits.
-The <code>Tester</code> is instantiated with a specific magma
-…</p></section>
+<section class="desc"><p>This Tester provides a convenience mechanism for verifying a DUT against a
+functional model.
+The basic pattern is that every time <code>eval</code> is invoked
+on the Tester, a check is done to verify that the current outputs of the
+functional model are equivalent to the outputs of the DUT.
+This pattern
+works best with a model that is fairly low-level (e.g. cycle accurate). The
+user has the flexibility to relax accuracy of the model by setting the
+outputs of the functional model to be <code>fault.AnyValue</code>.
+Anything is equal
+to <code>fault.AnyValue</code>, so the user can manage when to actually perform the
+consistency check by only updating <code>fault.AnyValue</code> at the appropriate
+time.</p></section>
 <details class="source">
 <summary>Source code</summary>
 <pre><code class="python">class FunctionalTester(fault.Tester):
+    &#34;&#34;&#34;
+    This Tester provides a convenience mechanism for verifying a DUT against a
+    functional model.  The basic pattern is that every time `eval` is invoked
+    on the Tester, a check is done to verify that the current outputs of the
+    functional model are equivalent to the outputs of the DUT.  This pattern
+    works best with a model that is fairly low-level (e.g. cycle accurate). The
+    user has the flexibility to relax accuracy of the model by setting the
+    outputs of the functional model to be `fault.AnyValue`.  Anything is equal
+    to `fault.AnyValue`, so the user can manage when to actually perform the
+    consistency check by only updating `fault.AnyValue` at the appropriate
+    time.
+    &#34;&#34;&#34;
     def __init__(self, circuit, clock, functional_model, input_mapping=None):
         super().__init__(circuit, clock)
         self.functional_model = functional_model
@@ -159,7 +188,7 @@ The <code>Tester</code> is instantiated with a specific magma
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="fault.functional_tester.FunctionalTester" href="tester.html#fault.tester.Tester">FunctionalTester</a></code></h4>
+<h4><code><a title="fault.functional_tester.FunctionalTester" href="#fault.functional_tester.FunctionalTester">FunctionalTester</a></code></h4>
 <ul class="">
 <li><code><a title="fault.functional_tester.FunctionalTester.expect_any_outputs" href="#fault.functional_tester.FunctionalTester.expect_any_outputs">expect_any_outputs</a></code></li>
 </ul>
