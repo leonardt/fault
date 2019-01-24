@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import fault
 
 
 class Action(ABC):
@@ -51,7 +52,8 @@ class Print(Action):
 
 class Expect(PortAction):
     def __init__(self, port, value):
-        if port.isoutput():
+        if not isinstance(port, fault.WrappedVerilogInternalPort) and \
+                port.isoutput() or port.type_.isoutput():
             raise ValueError(f"Can only expect on outputs: {port.debug_name} "
                              f"{type(port)}")
         super().__init__(port, value)
@@ -60,7 +62,8 @@ class Expect(PortAction):
 class Peek(Action):
     def __init__(self, port):
         super().__init__()
-        if port.isoutput():
+        if not isinstance(port, fault.WrappedVerilogInternalPort) and \
+                port.isoutput() or port.type_.isoutput():
             raise ValueError(f"Can only peek on outputs: {port.debug_name} "
                              f"{type(port)}")
         self.port = port
