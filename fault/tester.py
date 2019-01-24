@@ -58,6 +58,8 @@ class Tester:
         self.clock = clock
         self.default_print_format_str = default_print_format_str
         self.targets = {}
+        # For public verilator modules
+        self.verilator_includes = []
 
     def make_target(self, target: str, **kwargs):
         """
@@ -153,7 +155,7 @@ class Tester:
         should call `compile` with `target` before calling `run`.
         """
         try:
-            self.targets[target].run(self.actions)
+            self.targets[target].run(self)
         except KeyError:
             raise Exception(f"Could not find target={target}, did you compile"
                             " it first?")
@@ -206,3 +208,6 @@ class Tester:
         for i, action in enumerate(self.actions):
             s += f"    {i}: {action}\n"
         return s
+
+    def verilator_include(self, module_name):
+        self.verilator_includes.append(module_name)

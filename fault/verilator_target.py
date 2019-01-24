@@ -1,3 +1,4 @@
+import fault
 from .array import Array
 from pathlib import Path
 import subprocess
@@ -124,10 +125,18 @@ class VerilatorTarget(VerilogTarget):
         # perform the expect.
         if value_utils.is_any(action.value):
             return []
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = action.port.path
+            debug_name = name
+        else:
+            name = verilog_name(action.port.name)
+            debug_name = action.port.name
         value = action.value
         if isinstance(value, actions.Peek):
-            value = f"top->{verilog_name(value.port.name)}"
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                value = "top->" + action.port.path
+            else:
+                value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
@@ -135,7 +144,7 @@ class VerilatorTarget(VerilogTarget):
             value = BitVector(value, port_len).as_uint()
 
         return [f"my_assert(top->{name}, {value}, "
-                f"{i}, \"{action.port.name}\");"]
+                f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
         return ["top->eval();", "main_time++;", "#if VM_TRACE",
@@ -153,9 +162,12 @@ class VerilatorTarget(VerilogTarget):
             code.append(f"top->{name} ^= 1;")
         return code
 
-    def generate_code(self, actions):
+    def generate_code(self, tester):
         includes = [
             f'"V{self.circuit_name}.h"',
+            f'"V{self.circuit_name}_{self.circuit_name}.h"',
+        ] + [f'"V{self.circuit_name}_{include}.h"' for include in
+             tester.verilator_includes] + [
             '"verilated.h"',
             '<iostream>',
             '<verilated_vcd_c.h>',
@@ -164,7 +176,7 @@ class VerilatorTarget(VerilogTarget):
         ]
 
         main_body = ""
-        for i, action in enumerate(actions):
+        for i, action in enumerate(tester.actions):
             code = self.generate_action_code(i, action)
             for line in code:
                 main_body += f"  {line}\n"
@@ -181,10 +193,10 @@ class VerilatorTarget(VerilogTarget):
     def run_from_directory(self, cmd):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
-    def run(self, actions):
+    def run(self, tester):
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         # Write the verilator driver to file.
-        src = self.generate_code(actions)
+        src = self.generate_code(tester)
         with open(driver_file, "w") as f:
             f.write(src)
         # Run a series of commands: run the Makefile output by verilator, and
