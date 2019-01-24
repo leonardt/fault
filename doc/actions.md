@@ -33,7 +33,10 @@ for i in range(n):
 `format_str` allows for user-specified formatting of the printed output (similar to `printf` format strings).
 
 ## WrappedVerilogInternalPort
-Fault has primitive support for working with internal verilog signals.
+Fault has primitive support for working with internal verilog signals using the
+`verilator` target.  Note that this has only been tested using verilator
+version 4.008 (we've seen issues using 3.856 which is installed by default
+using apt on Ubuntu 14.04).
 
 Suppose you had a file `simple_alu.v`. Notice that the desired internal
 signals, `ConfigReg->Q` and `SimpleALU->opcode` are marked with a comment
