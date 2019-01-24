@@ -264,6 +264,6 @@ def test_tester_verilog_wrapped():
             signal)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
-            tester.compile_and_run(target, flags=["-Wno-fatal"])
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
