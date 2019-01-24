@@ -16,7 +16,7 @@ install:
 - pip install -r requirements.txt
 - pip install -e .
 script:
-- pytest --cov fault --codestyle fault -v --cov-report term-missing tests
+- pytest --cov fault --codestyle fault -s -v --cov-report term-missing tests
 after_success:
 - coveralls
 deploy:
