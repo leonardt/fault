@@ -252,15 +252,15 @@ def test_tester_verilog_wrapped():
                                              m.Bits(2)),
             signal)
         tester.expect(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->config_reg->Q",
-                                             m.Bits(2)),
+            fault.WrappedVerilogInternalPort(
+                "top->SimpleALU_inst0->config_reg->Q", m.Bits(2)),
             i)
         signal = tester.peek(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->config_reg->Q",
-                                             m.Bits(2)))
+            fault.WrappedVerilogInternalPort(
+                "top->SimpleALU_inst0->config_reg->Q", m.Bits(2)))
         tester.expect(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->config_reg->Q",
-                                             m.Bits(2)),
+            fault.WrappedVerilogInternalPort(
+                "top->SimpleALU_inst0->config_reg->Q", m.Bits(2)),
             signal)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":

@@ -155,7 +155,10 @@ class Tester:
         should call `compile` with `target` before calling `run`.
         """
         try:
-            self.targets[target].run(self)
+            if target == "verilator":
+                self.targets[target].run(self.actions, self.verilator_includes)
+            else:
+                self.targets[target].run(self.actions)
         except KeyError:
             raise Exception(f"Could not find target={target}, did you compile"
                             " it first?")

@@ -50,10 +50,16 @@ class Print(Action):
         return cls(new_port, self.format_str)
 
 
+def is_output(port):
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isoutput()
+    else:
+        return not port.isoutput()
+
+
 class Expect(PortAction):
     def __init__(self, port, value):
-        if not isinstance(port, fault.WrappedVerilogInternalPort) and \
-                port.isoutput() or port.type_.isoutput():
+        if not is_output(port):
             raise ValueError(f"Can only expect on outputs: {port.debug_name} "
                              f"{type(port)}")
         super().__init__(port, value)
@@ -62,8 +68,7 @@ class Expect(PortAction):
 class Peek(Action):
     def __init__(self, port):
         super().__init__()
-        if not isinstance(port, fault.WrappedVerilogInternalPort) and \
-                port.isoutput() or port.type_.isoutput():
+        if not is_output(port):
             raise ValueError(f"Can only peek on outputs: {port.debug_name} "
                              f"{type(port)}")
         self.port = port

@@ -162,12 +162,15 @@ class VerilatorTarget(VerilogTarget):
             code.append(f"top->{name} ^= 1;")
         return code
 
-    def generate_code(self, tester):
+    def generate_code(self, actions, verilator_includes):
+        if verilator_includes:
+            # Include the top circuit by default
+            verilator_includes.insert(
+                0, f'{self.circuit_name}')
         includes = [
             f'"V{self.circuit_name}.h"',
-            f'"V{self.circuit_name}_{self.circuit_name}.h"',
         ] + [f'"V{self.circuit_name}_{include}.h"' for include in
-             tester.verilator_includes] + [
+             verilator_includes] + [
             '"verilated.h"',
             '<iostream>',
             '<verilated_vcd_c.h>',
@@ -176,7 +179,7 @@ class VerilatorTarget(VerilogTarget):
         ]
 
         main_body = ""
-        for i, action in enumerate(tester.actions):
+        for i, action in enumerate(actions):
             code = self.generate_action_code(i, action)
             for line in code:
                 main_body += f"  {line}\n"
@@ -193,10 +196,10 @@ class VerilatorTarget(VerilogTarget):
     def run_from_directory(self, cmd):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
-    def run(self, tester):
+    def run(self, actions, verilator_includes=[]):
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         # Write the verilator driver to file.
-        src = self.generate_code(tester)
+        src = self.generate_code(actions, verilator_includes)
         with open(driver_file, "w") as f:
             f.write(src)
         # Run a series of commands: run the Makefile output by verilator, and
