@@ -39,7 +39,7 @@ Suppose you had a file `simple_alu.v`. Notice that the desired internal
 signals, `ConfigReg->Q` and `SimpleALU->opcode` are marked with a comment
 `/*verilator public*/`.
 
-```
+```verilog
 // simple_alu.v
 module ConfigReg(input [1:0] D, output [1:0] Q, input CLK, input EN);
 reg Q/*verilator public*/;
@@ -67,7 +67,7 @@ endmodule
 
 We can wrap the verilog using magma
 
-```
+```python
 SimpleALU = m.DefineFromVerilogFile("tests/simple_alu.v",
                                     type_map={"CLK": m.In(m.Clock)},
                                     target_modules=["SimpleALU"])[0]
@@ -91,7 +91,7 @@ m.EndDefine()
 
 Here's an example test we can write using the internal signals
 
-```
+```python
     tester = fault.Tester(circ, circ.CLK)
     tester.verilator_include("SimpleALU")
     tester.verilator_include("ConfigReg")
