@@ -5,10 +5,17 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - g++-4.9
-    - verilator
 python:
 - '3.6'
 install:
+- sudo apt-get install -y make autoconf g++ flex bison
+- wget https://www.veripool.org/ftp/verilator-4.008.tgz
+- unset VERILATOR_ROOT
+- tar xvzf verilator*.t*gz
+- cd verilator*
+- ./configure
+- make
+- sudo make install
 - wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
 - source install_coreir.sh
 - pip install python-coveralls
