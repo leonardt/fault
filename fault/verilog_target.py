@@ -24,7 +24,7 @@ class VerilogTarget(Target):
     """
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, include_verilog_libraries=[],
-                 magma_output="verilog"):
+                 magma_output="verilog", magma_opts={}):
         super().__init__(circuit)
 
         if circuit_name is None:
@@ -39,12 +39,14 @@ class VerilogTarget(Target):
         self.include_verilog_libraries = include_verilog_libraries
 
         self.magma_output = magma_output
+        self.magma_opts = magma_opts
 
         self.verilog_file = Path(f"{self.circuit_name}.v")
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
             prefix = str(self.directory / self.verilog_file)[:-2]
-            m.compile(prefix, self.circuit, output=self.magma_output)
+            m.compile(prefix, self.circuit, output=self.magma_output,
+                      **self.magma_opts)
             if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f"Compiling {self.circuit} failed")
 

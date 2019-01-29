@@ -73,7 +73,7 @@ class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="coreir-verilog",
-                 circuit_name=None):
+                 circuit_name=None, magma_opts={}):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -85,7 +85,7 @@ class VerilatorTarget(VerilogTarget):
                 -I<dir>                    Directory to search for includes
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output)
+                         include_verilog_libraries, magma_output, magma_opts)
         self.flags = flags
         self.include_directories = include_directories
 
