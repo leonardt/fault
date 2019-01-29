@@ -7,6 +7,8 @@ import fault.actions as actions
 from fault.verilog_target import VerilogTarget, verilog_name
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
+from fault.select_path import SelectPath
+from fault.wrapper import PortWrapper
 import math
 from bit_vector import BitVector, SIntVector
 
@@ -95,6 +97,7 @@ class VerilatorTarget(VerilogTarget):
             driver_file.name, self.flags)
         if self.run_from_directory(verilator_cmd):
             raise Exception(f"Running verilator cmd {verilator_cmd} failed")
+        self.debug_includes = set()
 
     def make_poke(self, i, action):
         name = verilog_name(action.port.name)
@@ -128,15 +131,25 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(action.port, fault.WrappedVerilogInternalPort):
             name = action.port.path
             debug_name = name
+        elif isinstance(action.port, SelectPath):
+            name = f"{self.circuit_name}->" + action.port.verilator_path
+            debug_name = action.port[-1].debug_name
         else:
             name = verilog_name(action.port.name)
-            debug_name = action.port.name
+            debug_name = action.port.debug_name
         value = action.value
         if isinstance(value, actions.Peek):
             if isinstance(value.port, fault.WrappedVerilogInternalPort):
                 value = "top->" + action.port.path
             else:
                 value = f"top->{verilog_name(value.port.name)}"
+        elif isinstance(value, PortWrapper):
+            self.debug_includes.add(f"{value.select_path[0].circuit.name}")
+            for item in value.select_path[1:-1]:
+                circuit_name = type(item.instance).name
+                self.debug_includes.add(f"{circuit_name}")
+            value = f"top->{self.circuit_name}->" + \
+                value.select_path.verilator_path
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
@@ -183,6 +196,10 @@ class VerilatorTarget(VerilogTarget):
             code = self.generate_action_code(i, action)
             for line in code:
                 main_body += f"  {line}\n"
+
+        includes += [f'"V{self.circuit_name}_{include}.h"' for include in
+             self.debug_includes]
+
 
         includes_src = "\n".join(["#include " + i for i in includes])
         src = src_tpl.format(

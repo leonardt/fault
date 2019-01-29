@@ -8,6 +8,8 @@ from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
+from fault.select_path import SelectPath
+from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
 
 
@@ -109,7 +111,9 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
-        if not isinstance(value, actions.Peek):
+        is_peek = isinstance(value, actions.Peek)
+        is_port_wrapper = isinstance(value, PortWrapper)
+        if not (is_peek or is_port_wrapper):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
@@ -218,56 +222,3 @@ class Tester:
     @property
     def circuit(self):
         return CircuitWrapper(self._circuit, self)
-
-
-class Wrapper:
-    def __init__(self, circuit, parent):
-        self._circuit = circuit
-        self.instance_map = {instance.name: instance for instance in
-                             circuit.instances}
-        self.parent = parent
-
-    def __setattr__(self, attr, value):
-        # Hack to stage this after __init__ has been run, should redefine this
-        # method in a metaclass? Could also use a try/except pattern, so the
-        # exceptions only occur during object instantiation
-        if hasattr(self, "_circuit") and hasattr(self, "instance_map"):
-            if attr in self._circuit.interface.ports.keys():
-                if isinstance(self.parent, Tester):
-                    self.parent.poke(self._circuit.interface.ports[attr], value)
-                else:
-                    exit(1)
-            else:
-                object.__setattr__(self, attr, value)
-        else:
-            object.__setattr__(self, attr, value)
-
-    def __getattr__(self, attr):
-        # Hack to stage this after __init__ has been run, should redefine this
-        # method in a metaclass?
-        try:
-            if attr in self._circuit.interface.ports.keys():
-                return PortWrapper(self._circuit.interface.ports[attr], self)
-            elif attr in self.instance_map:
-                return InstanceWrapper(self.instance_map[attr], self)
-            else:
-                object.__getattribute__(self, attr)
-        except Exception as e:
-            object.__getattribute__(self, attr)
-
-
-class CircuitWrapper(Wrapper):
-    def __init__(self, circuit, tester):
-        super().__init__(circuit, tester)
-
-
-class PortWrapper:
-    def __init__(self, port, parent):
-        self.port = port
-        self.parent = parent
-
-
-class InstanceWrapper(Wrapper):
-    def __init__(self, instance, parent):
-        self.instance = instance
-        super().__init__(type(instance), parent)

@@ -3,12 +3,15 @@ import magma
 from bit_vector import BitVector
 from fault.value import AnyValue, UnknownValue
 from fault.array import Array
+from fault.select_path import SelectPath
 
 
 def make_value(port, value):
     switch = port
     if isinstance(port, fault.WrappedVerilogInternalPort):
         switch = port.type_
+    elif isinstance(port, SelectPath):
+        switch = port[-1]
     if isinstance(switch, (magma._BitType, magma._BitKind)):
         return make_bit(value)
     if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):

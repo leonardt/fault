@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import fault
+from fault.select_path import SelectPath
 
 
 class Action(ABC):
@@ -51,6 +52,8 @@ class Print(Action):
 
 
 def is_output(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
         return not port.type_.isoutput()
     else:
