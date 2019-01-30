@@ -357,7 +357,9 @@ class VerilatorTarget(VerilogTarget):
                         # TODO: Support functions too
                         code = get_short_lambda_body_text(guarantee.value)
                         # TODO: More robust symbol replacer on AST
-                        code = code.replace(name, f"top->{name}")
+                        for port in circuit.interface.ports:
+                            code = code.replace("and", "&&")
+                            code = code.replace(port, f"top->{port}")
                         main_body += f"""\
     if (!({code})) {{
       std::cerr << std::endl;  // end the current line
