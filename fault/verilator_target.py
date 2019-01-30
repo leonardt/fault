@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import magma as m
 import fault.actions as actions
+from fault.actions import Poke, Eval
 from fault.verilog_target import VerilogTarget, verilog_name
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
@@ -12,6 +13,7 @@ from fault.wrapper import PortWrapper, InstanceWrapper
 import math
 from bit_vector import BitVector, SIntVector
 import subprocess
+from fault.random import random_bv
 
 
 src_tpl = """\
@@ -185,11 +187,11 @@ class VerilatorTarget(VerilogTarget):
                 f'{action.format_str}\\n", top->{name});']
 
     def make_assume(self, i, action):
-        self.assumptions.append((i, action))
+        self.assumptions.append(action)
         return ""
 
     def make_guarantee(self, i, action):
-        self.guarantees.append((i, action))
+        self.guarantees.append(action)
         return ""
 
     def make_expect(self, i, action):
@@ -255,7 +257,7 @@ class VerilatorTarget(VerilogTarget):
             code.append(f"top->{name} ^= 1;")
         return code
 
-    def generate_code(self, actions, verilator_includes):
+    def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
             verilator_includes.insert(
@@ -277,6 +279,15 @@ class VerilatorTarget(VerilogTarget):
             for line in code:
                 main_body += f"  {line}\n"
 
+        for i in range(num_tests):
+            main_body += self.add_assumptions(circuit, actions, i)
+            code = self.make_eval(i, Eval())
+            for line in code:
+                main_body += f"  {line}\n"
+            main_body += self.add_guarantees(circuit, actions, i)
+
+
+
         includes += [f'"V{self.circuit_name}_{include}.h"' for include in
                      self.debug_includes]
 
@@ -292,10 +303,12 @@ class VerilatorTarget(VerilogTarget):
     def run_from_directory(self, cmd):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
-    def run(self, actions, verilator_includes=[]):
+    def run(self, actions, verilator_includes=[], num_tests=0,
+            _circuit=None):
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         # Write the verilator driver to file.
-        src = self.generate_code(actions, verilator_includes)
+        src = self.generate_code(actions, verilator_includes, num_tests,
+                                 _circuit)
         with open(driver_file, "w") as f:
             f.write(src)
         # Run a series of commands: run the Makefile output by verilator, and
@@ -304,3 +317,46 @@ class VerilatorTarget(VerilogTarget):
             self.circuit_name)
         assert not self.run_from_directory(verilator_make_cmd)
         assert not self.run_from_directory(f"./obj_dir/V{self.circuit_name}")
+
+    def add_assumptions(self, circuit, actions, i):
+        main_body = ""
+        for port in circuit.interface.ports.values():
+            if port.isoutput():
+                for assumption in self.assumptions:
+                    # TODO: Chained assumptions?
+                    assume_port = assumption.port
+                    if isinstance(assume_port, SelectPath):
+                        assume_port = assume_port[-1]
+                    if assume_port is port:
+                        pred = assumption.value
+                        while True:
+                            randval = random_bv(len(assume_port))
+                            if pred(randval):
+                                break
+                        code = self.make_poke(
+                            len(actions) + i, Poke(port, randval))
+                        for line in code:
+                            main_body += f"  {line}\n"
+                        break
+        return main_body
+
+    def add_guarantees(self, circuit, actions, i):
+        main_body = ""
+        for port in circuit.interface.ports.values():
+            if port.isinput():
+                for guarantee in self.guarantees:
+                    assume_port = guarantee.port
+                    if isinstance(assume_port, SelectPath):
+                        assume_port = assume_port[-1]
+                    if assume_port is port:
+                        pred = guarantee.value
+                        while True:
+                            randval = random_bv(len(assume_port))
+                            if pred(randval):
+                                break
+                        code = self.make_poke(
+                            len(actions) + i, Poke(port, randval))
+                        for line in code:
+                            main_body += f"  {line}\n"
+                        break
+        return main_body
