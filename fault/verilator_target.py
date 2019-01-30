@@ -133,6 +133,10 @@ class VerilatorTarget(VerilogTarget):
             debug_name = name
         elif isinstance(action.port, SelectPath):
             name = f"{self.circuit_name}->" + action.port.verilator_path
+            self.debug_includes.add(f"{action.port[0].circuit.name}")
+            for item in action.port[1:-1]:
+                circuit_name = type(item.instance).name
+                self.debug_includes.add(f"{circuit_name}")
             debug_name = action.port[-1].debug_name
         else:
             name = verilog_name(action.port.name)
