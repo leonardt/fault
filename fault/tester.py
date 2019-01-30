@@ -8,7 +8,6 @@ from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
-from fault.select_path import SelectPath
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
 
