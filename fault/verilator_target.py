@@ -104,6 +104,8 @@ class VerilatorTarget(VerilogTarget):
         # Need to check version since they changed how internal signal access
         # works
         self.verilator_version = float(verilator_version.split()[1])
+        self.assumptions = []
+        self.guarantees = []
 
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
@@ -182,6 +184,14 @@ class VerilatorTarget(VerilogTarget):
         name = verilog_name(action.port.name)
         return [f'printf("{action.port.debug_name} = '
                 f'{action.format_str}\\n", top->{name});']
+
+    def make_assume(self, i, action):
+        self.assumptions.append((i, action))
+        return ""
+
+    def make_guarantee(self, i, action):
+        self.guarantees.append((i, action))
+        return ""
 
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to

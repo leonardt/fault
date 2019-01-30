@@ -77,6 +77,22 @@ class Expect(PortAction):
         super().__init__(port, value)
 
 
+class Assume(PortAction):
+    def __init__(self, port, value):
+        if is_input(port):
+            raise ValueError(f"Can only assume inputs (got {port.debug_name}"
+                             f" of type {type(port)})")
+        super().__init__(port, value)
+
+
+class Guarantee(PortAction):
+    def __init__(self, port, value):
+        if not is_output(port):
+            raise ValueError(f"Can only guarantee on outputs (got"
+                             f"{port.debug_name} of type {type(port)})")
+        super().__init__(port, value)
+
+
 class Peek(Action):
     def __init__(self, port):
         super().__init__()
