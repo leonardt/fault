@@ -352,7 +352,6 @@ class VerilatorTarget(VerilogTarget):
                         # TODO: Support functions too
                         code = get_short_lambda_body_text(guarantee.value)
                         # TODO: More robust symbol replacer on AST
-                        print(name)
                         code = code.replace(name, f"top->{name}")
                         main_body += f"""\
     if (!({code})) {{
