@@ -15,7 +15,6 @@ def test_tester_magma_internal_signals():
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         tester.compile_and_run("verilator", directory=_dir,
                                flags=["-Wno-fatal"],
                                magma_opts={"verilator_debug": True})
