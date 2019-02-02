@@ -100,7 +100,22 @@ class VerilatorTarget(VerilogTarget):
         self.debug_includes = set()
 
     def make_poke(self, i, action):
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f"{self.circuit_name}->" + action.port.verilator_path
+            self.debug_includes.add(f"{action.port[0].circuit.name}")
+            for item in action.port[1:-1]:
+                circuit = type(item.instance)
+                circuit_name = circuit.verilog_name
+                # Verilator specializes each parametrization into a separate
+                # mdoule, this is an attempt to reverse engineer the naming
+                # scheme
+                if circuit_name == "coreir_reg":
+                    circuit_name += "_"
+                    circuit_name += f"_I{circuit.coreir_configargs['init']}"
+                    circuit_name += f"_W{circuit.coreir_genargs['width']}"
+                self.debug_includes.add(f"{circuit_name}")
+        else:
+            name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > 32:
             asserts = []

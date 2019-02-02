@@ -91,3 +91,7 @@ def test_magma_simulator_target_peek(backend):
         actions.append(Eval())
         actions.append(Expect(circ.O0, Peek(circ.O1)))
     run(circ, actions, None, backend)
+
+
+if __name__ == "__main__":
+    test_magma_simulator_target_basic("coreir")

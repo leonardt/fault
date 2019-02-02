@@ -5,8 +5,11 @@ from fault.select_path import SelectPath
 class Wrapper:
     def __init__(self, circuit, parent):
         self.circuit = circuit
-        self.instance_map = {instance.name: instance for instance in
-                             circuit.instances}
+        if hasattr(circuit, "instances"):
+            self.instance_map = {instance.name: instance for instance in
+                                 circuit.instances}
+        else:
+            self.instance_map = None
         self.parent = parent
 
     def __setattr__(self, attr, value):
@@ -18,7 +21,7 @@ class Wrapper:
                 if isinstance(self.parent, fault.Tester):
                     self.parent.poke(self.circuit.interface.ports[attr], value)
                 else:
-                    exit(1)
+                    raise NotImplementedError()
             else:
                 object.__setattr__(self, attr, value)
         else:
@@ -66,3 +69,45 @@ class InstanceWrapper(Wrapper):
     def __init__(self, instance, parent):
         self.instance = instance
         super().__init__(type(instance), parent)
+
+    def __setattr__(self, attr, value):
+        try:
+            if attr in self.circuit.interface.ports.keys():
+                wrapper = PortWrapper(self.circuit.interface.ports[attr], self)
+                select_path = wrapper.select_path
+                select_path.tester.poke(select_path, value)
+            elif attr in self.instance_map and \
+                    type(self.instance_map[attr]).name == "reg_P":
+                try:
+                    # Support directly poking coreir reg
+                    wrapper = PortWrapper(
+                        fault.WrappedVerilogInternalPort(
+                            "outReg", self.instance_map[attr].O),
+                        InstanceWrapper(self.instance_map[attr], self))
+                    select_path = wrapper.select_path
+                    select_path.tester.poke(select_path, value)
+                    # Poke the input to the register too
+                    wrapper = PortWrapper(
+                        fault.WrappedVerilogInternalPort(
+                            "in", self.instance_map[attr].O),
+                        InstanceWrapper(self.instance_map[attr], self))
+                    select_path = wrapper.select_path
+                    select_path.tester.poke(select_path, value)
+                    wrapper = PortWrapper(
+                        fault.WrappedVerilogInternalPort(
+                            "out", self.instance_map[attr].O),
+                        InstanceWrapper(self.instance_map[attr], self))
+                    select_path = wrapper.select_path
+                    select_path.tester.poke(select_path, value)
+                    wrapper = PortWrapper(type(self.instance_map["enable_mux"]).I0,
+                        InstanceWrapper(self.instance_map["enable_mux"], self))
+                    select_path = wrapper.select_path
+                    select_path.tester.poke(select_path, value)
+                except Exception as e:
+                    print(e)
+                    exit(1)
+            else:
+                object.__setattr__(self, attr, value)
+        except Exception as e:
+            object.__setattr__(self, attr, value)
+

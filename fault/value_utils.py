@@ -8,10 +8,10 @@ from fault.select_path import SelectPath
 
 def make_value(port, value):
     switch = port
-    if isinstance(port, fault.WrappedVerilogInternalPort):
-        switch = port.type_
-    elif isinstance(port, SelectPath):
-        switch = port[-1]
+    if isinstance(switch, SelectPath):
+        switch = switch[-1]
+    if isinstance(switch, fault.WrappedVerilogInternalPort):
+        switch = switch.type_
     if isinstance(switch, (magma._BitType, magma._BitKind)):
         return make_bit(value)
     if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):

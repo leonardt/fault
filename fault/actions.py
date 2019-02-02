@@ -28,9 +28,18 @@ class PortAction(Action):
         return cls(new_port, self.value)
 
 
+def can_poke(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isinput()
+    else:
+        return not port.isinput()
+
+
 class Poke(PortAction):
     def __init__(self, port, value):
-        if port.isinput():
+        if not can_poke(port):
             raise ValueError(f"Can only poke inputs: {port.debug_name} "
                              f"{type(port)}")
         super().__init__(port, value)

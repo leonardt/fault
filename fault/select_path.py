@@ -1,3 +1,4 @@
+import fault
 from fault.verilog_target import verilog_name
 
 
@@ -18,5 +19,8 @@ class SelectPath:
         # (appended next)
         for x in self.path[1:-1]:
             path_str += x.instance.name + "->"
-        path_str += verilog_name(self.path[-1].name)
+        if isinstance(self.path[-1], fault.WrappedVerilogInternalPort):
+            path_str += self.path[-1].path
+        else:
+            path_str += verilog_name(self.path[-1].name)
         return path_str

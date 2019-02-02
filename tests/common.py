@@ -49,7 +49,7 @@ class ConfigReg(m.Circuit):
 
     @classmethod
     def definition(io):
-        reg = mantle.Register(2, has_ce=True)
+        reg = mantle.Register(2, has_ce=True, name="conf_reg")
         io.Q <= reg(io.D, CE=io.CE)
 
 
