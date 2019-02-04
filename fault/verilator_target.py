@@ -11,6 +11,7 @@ from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
 import math
 from bit_vector import BitVector, SIntVector
+import subprocess
 
 
 src_tpl = """\
@@ -98,10 +99,22 @@ class VerilatorTarget(VerilogTarget):
         if self.run_from_directory(verilator_cmd):
             raise Exception(f"Running verilator cmd {verilator_cmd} failed")
         self.debug_includes = set()
+        verilator_version = subprocess.check_output(["verilator", "--version"])
+        # Need to check version since they changed how internal signal access
+        # works
+        self.verilator_version = float(verilator_version.split()[1])
 
     def make_poke(self, i, action):
+        if isinstance(action.port, fault.WrappedVerilogInternalPort):
+            raise NotImplementedError()
         if isinstance(action.port, SelectPath):
-            name = f"{self.circuit_name}->" + action.port.verilator_path
+            # TODO: Find the version that they changed this, 3.874 is known to
+            # use top->v instead of top->{circuit_name}
+            if self.verilator_version > 3.874:
+                prefix = f"{self.circuit_name}"
+            else:
+                prefix = f"v"
+            name = f"{prefix}->" + action.port.verilator_path
             self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit = type(item.instance)
@@ -143,11 +156,15 @@ class VerilatorTarget(VerilogTarget):
         # perform the expect.
         if value_utils.is_any(action.value):
             return []
+        if self.verilator_version > 3.874:
+            prefix = f"{self.circuit_name}"
+        else:
+            prefix = f"v"
         if isinstance(action.port, fault.WrappedVerilogInternalPort):
-            name = action.port.path
+            name = f"{prefix}->{action.port.path}"
             debug_name = name
         elif isinstance(action.port, SelectPath):
-            name = f"{self.circuit_name}->" + action.port.verilator_path
+            name = f"{prefix}->" + action.port.verilator_path
             self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
@@ -159,7 +176,7 @@ class VerilatorTarget(VerilogTarget):
         value = action.value
         if isinstance(value, actions.Peek):
             if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                value = "top->" + action.port.path
+                value = f"top->{prefix}->{action.port.path}"
             else:
                 value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(value, PortWrapper):
@@ -167,8 +184,11 @@ class VerilatorTarget(VerilogTarget):
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
-            value = f"top->{self.circuit_name}->" + \
-                value.select_path.verilator_path
+            if self.verilator_version > 3.874:
+                prefix = f"{self.circuit_name}"
+            else:
+                prefix = f"v"
+            value = f"top->{prefix}->" + value.select_path.verilator_path
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type

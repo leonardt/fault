@@ -33,7 +33,7 @@ def test_tester_magma_internal_signals(target, simulator):
         }
         if simulator is not None:
             kwargs["simulator"] = simulator
-        tester.compile_and_run("verilator", **kwargs)
+        tester.compile_and_run(target, **kwargs)
 
 
 def test_tester_poke_internal_register(target, simulator):
@@ -47,7 +47,11 @@ def test_tester_poke_internal_register(target, simulator):
         tester.step(2)
         tester.circuit.config_reg.conf_reg.O.expect(i)
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
-        tester.compile_and_run("verilator", directory=_dir,
-                               flags=["-Wno-fatal", "--trace"],
-                               magma_opts={"verilator_debug": True})
+        kwargs = {
+            "directory": _dir,
+            "flags": ["-Wno-fatal"],
+            "magma_opts": {"verilator_debug": True}
+        }
+        if simulator is not None:
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(target, **kwargs)
