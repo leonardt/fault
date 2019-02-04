@@ -6,14 +6,16 @@ from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
 import tempfile
 import os
+import shutil
 
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [("verilator", None)]
-        if not os.getenv("TRAVIS", False):
+        if shutil.which("irun"):
             targets.append(
                 ("system-verilog", "ncsim"))
+        if shutil.which("vcs"):
             targets.append(
                 ("system-verilog", "vcs"))
         metafunc.parametrize("target,simulator", targets)

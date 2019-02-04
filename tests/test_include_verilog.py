@@ -3,13 +3,15 @@ import tempfile
 import fault
 import magma as m
 import os
+import shutil
 
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [("verilator", None)]
-        if not os.getenv("TRAVIS", False):
+        if shutil.which("irun"):
             targets.append(("system-verilog", "ncsim"))
+        if shutil.which("vcs"):
             targets.append(("system-verilog", "vcs"))
         metafunc.parametrize("target,simulator", targets)
 

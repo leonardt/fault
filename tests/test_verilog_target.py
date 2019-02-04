@@ -9,14 +9,16 @@ from fault.random import random_bv
 import copy
 import os.path
 import pytest
+import shutil
 
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [(fault.verilator_target.VerilatorTarget, None)]
-        if not os.getenv("TRAVIS", False):
+        if shutil.which("irun"):
             targets.append(
                 (fault.system_verilog_target.SystemVerilogTarget, "ncsim"))
+        if shutil.which("vcs"):
             targets.append(
                 (fault.system_verilog_target.SystemVerilogTarget, "vcs"))
         metafunc.parametrize("target,simulator", targets)

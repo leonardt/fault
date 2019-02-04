@@ -1,9 +1,20 @@
 import common
 import tempfile
 from fault import Tester
+import shutil
 
 
-def test_tester_magma_internal_signals():
+def pytest_generate_tests(metafunc):
+    if "target" in metafunc.fixturenames:
+        targets = [("verilator", None)]
+        if shutil.which("irun"):
+            targets.append(("system_verilog", "ncsim"))
+        if shutil.which("vcs"):
+            targets.append(("system_verilog", "vcs"))
+        metafunc.parametrize("target,simulator", targets)
+
+
+def test_tester_magma_internal_signals(target, simulator):
     circ = common.SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -15,12 +26,17 @@ def test_tester_magma_internal_signals():
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
     with tempfile.TemporaryDirectory() as _dir:
-        tester.compile_and_run("verilator", directory=_dir,
-                               flags=["-Wno-fatal"],
-                               magma_opts={"verilator_debug": True})
+        kwargs = {
+            "directory": _dir,
+            "flags": ["-Wno-fatal"],
+            "magma_opts": {"verilator_debug": True}
+        }
+        if simulator is not None:
+            kwargs["simulator"] = simulator
+        tester.compile_and_run("verilator", **kwargs)
 
 
-def test_tester_poke_internal_register():
+def test_tester_poke_internal_register(target, simulator):
     circ = common.SimpleALU
 
     tester = Tester(circ, circ.CLK)
