@@ -129,6 +129,12 @@ class VerilatorTarget(VerilogTarget):
                 self.debug_includes.add(f"{circuit_name}")
         else:
             name = verilog_name(action.port.name)
+
+        # Special case poking internal registers
+        is_reg_poke = isinstance(action.port, SelectPath) and \
+            isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
+            and action.port.path == "outReg"
+
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > 32:
             asserts = []
@@ -136,10 +142,8 @@ class VerilatorTarget(VerilogTarget):
                 value = action.value[i * 32:min(
                     (i + 1) * 32, action.value.num_bits)]
                 asserts += [f"top->{name}[{i}] = {value};"]
-            if isinstance(action.port, SelectPath) and \
-                isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
-                and action.port.path == "outReg":
-                    raise NotImplementedError()
+            if is_reg_poke:
+                raise NotImplementedError()
             return asserts
         else:
             value = action.value
@@ -148,21 +152,19 @@ class VerilatorTarget(VerilogTarget):
                 # unsigned c type
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
-            result =  [f"top->{name} = {value};"]
+            result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
-            if isinstance(action.port, SelectPath) and \
-                isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
-                and action.port[-1].path == "outReg":
-                    action.port[-1].path = "out"
+            if is_reg_poke:
+                action.port[-1].path = "out"
+                result += self.make_poke(i, action)
+                action.port[-1].path = "in"
+                result += self.make_poke(i, action)
+                if "enable_mux" in action.port[-3].instance_map:
+                    mux_inst = action.port[-3].instance_map["enable_mux"]
+                    action.port[-2] = InstanceWrapper(mux_inst, action.port[-3])
+                    action.port[-1] = type(mux_inst).I0
                     result += self.make_poke(i, action)
-                    action.port[-1].path = "in"
-                    result += self.make_poke(i, action)
-                    if "enable_mux" in action.port[-3].instance_map:
-                        mux_inst = action.port[-3].instance_map["enable_mux"]
-                        action.port[-2] = InstanceWrapper(mux_inst, action.port[-3])
-                        action.port[-1] = type(mux_inst).I0
-                        result += self.make_poke(i, action)
             return result
 
     def make_print(self, i, action):
