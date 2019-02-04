@@ -74,7 +74,7 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_poke(self, i, action):
         if isinstance(action.port, SelectPath):
-            name = f"{self.circuit_name}.{action.port.system_verilog_path}"
+            name = f"dut.{action.port.system_verilog_path}"
         else:
             name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
@@ -98,7 +98,7 @@ class SystemVerilogTarget(VerilogTarget):
         if value_utils.is_any(action.value):
             return []
         if isinstance(action.port, SelectPath):
-            name = f"{self.circuit_name}.{action.port.system_verilog_path}"
+            name = f"dut.{action.port.system_verilog_path}"
             debug_name = action.port[-1].name
         else:
             name = verilog_name(action.port.name)
@@ -107,7 +107,7 @@ class SystemVerilogTarget(VerilogTarget):
         if isinstance(value, actions.Peek):
             value = f"{value.port.name}"
         elif isinstance(value, PortWrapper):
-            value = f"{self.circuit_name}.{value.select_path.system_verilog_path}"
+            value = f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
