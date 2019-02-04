@@ -256,8 +256,7 @@ class VerilatorTarget(VerilogTarget):
                 main_body += f"  {line}\n"
 
         includes += [f'"V{self.circuit_name}_{include}.h"' for include in
-             self.debug_includes]
-
+                     self.debug_includes]
 
         includes_src = "\n".join(["#include " + i for i in includes])
         src = src_tpl.format(

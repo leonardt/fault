@@ -93,4 +93,3 @@ class InstanceWrapper(Wrapper):
                 object.__setattr__(self, attr, value)
         except Exception as e:
             object.__setattr__(self, attr, value)
-
