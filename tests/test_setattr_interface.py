@@ -7,10 +7,10 @@ import shutil
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [("verilator", None)]
-        if shutil.which("irun"):
-            targets.append(("system_verilog", "ncsim"))
+        # if shutil.which("irun"):
+        #     targets.append(("system-verilog", "ncsim"))
         if shutil.which("vcs"):
-            targets.append(("system_verilog", "vcs"))
+            targets.append(("system-verilog", "vcs"))
         metafunc.parametrize("target,simulator", targets)
 
 
@@ -27,10 +27,11 @@ def test_tester_magma_internal_signals(target, simulator):
         tester.circuit.config_reg.Q.expect(signal)
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {
-            "directory": _dir,
-            "flags": ["-Wno-fatal"],
+            "directory": "build",
             "magma_opts": {"verilator_debug": True}
         }
+        if target == "verilator":
+            kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
             kwargs["simulator"] = simulator
         tester.compile_and_run(target, **kwargs)
@@ -48,10 +49,11 @@ def test_tester_poke_internal_register(target, simulator):
         tester.circuit.config_reg.conf_reg.O.expect(i)
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {
-            "directory": _dir,
-            "flags": ["-Wno-fatal"],
+            "directory": "build",
             "magma_opts": {"verilator_debug": True}
         }
+        if target == "verilator":
+            kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
             kwargs["simulator"] = simulator
         tester.compile_and_run(target, **kwargs)

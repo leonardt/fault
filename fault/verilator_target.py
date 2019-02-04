@@ -8,7 +8,7 @@ from fault.verilog_target import VerilogTarget, verilog_name
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 from fault.select_path import SelectPath
-from fault.wrapper import PortWrapper
+from fault.wrapper import PortWrapper, InstanceWrapper
 import math
 from bit_vector import BitVector, SIntVector
 import subprocess
@@ -136,6 +136,10 @@ class VerilatorTarget(VerilogTarget):
                 value = action.value[i * 32:min(
                     (i + 1) * 32, action.value.num_bits)]
                 asserts += [f"top->{name}[{i}] = {value};"]
+            if isinstance(action.port, SelectPath) and \
+                isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
+                and action.port.path == "outReg":
+                    raise NotImplementedError()
             return asserts
         else:
             value = action.value
@@ -144,7 +148,22 @@ class VerilatorTarget(VerilogTarget):
                 # unsigned c type
                 port_len = len(action.port)
                 value = BitVector(value, port_len).as_uint()
-            return [f"top->{name} = {value};"]
+            result =  [f"top->{name} = {value};"]
+            # Hack to support verilator's semantics, need to set the register
+            # mux values for expected behavior
+            if isinstance(action.port, SelectPath) and \
+                isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
+                and action.port[-1].path == "outReg":
+                    action.port[-1].path = "out"
+                    result += self.make_poke(i, action)
+                    action.port[-1].path = "in"
+                    result += self.make_poke(i, action)
+                    if "enable_mux" in action.port[-3].instance_map:
+                        mux_inst = action.port[-3].instance_map["enable_mux"]
+                        action.port[-2] = InstanceWrapper(mux_inst, action.port[-3])
+                        action.port[-1] = type(mux_inst).I0
+                        result += self.make_poke(i, action)
+            return result
 
     def make_print(self, i, action):
         name = verilog_name(action.port.name)
