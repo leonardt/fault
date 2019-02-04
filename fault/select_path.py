@@ -1,5 +1,5 @@
 import fault
-from fault.verilog_target import verilog_name
+from fault.verilog_utils import verilog_name
 
 
 class SelectPath:
