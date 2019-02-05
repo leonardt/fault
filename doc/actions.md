@@ -37,7 +37,7 @@ Fault has primitive support for working with internal verilog signals using the
 `verilator` target.
 
 Suppose you had a file `simple_alu.v`. Notice that the desired internal
-signals, `ConfigReg->Q` and `SimpleALU->opcode` are marked with a comment
+signals, `ConfigReg.Q` and `SimpleALU.opcode` are marked with a comment
 `/*verilator public*/`.
 
 ```verilog
@@ -101,25 +101,25 @@ Here's an example test we can write using the internal signals
         tester.poke(circ.config_data, i)
         tester.step(2)
         tester.expect(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->opcode",
+            fault.WrappedVerilogInternalPort("top.SimpleALU_inst0.opcode",
                                              m.Bits(2)),
             i)
         signal = tester.peek(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->opcode",
+            fault.WrappedVerilogInternalPort("top.SimpleALU_inst0.opcode",
                                              m.Bits(2)))
         tester.expect(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->opcode",
+            fault.WrappedVerilogInternalPort("top.SimpleALU_inst0.opcode",
                                              m.Bits(2)),
             signal)
         tester.expect(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->config_reg->Q",
+            fault.WrappedVerilogInternalPort("top.SimpleALU_inst0.config_reg.Q",
                                              m.Bits(2)),
             i)
         signal = tester.peek(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->config_reg->Q",
+            fault.WrappedVerilogInternalPort("top.SimpleALU_inst0.config_reg.Q",
                                              m.Bits(2)))
         tester.expect(
-            fault.WrappedVerilogInternalPort("top->SimpleALU_inst0->config_reg->Q",
+            fault.WrappedVerilogInternalPort("top.SimpleALU_inst0.config_reg.Q",
                                              m.Bits(2)),
             signal)
 ```

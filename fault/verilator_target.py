@@ -106,15 +106,16 @@ class VerilatorTarget(VerilogTarget):
         self.verilator_version = float(verilator_version.split()[1])
 
     def make_poke(self, i, action):
+        if self.verilator_version > 3.874:
+            prefix = f"{self.circuit_name}"
+        else:
+            prefix = f"v"
         if isinstance(action.port, fault.WrappedVerilogInternalPort):
-            raise NotImplementedError()
-        if isinstance(action.port, SelectPath):
+            path = action.port.path.replace(".", "->")
+            name = f"{prefix}->{path}"
+        elif isinstance(action.port, SelectPath):
             # TODO: Find the version that they changed this, 3.874 is known to
             # use top->v instead of top->{circuit_name}
-            if self.verilator_version > 3.874:
-                prefix = f"{self.circuit_name}"
-            else:
-                prefix = f"v"
             name = f"{prefix}->" + action.port.verilator_path
             self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
@@ -183,7 +184,8 @@ class VerilatorTarget(VerilogTarget):
         else:
             prefix = f"v"
         if isinstance(action.port, fault.WrappedVerilogInternalPort):
-            name = f"{prefix}->{action.port.path}"
+            path = action.port.path.replace(".", "->")
+            name = f"{prefix}->{path}"
             debug_name = name
         elif isinstance(action.port, SelectPath):
             name = f"{prefix}->" + action.port.verilator_path
@@ -198,7 +200,8 @@ class VerilatorTarget(VerilogTarget):
         value = action.value
         if isinstance(value, actions.Peek):
             if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                value = f"top->{prefix}->{action.port.path}"
+                path = action.port.path.replace(".", "->")
+                value = f"top->{prefix}->{path}"
             else:
                 value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(value, PortWrapper):
