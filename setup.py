@@ -4,10 +4,14 @@ import sys
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+description = """\
+A Python package for testing hardware (part of the magma ecosystem)\
+"""
+
 setup(
     name='fault',
-    version='0.43',
-    description='A Python package for testing hardware (part of the magma ecosystem)',
+    version='1.0.0',
+    description=description,
     scripts=[],
     packages=[
         "fault",

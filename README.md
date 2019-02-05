@@ -4,6 +4,8 @@
 
 A Python package for testing hardware (part of the magma ecosystem).
 
+[CHANGELOG](./CHANGELOG.md)
+
 ## Example
 Here is a simple ALU defined in magma.
 ```python
