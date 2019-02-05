@@ -44,7 +44,7 @@ expected operation.
 import operator
 
 ops = [operator.add, operator.sub, operator.mul, operator.div]
-tester = Tester(SimpleALU, SimpleALU.CLK)
+tester = fault.Tester(SimpleALU, SimpleALU.CLK)
 tester.circuit.CLK = 0
 tester.circuit.config_en = 1
 for i in range(0, 4):
@@ -54,9 +54,6 @@ for i in range(0, 4):
     tester.circuit.b = 2
     tester.eval()
     tester.circuit.c.expect(ops[i](3, 2))
-    tester.circuit.config_reg.Q.expect(i)
-    signal = tester.circuit.config_reg.Q
-    tester.circuit.config_reg.Q.expect(signal)
 ```
 
 We can run this with three different simulators
@@ -66,4 +63,21 @@ tester.compile_and_run("verilator", flags=["-Wno-fatal"],
                        magma_opts={"verilator_debug": True}, directory="build")
 tester.compile_and_run("system-verilog", simulator="ncsim", directory="build")
 tester.compile_and_run("system-verilog", simulator="vcs", directory="build")
+```
+
+If you're using `mantle.Register` from the `coreir` implementation, you can
+also poke the internal register value directly using the `value` field.  Notice
+that `conf_reg` is defined in `ConfigReg` to be an instance of
+`mantle.Register` and the test bench pokes it by setting `confg_reg.value`
+equal to `1`.
+
+```python
+tester = fault.Tester(SimpleALU, SimpleALU.CLK)
+tester.circuit.CLK = 0
+# Initialize
+tester.step(2)
+for i in reversed(range(4)):
+    tester.circuit.config_reg.conf_reg.value = i
+    tester.step(2)
+    tester.circuit.config_reg.conf_reg.O.expect(i)
 ```
