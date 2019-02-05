@@ -7,6 +7,7 @@ import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 import subprocess
 from fault.wrapper import PortWrapper
+import fault
 
 
 src_tpl = """\
@@ -75,6 +76,8 @@ class SystemVerilogTarget(VerilogTarget):
     def make_poke(self, i, action):
         if isinstance(action.port, SelectPath):
             name = f"dut.{action.port.system_verilog_path}"
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f"dut.{action.port.path}"
         else:
             name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
@@ -100,12 +103,18 @@ class SystemVerilogTarget(VerilogTarget):
         if isinstance(action.port, SelectPath):
             name = f"dut.{action.port.system_verilog_path}"
             debug_name = action.port[-1].name
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f"dut.{action.port.path}"
+            debug_name = name
         else:
             name = verilog_name(action.port.name)
             debug_name = action.port.name
         value = action.value
         if isinstance(value, actions.Peek):
-            value = f"{value.port.name}"
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                value = f"dut.{value.port.path}"
+            else:
+                value = f"{value.port.name}"
         elif isinstance(value, PortWrapper):
             value = f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(action.port, m.SIntType) and value < 0:

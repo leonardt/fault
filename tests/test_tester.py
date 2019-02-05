@@ -213,8 +213,7 @@ Actions:
 """  # nopep8
 
 
-def test_tester_verilog_wrapped():
-    target = "verilator"
+def test_tester_verilog_wrapped(target, simulator):
     SimpleALU = m.DefineFromVerilogFile("tests/simple_alu.v",
                                         type_map={"CLK": m.In(m.Clock)},
                                         target_modules=["SimpleALU"])[0]
@@ -238,31 +237,33 @@ def test_tester_verilog_wrapped():
     tester = fault.Tester(circ, circ.CLK)
     tester.verilator_include("SimpleALU")
     tester.verilator_include("ConfigReg")
-    tester.poke(circ.config_en, 1)
     for i in range(0, 4):
-        tester.poke(circ.config_data, i)
+        tester.poke(
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.config_reg.Q",
+                                             m.Bits(2)),
+            i)
         tester.step(2)
         tester.expect(
-            fault.WrappedVerilogInternalPort("SimpleALU_inst0->opcode",
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
                                              m.Bits(2)),
             i)
         signal = tester.peek(
-            fault.WrappedVerilogInternalPort("SimpleALU_inst0->opcode",
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
                                              m.Bits(2)))
         tester.expect(
-            fault.WrappedVerilogInternalPort("SimpleALU_inst0->opcode",
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
                                              m.Bits(2)),
             signal)
         tester.expect(
             fault.WrappedVerilogInternalPort(
-                "SimpleALU_inst0->config_reg->Q", m.Bits(2)),
+                "SimpleALU_inst0.config_reg.Q", m.Bits(2)),
             i)
         signal = tester.peek(
             fault.WrappedVerilogInternalPort(
-                "SimpleALU_inst0->config_reg->Q", m.Bits(2)))
+                "SimpleALU_inst0.config_reg.Q", m.Bits(2)))
         tester.expect(
             fault.WrappedVerilogInternalPort(
-                "SimpleALU_inst0->config_reg->Q", m.Bits(2)),
+                "SimpleALU_inst0.config_reg.Q", m.Bits(2)),
             signal)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
