@@ -24,7 +24,18 @@
 <summary>Source code</summary>
 <pre><code class="python">from .tester import Tester
 from .value import Value, AnyValue, UnknownValue
-import fault.random}</code></pre>
+import fault.random
+
+
+class WrappedVerilogInternalPort:
+    def __init__(self, path: str, type_):
+        &#34;&#34;&#34;
+        path: &lt;instance_name&gt;.&lt;port_name&gt; (can nest instances)
+
+        type_: magma type of the signal (e.g. m.Bits(2))
+        &#34;&#34;&#34;
+        self.path = path
+        self.type_ = type_}</code></pre>
 </details>
 </section>
 <section>
@@ -63,6 +74,10 @@ import fault.random}</code></pre>
 <section class="desc"></section>
 </dd>
 <dt><code class="name"><a title="fault.random" href="random.html">fault.random</a></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+<dt><code class="name"><a title="fault.select_path" href="select_path.html">fault.select_path</a></code></dt>
 <dd>
 <section class="desc"></section>
 </dd>
@@ -114,6 +129,14 @@ import fault.random}</code></pre>
 <dd>
 <section class="desc"></section>
 </dd>
+<dt><code class="name"><a title="fault.verilog_utils" href="verilog_utils.html">fault.verilog_utils</a></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
+<dt><code class="name"><a title="fault.wrapper" href="wrapper.html">fault.wrapper</a></code></dt>
+<dd>
+<section class="desc"></section>
+</dd>
 </dl>
 </section>
 <section>
@@ -121,6 +144,52 @@ import fault.random}</code></pre>
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="fault.WrappedVerilogInternalPort"><code class="flex name class">
+<span>class <span class="ident">WrappedVerilogInternalPort</span></span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class WrappedVerilogInternalPort:
+    def __init__(self, path: str, type_):
+        &#34;&#34;&#34;
+        path: &lt;instance_name&gt;.&lt;port_name&gt; (can nest instances)
+
+        type_: magma type of the signal (e.g. m.Bits(2))
+        &#34;&#34;&#34;
+        self.path = path
+        self.type_ = type_}</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="fault.WrappedVerilogInternalPort.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, path, type_)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>path</code></strong> :&ensp;&lt;<code>instance_name</code>&gt;<code>.</code>&lt;<code>port_name</code>&gt; (<code>can</code> <code>nest</code> <code>instances</code>)</dt>
+<dd>&nbsp;</dd>
+<dt><strong><code>type_</code></strong> :&ensp;<code>magma</code> <code>type</code> of <code>the</code> <code>signal</code> (<code>e.g.</code> <code>m.Bits</code>(<code>2</code>))</dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def __init__(self, path: str, type_):
+    &#34;&#34;&#34;
+    path: &lt;instance_name&gt;.&lt;port_name&gt; (can nest instances)
+
+    type_: magma type of the signal (e.g. m.Bits(2))
+    &#34;&#34;&#34;
+    self.path = path
+    self.type_ = type_}</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -140,6 +209,7 @@ import fault.random}</code></pre>
 <li><code><a title="fault.logging" href="logging.html">fault.logging</a></code></li>
 <li><code><a title="fault.magma_simulator_target" href="magma_simulator_target.html">fault.magma_simulator_target</a></code></li>
 <li><code><a title="fault.random" href="random.html">fault.random</a></code></li>
+<li><code><a title="fault.select_path" href="select_path.html">fault.select_path</a></code></li>
 <li><code><a title="fault.system_verilog_target" href="system_verilog_target.html">fault.system_verilog_target</a></code></li>
 <li><code><a title="fault.target" href="target.html">fault.target</a></code></li>
 <li><code><a title="fault.test_vector_generator" href="test_vector_generator.html">fault.test_vector_generator</a></code></li>
@@ -152,6 +222,18 @@ import fault.random}</code></pre>
 <li><code><a title="fault.verilator_target" href="verilator_target.html">fault.verilator_target</a></code></li>
 <li><code><a title="fault.verilator_utils" href="verilator_utils.html">fault.verilator_utils</a></code></li>
 <li><code><a title="fault.verilog_target" href="verilog_target.html">fault.verilog_target</a></code></li>
+<li><code><a title="fault.verilog_utils" href="verilog_utils.html">fault.verilog_utils</a></code></li>
+<li><code><a title="fault.wrapper" href="wrapper.html">fault.wrapper</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="fault.WrappedVerilogInternalPort" href="#fault.WrappedVerilogInternalPort">WrappedVerilogInternalPort</a></code></h4>
+<ul class="">
+<li><code><a title="fault.WrappedVerilogInternalPort.__init__" href="#fault.WrappedVerilogInternalPort.__init__">__init__</a></code></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

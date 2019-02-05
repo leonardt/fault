@@ -22,18 +22,25 @@
 <section id="section-intro">
 <details class="source">
 <summary>Source code</summary>
-<pre><code class="python">import magma
+<pre><code class="python">import fault
+import magma
 from bit_vector import BitVector
 from fault.value import AnyValue, UnknownValue
 from fault.array import Array
+from fault.select_path import SelectPath
 
 
 def make_value(port, value):
-    if isinstance(port, (magma._BitType, magma._BitKind)):
+    switch = port
+    if isinstance(switch, SelectPath):
+        switch = switch[-1]
+    if isinstance(switch, fault.WrappedVerilogInternalPort):
+        switch = switch.type_
+    if isinstance(switch, (magma._BitType, magma._BitKind)):
         return make_bit(value)
-    if isinstance(port, (magma.ArrayType, magma.ArrayKind)):
-        return make_array(port.T, port.N, value)
-    raise NotImplementedError(port, value)
+    if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):
+        return make_array(switch.T, switch.N, value)
+    raise NotImplementedError(switch, value)
 
 
 def make_bit(value):
@@ -163,11 +170,16 @@ def is_any(value):
 <details class="source">
 <summary>Source code</summary>
 <pre><code class="python">def make_value(port, value):
-    if isinstance(port, (magma._BitType, magma._BitKind)):
+    switch = port
+    if isinstance(switch, SelectPath):
+        switch = switch[-1]
+    if isinstance(switch, fault.WrappedVerilogInternalPort):
+        switch = switch.type_
+    if isinstance(switch, (magma._BitType, magma._BitKind)):
         return make_bit(value)
-    if isinstance(port, (magma.ArrayType, magma.ArrayKind)):
-        return make_array(port.T, port.N, value)
-    raise NotImplementedError(port, value)}</code></pre>
+    if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):
+        return make_array(switch.T, switch.N, value)
+    raise NotImplementedError(switch, value)}</code></pre>
 </details>
 </dd>
 </dl>
