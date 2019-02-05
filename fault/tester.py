@@ -8,6 +8,8 @@ from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
+from fault.select_path import SelectPath
+from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
 
 
@@ -51,13 +53,15 @@ class Tester:
         `default_print_format_str`: optional, this sets the default format
             string used for the `print` method
         """
-        self.circuit = circuit
+        self._circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
         self.default_print_format_str = default_print_format_str
         self.targets = {}
+        # For public verilator modules
+        self.verilator_includes = []
 
     def make_target(self, target: str, **kwargs):
         """
@@ -68,15 +72,15 @@ class Tester:
             "system-verilog"
         """
         if target == "verilator":
-            return VerilatorTarget(self.circuit, **kwargs)
+            return VerilatorTarget(self._circuit, **kwargs)
         elif target == "coreir":
-            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+            return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='coreir', **kwargs)
         elif target == "python":
-            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+            return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='python', **kwargs)
         elif target == "system-verilog":
-            return SystemVerilogTarget(self.circuit, **kwargs)
+            return SystemVerilogTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
@@ -107,7 +111,9 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
-        if not isinstance(value, actions.Peek):
+        is_peek = isinstance(value, actions.Peek)
+        is_port_wrapper = isinstance(value, PortWrapper)
+        if not (is_peek or is_port_wrapper):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
@@ -130,7 +136,7 @@ class Tester:
         """
         Serialize the action sequence into a set of test vectors
         """
-        builder = VectorBuilder(self.circuit)
+        builder = VectorBuilder(self._circuit)
         for action in self.actions:
             builder.process(action)
         return builder.vectors
@@ -153,7 +159,10 @@ class Tester:
         should call `compile` with `target` before calling `run`.
         """
         try:
-            self.targets[target].run(self.actions)
+            if target == "verilator":
+                self.targets[target].run(self.actions, self.verilator_includes)
+            else:
+                self.targets[target].run(self.actions)
         except KeyError:
             raise Exception(f"Could not find target={target}, did you compile"
                             " it first?")
@@ -170,10 +179,10 @@ class Tester:
         Generates a new instance of the Tester object that targets
         `new_circuit`. This allows you to copy a set of actions for a new
         circuit with the same interface (or an interface that is a super set of
-        self.circuit)
+        self._circuit)
         """
-        # Check that the interface of self.circuit is a subset of new_circuit
-        check_interface_is_subset(self.circuit, new_circuit)
+        # Check that the interface of self._circuit is a subset of new_circuit
+        check_interface_is_subset(self._circuit, new_circuit)
 
         new_tester = Tester(new_circuit, clock, self.default_print_format_str)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
@@ -185,9 +194,9 @@ class Tester:
         Set all the input ports to 0, useful for intiializing everything to a
         known value
         """
-        for name, port in self.circuit.IO.ports.items():
+        for name, port in self._circuit.IO.ports.items():
             if port.isinput():
-                self.poke(self.circuit.interface.ports[name], 0)
+                self.poke(self._circuit.interface.ports[name], 0)
 
     def clear(self):
         """
@@ -206,3 +215,10 @@ class Tester:
         for i, action in enumerate(self.actions):
             s += f"    {i}: {action}\n"
         return s
+
+    def verilator_include(self, module_name):
+        self.verilator_includes.append(module_name)
+
+    @property
+    def circuit(self):
+        return CircuitWrapper(self._circuit, self)

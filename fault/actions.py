@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import fault
+from fault.select_path import SelectPath
 
 
 class Action(ABC):
@@ -26,9 +28,18 @@ class PortAction(Action):
         return cls(new_port, self.value)
 
 
+def can_poke(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isinput()
+    else:
+        return not port.isinput()
+
+
 class Poke(PortAction):
     def __init__(self, port, value):
-        if port.isinput():
+        if not can_poke(port):
             raise ValueError(f"Can only poke inputs: {port.debug_name} "
                              f"{type(port)}")
         super().__init__(port, value)
@@ -49,9 +60,18 @@ class Print(Action):
         return cls(new_port, self.format_str)
 
 
+def is_output(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isoutput()
+    else:
+        return not port.isoutput()
+
+
 class Expect(PortAction):
     def __init__(self, port, value):
-        if port.isoutput():
+        if not is_output(port):
             raise ValueError(f"Can only expect on outputs: {port.debug_name} "
                              f"{type(port)}")
         super().__init__(port, value)
@@ -60,7 +80,7 @@ class Expect(PortAction):
 class Peek(Action):
     def __init__(self, port):
         super().__init__()
-        if port.isoutput():
+        if not is_output(port):
             raise ValueError(f"Can only peek on outputs: {port.debug_name} "
                              f"{type(port)}")
         self.port = port

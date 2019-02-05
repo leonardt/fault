@@ -1,3 +1,4 @@
+import magma as m
 import random
 from bit_vector import BitVector
 import fault
@@ -5,14 +6,16 @@ from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
 import tempfile
 import os
+import shutil
 
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = [("verilator", None)]
-        if not os.getenv("TRAVIS", False):
+        if shutil.which("irun"):
             targets.append(
                 ("system-verilog", "ncsim"))
+        if shutil.which("vcs"):
             targets.append(
                 ("system-verilog", "vcs"))
         metafunc.parametrize("target,simulator", targets)
@@ -208,3 +211,62 @@ Actions:
     2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector(0, 4), BitVector(1, 4), BitVector(2, 4)], 3), Array([BitVector(3, 4), BitVector(4, 4), BitVector(5, 4)], 3)], 2))
     3: Print(DoubleNestedArraysCircuit.O, "%08x")
 """  # nopep8
+
+
+def test_tester_verilog_wrapped(target, simulator):
+    SimpleALU = m.DefineFromVerilogFile("tests/simple_alu.v",
+                                        type_map={"CLK": m.In(m.Clock)},
+                                        target_modules=["SimpleALU"])[0]
+
+    circ = m.DefineCircuit("top",
+                           "a", m.In(m.Bits(16)),
+                           "b", m.In(m.Bits(16)),
+                           "c", m.Out(m.Bits(16)),
+                           "config_data", m.In(m.Bits(2)),
+                           "config_en", m.In(m.Bit),
+                           "CLK", m.In(m.Clock))
+    simple_alu = SimpleALU()
+    m.wire(simple_alu.a, circ.a)
+    m.wire(simple_alu.b, circ.b)
+    m.wire(simple_alu.c, circ.c)
+    m.wire(simple_alu.config_data, circ.config_data)
+    m.wire(simple_alu.config_en, circ.config_en)
+    m.wire(simple_alu.CLK, circ.CLK)
+    m.EndDefine()
+
+    tester = fault.Tester(circ, circ.CLK)
+    tester.verilator_include("SimpleALU")
+    tester.verilator_include("ConfigReg")
+    for i in range(0, 4):
+        tester.poke(
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.config_reg.Q",
+                                             m.Bits(2)),
+            i)
+        tester.step(2)
+        tester.expect(
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
+                                             m.Bits(2)),
+            i)
+        signal = tester.peek(
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
+                                             m.Bits(2)))
+        tester.expect(
+            fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
+                                             m.Bits(2)),
+            signal)
+        tester.expect(
+            fault.WrappedVerilogInternalPort(
+                "SimpleALU_inst0.config_reg.Q", m.Bits(2)),
+            i)
+        signal = tester.peek(
+            fault.WrappedVerilogInternalPort(
+                "SimpleALU_inst0.config_reg.Q", m.Bits(2)))
+        tester.expect(
+            fault.WrappedVerilogInternalPort(
+                "SimpleALU_inst0.config_reg.Q", m.Bits(2)),
+            signal)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)

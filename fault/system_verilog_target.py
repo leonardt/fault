@@ -4,20 +4,24 @@ from pathlib import Path
 import fault.actions as actions
 from bit_vector import BitVector
 import fault.value_utils as value_utils
+from fault.select_path import SelectPath
 import subprocess
+from fault.wrapper import PortWrapper
+import fault
 
 
 src_tpl = """\
 module {circuit_name}_tb;
 {declarations}
-    initial begin
-{initial_body}
-        #20 $finish;
-    end
 
     {circuit_name} dut (
         {port_list}
     );
+
+    initial begin
+{initial_body}
+        #20 $finish;
+    end
 
 endmodule
 """
@@ -33,7 +37,7 @@ quit
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, magma_output="coreir-verilog",
-                 include_verilog_libraries=[], simulator=None,
+                 magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5):
         """
         circuit: a magma circuit
@@ -48,6 +52,8 @@ class SystemVerilogTarget(VerilogTarget):
         magma_output: Set the output parameter to m.compile
                       (default coreir-verilog)
 
+        magma_opts: Options dictionary for `magma.compile` command
+
         simulator: "ncsim" or "vcs"
 
         timescale: Set the timescale for the verilog simulation
@@ -57,7 +63,7 @@ class SystemVerilogTarget(VerilogTarget):
                           clock
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output)
+                         include_verilog_libraries, magma_output, magma_opts)
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
@@ -68,7 +74,12 @@ class SystemVerilogTarget(VerilogTarget):
         self.clock_step_delay = clock_step_delay
 
     def make_poke(self, i, action):
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f"dut.{action.port.system_verilog_path}"
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f"dut.{action.port.path}"
+        else:
+            name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > 32:
             raise NotImplementedError()
@@ -89,10 +100,23 @@ class SystemVerilogTarget(VerilogTarget):
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f"dut.{action.port.system_verilog_path}"
+            debug_name = action.port[-1].name
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f"dut.{action.port.path}"
+            debug_name = name
+        else:
+            name = verilog_name(action.port.name)
+            debug_name = action.port.name
         value = action.value
         if isinstance(value, actions.Peek):
-            value = f"{value.port.name}"
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                value = f"dut.{value.port.path}"
+            else:
+                value = f"{value.port.name}"
+        elif isinstance(value, PortWrapper):
+            value = f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
@@ -100,7 +124,7 @@ class SystemVerilogTarget(VerilogTarget):
             value = BitVector(value, port_len).as_uint()
 
         return [f"if ({name} != {value}) $error(\"Failed on action={i}"
-                f" checking port {action.port.name}. Expected %x, got %x\""
+                f" checking port {debug_name}. Expected %x, got %x\""
                 f", {value}, {name});"]
 
     def make_eval(self, i, action):
@@ -138,7 +162,7 @@ class SystemVerilogTarget(VerilogTarget):
     def generate_port_code(name, type_):
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
-        if array_of_bits or isinstance(type_, m.TupleKind):
+        if is_array_of_bits or isinstance(type_, m.TupleKind):
             return SystemVerilogTarget.generate_recursive_port_code(name, type_)
         else:
             width_str = ""

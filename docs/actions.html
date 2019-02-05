@@ -23,6 +23,8 @@
 <details class="source">
 <summary>Source code</summary>
 <pre><code class="python">from abc import ABC, abstractmethod
+import fault
+from fault.select_path import SelectPath
 
 
 class Action(ABC):
@@ -50,9 +52,18 @@ class PortAction(Action):
         return cls(new_port, self.value)
 
 
+def can_poke(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isinput()
+    else:
+        return not port.isinput()
+
+
 class Poke(PortAction):
     def __init__(self, port, value):
-        if port.isinput():
+        if not can_poke(port):
             raise ValueError(f&#34;Can only poke inputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         super().__init__(port, value)
@@ -73,9 +84,18 @@ class Print(Action):
         return cls(new_port, self.format_str)
 
 
+def is_output(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isoutput()
+    else:
+        return not port.isoutput()
+
+
 class Expect(PortAction):
     def __init__(self, port, value):
-        if port.isoutput():
+        if not is_output(port):
             raise ValueError(f&#34;Can only expect on outputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         super().__init__(port, value)
@@ -84,7 +104,7 @@ class Expect(PortAction):
 class Peek(Action):
     def __init__(self, port):
         super().__init__()
-        if port.isoutput():
+        if not is_output(port):
             raise ValueError(f&#34;Can only peek on outputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         self.port = port
@@ -131,6 +151,41 @@ class Step(Action):
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="fault.actions.can_poke"><code class="name flex">
+<span>def <span class="ident">can_poke</span></span>(<span>port)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def can_poke(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isinput()
+    else:
+        return not port.isinput()}</code></pre>
+</details>
+</dd>
+<dt id="fault.actions.is_output"><code class="name flex">
+<span>def <span class="ident">is_output</span></span>(<span>port)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def is_output(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return not port.type_.isoutput()
+    else:
+        return not port.isoutput()}</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
@@ -241,7 +296,7 @@ inheritance.</p></section>
 <summary>Source code</summary>
 <pre><code class="python">class Expect(PortAction):
     def __init__(self, port, value):
-        if port.isoutput():
+        if not is_output(port):
             raise ValueError(f&#34;Can only expect on outputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         super().__init__(port, value)}</code></pre>
@@ -272,7 +327,7 @@ inheritance.</p></section>
 <pre><code class="python">class Peek(Action):
     def __init__(self, port):
         super().__init__()
-        if port.isoutput():
+        if not is_output(port):
             raise ValueError(f&#34;Can only peek on outputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         self.port = port
@@ -300,7 +355,7 @@ See help(type(self)) for accurate signature.</p></section>
 <summary>Source code</summary>
 <pre><code class="python">def __init__(self, port):
     super().__init__()
-    if port.isoutput():
+    if not is_output(port):
         raise ValueError(f&#34;Can only peek on outputs: {port.debug_name} &#34;
                          f&#34;{type(port)}&#34;)
     self.port = port}</code></pre>
@@ -331,7 +386,7 @@ inheritance.</p></section>
 <summary>Source code</summary>
 <pre><code class="python">class Poke(PortAction):
     def __init__(self, port, value):
-        if port.isinput():
+        if not can_poke(port):
             raise ValueError(f&#34;Can only poke inputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         super().__init__(port, value)}</code></pre>
@@ -523,6 +578,12 @@ See help(type(self)) for accurate signature.</p></section>
 <li><h3>Super-module</h3>
 <ul>
 <li><code><a title="fault" href="index.html">fault</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="fault.actions.can_poke" href="#fault.actions.can_poke">can_poke</a></code></li>
+<li><code><a title="fault.actions.is_output" href="#fault.actions.is_output">is_output</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>

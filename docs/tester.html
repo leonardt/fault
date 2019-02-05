@@ -32,6 +32,8 @@ from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
+from fault.select_path import SelectPath
+from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
 
 
@@ -75,13 +77,15 @@ class Tester:
         `default_print_format_str`: optional, this sets the default format
             string used for the `print` method
         &#34;&#34;&#34;
-        self.circuit = circuit
+        self._circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f&#34;Expected clock port: {clock, type(clock)}&#34;)
         self.clock = clock
         self.default_print_format_str = default_print_format_str
         self.targets = {}
+        # For public verilator modules
+        self.verilator_includes = []
 
     def make_target(self, target: str, **kwargs):
         &#34;&#34;&#34;
@@ -92,15 +96,15 @@ class Tester:
             &#34;system-verilog&#34;
         &#34;&#34;&#34;
         if target == &#34;verilator&#34;:
-            return VerilatorTarget(self.circuit, **kwargs)
+            return VerilatorTarget(self._circuit, **kwargs)
         elif target == &#34;coreir&#34;:
-            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+            return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend=&#39;coreir&#39;, **kwargs)
         elif target == &#34;python&#34;:
-            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+            return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend=&#39;python&#39;, **kwargs)
         elif target == &#34;system-verilog&#34;:
-            return SystemVerilogTarget(self.circuit, **kwargs)
+            return SystemVerilogTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
@@ -131,7 +135,9 @@ class Tester:
         &#34;&#34;&#34;
         Expect the current value of `port` to be `value`
         &#34;&#34;&#34;
-        if not isinstance(value, actions.Peek):
+        is_peek = isinstance(value, actions.Peek)
+        is_port_wrapper = isinstance(value, PortWrapper)
+        if not (is_peek or is_port_wrapper):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
@@ -154,7 +160,7 @@ class Tester:
         &#34;&#34;&#34;
         Serialize the action sequence into a set of test vectors
         &#34;&#34;&#34;
-        builder = VectorBuilder(self.circuit)
+        builder = VectorBuilder(self._circuit)
         for action in self.actions:
             builder.process(action)
         return builder.vectors
@@ -177,7 +183,10 @@ class Tester:
         should call `compile` with `target` before calling `run`.
         &#34;&#34;&#34;
         try:
-            self.targets[target].run(self.actions)
+            if target == &#34;verilator&#34;:
+                self.targets[target].run(self.actions, self.verilator_includes)
+            else:
+                self.targets[target].run(self.actions)
         except KeyError:
             raise Exception(f&#34;Could not find target={target}, did you compile&#34;
                             &#34; it first?&#34;)
@@ -194,10 +203,10 @@ class Tester:
         Generates a new instance of the Tester object that targets
         `new_circuit`. This allows you to copy a set of actions for a new
         circuit with the same interface (or an interface that is a super set of
-        self.circuit)
+        self._circuit)
         &#34;&#34;&#34;
-        # Check that the interface of self.circuit is a subset of new_circuit
-        check_interface_is_subset(self.circuit, new_circuit)
+        # Check that the interface of self._circuit is a subset of new_circuit
+        check_interface_is_subset(self._circuit, new_circuit)
 
         new_tester = Tester(new_circuit, clock, self.default_print_format_str)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
@@ -209,9 +218,9 @@ class Tester:
         Set all the input ports to 0, useful for intiializing everything to a
         known value
         &#34;&#34;&#34;
-        for name, port in self.circuit.IO.ports.items():
+        for name, port in self._circuit.IO.ports.items():
             if port.isinput():
-                self.poke(self.circuit.interface.ports[name], 0)
+                self.poke(self._circuit.interface.ports[name], 0)
 
     def clear(self):
         &#34;&#34;&#34;
@@ -229,7 +238,14 @@ class Tester:
         s += &#34;Actions:\n&#34;
         for i, action in enumerate(self.actions):
             s += f&#34;    {i}: {action}\n&#34;
-        return s}</code></pre>
+        return s
+
+    def verilator_include(self, module_name):
+        self.verilator_includes.append(module_name)
+
+    @property
+    def circuit(self):
+        return CircuitWrapper(self._circuit, self)}</code></pre>
 </details>
 </section>
 <section>
@@ -312,13 +328,15 @@ execution of tests.</p>
         `default_print_format_str`: optional, this sets the default format
             string used for the `print` method
         &#34;&#34;&#34;
-        self.circuit = circuit
+        self._circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f&#34;Expected clock port: {clock, type(clock)}&#34;)
         self.clock = clock
         self.default_print_format_str = default_print_format_str
         self.targets = {}
+        # For public verilator modules
+        self.verilator_includes = []
 
     def make_target(self, target: str, **kwargs):
         &#34;&#34;&#34;
@@ -329,15 +347,15 @@ execution of tests.</p>
             &#34;system-verilog&#34;
         &#34;&#34;&#34;
         if target == &#34;verilator&#34;:
-            return VerilatorTarget(self.circuit, **kwargs)
+            return VerilatorTarget(self._circuit, **kwargs)
         elif target == &#34;coreir&#34;:
-            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+            return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend=&#39;coreir&#39;, **kwargs)
         elif target == &#34;python&#34;:
-            return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+            return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend=&#39;python&#39;, **kwargs)
         elif target == &#34;system-verilog&#34;:
-            return SystemVerilogTarget(self.circuit, **kwargs)
+            return SystemVerilogTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
@@ -368,7 +386,9 @@ execution of tests.</p>
         &#34;&#34;&#34;
         Expect the current value of `port` to be `value`
         &#34;&#34;&#34;
-        if not isinstance(value, actions.Peek):
+        is_peek = isinstance(value, actions.Peek)
+        is_port_wrapper = isinstance(value, PortWrapper)
+        if not (is_peek or is_port_wrapper):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
@@ -391,7 +411,7 @@ execution of tests.</p>
         &#34;&#34;&#34;
         Serialize the action sequence into a set of test vectors
         &#34;&#34;&#34;
-        builder = VectorBuilder(self.circuit)
+        builder = VectorBuilder(self._circuit)
         for action in self.actions:
             builder.process(action)
         return builder.vectors
@@ -414,7 +434,10 @@ execution of tests.</p>
         should call `compile` with `target` before calling `run`.
         &#34;&#34;&#34;
         try:
-            self.targets[target].run(self.actions)
+            if target == &#34;verilator&#34;:
+                self.targets[target].run(self.actions, self.verilator_includes)
+            else:
+                self.targets[target].run(self.actions)
         except KeyError:
             raise Exception(f&#34;Could not find target={target}, did you compile&#34;
                             &#34; it first?&#34;)
@@ -431,10 +454,10 @@ execution of tests.</p>
         Generates a new instance of the Tester object that targets
         `new_circuit`. This allows you to copy a set of actions for a new
         circuit with the same interface (or an interface that is a super set of
-        self.circuit)
+        self._circuit)
         &#34;&#34;&#34;
-        # Check that the interface of self.circuit is a subset of new_circuit
-        check_interface_is_subset(self.circuit, new_circuit)
+        # Check that the interface of self._circuit is a subset of new_circuit
+        check_interface_is_subset(self._circuit, new_circuit)
 
         new_tester = Tester(new_circuit, clock, self.default_print_format_str)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
@@ -446,9 +469,9 @@ execution of tests.</p>
         Set all the input ports to 0, useful for intiializing everything to a
         known value
         &#34;&#34;&#34;
-        for name, port in self.circuit.IO.ports.items():
+        for name, port in self._circuit.IO.ports.items():
             if port.isinput():
-                self.poke(self.circuit.interface.ports[name], 0)
+                self.poke(self._circuit.interface.ports[name], 0)
 
     def clear(self):
         &#34;&#34;&#34;
@@ -466,8 +489,28 @@ execution of tests.</p>
         s += &#34;Actions:\n&#34;
         for i, action in enumerate(self.actions):
             s += f&#34;    {i}: {action}\n&#34;
-        return s}</code></pre>
+        return s
+
+    def verilator_include(self, module_name):
+        self.verilator_includes.append(module_name)
+
+    @property
+    def circuit(self):
+        return CircuitWrapper(self._circuit, self)}</code></pre>
 </details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="fault.tester.Tester.circuit"><code class="name">var <span class="ident">circuit</span></code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">@property
+def circuit(self):
+    return CircuitWrapper(self._circuit, self)}</code></pre>
+</details>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="fault.tester.Tester.__init__"><code class="name flex">
@@ -488,13 +531,15 @@ string used for the <code>print</code> method</p></section>
     `default_print_format_str`: optional, this sets the default format
         string used for the `print` method
     &#34;&#34;&#34;
-    self.circuit = circuit
+    self._circuit = circuit
     self.actions = []
     if clock is not None and not isinstance(clock, m.ClockType):
         raise TypeError(f&#34;Expected clock port: {clock, type(clock)}&#34;)
     self.clock = clock
     self.default_print_format_str = default_print_format_str
-    self.targets = {}}</code></pre>
+    self.targets = {}
+    # For public verilator modules
+    self.verilator_includes = []}</code></pre>
 </details>
 </dd>
 <dt id="fault.tester.Tester.clear"><code class="name flex">
@@ -579,7 +624,9 @@ this avoids having to call verilator multiple times)</p></section>
     &#34;&#34;&#34;
     Expect the current value of `port` to be `value`
     &#34;&#34;&#34;
-    if not isinstance(value, actions.Peek):
+    is_peek = isinstance(value, actions.Peek)
+    is_port_wrapper = isinstance(value, PortWrapper)
+    if not (is_peek or is_port_wrapper):
         value = make_value(port, value)
     self.actions.append(actions.Expect(port, value))}</code></pre>
 </details>
@@ -603,15 +650,15 @@ corresponding target object.</p>
         &#34;system-verilog&#34;
     &#34;&#34;&#34;
     if target == &#34;verilator&#34;:
-        return VerilatorTarget(self.circuit, **kwargs)
+        return VerilatorTarget(self._circuit, **kwargs)
     elif target == &#34;coreir&#34;:
-        return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+        return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                     backend=&#39;coreir&#39;, **kwargs)
     elif target == &#34;python&#34;:
-        return MagmaSimulatorTarget(self.circuit, clock=self.clock,
+        return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                     backend=&#39;python&#39;, **kwargs)
     elif target == &#34;system-verilog&#34;:
-        return SystemVerilogTarget(self.circuit, **kwargs)
+        return SystemVerilogTarget(self._circuit, **kwargs)
     raise NotImplementedError(target)}</code></pre>
 </details>
 </dd>
@@ -672,7 +719,7 @@ corresponding target object.</p>
 <section class="desc"><p>Generates a new instance of the Tester object that targets
 <code>new_circuit</code>. This allows you to copy a set of actions for a new
 circuit with the same interface (or an interface that is a super set of
-self.circuit)</p></section>
+self._circuit)</p></section>
 <details class="source">
 <summary>Source code</summary>
 <pre><code class="python">def retarget(self, new_circuit, clock=None):
@@ -680,10 +727,10 @@ self.circuit)</p></section>
     Generates a new instance of the Tester object that targets
     `new_circuit`. This allows you to copy a set of actions for a new
     circuit with the same interface (or an interface that is a super set of
-    self.circuit)
+    self._circuit)
     &#34;&#34;&#34;
-    # Check that the interface of self.circuit is a subset of new_circuit
-    check_interface_is_subset(self.circuit, new_circuit)
+    # Check that the interface of self._circuit is a subset of new_circuit
+    check_interface_is_subset(self._circuit, new_circuit)
 
     new_tester = Tester(new_circuit, clock, self.default_print_format_str)
     new_tester.actions = [action.retarget(new_circuit, clock) for action in
@@ -706,7 +753,10 @@ should call <code>compile</code> with <code>target</code> before calling <code>r
     should call `compile` with `target` before calling `run`.
     &#34;&#34;&#34;
     try:
-        self.targets[target].run(self.actions)
+        if target == &#34;verilator&#34;:
+            self.targets[target].run(self.actions, self.verilator_includes)
+        else:
+            self.targets[target].run(self.actions)
     except KeyError:
         raise Exception(f&#34;Could not find target={target}, did you compile&#34;
                         &#34; it first?&#34;)}</code></pre>
@@ -723,7 +773,7 @@ should call <code>compile</code> with <code>target</code> before calling <code>r
     &#34;&#34;&#34;
     Serialize the action sequence into a set of test vectors
     &#34;&#34;&#34;
-    builder = VectorBuilder(self.circuit)
+    builder = VectorBuilder(self._circuit)
     for action in self.actions:
         builder.process(action)
     return builder.vectors}</code></pre>
@@ -746,6 +796,17 @@ should call <code>compile</code> with <code>target</code> before calling <code>r
     self.actions.append(actions.Step(self.clock, steps))}</code></pre>
 </details>
 </dd>
+<dt id="fault.tester.Tester.verilator_include"><code class="name flex">
+<span>def <span class="ident">verilator_include</span></span>(<span>self, module_name)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def verilator_include(self, module_name):
+    self.verilator_includes.append(module_name)}</code></pre>
+</details>
+</dd>
 <dt id="fault.tester.Tester.zero_inputs"><code class="name flex">
 <span>def <span class="ident">zero_inputs</span></span>(<span>self)</span>
 </code></dt>
@@ -759,9 +820,9 @@ known value</p></section>
     Set all the input ports to 0, useful for intiializing everything to a
     known value
     &#34;&#34;&#34;
-    for name, port in self.circuit.IO.ports.items():
+    for name, port in self._circuit.IO.ports.items():
         if port.isinput():
-            self.poke(self.circuit.interface.ports[name], 0)}</code></pre>
+            self.poke(self._circuit.interface.ports[name], 0)}</code></pre>
 </details>
 </dd>
 </dl>
@@ -786,6 +847,7 @@ known value</p></section>
 <h4><code><a title="fault.tester.Tester" href="#fault.tester.Tester">Tester</a></code></h4>
 <ul class="two-column">
 <li><code><a title="fault.tester.Tester.__init__" href="#fault.tester.Tester.__init__">__init__</a></code></li>
+<li><code><a title="fault.tester.Tester.circuit" href="#fault.tester.Tester.circuit">circuit</a></code></li>
 <li><code><a title="fault.tester.Tester.clear" href="#fault.tester.Tester.clear">clear</a></code></li>
 <li><code><a title="fault.tester.Tester.compile" href="#fault.tester.Tester.compile">compile</a></code></li>
 <li><code><a title="fault.tester.Tester.compile_and_run" href="#fault.tester.Tester.compile_and_run">compile_and_run</a></code></li>
@@ -799,6 +861,7 @@ known value</p></section>
 <li><code><a title="fault.tester.Tester.run" href="#fault.tester.Tester.run">run</a></code></li>
 <li><code><a title="fault.tester.Tester.serialize" href="#fault.tester.Tester.serialize">serialize</a></code></li>
 <li><code><a title="fault.tester.Tester.step" href="#fault.tester.Tester.step">step</a></code></li>
+<li><code><a title="fault.tester.Tester.verilator_include" href="#fault.tester.Tester.verilator_include">verilator_include</a></code></li>
 <li><code><a title="fault.tester.Tester.zero_inputs" href="#fault.tester.Tester.zero_inputs">zero_inputs</a></code></li>
 </ul>
 </li>

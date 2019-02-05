@@ -28,20 +28,24 @@ from pathlib import Path
 import fault.actions as actions
 from bit_vector import BitVector
 import fault.value_utils as value_utils
+from fault.select_path import SelectPath
 import subprocess
+from fault.wrapper import PortWrapper
+import fault
 
 
 src_tpl = &#34;&#34;&#34;\
 module {circuit_name}_tb;
 {declarations}
-    initial begin
-{initial_body}
-        #20 $finish;
-    end
 
     {circuit_name} dut (
         {port_list}
     );
+
+    initial begin
+{initial_body}
+        #20 $finish;
+    end
 
 endmodule
 &#34;&#34;&#34;
@@ -57,7 +61,7 @@ quit
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory=&#34;build/&#34;,
                  skip_compile=False, magma_output=&#34;coreir-verilog&#34;,
-                 include_verilog_libraries=[], simulator=None,
+                 magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale=&#34;1ns/1ns&#34;, clock_step_delay=5):
         &#34;&#34;&#34;
         circuit: a magma circuit
@@ -72,6 +76,8 @@ class SystemVerilogTarget(VerilogTarget):
         magma_output: Set the output parameter to m.compile
                       (default coreir-verilog)
 
+        magma_opts: Options dictionary for `magma.compile` command
+
         simulator: &#34;ncsim&#34; or &#34;vcs&#34;
 
         timescale: Set the timescale for the verilog simulation
@@ -81,7 +87,7 @@ class SystemVerilogTarget(VerilogTarget):
                           clock
         &#34;&#34;&#34;
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output)
+                         include_verilog_libraries, magma_output, magma_opts)
         if simulator is None:
             raise ValueError(&#34;Must specify simulator when using system-verilog&#34;
                              &#34; target&#34;)
@@ -92,7 +98,12 @@ class SystemVerilogTarget(VerilogTarget):
         self.clock_step_delay = clock_step_delay
 
     def make_poke(self, i, action):
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f&#34;dut.{action.port.path}&#34;
+        else:
+            name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits &gt; 32:
             raise NotImplementedError()
@@ -113,10 +124,23 @@ class SystemVerilogTarget(VerilogTarget):
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+            debug_name = action.port[-1].name
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f&#34;dut.{action.port.path}&#34;
+            debug_name = name
+        else:
+            name = verilog_name(action.port.name)
+            debug_name = action.port.name
         value = action.value
         if isinstance(value, actions.Peek):
-            value = f&#34;{value.port.name}&#34;
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                value = f&#34;dut.{value.port.path}&#34;
+            else:
+                value = f&#34;{value.port.name}&#34;
+        elif isinstance(value, PortWrapper):
+            value = f&#34;dut.{value.select_path.system_verilog_path}&#34;
         elif isinstance(action.port, m.SIntType) and value &lt; 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
@@ -124,7 +148,7 @@ class SystemVerilogTarget(VerilogTarget):
             value = BitVector(value, port_len).as_uint()
 
         return [f&#34;if ({name} != {value}) $error(\&#34;Failed on action={i}&#34;
-                f&#34; checking port {action.port.name}. Expected %x, got %x\&#34;&#34;
+                f&#34; checking port {debug_name}. Expected %x, got %x\&#34;&#34;
                 f&#34;, {value}, {name});&#34;]
 
     def make_eval(self, i, action):
@@ -162,7 +186,7 @@ class SystemVerilogTarget(VerilogTarget):
     def generate_port_code(name, type_):
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
-        if array_of_bits or isinstance(type_, m.TupleKind):
+        if is_array_of_bits or isinstance(type_, m.TupleKind):
             return SystemVerilogTarget.generate_recursive_port_code(name, type_)
         else:
             width_str = &#34;&#34;
@@ -252,7 +276,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
 <pre><code class="python">class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory=&#34;build/&#34;,
                  skip_compile=False, magma_output=&#34;coreir-verilog&#34;,
-                 include_verilog_libraries=[], simulator=None,
+                 magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale=&#34;1ns/1ns&#34;, clock_step_delay=5):
         &#34;&#34;&#34;
         circuit: a magma circuit
@@ -267,6 +291,8 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         magma_output: Set the output parameter to m.compile
                       (default coreir-verilog)
 
+        magma_opts: Options dictionary for `magma.compile` command
+
         simulator: &#34;ncsim&#34; or &#34;vcs&#34;
 
         timescale: Set the timescale for the verilog simulation
@@ -276,7 +302,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
                           clock
         &#34;&#34;&#34;
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output)
+                         include_verilog_libraries, magma_output, magma_opts)
         if simulator is None:
             raise ValueError(&#34;Must specify simulator when using system-verilog&#34;
                              &#34; target&#34;)
@@ -287,7 +313,12 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         self.clock_step_delay = clock_step_delay
 
     def make_poke(self, i, action):
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f&#34;dut.{action.port.path}&#34;
+        else:
+            name = verilog_name(action.port.name)
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits &gt; 32:
             raise NotImplementedError()
@@ -308,10 +339,23 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []
-        name = verilog_name(action.port.name)
+        if isinstance(action.port, SelectPath):
+            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+            debug_name = action.port[-1].name
+        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+            name = f&#34;dut.{action.port.path}&#34;
+            debug_name = name
+        else:
+            name = verilog_name(action.port.name)
+            debug_name = action.port.name
         value = action.value
         if isinstance(value, actions.Peek):
-            value = f&#34;{value.port.name}&#34;
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                value = f&#34;dut.{value.port.path}&#34;
+            else:
+                value = f&#34;{value.port.name}&#34;
+        elif isinstance(value, PortWrapper):
+            value = f&#34;dut.{value.select_path.system_verilog_path}&#34;
         elif isinstance(action.port, m.SIntType) and value &lt; 0:
             # Handle sign extension for verilator since it expects and
             # unsigned c type
@@ -319,7 +363,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             value = BitVector(value, port_len).as_uint()
 
         return [f&#34;if ({name} != {value}) $error(\&#34;Failed on action={i}&#34;
-                f&#34; checking port {action.port.name}. Expected %x, got %x\&#34;&#34;
+                f&#34; checking port {debug_name}. Expected %x, got %x\&#34;&#34;
                 f&#34;, {value}, {name});&#34;]
 
     def make_eval(self, i, action):
@@ -357,7 +401,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
     def generate_port_code(name, type_):
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
-        if array_of_bits or isinstance(type_, m.TupleKind):
+        if is_array_of_bits or isinstance(type_, m.TupleKind):
             return SystemVerilogTarget.generate_recursive_port_code(name, type_)
         else:
             width_str = &#34;&#34;
@@ -435,7 +479,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
 def generate_port_code(name, type_):
     is_array_of_bits = isinstance(type_, m.ArrayKind) and \
         not isinstance(type_.T, m.BitKind)
-    if array_of_bits or isinstance(type_, m.TupleKind):
+    if is_array_of_bits or isinstance(type_, m.TupleKind):
         return SystemVerilogTarget.generate_recursive_port_code(name, type_)
     else:
         width_str = &#34;&#34;
@@ -483,7 +527,7 @@ def generate_recursive_port_code(name, type_):
 <h3>Methods</h3>
 <dl>
 <dt id="fault.system_verilog_target.SystemVerilogTarget.__init__"><code class="name flex">
-<span>def <span class="ident">__init__</span></span>(<span>self, circuit, circuit_name=None, directory=&#39;build/&#39;, skip_compile=False, magma_output=&#39;coreir-verilog&#39;, include_verilog_libraries=[], simulator=None, timescale=&#39;1ns/1ns&#39;, clock_step_delay=5)</span>
+<span>def <span class="ident">__init__</span></span>(<span>self, circuit, circuit_name=None, directory=&#39;build/&#39;, skip_compile=False, magma_output=&#39;coreir-verilog&#39;, magma_opts={}, include_verilog_libraries=[], simulator=None, timescale=&#39;1ns/1ns&#39;, clock_step_delay=5)</span>
 </code></dt>
 <dd>
 <section class="desc"><dl>
@@ -497,6 +541,8 @@ def generate_recursive_port_code(name, type_):
 <dd>&nbsp;</dd>
 <dt><strong><code>magma_output</code></strong> :&ensp;<code>Set</code> <code>the</code> <code>output</code> <code>parameter</code> <code>to</code> <code>m.compile</code></dt>
 <dd>(default coreir-verilog)</dd>
+<dt><strong><code>magma_opts</code></strong> :&ensp;<code>Options</code> <code>dictionary</code> <code>for</code> <code>magma.compile</code> <code>command</code></dt>
+<dd>&nbsp;</dd>
 <dt><strong><code>simulator</code></strong> :&ensp;<code>"ncsim"</code> or <code>"vcs"</code></dt>
 <dd>&nbsp;</dd>
 <dt><strong><code>timescale</code></strong> :&ensp;<code>Set</code> <code>the</code> <code>timescale</code> <code>for</code> <code>the</code> <code>verilog</code> <code>simulation</code></dt>
@@ -508,7 +554,7 @@ def generate_recursive_port_code(name, type_):
 <summary>Source code</summary>
 <pre><code class="python">def __init__(self, circuit, circuit_name=None, directory=&#34;build/&#34;,
              skip_compile=False, magma_output=&#34;coreir-verilog&#34;,
-             include_verilog_libraries=[], simulator=None,
+             magma_opts={}, include_verilog_libraries=[], simulator=None,
              timescale=&#34;1ns/1ns&#34;, clock_step_delay=5):
     &#34;&#34;&#34;
     circuit: a magma circuit
@@ -523,6 +569,8 @@ def generate_recursive_port_code(name, type_):
     magma_output: Set the output parameter to m.compile
                   (default coreir-verilog)
 
+    magma_opts: Options dictionary for `magma.compile` command
+
     simulator: &#34;ncsim&#34; or &#34;vcs&#34;
 
     timescale: Set the timescale for the verilog simulation
@@ -532,7 +580,7 @@ def generate_recursive_port_code(name, type_):
                       clock
     &#34;&#34;&#34;
     super().__init__(circuit, circuit_name, directory, skip_compile,
-                     include_verilog_libraries, magma_output)
+                     include_verilog_libraries, magma_output, magma_opts)
     if simulator is None:
         raise ValueError(&#34;Must specify simulator when using system-verilog&#34;
                          &#34; target&#34;)
@@ -596,10 +644,23 @@ def generate_recursive_port_code(name, type_):
 <pre><code class="python">def make_expect(self, i, action):
     if value_utils.is_any(action.value):
         return []
-    name = verilog_name(action.port.name)
+    if isinstance(action.port, SelectPath):
+        name = f&#34;dut.{action.port.system_verilog_path}&#34;
+        debug_name = action.port[-1].name
+    elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+        name = f&#34;dut.{action.port.path}&#34;
+        debug_name = name
+    else:
+        name = verilog_name(action.port.name)
+        debug_name = action.port.name
     value = action.value
     if isinstance(value, actions.Peek):
-        value = f&#34;{value.port.name}&#34;
+        if isinstance(value.port, fault.WrappedVerilogInternalPort):
+            value = f&#34;dut.{value.port.path}&#34;
+        else:
+            value = f&#34;{value.port.name}&#34;
+    elif isinstance(value, PortWrapper):
+        value = f&#34;dut.{value.select_path.system_verilog_path}&#34;
     elif isinstance(action.port, m.SIntType) and value &lt; 0:
         # Handle sign extension for verilator since it expects and
         # unsigned c type
@@ -607,7 +668,7 @@ def generate_recursive_port_code(name, type_):
         value = BitVector(value, port_len).as_uint()
 
     return [f&#34;if ({name} != {value}) $error(\&#34;Failed on action={i}&#34;
-            f&#34; checking port {action.port.name}. Expected %x, got %x\&#34;&#34;
+            f&#34; checking port {debug_name}. Expected %x, got %x\&#34;&#34;
             f&#34;, {value}, {name});&#34;]}</code></pre>
 </details>
 </dd>
@@ -619,7 +680,12 @@ def generate_recursive_port_code(name, type_):
 <details class="source">
 <summary>Source code</summary>
 <pre><code class="python">def make_poke(self, i, action):
-    name = verilog_name(action.port.name)
+    if isinstance(action.port, SelectPath):
+        name = f&#34;dut.{action.port.system_verilog_path}&#34;
+    elif isinstance(action.port, fault.WrappedVerilogInternalPort):
+        name = f&#34;dut.{action.port.path}&#34;
+    else:
+        name = verilog_name(action.port.name)
     if isinstance(action.value, BitVector) and \
             action.value.num_bits &gt; 32:
         raise NotImplementedError()
