@@ -99,7 +99,8 @@ class VerilatorTarget(VerilogTarget):
         if self.run_from_directory(verilator_cmd):
             raise Exception(f"Running verilator cmd {verilator_cmd} failed")
         self.debug_includes = set()
-        verilator_version = subprocess.check_output("verilator --version", shell=True)
+        verilator_version = subprocess.check_output("verilator --version",
+                                                    shell=True)
         # Need to check version since they changed how internal signal access
         # works
         self.verilator_version = float(verilator_version.split()[1])
