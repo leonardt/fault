@@ -28,7 +28,7 @@ def test_tester_magma_internal_signals(target, simulator):
         tester.circuit.config_reg.Q.expect(signal)
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {
-            "directory": "build",
+            "directory": _dir,
             "magma_opts": {"verilator_debug": True}
         }
         if target == "verilator":
@@ -51,7 +51,7 @@ def test_tester_poke_internal_register(target, simulator):
         tester.circuit.config_reg.conf_reg.O.expect(i)
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {
-            "directory": "build",
+            "directory": _dir,
             "magma_opts": {"verilator_debug": True}
         }
         if target == "verilator":
