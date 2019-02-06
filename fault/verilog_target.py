@@ -50,7 +50,7 @@ class VerilogTarget(Target):
         self.verilog_file = Path(f"{self.circuit_name}.{suffix}")
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
-            prefix = str(self.directory / self.verilog_file)[:-2]
+            prefix = os.path.splitext(self.directory / self.verilog_file)[0]
             m.compile(prefix, self.circuit, output=self.magma_output,
                       **self.magma_opts)
             if not (self.directory / self.verilog_file).is_file():
