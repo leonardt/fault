@@ -4,6 +4,7 @@ from fault.target import Target
 from pathlib import Path
 import fault.actions as actions
 from fault.util import flatten
+import os
 
 
 def verilog_name(name):
@@ -41,7 +42,12 @@ class VerilogTarget(Target):
         self.magma_output = magma_output
         self.magma_opts = magma_opts
 
-        self.verilog_file = Path(f"{self.circuit_name}.v")
+        if hasattr(circuit, "verilog_file_name") and \
+                os.path.splitext(circuit.verilog_file_name)[-1] == ".sv":
+            suffix = "sv"
+        else:
+            suffix = "v"
+        self.verilog_file = Path(f"{self.circuit_name}.{suffix}")
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
             prefix = str(self.directory / self.verilog_file)[:-2]
