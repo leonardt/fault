@@ -4,6 +4,8 @@
 
 A Python package for testing hardware (part of the magma ecosystem).
 
+[API Documentation](http://truong.io/fault/)
+
 [CHANGELOG](./CHANGELOG.md)
 
 ## Example
