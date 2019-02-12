@@ -5,6 +5,7 @@ from pathlib import Path
 import fault.actions as actions
 from fault.util import flatten
 import os
+from fault.select_path import SelectPath
 
 
 def verilog_name(name):
@@ -58,14 +59,17 @@ class VerilogTarget(Target):
 
     def generate_array_action_code(self, i, action):
         result = []
-        for j in range(action.port.N):
+        port = action.port
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        for j in range(port.N):
             if isinstance(action, actions.Print):
                 value = action.format_str
             else:
                 value = action.value[j]
             result += [
                 self.generate_action_code(
-                    i, type(action)(action.port[j], value)
+                    i, type(action)(port[j], value)
                 )]
         return flatten(result)
 
@@ -73,6 +77,11 @@ class VerilogTarget(Target):
         if isinstance(action, (actions.PortAction, actions.Print)) and \
                 isinstance(action.port, m.ArrayType) and \
                 not isinstance(action.port.T, m.BitKind):
+            return self.generate_array_action_code(i, action)
+        elif isinstance(action, (actions.PortAction, actions.Print)) and \
+                isinstance(action.port, SelectPath) and \
+                isinstance(action.port[-1], m.ArrayType) and \
+                not isinstance(action.port[-1].T, m.BitKind):
             return self.generate_array_action_code(i, action)
         if isinstance(action, actions.Poke):
             return self.make_poke(i, action)
