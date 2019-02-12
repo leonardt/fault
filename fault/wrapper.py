@@ -1,5 +1,6 @@
 import fault
 from fault.select_path import SelectPath
+import magma as m
 
 
 class Wrapper:
@@ -49,10 +50,48 @@ class PortWrapper:
     def __init__(self, port, parent):
         self.port = port
         self.parent = parent
+        self.init_done = True
 
     def expect(self, value):
         select_path = self.select_path
         select_path.tester.expect(select_path, value)
+
+    def __setitem__(self, key, value):
+        if not isinstance(self.port, (m.ArrayType, m.TupleType)):
+            raise Exception(f"Can only use item assignment with arrays and "
+                            f"tuples not {type(self.port)}")
+        select_path = self.select_path
+        select_path[-1] = select_path[-1][key]
+        select_path.tester.poke(select_path, value)
+
+    def __getitem__(self, key):
+        if not isinstance(self.port, (m.ArrayType, m.TupleType)):
+            raise Exception(f"Can only use getitem with arrays and "
+                            f"tuples not {type(self.port)}")
+        select_path = self.select_path
+        return PortWrapper(self.port[key], self.parent)
+
+    def __getattr__(self, key):
+        try:
+            object.__getattribute__(self, "init_done")
+            if not isinstance(self.port, (m.TupleType)):
+                raise Exception(f"Can only use getattr with tuples, "
+                                f"not {type(self.port)}")
+            select_path = self.select_path
+            return PortWrapper(getattr(self.port, key), self.parent)
+        except AttributeError:
+            return object.__getattribute__(self, key)
+
+    def __setattr__(self, key, value):
+        try:
+            object.__getattribute__(self, "init_done")
+            if not isinstance(self.port, (m.TupleType)):
+                raise Exception(f"Can only use setattr with tuples, "
+                                f"not {type(self.port)}")
+            select_path = self.select_path
+            select_path.tester.poke(getattr(self.port, key), value)
+        except AttributeError:
+            return object.__setattr__(self, key, value)
 
     @property
     def select_path(self):

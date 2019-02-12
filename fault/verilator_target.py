@@ -114,9 +114,12 @@ class VerilatorTarget(VerilogTarget):
             path = action.port.path.replace(".", "->")
             name = f"{prefix}->{path}"
         elif isinstance(action.port, SelectPath):
-            # TODO: Find the version that they changed this, 3.874 is known to
-            # use top->v instead of top->{circuit_name}
-            name = f"{prefix}->" + action.port.verilator_path
+            name = ""
+            if len(action.port) > 2:
+                # TODO: Find the version that they changed this, 3.874 is known
+                # to use top->v instead of top->{circuit_name}
+                name += f"{prefix}->"
+            name += action.port.verilator_path
             self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit = type(item.instance)
