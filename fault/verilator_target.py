@@ -106,7 +106,7 @@ class VerilatorTarget(VerilogTarget):
         self.verilator_version = float(verilator_version.split()[1])
 
     def make_poke(self, i, action):
-        if self.verilator_version > 3.874:
+        if self.verilator_version >= 3.856:
             prefix = f"{self.circuit_name}"
         else:
             prefix = f"v"
@@ -116,7 +116,7 @@ class VerilatorTarget(VerilogTarget):
         elif isinstance(action.port, SelectPath):
             name = ""
             if len(action.port) > 2:
-                # TODO: Find the version that they changed this, 3.874 is known
+                # TODO: Find the version that they changed this, 3.856 is known
                 # to use top->v instead of top->{circuit_name}
                 name += f"{prefix}->"
             name += action.port.verilator_path
@@ -182,7 +182,7 @@ class VerilatorTarget(VerilogTarget):
         # perform the expect.
         if value_utils.is_any(action.value):
             return []
-        if self.verilator_version > 3.874:
+        if self.verilator_version >= 3.856:
             prefix = f"{self.circuit_name}"
         else:
             prefix = f"v"
@@ -192,7 +192,7 @@ class VerilatorTarget(VerilogTarget):
             debug_name = name
         elif isinstance(action.port, SelectPath):
             name = f"{prefix}->" + action.port.verilator_path
-            if self.verilator_version > 3.874:
+            if self.verilator_version >= 3.856:
                 self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
@@ -209,12 +209,12 @@ class VerilatorTarget(VerilogTarget):
             else:
                 value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(value, PortWrapper):
-            if self.verilator_version > 3.874:
+            if self.verilator_version >= 3.856:
                 self.debug_includes.add(f"{value.select_path[0].circuit.name}")
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
-            if self.verilator_version > 3.874:
+            if self.verilator_version >= 3.856:
                 prefix = f"{self.circuit_name}"
             else:
                 prefix = f"v"

@@ -117,6 +117,7 @@ class InstanceWrapper(Wrapper):
                 select_path.tester.poke(select_path, value)
             elif attr in self.instance_map and \
                     type(self.instance_map[attr]).name == "reg_P":
+                exit(1)
                 try:
                     # Support directly poking coreir reg
                     wrapper = PortWrapper(
@@ -129,6 +130,6 @@ class InstanceWrapper(Wrapper):
                     print(e)
                     exit(1)
             else:
-                object.__setattr__(self, attr, value)
+                raise Exception(f"Could not set attribute {value}")
         except Exception as e:
             object.__setattr__(self, attr, value)
