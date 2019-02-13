@@ -106,7 +106,7 @@ class VerilatorTarget(VerilogTarget):
         self.verilator_version = float(verilator_version.split()[1])
 
     def make_poke(self, i, action):
-        if self.verilator_version >= 3.856:
+        if self.verilator_version > 3.856:
             prefix = f"{self.circuit_name}"
         else:
             prefix = f"v"
@@ -182,7 +182,7 @@ class VerilatorTarget(VerilogTarget):
         # perform the expect.
         if value_utils.is_any(action.value):
             return []
-        if self.verilator_version >= 3.856:
+        if self.verilator_version > 3.856:
             prefix = f"{self.circuit_name}"
         else:
             prefix = f"v"
@@ -214,7 +214,7 @@ class VerilatorTarget(VerilogTarget):
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
-            if self.verilator_version >= 3.856:
+            if self.verilator_version > 3.856:
                 prefix = f"{self.circuit_name}"
             else:
                 prefix = f"v"
