@@ -8,6 +8,10 @@ A Python package for testing hardware (part of the magma ecosystem).
 
 [CHANGELOG](./CHANGELOG.md)
 
+## Documentation
+* [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
+* [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)
+
 ## Example
 Here is a simple ALU defined in magma.
 ```python
