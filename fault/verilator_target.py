@@ -131,6 +131,11 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name += "_"
                     circuit_name += f"_I{circuit.coreir_configargs['init']}"
                     circuit_name += f"_W{circuit.coreir_genargs['width']}"
+                elif circuit_name == "coreir_reg_arst":
+                    circuit_name += "_"
+                    circuit_name += f"_I{circuit.coreir_configargs['init']}"
+                    if circuit.coreir_genargs['width'] != 1:
+                        circuit_name += f"_W{circuit.coreir_genargs['width']}"
                 self.debug_includes.add(f"{circuit_name}")
         else:
             name = verilog_name(action.port.name)

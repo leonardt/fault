@@ -108,15 +108,17 @@ class InstanceWrapper(Wrapper):
     def __init__(self, instance, parent):
         self.instance = instance
         super().__init__(type(instance), parent)
+        self.init_done = True
 
     def __setattr__(self, attr, value):
         try:
+            object.__getattribute__(self, "init_done")
             if attr in self.circuit.interface.ports.keys():
                 wrapper = PortWrapper(self.circuit.interface.ports[attr], self)
                 select_path = wrapper.select_path
                 select_path.tester.poke(select_path, value)
             elif attr in self.instance_map and \
-                    type(self.instance_map[attr]).name == "reg_P":
+                    "reg_P" in type(self.instance_map[attr]).name:
                 try:
                     # Support directly poking coreir reg
                     wrapper = PortWrapper(
@@ -129,6 +131,7 @@ class InstanceWrapper(Wrapper):
                     print(e)
                     exit(1)
             else:
-                object.__setattr__(self, attr, value)
-        except Exception as e:
+                raise Exception(f"Could not set attr {attr} with value"
+                                f" {value}")
+        except AttributeError:
             object.__setattr__(self, attr, value)
