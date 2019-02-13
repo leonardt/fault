@@ -214,7 +214,7 @@ class VerilatorTarget(VerilogTarget):
             else:
                 value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(value, PortWrapper):
-            if self.verilator_version >= 3.874:
+            if self.verilator_version > 3.874:
                 self.debug_includes.add(f"{value.select_path[0].circuit.name}")
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
