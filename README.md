@@ -63,10 +63,19 @@ for i in range(0, 4):
 We can run this with three different simulators
 
 ```python
-tester.compile_and_run("verilator", flags=["-Wno-fatal"], 
-                       magma_opts={"verilator_debug": True}, directory="build")
+tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
 tester.compile_and_run("system-verilog", simulator="ncsim", directory="build")
 tester.compile_and_run("system-verilog", simulator="vcs", directory="build")
+```
+
+### Working with internal signals
+Fault supports peeking, expecting, and printing internal signals. For the
+`verilator` target, you should use the keyword argument `magma_opts` with
+`"verilator_debug"` set to true.  This will cause coreir to compile the verilog
+with the required debug comments.  Example:
+```python
+tester.compile_and_run("verilator", flags=["-Wno-fatal"], 
+                       magma_opts={"verilator_debug": True}, directory="build")
 ```
 
 If you're using `mantle.Register` from the `coreir` implementation, you can

@@ -192,7 +192,8 @@ class VerilatorTarget(VerilogTarget):
             debug_name = name
         elif isinstance(action.port, SelectPath):
             name = f"{prefix}->" + action.port.verilator_path
-            self.debug_includes.add(f"{action.port[0].circuit.name}")
+            if self.verilator_version > 3.874:
+                self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
@@ -208,7 +209,8 @@ class VerilatorTarget(VerilogTarget):
             else:
                 value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(value, PortWrapper):
-            self.debug_includes.add(f"{value.select_path[0].circuit.name}")
+            if self.verilator_version > 3.874:
+                self.debug_includes.add(f"{value.select_path[0].circuit.name}")
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
