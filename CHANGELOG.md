@@ -6,16 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.6]
 ### Fixes
-- Fixes verilator version guard for top circuit prefix.
+- Fixes backwards compatability issues with verilator
+
+## [1.0.6]
+### Fixes
+- Fixes verilator version guard for top circuit prefix
 - Fixes support for poking coreir_arst register
 
 ## [1.0.5]
 ### Fixes
-- Fixes verilator version guard for including top circuit header.
+- Fixes verilator version guard for including top circuit header
 
 ## [1.0.4]
 ### Added
-- Adds support for arrays and tuples in setattr interface.
+- Adds support for arrays and tuples in setattr interface
 
 ## [1.0.3]
 ### Fixed
@@ -35,8 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added preliminary support for peek and expect on internal signals and poke on
   internal registers
 
-[Unreleased]: https://github.com/leonardt/fault/compare/v1.0.6...HEAD
-[1.0.6]: https://github.com/leonardt/fault/compare/v1.0.4...v1.0.6
+[Unreleased]: https://github.com/leonardt/fault/compare/v1.0.7...HEAD
+[1.0.7]: https://github.com/leonardt/fault/compare/v1.0.6...v1.0.7
+[1.0.6]: https://github.com/leonardt/fault/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/leonardt/fault/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/leonardt/fault/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/leonardt/fault/compare/v1.0.2...v1.0.3
