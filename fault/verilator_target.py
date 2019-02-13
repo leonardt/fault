@@ -219,10 +219,6 @@ class VerilatorTarget(VerilogTarget):
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
-            if self.verilator_version > 3.874:
-                prefix = f"{self.circuit_name}"
-            else:
-                prefix = f"v"
             value = f"top->{prefix}->" + value.select_path.verilator_path
         elif isinstance(action.port, m.SIntType) and value < 0:
             # Handle sign extension for verilator since it expects and
