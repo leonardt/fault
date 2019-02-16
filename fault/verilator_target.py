@@ -187,7 +187,7 @@ class VerilatorTarget(VerilogTarget):
 
     def make_print(self, i, action):
         name = verilog_name(action.port.name)
-        if action.format_str.__contains__("%x"):
+        if action.format_str.__contains__("%x") or action.format_str.__contains__("%d"):
             return [f'printf("'
                     f'{action.format_str}", top->{name});']
         else:
