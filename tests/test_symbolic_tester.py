@@ -3,7 +3,7 @@ import tempfile
 from fault import SymbolicTester
 
 
-def test_tester_magma_internal_signals():
+def test_tester_magma_internal_signals_verilator():
     circ = common.SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
@@ -21,7 +21,6 @@ def test_tester_magma_internal_signals():
     # tester.circuit.c.guarantee(lambda x: x > 0)
     tester.circuit.c.guarantee(lambda a, b, c: (c >= a) and (c >= b))
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         tester.compile_and_run("verilator", directory=_dir,
                                flags=["-Wno-fatal"],
                                magma_opts={"verilator_debug": True})
