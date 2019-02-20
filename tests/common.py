@@ -65,4 +65,7 @@ class SimpleALU(m.Circuit):
     def definition(io):
         opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
         io.c <= mantle.mux(
-            [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
+            # udiv not implemented
+            # [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
+            # use arbitrary fourth op
+            [io.a + io.b, io.a - io.b, io.a * io.b, io.b - io.a], opcode)
