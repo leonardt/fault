@@ -17,7 +17,8 @@ setup(
         "fault",
     ],
     install_requires=[
-        "astor"
+        "astor",
+        "cosa"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
