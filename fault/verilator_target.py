@@ -282,7 +282,6 @@ class VerilatorTarget(VerilogTarget):
                 main_body += f"  {line}\n"
             main_body += self.add_guarantees(circuit, actions, i)
 
-
         includes += [f'"V{self.circuit_name}_{include}.h"' for include in
                      self.debug_includes]
 
