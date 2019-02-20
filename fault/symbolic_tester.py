@@ -1,6 +1,7 @@
 import fault
 from fault.tester import Tester
 from fault.wrapper import Wrapper, PortWrapper, InstanceWrapper
+from fault.cosa_target import CoSATarget
 import fault.actions as actions
 
 
@@ -84,7 +85,16 @@ class SymbolicTester(Tester):
         return SymbolicCircuitWrapper(self._circuit, self)
 
     def run(self, target="verilator"):
-        if target != "verilator":
+        if target == "verilator":
+            self.targets[target].run(self.actions, self.verilator_includes,
+                                     self.num_tests, self._circuit)
+        elif target == "cosa":
+            self.targets[target].run(self.actions)
+        else:
             raise NotImplementedError()
-        self.targets[target].run(self.actions, self.verilator_includes,
-                                 self.num_tests, self._circuit)
+
+    def make_target(self, target: str, **kwargs):
+        if target == "cosa":
+            return CoSATarget(self._circuit, **kwargs)
+        else:
+            return super().make_target(target, **kwargs)

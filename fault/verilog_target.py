@@ -46,6 +46,17 @@ class VerilogTarget(Target):
             if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f"Compiling {self.circuit} failed")
 
+        self.assumptions = []
+        self.guarantees = []
+
+    def make_assume(self, i, action):
+        self.assumptions.append(action)
+        return ""
+
+    def make_guarantee(self, i, action):
+        self.guarantees.append(action)
+        return ""
+
     def generate_array_action_code(self, i, action):
         result = []
         port = action.port
