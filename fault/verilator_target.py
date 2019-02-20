@@ -14,6 +14,9 @@ import math
 from bit_vector import BitVector, SIntVector
 import subprocess
 from fault.random import random_bv
+import ast
+import inspect
+import os
 
 
 src_tpl = """\
@@ -287,7 +290,6 @@ class VerilatorTarget(VerilogTarget):
             main_body += self.add_guarantees(circuit, actions, i)
 
 
-
         includes += [f'"V{self.circuit_name}_{include}.h"' for include in
                      self.debug_includes]
 
@@ -371,11 +373,6 @@ class VerilatorTarget(VerilogTarget):
         return main_body
 
 
-import ast
-import inspect
-import os
-
-
 # From https://gist.github.com/Xion/617c1496ff45f3673a5692c3b0e3f75a
 def get_short_lambda_body_text(lambda_func):
     """Return the source of a (short) lambda function.
@@ -436,5 +433,5 @@ def get_short_lambda_body_text(lambda_func):
             pass
         lambda_text = lambda_text[:-1]
         lambda_body_text = lambda_body_text[:-1]
-    
+
     return None
