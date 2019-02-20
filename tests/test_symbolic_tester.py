@@ -33,7 +33,6 @@ def test_tester_magma_internal_signals_verilator(target):
     # tester.circuit.c.guarantee(lambda x: x > 0)
     tester.circuit.c.guarantee(lambda a, b, c: (c >= a) and (c >= b))
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         kwargs = {}
         if target == "verilator":
             kwargs["flags"] = ["-Wno-fatal"]
