@@ -39,13 +39,14 @@ def get_width(port):
 class CoSATarget(VerilogTarget):
     def __init__(self, circuit, directory="build/", skip_compile=False,
                  include_verilog_libraries=[], magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts={}):
+                 circuit_name=None, magma_opts={}, solver="msat"):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
         self.state_index = 0
         self.curr_state_pokes = []
         self.step_offset = 0
         self.states = []
+        self.solver = solver
 
     def make_eval(self, i, action):
         return
@@ -158,4 +159,4 @@ expected: True
         with open(ets_file, "w") as f:
             f.write(ets)
         assert not os.system(
-            f"CoSA --problem {problem_file} --solver z3")
+            f"CoSA --problem {problem_file} --solver {self.solver}")
