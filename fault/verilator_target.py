@@ -120,7 +120,8 @@ class VerilatorTarget(VerilogTarget):
                 # to use top->v instead of top->{circuit_name}
                 name += f"{prefix}->"
             name += action.port.verilator_path
-            self.debug_includes.add(f"{action.port[0].circuit.name}")
+            if len(action.port) > 2:
+                self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit = type(item.instance)
                 circuit_name = circuit.verilog_name
@@ -196,9 +197,12 @@ class VerilatorTarget(VerilogTarget):
             name = f"{prefix}->{path}"
             debug_name = name
         elif isinstance(action.port, SelectPath):
-            name = f"{prefix}->" + action.port.verilator_path
+            name = action.port.verilator_path
+            if len(action.port) > 2:
+                name = f"{prefix}->" + name
             if self.verilator_version >= 3.856:
-                self.debug_includes.add(f"{action.port[0].circuit.name}")
+                if len(action.port) > 2:
+                    self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
@@ -215,7 +219,8 @@ class VerilatorTarget(VerilogTarget):
                 value = f"top->{verilog_name(value.port.name)}"
         elif isinstance(value, PortWrapper):
             if self.verilator_version >= 3.856:
-                self.debug_includes.add(f"{value.select_path[0].circuit.name}")
+                if len(action.port) > 2:
+                    self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")

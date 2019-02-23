@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.6]
+## [1.0.8]
+### Fixes
+- Fixes issue with tests that use setattr only for top interface ports. In this
+  case, the top circuit header does not need to be included for debug signals.
+
+## [1.0.7]
 ### Fixes
 - Fixes backwards compatability issues with verilator
 
@@ -39,7 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added preliminary support for peek and expect on internal signals and poke on
   internal registers
 
-[Unreleased]: https://github.com/leonardt/fault/compare/v1.0.7...HEAD
+[Unreleased]: https://github.com/leonardt/fault/compare/v1.0.8...HEAD
+[1.0.7]: https://github.com/leonardt/fault/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/leonardt/fault/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/leonardt/fault/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/leonardt/fault/compare/v1.0.4...v1.0.5
