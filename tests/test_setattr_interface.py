@@ -127,9 +127,11 @@ def test_tester_coverage():
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
     tester.circuit.config_en = 1
-    for i in range(0, 3):
+    for i in range(0, 4):
+        # tester.circuit.config_en = 1
         tester.circuit.config_data = i
         tester.step(2)
+        # tester.circuit.config_en = 0
         tester.circuit.config_reg.Q.expect(i)
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
@@ -141,8 +143,10 @@ def test_tester_coverage():
                 tester.circuit.b = b
                 tester.eval()
                 tester.circuit.c.expect([operator.add, operator.sub,
-                                         operator.mul, operator.sub][i](a, b))
+                                         operator.mul,
+                                         lambda x, y: y - x][i](a, b))
     with tempfile.TemporaryDirectory() as _dir:
+        _dir = "build"
         kwargs = {
             "directory": _dir,
             "magma_opts": {"verilator_debug": True}
