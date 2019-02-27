@@ -16,8 +16,8 @@ def test_tester_magma_internal_signals_verilator(target):
     tester.circuit.config_en = 1
     tester.circuit.config_data = 0
     tester.step(2)
-    # TODO: Handle case with only 1 step in cosa backend, then these would just
-    # become assumptions
+    # TODO: Handle case with only 1 step in cosa backend, then these would
+    # just become assumptions
     tester.circuit.config_en = 0
     tester.step(2)
     tester.circuit.config_reg.Q.expect(0)

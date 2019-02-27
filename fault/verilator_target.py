@@ -84,7 +84,7 @@ class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts={}, coverage=False):
+                 circuit_name=None, magma_opts={}, coverage=None):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
