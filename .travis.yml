@@ -22,6 +22,15 @@ install:
 - export LD_LIBRARY_PATH="/home/travis/.smt_solvers/python-bindings-3.6:${LD_LIBRARY_PATH}"
 - pysmt-install --check
 # End setup CoSA dependencies
+# Requirement for Verilator coverage
+# https://www.veripool.org/projects/systemperl/wiki/Installing
+- git clone http://git.veripool.org/git/SystemPerl   # Only first time
+- cd SystemPerl
+- perl Makefile.PL
+- make
+- make test
+- make install
+- cd ..
 
 script:
 - pytest --cov fault --codestyle fault -v --cov-report term-missing tests
