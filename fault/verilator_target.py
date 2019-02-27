@@ -56,11 +56,14 @@ int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
 
+#if VM_TRACE || VM_COVERAGE
+  mkdir("logs", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+#endif
+
 #if VM_TRACE
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
   top->trace(tracer, 99);
-  mkdir("logs", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   tracer->open("logs/{circuit_name}.vcd");
 #endif
 
@@ -68,6 +71,10 @@ int main(int argc, char **argv) {{
 
 #if VM_TRACE
   tracer->close();
+#endif
+
+#if VM_COVERAGE
+  VerilatedCov::write("logs/{circuit_name}.dat");
 #endif
 }}
 """  # nopep8
@@ -77,7 +84,7 @@ class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts={}):
+                 circuit_name=None, magma_opts={}, coverage=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -91,6 +98,14 @@ class VerilatorTarget(VerilogTarget):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
         self.flags = flags
+        if coverage == "all":
+            self.flags.append("--coverage")
+        elif coverage == "line":
+            self.flags.append("--coverage-line")
+        elif coverage == "toggle":
+            self.flags.append("--coverage-toggle")
+        else:
+            raise NotImplementedError(coverage)
         self.include_directories = include_directories
 
         # Compile the design using `verilator`

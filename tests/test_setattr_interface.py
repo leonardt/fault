@@ -113,3 +113,39 @@ def test_setattr_tuple(target, simulator):
     tester.circuit.O.a.expect(5)
     tester.circuit.O.b.expect(11)
     run_test(target, simulator, tester)
+
+
+# def test_tester_coverage(target, simulator):
+def test_tester_coverage():
+    target = "verilator"
+    simulator = None
+    circ = common.SimpleALU
+
+    tester = Tester(circ, circ.CLK)
+    tester.circuit.CLK = 0
+    tester.circuit.config_en = 1
+    for i in range(0, 4):
+        tester.circuit.config_data = i
+        tester.step(2)
+        tester.circuit.config_reg.Q.expect(i)
+        signal = tester.circuit.config_reg.Q
+        tester.circuit.config_reg.Q.expect(signal)
+    with tempfile.TemporaryDirectory() as _dir:
+        _dir = "build"
+        kwargs = {
+            "directory": _dir,
+            "magma_opts": {"verilator_debug": True}
+        }
+        if target == "verilator":
+            kwargs["flags"] = ["-Wno-fatal"]
+        if simulator is not None:
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(target, coverage="all", **kwargs)
+        import subprocess
+        subprocess.call(
+            f"verilator_coverage logs/{circ.name}.dat -annotate logs",
+            cwd=_dir, shell=True)
+        # with open(f"{_dir}/logs/{circ.name}.dat", "r") as cov:
+        #     print(cov.read())
+        #     assert False
+        assert False
