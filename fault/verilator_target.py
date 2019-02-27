@@ -104,7 +104,7 @@ class VerilatorTarget(VerilogTarget):
             self.flags.append("--coverage-line")
         elif coverage == "toggle":
             self.flags.append("--coverage-toggle")
-        else:
+        elif coverage is not None:
             raise NotImplementedError(coverage)
         self.include_directories = include_directories
 

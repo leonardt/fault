@@ -3,6 +3,9 @@ import tempfile
 from fault import Tester
 import shutil
 import random
+from bit_vector import BitVector
+import operator
+import delegator
 
 
 def pytest_generate_tests(metafunc):
@@ -119,17 +122,26 @@ def test_setattr_tuple(target, simulator):
 def test_tester_coverage():
     target = "verilator"
     simulator = None
-    circ = common.SimpleALU
+    circ = common.SimpleALU2
 
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
     tester.circuit.config_en = 1
-    for i in range(0, 4):
+    for i in range(0, 3):
         tester.circuit.config_data = i
         tester.step(2)
         tester.circuit.config_reg.Q.expect(i)
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
+        for j in range(0, 4):
+            for k in range(0, 4):
+                a = BitVector(j, 2)
+                b = BitVector(k, 2)
+                tester.circuit.a = a
+                tester.circuit.b = b
+                tester.eval()
+                tester.circuit.c.expect([operator.add, operator.sub,
+                                         operator.mul, operator.sub][i](a, b))
     with tempfile.TemporaryDirectory() as _dir:
         _dir = "build"
         kwargs = {
@@ -140,12 +152,9 @@ def test_tester_coverage():
             kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
             kwargs["simulator"] = simulator
-        tester.compile_and_run(target, coverage="all", **kwargs)
+        tester.compile_and_run(target, coverage="toggle", **kwargs)
         import subprocess
-        subprocess.call(
+        result = delegator.run(
             f"verilator_coverage logs/{circ.name}.dat -annotate logs",
-            cwd=_dir, shell=True)
-        # with open(f"{_dir}/logs/{circ.name}.dat", "r") as cov:
-        #     print(cov.read())
-        #     assert False
-        assert False
+            cwd=_dir)
+        assert result.out.splitlines()[0] == "Total coverage (71/130) 54.00%"
