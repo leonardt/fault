@@ -50,6 +50,7 @@ expected operation.
 
 ```python
 import operator
+import fault
 
 ops = [operator.add, operator.sub, operator.mul, operator.div]
 tester = fault.Tester(SimpleALU, SimpleALU.CLK)
