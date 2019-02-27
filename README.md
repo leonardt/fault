@@ -52,7 +52,7 @@ expected operation.
 import operator
 import fault
 
-ops = [operator.add, operator.sub, operator.mul, operator.div]
+ops = [operator.add, operator.sub, operator.mul, operator.floordiv]
 tester = fault.Tester(SimpleALU, SimpleALU.CLK)
 tester.circuit.CLK = 0
 tester.circuit.config_en = 1
