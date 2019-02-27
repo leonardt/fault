@@ -143,7 +143,6 @@ def test_tester_coverage():
                 tester.circuit.c.expect([operator.add, operator.sub,
                                          operator.mul, operator.sub][i](a, b))
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         kwargs = {
             "directory": _dir,
             "magma_opts": {"verilator_debug": True}
