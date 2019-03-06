@@ -11,7 +11,7 @@ import fault.verilator_utils as verilator_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from bit_vector import BitVector, SIntVector
+from hwtypes import BitVector, SIntVector
 import subprocess
 from fault.random import random_bv
 import fault.utils as utils

@@ -1,5 +1,5 @@
 import random
-from bit_vector import BitVector
+from hwtypes import BitVector
 
 
 def random_bv(width):
