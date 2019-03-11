@@ -71,9 +71,6 @@ def is_output(port):
 
 class Expect(PortAction):
     def __init__(self, port, value):
-        if not is_output(port):
-            raise ValueError(f"Can only expect on outputs: {port.debug_name} "
-                             f"{type(port)}")
         super().__init__(port, value)
 
 
