@@ -10,7 +10,7 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='1.0.8',
+    version='2.0.0',
     description=description,
     scripts=[],
     packages=[
@@ -18,7 +18,7 @@ setup(
     ],
     install_requires=[
         "astor",
-        "coreir==1.0.2",
+        "coreir==2.0.0",
         "cosa"
     ],
     license='BSD License',
