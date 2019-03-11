@@ -28,18 +28,18 @@ class PortAction(Action):
         return cls(new_port, self.value)
 
 
-def can_poke(port):
+def is_input(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return not port.type_.isinput()
+        return port.type_.isinput()
     else:
-        return not port.isinput()
+        return port.isinput()
 
 
 class Poke(PortAction):
     def __init__(self, port, value):
-        if not can_poke(port):
+        if is_input(port):
             raise ValueError(f"Can only poke inputs: {port.debug_name} "
                              f"{type(port)}")
         super().__init__(port, value)
@@ -71,6 +71,22 @@ def is_output(port):
 
 class Expect(PortAction):
     def __init__(self, port, value):
+        super().__init__(port, value)
+
+
+class Assume(PortAction):
+    def __init__(self, port, value):
+        if is_input(port):
+            raise ValueError(f"Can only assume inputs (got {port.debug_name}"
+                             f" of type {type(port)})")
+        super().__init__(port, value)
+
+
+class Guarantee(PortAction):
+    def __init__(self, port, value):
+        if not is_output(port):
+            raise ValueError(f"Can only guarantee on outputs (got"
+                             f"{port.debug_name} of type {type(port)})")
         super().__init__(port, value)
 
 

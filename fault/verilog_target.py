@@ -6,18 +6,7 @@ import fault.actions as actions
 from fault.util import flatten
 import os
 from fault.select_path import SelectPath
-
-
-def verilog_name(name):
-    if isinstance(name, m.ref.DefnRef):
-        return str(name)
-    if isinstance(name, m.ref.ArrayRef):
-        array_name = verilog_name(name.array.name)
-        return f"{array_name}_{name.index}"
-    if isinstance(name, m.ref.TupleRef):
-        tuple_name = verilog_name(name.tuple.name)
-        return f"{tuple_name}_{name.index}"
-    raise NotImplementedError(name, type(name))
+from fault.verilog_utils import verilog_name
 
 
 class VerilogTarget(Target):
@@ -57,6 +46,17 @@ class VerilogTarget(Target):
             if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f"Compiling {self.circuit} failed")
 
+        self.assumptions = []
+        self.guarantees = []
+
+    def make_assume(self, i, action):
+        self.assumptions.append(action)
+        return ""
+
+    def make_guarantee(self, i, action):
+        self.guarantees.append(action)
+        return ""
+
     def generate_array_action_code(self, i, action):
         result = []
         port = action.port
@@ -94,6 +94,10 @@ class VerilogTarget(Target):
             return self.make_eval(i, action)
         if isinstance(action, actions.Step):
             return self.make_step(i, action)
+        if isinstance(action, actions.Assume):
+            return self.make_assume(i, action)
+        if isinstance(action, actions.Guarantee):
+            return self.make_guarantee(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod

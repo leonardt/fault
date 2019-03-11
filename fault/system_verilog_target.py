@@ -75,7 +75,11 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_poke(self, i, action):
         if isinstance(action.port, SelectPath):
-            name = f"dut.{action.port.system_verilog_path}"
+            if len(action.port) > 2:
+                name = f"dut.{action.port.system_verilog_path}"
+            else:
+                # Top level ports assign to the external reg
+                name = verilog_name(action.port[-1].name)
         elif isinstance(action.port, fault.WrappedVerilogInternalPort):
             name = f"dut.{action.port.path}"
         else:

@@ -1,6 +1,7 @@
 from .tester import Tester
 from .value import Value, AnyValue, UnknownValue
 import fault.random
+from .symbolic_tester import SymbolicTester
 
 
 class WrappedVerilogInternalPort:
