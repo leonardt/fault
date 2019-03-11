@@ -10,7 +10,6 @@ from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
-from dataclasses import fields, is_dataclass
 
 
 class Tester:
@@ -88,9 +87,8 @@ class Tester:
         Set `port` to be `value`
         """
         if isinstance(port, m.TupleType):
-            assert is_dataclass(value), "Expected dataclass when setting tuple"
-            for p, f in zip(port, fields(value)):
-                self.poke(p, getattr(value, f.name))
+            for p, v in zip(port, value):
+                self.poke(p, v)
         else:
             value = make_value(port, value)
             self.actions.append(actions.Poke(port, value))
