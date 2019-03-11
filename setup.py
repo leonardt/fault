@@ -18,6 +18,7 @@ setup(
     ],
     install_requires=[
         "astor",
+        "coreir==1.0.2",
         "cosa"
     ],
     license='BSD License',
