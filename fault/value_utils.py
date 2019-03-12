@@ -28,7 +28,7 @@ def make_bit(value):
     if isinstance(value, BitVector) and len(value) == 1:
         return value
     if value == 0 or value == 1:
-        return BitVector(value, 1)
+        return BitVector[1](value)
     if value is AnyValue or value is UnknownValue:
         return value
     raise NotImplementedError(value)
