@@ -1,6 +1,6 @@
 import pytest
 import magma as m
-from bit_vector import BitVector
+from hwtypes import BitVector
 from fault.array import Array
 from fault.value_utils import make_value
 from fault.value import AnyValue, UnknownValue

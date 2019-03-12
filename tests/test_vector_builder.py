@@ -1,5 +1,5 @@
 import random
-from bit_vector import BitVector
+from hwtypes import BitVector
 import fault
 import common
 from fault.actions import Poke, Expect, Eval, Step, Print

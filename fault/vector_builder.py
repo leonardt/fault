@@ -1,4 +1,4 @@
-from bit_vector import BitVector
+from hwtypes import BitVector
 import magma
 import fault.actions as actions
 from fault.value_utils import make_value

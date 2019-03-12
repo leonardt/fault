@@ -1,6 +1,6 @@
 from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
 from magma.simulator.python_simulator import PythonSimulator
-from bit_vector import BitVector, SIntVector, UIntVector
+from hwtypes import BitVector, SIntVector, UIntVector
 from inspect import signature
 from itertools import product
 import pytest

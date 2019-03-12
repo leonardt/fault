@@ -1,4 +1,4 @@
-from bit_vector import BitVector
+from hwtypes import BitVector
 import magma as m
 from magma.simulator.python_simulator import PythonSimulator
 from magma.simulator.coreir_simulator import CoreIRSimulator
