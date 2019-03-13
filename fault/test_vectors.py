@@ -82,14 +82,14 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
                                             2**(num_bits - 1))
                     else:
                         input_range = input_ranges[i]
-                    args.append([SIntVector(x, num_bits=num_bits)
+                    args.append([SIntVector[num_bits](x)
                                  for x in input_range])
                 else:
                     if input_ranges is None:
                         input_range = range(1 << num_bits)
                     else:
                         input_range = input_ranges[i]
-                    args.append([BitVector(x, num_bits=num_bits)
+                    args.append([BitVector[num_bits](x)
                                  for x in input_range])
             else:
                 raise NotImplementedError(type(port))
@@ -131,14 +131,14 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
                         input_range = range(start, end)
                     else:
                         input_range = input_ranges[i]
-                    args.append([SIntVector(x, num_bits=num_bits)
+                    args.append([SIntVector[num_bits](x)
                                  for x in input_range])
                 else:
                     if input_ranges is None:
                         input_range = range(1 << num_bits)
                     else:
                         input_range = input_ranges[i]
-                    args.append([BitVector(x, num_bits=num_bits)
+                    args.append([BitVector[num_bits](x)
                                  for x in input_range])
             else:
                 assert True, "can't test Tuples"
