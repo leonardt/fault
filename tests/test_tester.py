@@ -1,6 +1,6 @@
 import magma as m
 import random
-from bit_vector import BitVector
+from hwtypes import BitVector
 import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import common
@@ -206,9 +206,9 @@ def test_print_arrays(capsys):
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
 Actions:
-    0: Poke(DoubleNestedArraysCircuit.I, Array([Array([BitVector(0, 4), BitVector(1, 4), BitVector(2, 4)], 3), Array([BitVector(3, 4), BitVector(4, 4), BitVector(5, 4)], 3)], 2))
+    0: Poke(DoubleNestedArraysCircuit.I, Array([Array([BitVector[4](0), BitVector[4](1), BitVector[4](2)], 3), Array([BitVector[4](3), BitVector[4](4), BitVector[4](5)], 3)], 2))
     1: Eval()
-    2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector(0, 4), BitVector(1, 4), BitVector(2, 4)], 3), Array([BitVector(3, 4), BitVector(4, 4), BitVector(5, 4)], 3)], 2))
+    2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector[4](0), BitVector[4](1), BitVector[4](2)], 3), Array([BitVector[4](3), BitVector[4](4), BitVector[4](5)], 3)], 2))
     3: Print(DoubleNestedArraysCircuit.O, "%08x")
 """  # nopep8
 

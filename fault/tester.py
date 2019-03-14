@@ -86,8 +86,12 @@ class Tester:
         """
         Set `port` to be `value`
         """
-        value = make_value(port, value)
-        self.actions.append(actions.Poke(port, value))
+        if isinstance(port, m.TupleType):
+            for p, v in zip(port, value):
+                self.poke(p, v)
+        else:
+            value = make_value(port, value)
+            self.actions.append(actions.Poke(port, value))
 
     def peek(self, port):
         """

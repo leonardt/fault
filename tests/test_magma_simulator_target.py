@@ -1,4 +1,4 @@
-from bit_vector import BitVector
+from hwtypes import BitVector
 import common
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.magma_simulator_target import MagmaSimulatorTarget

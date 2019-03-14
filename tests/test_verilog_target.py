@@ -1,7 +1,7 @@
 import tempfile
 import magma as m
 import fault
-from bit_vector import BitVector
+from hwtypes import BitVector
 import common
 import random
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek

@@ -1,9 +1,10 @@
 import fault
 import magma
-from bit_vector import BitVector
+from hwtypes import BitVector, Bit
 from fault.value import AnyValue, UnknownValue
 from fault.array import Array
 from fault.select_path import SelectPath
+from enum import Enum
 
 
 def make_value(port, value):
@@ -16,15 +17,17 @@ def make_value(port, value):
         return make_bit(value)
     if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):
         return make_array(switch.T, switch.N, value)
+    if isinstance(switch, (magma.TupleType, magma.TupleKind)):
+        raise NotImplementedError()
     raise NotImplementedError(switch, value)
 
 
 def make_bit(value):
     # TODO(rsetaluri): Use bit_vector.Bit when implemented.
-    if isinstance(value, BitVector) and value.num_bits == 1:
+    if isinstance(value, BitVector) and len(value) == 1:
         return value
     if value == 0 or value == 1:
-        return BitVector(value, 1)
+        return BitVector[1](value)
     if value is AnyValue or value is UnknownValue:
         return value
     raise NotImplementedError(value)
@@ -44,13 +47,19 @@ def make_array(T, N, value):
 
 def make_bit_vector(N, value):
     assert isinstance(N, int)
-    if isinstance(value, BitVector) and N == value.num_bits:
+    if isinstance(value, BitVector[N]):
         return value
+    if isinstance(value, BitVector) and len(value) < N or \
+            isinstance(value, Bit):
+        return BitVector[N](value)
     if isinstance(value, int):
-        return BitVector(value, N)
+        return BitVector[N](value)
     if value is AnyValue or value is UnknownValue:
         return value
-    raise NotImplementedError(N, value)
+    if isinstance(value, Enum):
+        N = type(value).bit_length()
+        return BitVector[N](value.value)
+    raise NotImplementedError(N, value, type(value))
 
 
 def is_any(value):

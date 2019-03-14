@@ -1,7 +1,7 @@
 from itertools import product
 import pytest
 import tempfile
-from bit_vector import BitVector
+from hwtypes import BitVector
 import magma as m
 import mantle
 from common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit

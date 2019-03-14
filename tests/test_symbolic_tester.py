@@ -1,7 +1,7 @@
 import common
 import tempfile
 from fault import SymbolicTester
-from bit_vector import BitVector
+from hwtypes import BitVector
 
 
 def pytest_generate_tests(metafunc):
