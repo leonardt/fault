@@ -13,9 +13,9 @@ install:
 - source install_coreir.sh
 - pip install python-coveralls
 - pip install pytest-cov pytest-codestyle
-- pip install git+git://github.com/phanrahan/magma@lassen#egg=magma
 - pip install -r requirements.txt
 - pip install -e .
+- pip install git+git://github.com/phanrahan/magma@lassen#egg=magma
 # Begin setup CoSA dependencies
 - pysmt-install --msat --confirm-agreement
 - export PYTHONPATH="/home/travis/.smt_solvers/python-bindings-3.6:${PYTHONPATH}"
