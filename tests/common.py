@@ -19,18 +19,18 @@ def define_simple_circuit(T, circ_name, has_clk=False):
 
 TestBasicCircuit = define_simple_circuit(m.Bit, "BasicCircuit")
 TestArrayCircuit = define_simple_circuit(m.Array[3, m.Bit], "ArrayCircuit")
-TestSIntCircuit = define_simple_circuit(m.SInt(3), "SIntCircuit")
-TestNestedArraysCircuit = define_simple_circuit(m.Array[3, m.Bits(4)],
+TestSIntCircuit = define_simple_circuit(m.SInt[3], "SIntCircuit")
+TestNestedArraysCircuit = define_simple_circuit(m.Array[3, m.Bits[4]],
                                                 "NestedArraysCircuit")
 TestDoubleNestedArraysCircuit = define_simple_circuit(
-    m.Array[2, m.Array[3, m.Bits(4)]], "DoubleNestedArraysCircuit")
+    m.Array[2, m.Array[3, m.Bits[4]]], "DoubleNestedArraysCircuit")
 TestBasicClkCircuit = define_simple_circuit(m.Bit, "BasicClkCircuit", True)
 TestBasicClkCircuitCopy = define_simple_circuit(m.Bit, "BasicClkCircuitCopy",
                                                 True)
-TestTupleCircuit = define_simple_circuit(m.Tuple(a=m.Bits(4), b=m.Bits(4)),
+TestTupleCircuit = define_simple_circuit(m.Tuple(a=m.Bits[4], b=m.Bits[4]),
                                          "TupleCircuit")
 
-T = m.Bits(3)
+T = m.Bits[3]
 
 
 class TestPeekCircuit(m.Circuit):
@@ -44,7 +44,7 @@ class TestPeekCircuit(m.Circuit):
 
 
 class ConfigReg(m.Circuit):
-    IO = ["D", m.In(m.Bits(2)), "Q", m.Out(m.Bits(2))] + \
+    IO = ["D", m.In(m.Bits[2]), "Q", m.Out(m.Bits[2])] + \
         m.ClockInterface(has_ce=True)
 
     @classmethod
@@ -54,10 +54,10 @@ class ConfigReg(m.Circuit):
 
 
 class SimpleALU(m.Circuit):
-    IO = ["a", m.In(m.UInt(16)),
-          "b", m.In(m.UInt(16)),
-          "c", m.Out(m.UInt(16)),
-          "config_data", m.In(m.Bits(2)),
+    IO = ["a", m.In(m.UInt[16]),
+          "b", m.In(m.UInt[16]),
+          "c", m.Out(m.UInt[16]),
+          "config_data", m.In(m.Bits[2]),
           "config_en", m.In(m.Enable),
           ] + m.ClockInterface()
 

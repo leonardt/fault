@@ -230,7 +230,7 @@ def test_target_tuple(target, simulator):
                                    31, 32])
 def test_target_sint_sign_extend(width, target, simulator):
     circ = common.define_simple_circuit(
-        m.SInt(width), f"test_target_sint_sign_extend_{width}")
+        m.SInt[width], f"test_target_sint_sign_extend_{width}")
     actions = [
         Poke(circ.I, -2),
         Eval(),

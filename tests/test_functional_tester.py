@@ -22,8 +22,8 @@ def test_configuration():
             self.eval()
 
     class Configurable(m.Circuit):
-        IO = ["config_addr", m.In(m.Bits(32)), "config_data", m.In(m.Bits(32)),
-              "config_en", m.In(m.Enable), "O", m.Out(m.Bits(32))
+        IO = ["config_addr", m.In(m.Bits[32]), "config_data", m.In(m.Bits[32]),
+              "config_en", m.In(m.Enable), "O", m.Out(m.Bits[32])
               ] + m.ClockInterface()
 
         @classmethod

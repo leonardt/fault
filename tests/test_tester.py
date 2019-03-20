@@ -219,10 +219,10 @@ def test_tester_verilog_wrapped(target, simulator):
                                         target_modules=["SimpleALU"])[0]
 
     circ = m.DefineCircuit("top",
-                           "a", m.In(m.Bits(16)),
-                           "b", m.In(m.Bits(16)),
-                           "c", m.Out(m.Bits(16)),
-                           "config_data", m.In(m.Bits(2)),
+                           "a", m.In(m.Bits[16]),
+                           "b", m.In(m.Bits[16]),
+                           "c", m.Out(m.Bits[16]),
+                           "config_data", m.In(m.Bits[2]),
                            "config_en", m.In(m.Bit),
                            "CLK", m.In(m.Clock))
     simple_alu = SimpleALU()
@@ -240,30 +240,30 @@ def test_tester_verilog_wrapped(target, simulator):
     for i in range(0, 4):
         tester.poke(
             fault.WrappedVerilogInternalPort("SimpleALU_inst0.config_reg.Q",
-                                             m.Bits(2)),
+                                             m.Bits[2]),
             i)
         tester.step(2)
         tester.expect(
             fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
-                                             m.Bits(2)),
+                                             m.Bits[2]),
             i)
         signal = tester.peek(
             fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
-                                             m.Bits(2)))
+                                             m.Bits[2]))
         tester.expect(
             fault.WrappedVerilogInternalPort("SimpleALU_inst0.opcode",
-                                             m.Bits(2)),
+                                             m.Bits[2]),
             signal)
         tester.expect(
             fault.WrappedVerilogInternalPort(
-                "SimpleALU_inst0.config_reg.Q", m.Bits(2)),
+                "SimpleALU_inst0.config_reg.Q", m.Bits[2]),
             i)
         signal = tester.peek(
             fault.WrappedVerilogInternalPort(
-                "SimpleALU_inst0.config_reg.Q", m.Bits(2)))
+                "SimpleALU_inst0.config_reg.Q", m.Bits[2]))
         tester.expect(
             fault.WrappedVerilogInternalPort(
-                "SimpleALU_inst0.config_reg.Q", m.Bits(2)),
+                "SimpleALU_inst0.config_reg.Q", m.Bits[2]),
             signal)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
