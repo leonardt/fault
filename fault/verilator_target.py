@@ -15,6 +15,7 @@ from hwtypes import BitVector, SIntVector
 import subprocess
 from fault.random import random_bv
 import fault.utils as utils
+import platform
 
 
 src_tpl = """\
@@ -149,12 +150,13 @@ class VerilatorTarget(VerilogTarget):
             isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
             and action.port[-1].path == "outReg"
 
+        max_bits = 64 if platform.architecture()[0] == "64bit" else 32
         if isinstance(action.value, BitVector) and \
-                action.value.num_bits > 32:
+                action.value.num_bits > max_bits:
             asserts = []
-            for i in range(math.ceil(action.value.num_bits / 32)):
-                value = action.value[i * 32:min(
-                    (i + 1) * 32, action.value.num_bits)]
+            for i in range(math.ceil(action.value.num_bits / max_bits)):
+                value = action.value[i * max_bits:min(
+                    (i + 1) * max_bits, action.value.num_bits)]
                 asserts += [f"top->{name}[{i}] = {value};"]
             if is_reg_poke:
                 raise NotImplementedError()
