@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1]
+### Fixes
+- Fixes for upstream changes to magma `Array` and `Bits` type constructor
+  syntax.
+
+## [2.0.0]
+### Changes
+- Updates to using hwtypes and uses the new hwtypes syntax
+
 ## [1.0.8]
 ### Fixes
 - Fixes issue with tests that use setattr only for top interface ports. In this
