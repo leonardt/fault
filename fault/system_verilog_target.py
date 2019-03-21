@@ -84,17 +84,14 @@ class SystemVerilogTarget(VerilogTarget):
             name = f"dut.{action.port.path}"
         else:
             name = verilog_name(action.port.name)
-        if isinstance(action.value, BitVector) and \
-                action.value.num_bits > 32:
-            raise NotImplementedError()
-        else:
-            value = action.value
-            if isinstance(action.port, m.SIntType) and value < 0:
-                # Handle sign extension for verilator since it expects and
-                # unsigned c type
-                port_len = len(action.port)
-                value = BitVector(value, port_len).as_uint()
-            return [f"{name} = {value};", f"#{self.clock_step_delay}"]
+        # For now we assume that verilog can handle big ints
+        value = action.value
+        if isinstance(action.port, m.SIntType) and value < 0:
+            # Handle sign extension for verilator since it expects and
+            # unsigned c type
+            port_len = len(action.port)
+            value = BitVector(value, port_len).as_uint()
+        return [f"{name} = {value};", f"#{self.clock_step_delay}"]
 
     def make_print(self, i, action):
         name = verilog_name(action.port.name)
