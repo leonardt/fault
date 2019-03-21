@@ -8,6 +8,7 @@ from fault.select_path import SelectPath
 import subprocess
 from fault.wrapper import PortWrapper
 import fault
+import platform
 
 
 src_tpl = """\
@@ -84,8 +85,9 @@ class SystemVerilogTarget(VerilogTarget):
             name = f"dut.{action.port.path}"
         else:
             name = verilog_name(action.port.name)
+        max_bits = 64 if platform.architecture()[0] == "64bit" else 32
         if isinstance(action.value, BitVector) and \
-                action.value.num_bits > 32:
+                action.value.num_bits > max_bits:
             raise NotImplementedError()
         else:
             value = action.value
