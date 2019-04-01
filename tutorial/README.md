@@ -1,11 +1,25 @@
 # Testing Hardware Circuits using Fault
 
-Welcome to the fault tutorial. The sources for these files are hosted in the
-[GitHub repository](https://github.com/leonardt/fault), please submit issues
-using the GitHub issue tracker.  Pull requests with typo fixes and other
-improvements are always welcome!
+Welcome to the **fault tutorial**. The sources for these files are hosted in
+the [GitHub
+repository](https://github.com/leonardt/fault/tree/master/tutorial), please
+submit issues using the GitHub issue tracker.  Pull requests with typo fixes
+and other improvements are always welcome!
 
 ## Overview
+The *fault* library abstracts circuit testing actions using Python objects.
+
+Underlying the fault framework is
+[magma](https://github.com/phanrahan/magma), a library that abstracts circuits
+as Python objects.  `magma` provides the ability to define circuits in Python,
+wrap existing circuits from `verilog`, or create designs combining both.
+fault's features are agnostic to how the `magma.Circuit` object is defined,
+which means that you can use it with your existing `verilog` designs by using
+magma's `DefineFromVerilog` feature.
+
+faults goal is to provide a unified interface for describing circuit tests
+in Python.  Currently fault supports 
+
 * Abstract circuit testing in Python (integration with magma)
 * Metaprogram tests (flexibility, parametrization, HW generators)
 * Leverage Python libraries: pytest (also, constrained random number generators)
