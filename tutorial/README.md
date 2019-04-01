@@ -22,6 +22,15 @@ improvements are always welcome!
 ## Assume/Guarantee
 ### Exercise 3
 
+# Fault Internals
+This section provides an introduction to the internal architecture of the fault
+system.  The goal is to provide the required knowledge for anyone interested in
+contributing bug fixes, features, or refactors to the fault codebase.  The
+fault API docs are hosted at
+[http://truong.io/fault/](http://truong.io/fault/), this is a valuable link to
+remember.
+
+
 ## Roadmap
 ### Simulation Actions
 ### Constrained Random
