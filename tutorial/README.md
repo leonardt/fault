@@ -211,13 +211,65 @@ that exercises the ability to the poke the internal `config_reg` register.  You
 may find the function `fault.random.random_bv(width)`, which returns a random
 `hwtypes.BitVector` of a specified `width`, useful.
 
-### Extending The Tester Class
+## Extending The Tester Class
+**TODO: Explain poke method API**
 
-## pytest Parametrization
+The `fault.Tester` class can be extended using the standard Python subclassing
+pattern.  Here's an example that defines a `ResetTester` which exposes a
+`reset` method:
+```python
+class ResetTester(fault.Tester):
+    def __init__(self, circuit, clock, reset_port):
+        super().__init__(circuit, clock)
+        self.reset_port = reset_port
+
+    def reset(self):
+        self.poke(self.reset_port, 1)
+        self.eval()
+        self.poke(self.reset_port, 0)
+        self.eval()
+```
+
+Defining methods on a `Tester` subclass allows you to use the UVM driver
+pattern to lower high-level API calls into low-level port values.  It also
+allows you construct reuseable test components that can be composed using the
+standard inheritance pattern.  Here's an example of composing a driver for a
+configuration bus with the reset tester:
+```python
+class ConfigurationTester(Tester):
+    def __init__(self, circuit, clock, config_addr_port, config_data_port,
+                 config_en_port):
+        super().__init__(circuit, clock)
+        self.config_addr_port = config_addr_port
+        self.config_data_port = config_data_port
+        self.config_en_port = config_en_port
+
+    def configure(self, addr, data):
+        self.poke(self.clock, 0)
+        self.poke(self.config_addr_port, addr)
+        self.poke(self.config_data_port, data)
+        self.poke(self.config_en_port, 1)
+        self.step(2)
+        self.poke(self.config_en_port, 0)
+
+
+class ResetAndConfigurationTester(ResetTester, ConfigurationTester):
+    def __init__(self, circuit, clock, reset_port, config_addr_port,
+                 config_data_port, config_en_port):
+        # Note the explicit calls to `__init__` to manage the multiple
+        # inheritance, rather than the standard use of `super`
+        ResetTester.__init__(self, circuit, clock, reset_port)
+        ConfigurationTester.__init__(self, circuit, clock, config_addr_port,
+                                     config_data_port, config_en_port)
+```
+
 ### Exercise 2
 
-## Assume/Guarantee
+## pytest Parametrization
 ### Exercise 3
+
+## Assume/Guarantee
+### Exercise 4
 
 # Fault Internals
 This section provides an introduction to the internal architecture of the fault
