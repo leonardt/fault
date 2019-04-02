@@ -315,13 +315,13 @@ class RAM(m.Circuit):
 ```
 
 First, define a subclass `ReadTester` of `fault.Tester` that provides an
-`expect_read` method that takes in two parameters `addr` and `value`. The
+`expect_read` method which takes in two parameters `addr` and `value`. The
 method should use the address `addr` to perform a read operation and check that
 the result is equal to `value`.  Use `ReadTester` to test both the `ROM` and
 the `RAM`.
 
-Next, extend `ReadTester` with a subclass `ReadAndWriteTester` which adds a
-`write` method that takes in an `addr` and `value` parameter. Use the
+Next, extend `ReadTester` with a subclass `ReadAndWriteTester` that adds a
+`write` method which takes in an `addr` and `value` parameter. Use the
 `ReadAndWriteTester` to test the functionality of the `RAM`.
 
 Finally, compose your newly defined testers with the provided `ResetTester`
@@ -330,6 +330,96 @@ Finally, compose your newly defined testers with the provided `ResetTester`
 and extend them to also check that the reset logic behaves as expected.
 
 ## pytest Parametrization
+This section assumes basic knowledge of the `pytest` framework, please review
+[the pytest
+documentation](https://docs.pytest.org/en/latest/getting-started.html) if
+you're unfamiliar or need a refresher.
+
+The pytest framework provides powerful features for parametrizing tests. Using
+this pattern greatly improves the user experience when working with
+parametrized tests, including more informative error messages and facilities to
+rerun tests with specific parameters.  Full documentation on pytest
+parametrization can be found
+[here](https://docs.pytest.org/en/latest/parametrize.html).
+
+Suppose you had the following `pytest` function which runs your `SimpleALU`
+test from exercise 1:
+```python
+def test_simple_alu():
+    <SimpleALU Test Code>
+```
+
+If `SimpleALU` had a bug in one of the operations, when running the test you
+would see something along the lines of:
+```
+
+====================================== FAILURES =======================================
+___________________________________ test_simple_alu ___________________________________
+
+    def test_simple_alu():
+        ...
+>       tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
+
+...
+
+Got      : 0x1
+Expected : 0xffff
+i        : 13
+Port     : SimpleALU.c
+========================= 1 failed, 6 passed in 13.23 seconds =========================
+```
+
+The key problem here is that it's not clear which operation failed. You can try
+this out by changing one of the operations in `SimpleALU`, for example, swap
+the `+` operator to `^` and run your test.
+
+We can use pytest's parametrization feature to parametrize the test over the
+operation, which greatly improves the readability of the failure log, and
+provides an easy mechanism for re-running the test just for the specific
+operation of interest. Here's an example that passes an enumerated list of
+operation strings. The index of the operation is used as the opcode, and the
+string is used to grab an operator from the built-in Python `operator` module.
+
+```python
+@pytest.mark.parametrize("opcode, op",
+                         enumerate(["add", "sub", "mul", "floordiv"]))
+def test_simple_alu_parametrized(opcode, op):
+    op = getattr(operator, op)
+    <Test code referring to `op`>
+```
+
+Now, when a specific operation fails, you'll see an output along the lines of:
+```
+
+====================================== FAILURES =======================================
+_________________________ test_simple_alu_parametrized[1-sub] _________________________
+
+opcode = 1, op = <built-in function sub>
+
+    @pytest.mark.parametrize("opcode, op",
+                             enumerate(["add", "sub", "mul", "floordiv"]))
+    def test_simple_alu_parametrized(opcode, op):
+        op = getattr(operator, op)
+        ...
+
+>       tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
+
+...
+
+Got      : 0xffff
+Expected : 0x1
+i        : 7
+Port     : SimpleALU.c
+========================= 1 failed, 6 passed in 13.09 seconds =========================
+```
+Notice that the report clearly shows which operation failed by including the
+parameters in the test name `test_simple_alu_parametrized[1-sub]`.  You can use
+this parametrized name to rerun this specific test with `pytest -k
+test_simple_alu_parametrized[1-sub]` (for zsh users, you'll need to enclose the
+name in a string or escape the square brackets). More on the `-k` flag can be
+found
+[here](https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name).
+
 ### Exercise 3
 
 ## Assume/Guarantee
