@@ -172,7 +172,7 @@ the `__init__` method of the selected target):
 
 ### Exercise 1
 Suppose you had the following definition of a simple, configurable ALU in magma
-(source can be found in the file [fault/tutorial/exercise_1.py](./exercise_1.py)):
+(source: [fault/tutorial/exercise_1.py](./exercise_1.py)):
 ```python
 import magma as m
 import mantle
@@ -264,6 +264,70 @@ class ResetAndConfigurationTester(ResetTester, ConfigurationTester):
 ```
 
 ### Exercise 2
+Suppose you have the following two memory modules defined in magma (source:
+[fault/tutorial/exercise_2.py](./exercise_2.py)):
+```python
+import magma as m
+import mantle
+import fault
+
+
+data_width = 16
+addr_width = 4
+
+# Randomize initial contents of memory
+init = [fault.random.random_bv(data_width) for _ in range(1 << addr_width)]
+
+
+class ROM(m.Circuit):
+    IO = [
+        "RADDR", m.In(m.Bits[addr_width]),
+        "RDATA", m.Out(m.Bits[data_width]),
+    ] + m.ClockInterface(has_reset=True)
+
+    @classmethod
+    def definition(io):
+        regs = [mantle.Register(data_width, init=init[i], has_reset=True)
+                for i in range(1 << addr_width)]
+        for reg in regs:
+            reg.I <= reg.O
+        io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+
+
+class RAM(m.Circuit):
+    IO = [
+        "RADDR", m.In(m.Bits[addr_width]),
+        "RDATA", m.Out(m.Bits[data_width]),
+        "WADDR", m.In(m.Bits[addr_width]),
+        "WDATA", m.In(m.Bits[data_width]),
+        "WE", m.In(m.Bit),
+    ] + m.ClockInterface(has_reset=True)
+
+    @classmethod
+    def definition(io):
+        regs = [mantle.Register(data_width, init=init[i], has_ce=True,
+                                has_reset=True)
+                for i in range(1 << addr_width)]
+        for i, reg in enumerate(regs):
+            reg.I <= io.WDATA
+            reg.CE <= (io.WADDR == m.bits(i, addr_width)) & io.WE
+        io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+```
+
+First, define a subclass `ReadTester` of `fault.Tester` that provides an
+`expect_read` method that takes in two parameters `addr` and `value`. The
+method should use the address `addr` to perform a read operation and check that
+the result is equal to `value`.  Use `ReadTester` to test both the `ROM` and
+the `RAM`.
+
+Next, extend `ReadTester` with a subclass `ReadAndWriteTester` which adds a
+`write` method that takes in an `addr` and `value` parameter. Use the
+`ReadAndWriteTester` to test the functionality of the `RAM`.
+
+Finally, compose your newly defined testers with the provided `ResetTester`
+(from [fault/tutorial/reset_tester.py](./reset_tester.py)) to create a
+`ROMTester` and `RAMTester`.  Port your previous tests to use these new testers
+and extend them to also check that the reset logic behaves as expected.
 
 ## pytest Parametrization
 ### Exercise 3
