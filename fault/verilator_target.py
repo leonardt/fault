@@ -16,6 +16,7 @@ import subprocess
 from fault.random import random_bv
 import fault.utils as utils
 import platform
+import os
 
 
 src_tpl = """\

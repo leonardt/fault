@@ -24,6 +24,7 @@ class VerilogTarget(Target):
             self.circuit_name = circuit_name
 
         self.directory = Path(directory)
+        os.makedirs(directory, exist_ok=True)
 
         self.skip_compile = skip_compile
 

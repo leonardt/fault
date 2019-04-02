@@ -18,24 +18,107 @@ Fault's features are agnostic to how the `magma.Circuit` object is defined,
 which means that you can use it with your existing `verilog` designs by using
 magma's `DefineFromVerilog` feature.
 
-Fault is designed as an embedded DSL, which enables the construction of *test
+Fault is designed as an embedded DSL to enable the construction of *test
 generators* using standard Python programming techniques.  A *test generator*
 is a program that consumes a set of parameters to produce a test or suite of
 tests for a specific instance of a *chip generator*.  A *chip generator* is a
 program that consumes a set of parameters to produce a *chip* (an instance of
-the chip generator).
+the chip generator).  
 
-Fault is designed to provide a unified interface for describing circuit tests
-in Python.  
+As an embedded DSL, fault enables users to leverage techniques including OOP
+(object-oriented programming) and metaprogramming to construct flexible,
+composable, and reuseable tests.  Furthermore, fault users are able to leverage
+the large ecosystem of Python libraries including the [pytest
+framework](https://pytest.org/).
 
-* Abstract circuit testing in Python (integration with magma)
-* Metaprogram tests (flexibility, parametrization, HW generators)
-* Leverage Python libraries: pytest (also, constrained random number generators)
-* Reuse (standard OOP)
-* Simulation and formal (future plans: emulation and bringup)
-* (plans) Coverage
+An important design goal of fault is to provide a unified interface for
+describing circuit test components that can be used in multiple test
+environments including simulation, formal methods, emulation, and silicon.
+By providing a shared environment 
+Fault provides the ability to easily reuse test components across these
+environments.
+
+* **TODO (plans) Coverage**
 
 ## Tester Abstraction
+The `fault.Tester` object is the main entity provided by the fault library.  It
+provides a mechanism for recording a set of test actions performed on a magma
+circuit.  Full documentation can be found at
+http://truong.io/fault/tester.html.  A `Tester` must be instantiated with one
+argument `circuit` which corresponds to a `magma.Circuit` class that will be
+tested.   Here's a simple example:
+
+```python
+import magma as m
+import fault
+
+
+class Passthrough(m.Circuit):
+    IO = ["I", m.In(m.Bit), "O", m.Out(m.Bit)]
+
+    @classmethod
+    def definition(io):
+        io.O <= io.I
+
+
+passthrough_tester = fault.Tester(Passthrough)
+```
+
+There is a second optional argument `clock` which corresponds to a port on
+`circuit` to be used by the `step` action (described in more detail later).
+Here's an example:
+
+```python
+import magma as m
+import mantle
+import fault
+
+
+class TFF(m.Circuit):
+    IO = ["O", m.Out(m.Bit), "CLK", m.In(m.Clock)]
+
+    @classmethod
+    def definition(io):
+        reg = mantle.Register(None, name="tff_reg")
+        reg.CLK <= io.CLK
+        reg.I <= ~reg.O
+        io.O <= reg.O
+
+
+tff_tester = fault.Tester(TFF, clock=TFF.CLK)
+```
+
+### Tester Actions
+With an instance of a `fault.Tester` object, you can now perform actions to
+verify your circuit.  The first actions introduced are `poke`, `eval`, and
+`expect`.  
+
+The `poke` action is performed by setting an attribute on the `fault.Tester`
+instance's `circuit` attribute.  Here's an example using the
+`passthrough_tester`:
+
+```python
+passthrough_tester.circuit.I = 1
+```
+
+The `poke` (`setattr`) pattern supports poking internal instances of the
+`mantle.Register` circuit using the `value` attribute. This can be done at
+arbitrary depths in the instance hierarchy.  An instance can be referred to as
+an attribute of the top level `circuit` attribute or as an attribute of a
+nested instance. Here's an example using the `tff_tester`:
+
+```python
+tff_tester.circuit.reg.tff_reg.value = 1
+```
+
+Poking internal ports for wrapped verilog modules is more involved and is
+documented here for those who need it:
+https://github.com/leonardt/fault/blob/master/doc/actions.md#wrappedveriloginternalport.
+
+
+
+### Extending The Tester Class
+
 ### Exercise 1
 
 ## pytest Parametrization
