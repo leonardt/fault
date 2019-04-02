@@ -150,6 +150,25 @@ passthrough_tester.circuit.O.expect(1)
 ```
 
 ### Executing Tests
+Once you have finished recording your test actions, it is now time to run the
+test.  This is done using the `compile_and_run` method of the tester instance.
+Here are three examples:
+
+```python
+passthrough_tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
+passthrough_tester.compile_and_run("system-verilog", simulator="ncsim", directory="build")
+passthrough_tester.compile_and_run("system-verilog", simulator="vcs", directory="build")
+```
+
+The first argument, `target`, is required and corresponds to a string selecting
+the desired test execution target.  Valid targets are `"verilator"` and
+`"system-verilog"`. When using the `"system-verilog"` target, one should also
+specify a simulator, either `"ncsim"` or `"vcs"`.  Other arguments are target
+dependent, more information can be found in the API documentation for each
+target (keyword arguments to the `compile_and_run` method are passed through to
+the `__init__` method of the selected target):
+* [`SystemVerilogTarget.__init__`](http://truong.io/fault/system_verilog_target.html#fault.system_verilog_target.SystemVerilogTarget.__init__)
+* [`VerilatorTarget.__init__`](http://truong.io/fault/verilator_target.html#fault.verilator_target.VerilatorTarget.__init__)
 
 ### Exercise 1
 Suppose you had the following definition of a simple, configurable ALU in magma
