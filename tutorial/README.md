@@ -165,7 +165,7 @@ class ConfigReg(m.Circuit):
 
     @classmethod
     def definition(io):
-        reg = mantle.Register(2, has_ce=True, name="conf_reg")
+        reg = mantle.Register(2, has_ce=True, name="config_reg")
         io.Q <= reg(io.D, CE=io.CE)
 
 
@@ -179,16 +179,18 @@ class SimpleALU(m.Circuit):
 
     @classmethod
     def definition(io):
-        opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
+        opcode = ConfigReg(name="opcode_reg")(io.config_data, CE=io.config_en)
         io.c <= mantle.mux(
-            [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
+            [io.a + io.b, io.a - io.b, io.a * io.b, io.b - io.a], opcode)
 ```
 
 Study the implementation so you understand how it works (ask for help if you
 don't!). Then, write a fault test which checks the functionality of each op in
 the ALU.  You should construct two variants of your test, one that uses the
 configuration interface (the `config_data` and `config_en` ports) and another
-that exercises the ability to the poke the internal `config_reg` register.
+that exercises the ability to the poke the internal `config_reg` register.  You
+may find the function `fault.random.random_bv(width)`, which returns a random
+`hwtypes.BitVector` of a specified `width`, useful.
 
 ### Extending The Tester Class
 
