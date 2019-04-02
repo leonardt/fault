@@ -172,7 +172,7 @@ the `__init__` method of the selected target):
 
 ### Exercise 1
 Suppose you had the following definition of a simple, configurable ALU in magma
-(source can be found in the file `fault/tutorial/exercise_1.py`):
+(source can be found in the file [fault/tutorial/exercise_1.py](./exercise_1.py)):
 ```python
 import magma as m
 import mantle
