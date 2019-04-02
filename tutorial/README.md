@@ -7,6 +7,9 @@ submit issues using the [GH issue
 tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
 fixes and other improvements are always welcome!
 
+## Installation
+**TODO**
+
 ## Overview
 The *fault* library abstracts circuit testing actions using Python objects.
 
@@ -41,6 +44,10 @@ environments.
 * **TODO (plans) Coverage**
 
 ## Tester Abstraction
+
+**TODO: Discuss staged metaprogramming (mainly that fault actions are recorded
+and generated into a test bench to be performed at a later stage)**
+
 The `fault.Tester` object is the main entity provided by the fault library.  It
 provides a mechanism for recording a set of test actions performed on a magma
 circuit.  Full documentation can be found at
@@ -142,9 +149,48 @@ passthrough_tester.eval()
 passthrough_tester.circuit.O.expect(1)
 ```
 
-### Extending The Tester Class
+### Executing Tests
 
 ### Exercise 1
+Suppose you had the following definition of a simple, configurable ALU in magma
+(source can be found in the file `fault/tutorial/exercise_1.py`):
+```python
+import magma as m
+import mantle
+
+
+class ConfigReg(m.Circuit):
+    IO = ["D", m.In(m.Bits(2)), "Q", m.Out(m.Bits(2))] + \
+        m.ClockInterface(has_ce=True)
+
+    @classmethod
+    def definition(io):
+        reg = mantle.Register(2, has_ce=True, name="conf_reg")
+        io.Q <= reg(io.D, CE=io.CE)
+
+
+class SimpleALU(m.Circuit):
+    IO = ["a", m.In(m.UInt(16)),
+          "b", m.In(m.UInt(16)),
+          "c", m.Out(m.UInt(16)),
+          "config_data", m.In(m.Bits(2)),
+          "config_en", m.In(m.Enable),
+          ] + m.ClockInterface()
+
+    @classmethod
+    def definition(io):
+        opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
+        io.c <= mantle.mux(
+            [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
+```
+
+Study the implementation so you understand how it works (ask for help if you
+don't!). Then, write a fault test which checks the functionality of each op in
+the ALU.  You should construct two variants of your test, one that uses the
+configuration interface (the `config_data` and `config_en` ports) and another
+that exercises the ability to the poke the internal `config_reg` register.
+
+### Extending The Tester Class
 
 ## pytest Parametrization
 ### Exercise 2
