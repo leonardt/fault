@@ -421,6 +421,12 @@ found
 [here](https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name).
 
 ### Exercise 3
+Refactor your `SimpleALU` test from exercise 1 to use the `parametrize` pattern
+for the `opcode`, `op`, and the two data inputs `a, b`.  Then, play around with
+the `SimpleALU` definition by injecting various bugs to observe how the pytest
+failures are reported.  For example, if you change one of the operations to a
+different function, the test failures should clearly indicate which operation has
+been changed.
 
 ## Assume/Guarantee
 ### Exercise 4
