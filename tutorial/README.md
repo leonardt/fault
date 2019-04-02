@@ -425,8 +425,11 @@ Refactor your `SimpleALU` test from exercise 1 to use the `parametrize` pattern
 for the `opcode`, `op`, and the two data inputs `a, b`.  Then, play around with
 the `SimpleALU` definition by injecting various bugs to observe how the pytest
 failures are reported.  For example, if you change one of the operations to a
-different function, the test failures should clearly indicate which operation has
-been changed.
+different function, the test failures should clearly indicate which operation
+has been changed.  As another example, suppose one operation only failed for
+specific values (e.g. negative values), then the test reports should give a
+hint to this (assuming you've parametrized your inputs in a way that tests
+these faulty values!).
 
 ## Assume/Guarantee
 ### Exercise 4
