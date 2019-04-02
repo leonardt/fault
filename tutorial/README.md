@@ -89,6 +89,7 @@ tff_tester = fault.Tester(TFF, clock=TFF.CLK)
 ```
 
 ### Tester Actions
+#### Poke
 With an instance of a `fault.Tester` object, you can now perform actions to
 verify your circuit.  The first actions introduced are `poke`, `eval`, and
 `expect`.  
@@ -115,7 +116,31 @@ Poking internal ports for wrapped verilog modules is more involved and is
 documented here for those who need it:
 https://github.com/leonardt/fault/blob/master/doc/actions.md#wrappedveriloginternalport.
 
+#### Eval
+The `eval` action is performed by calling the `eval` method on a `fault.Tester`
+instance.  This action triggers an evaluation of the circuit when a test is run
+using cycle-accurate simulation, where multiple `poke` actions can be recorded
+before a circuit is evaluated. It has no effect for event-based simulations
+where *eval* is implicitly called after every `poke` action.  Here's an example:
+```python
+passthrough_tester.circuit.I = 0
+passthrough_tester.eval()
+# Passthrough.O should be 0
+passthrough_tester.circuit.I = 1
+# Passthrough.O should still be 0 because `eval` has not be called yet
+passthrough_tester.eval()
+# Passthrough.O should be 1
+```
 
+#### Expect
+The `expect` action is used to verify the value of output ports.  Expect is
+called as a method on attributes retrieved from the `circuit` attribute of a
+`fault.Tester` instance.  Here's an example:
+```python
+passthrough_tester.circuit.I = 1
+passthrough_tester.eval()
+passthrough_tester.circuit.O.expect(1)
+```
 
 ### Extending The Tester Class
 
