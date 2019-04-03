@@ -52,18 +52,18 @@ class PortAction(Action):
         return cls(new_port, self.value)
 
 
-def can_poke(port):
+def is_input(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return not port.type_.isinput()
+        return port.type_.isinput()
     else:
-        return not port.isinput()
+        return port.isinput()
 
 
 class Poke(PortAction):
     def __init__(self, port, value):
-        if not can_poke(port):
+        if is_input(port):
             raise ValueError(f&#34;Can only poke inputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         super().__init__(port, value)
@@ -95,9 +95,22 @@ def is_output(port):
 
 class Expect(PortAction):
     def __init__(self, port, value):
+        super().__init__(port, value)
+
+
+class Assume(PortAction):
+    def __init__(self, port, value):
+        if is_input(port):
+            raise ValueError(f&#34;Can only assume inputs (got {port.debug_name}&#34;
+                             f&#34; of type {type(port)})&#34;)
+        super().__init__(port, value)
+
+
+class Guarantee(PortAction):
+    def __init__(self, port, value):
         if not is_output(port):
-            raise ValueError(f&#34;Can only expect on outputs: {port.debug_name} &#34;
-                             f&#34;{type(port)}&#34;)
+            raise ValueError(f&#34;Can only guarantee on outputs (got&#34;
+                             f&#34;{port.debug_name} of type {type(port)})&#34;)
         super().__init__(port, value)
 
 
@@ -153,20 +166,20 @@ class Step(Action):
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="fault.actions.can_poke"><code class="name flex">
-<span>def <span class="ident">can_poke</span></span>(<span>port)</span>
+<dt id="fault.actions.is_input"><code class="name flex">
+<span>def <span class="ident">is_input</span></span>(<span>port)</span>
 </code></dt>
 <dd>
 <section class="desc"></section>
 <details class="source">
 <summary>Source code</summary>
-<pre><code class="python">def can_poke(port):
+<pre><code class="python">def is_input(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return not port.type_.isinput()
+        return port.type_.isinput()
     else:
-        return not port.isinput()}</code></pre>
+        return port.isinput()}</code></pre>
 </details>
 </dd>
 <dt id="fault.actions.is_output"><code class="name flex">
@@ -234,6 +247,36 @@ def retarget(self, new_circuit, clock):
 </dd>
 </dl>
 </dd>
+<dt id="fault.actions.Assume"><code class="flex name class">
+<span>class <span class="ident">Assume</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.actions.PortAction" href="#fault.actions.Action">PortAction</a>, <a title="fault.actions.Action" href="#fault.actions.Action">Action</a>, abc.ABC)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.actions.PortAction" href="#fault.actions.Action">PortAction</a></code>
+</p>
+<section class="desc inherited"><p>Helper class that provides a standard way to create an ABC using
+inheritance.</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class Assume(PortAction):
+    def __init__(self, port, value):
+        if is_input(port):
+            raise ValueError(f&#34;Can only assume inputs (got {port.debug_name}&#34;
+                             f&#34; of type {type(port)})&#34;)
+        super().__init__(port, value)}</code></pre>
+</details>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.actions.PortAction" href="#fault.actions.Action">PortAction</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.actions.PortAction.__init__" href="#fault.actions.PortAction.__init__">__init__</a></code></li>
+<li><code><a title="fault.actions.PortAction.retarget" href="#fault.actions.Action.retarget">retarget</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
 <dt id="fault.actions.Eval"><code class="flex name class">
 <span>class <span class="ident">Eval</span></span>
 <span>(</span><span><small>ancestors:</small> <a title="fault.actions.Action" href="#fault.actions.Action">Action</a>, abc.ABC)</span>
@@ -296,9 +339,36 @@ inheritance.</p></section>
 <summary>Source code</summary>
 <pre><code class="python">class Expect(PortAction):
     def __init__(self, port, value):
+        super().__init__(port, value)}</code></pre>
+</details>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.actions.PortAction" href="#fault.actions.Action">PortAction</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.actions.PortAction.__init__" href="#fault.actions.PortAction.__init__">__init__</a></code></li>
+<li><code><a title="fault.actions.PortAction.retarget" href="#fault.actions.Action.retarget">retarget</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="fault.actions.Guarantee"><code class="flex name class">
+<span>class <span class="ident">Guarantee</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.actions.PortAction" href="#fault.actions.Action">PortAction</a>, <a title="fault.actions.Action" href="#fault.actions.Action">Action</a>, abc.ABC)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.actions.PortAction" href="#fault.actions.Action">PortAction</a></code>
+</p>
+<section class="desc inherited"><p>Helper class that provides a standard way to create an ABC using
+inheritance.</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class Guarantee(PortAction):
+    def __init__(self, port, value):
         if not is_output(port):
-            raise ValueError(f&#34;Can only expect on outputs: {port.debug_name} &#34;
-                             f&#34;{type(port)}&#34;)
+            raise ValueError(f&#34;Can only guarantee on outputs (got&#34;
+                             f&#34;{port.debug_name} of type {type(port)})&#34;)
         super().__init__(port, value)}</code></pre>
 </details>
 <h3>Inherited members</h3>
@@ -386,7 +456,7 @@ inheritance.</p></section>
 <summary>Source code</summary>
 <pre><code class="python">class Poke(PortAction):
     def __init__(self, port, value):
-        if not can_poke(port):
+        if is_input(port):
             raise ValueError(f&#34;Can only poke inputs: {port.debug_name} &#34;
                              f&#34;{type(port)}&#34;)
         super().__init__(port, value)}</code></pre>
@@ -433,6 +503,8 @@ inheritance.</p></section>
 <ul class="hlist">
 <li><a title="fault.actions.Poke" href="#fault.actions.Action">Poke</a></li>
 <li><a title="fault.actions.Expect" href="#fault.actions.Action">Expect</a></li>
+<li><a title="fault.actions.Assume" href="#fault.actions.Action">Assume</a></li>
+<li><a title="fault.actions.Guarantee" href="#fault.actions.Action">Guarantee</a></li>
 </ul>
 <h3>Methods</h3>
 <dl>
@@ -582,7 +654,7 @@ See help(type(self)) for accurate signature.</p></section>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="fault.actions.can_poke" href="#fault.actions.can_poke">can_poke</a></code></li>
+<li><code><a title="fault.actions.is_input" href="#fault.actions.is_input">is_input</a></code></li>
 <li><code><a title="fault.actions.is_output" href="#fault.actions.is_output">is_output</a></code></li>
 </ul>
 </li>
@@ -595,6 +667,9 @@ See help(type(self)) for accurate signature.</p></section>
 </ul>
 </li>
 <li>
+<h4><code><a title="fault.actions.Assume" href="#fault.actions.Action">Assume</a></code></h4>
+</li>
+<li>
 <h4><code><a title="fault.actions.Eval" href="#fault.actions.Action">Eval</a></code></h4>
 <ul class="">
 <li><code><a title="fault.actions.Eval.__init__" href="#fault.actions.Eval.__init__">__init__</a></code></li>
@@ -602,6 +677,9 @@ See help(type(self)) for accurate signature.</p></section>
 </li>
 <li>
 <h4><code><a title="fault.actions.Expect" href="#fault.actions.Action">Expect</a></code></h4>
+</li>
+<li>
+<h4><code><a title="fault.actions.Guarantee" href="#fault.actions.Action">Guarantee</a></code></h4>
 </li>
 <li>
 <h4><code><a title="fault.actions.Peek" href="#fault.actions.Action">Peek</a></code></h4>

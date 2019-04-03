@@ -26,7 +26,7 @@
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from bit_vector import BitVector
+from hwtypes import BitVector
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 import subprocess
@@ -99,22 +99,23 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_poke(self, i, action):
         if isinstance(action.port, SelectPath):
-            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+            if len(action.port) &gt; 2:
+                name = f&#34;dut.{action.port.system_verilog_path}&#34;
+            else:
+                # Top level ports assign to the external reg
+                name = verilog_name(action.port[-1].name)
         elif isinstance(action.port, fault.WrappedVerilogInternalPort):
             name = f&#34;dut.{action.port.path}&#34;
         else:
             name = verilog_name(action.port.name)
-        if isinstance(action.value, BitVector) and \
-                action.value.num_bits &gt; 32:
-            raise NotImplementedError()
-        else:
-            value = action.value
-            if isinstance(action.port, m.SIntType) and value &lt; 0:
-                # Handle sign extension for verilator since it expects and
-                # unsigned c type
-                port_len = len(action.port)
-                value = BitVector(value, port_len).as_uint()
-            return [f&#34;{name} = {value};&#34;, f&#34;#{self.clock_step_delay}&#34;]
+        # For now we assume that verilog can handle big ints
+        value = action.value
+        if isinstance(action.port, m.SIntType) and value &lt; 0:
+            # Handle sign extension for verilator since it expects and
+            # unsigned c type
+            port_len = len(action.port)
+            value = BitVector(value, port_len).as_uint()
+        return [f&#34;{name} = {value};&#34;, f&#34;#{self.clock_step_delay}&#34;]
 
     def make_print(self, i, action):
         name = verilog_name(action.port.name)
@@ -314,22 +315,23 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
 
     def make_poke(self, i, action):
         if isinstance(action.port, SelectPath):
-            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+            if len(action.port) &gt; 2:
+                name = f&#34;dut.{action.port.system_verilog_path}&#34;
+            else:
+                # Top level ports assign to the external reg
+                name = verilog_name(action.port[-1].name)
         elif isinstance(action.port, fault.WrappedVerilogInternalPort):
             name = f&#34;dut.{action.port.path}&#34;
         else:
             name = verilog_name(action.port.name)
-        if isinstance(action.value, BitVector) and \
-                action.value.num_bits &gt; 32:
-            raise NotImplementedError()
-        else:
-            value = action.value
-            if isinstance(action.port, m.SIntType) and value &lt; 0:
-                # Handle sign extension for verilator since it expects and
-                # unsigned c type
-                port_len = len(action.port)
-                value = BitVector(value, port_len).as_uint()
-            return [f&#34;{name} = {value};&#34;, f&#34;#{self.clock_step_delay}&#34;]
+        # For now we assume that verilog can handle big ints
+        value = action.value
+        if isinstance(action.port, m.SIntType) and value &lt; 0:
+            # Handle sign extension for verilator since it expects and
+            # unsigned c type
+            port_len = len(action.port)
+            value = BitVector(value, port_len).as_uint()
+        return [f&#34;{name} = {value};&#34;, f&#34;#{self.clock_step_delay}&#34;]
 
     def make_print(self, i, action):
         name = verilog_name(action.port.name)
@@ -681,22 +683,23 @@ def generate_recursive_port_code(name, type_):
 <summary>Source code</summary>
 <pre><code class="python">def make_poke(self, i, action):
     if isinstance(action.port, SelectPath):
-        name = f&#34;dut.{action.port.system_verilog_path}&#34;
+        if len(action.port) &gt; 2:
+            name = f&#34;dut.{action.port.system_verilog_path}&#34;
+        else:
+            # Top level ports assign to the external reg
+            name = verilog_name(action.port[-1].name)
     elif isinstance(action.port, fault.WrappedVerilogInternalPort):
         name = f&#34;dut.{action.port.path}&#34;
     else:
         name = verilog_name(action.port.name)
-    if isinstance(action.value, BitVector) and \
-            action.value.num_bits &gt; 32:
-        raise NotImplementedError()
-    else:
-        value = action.value
-        if isinstance(action.port, m.SIntType) and value &lt; 0:
-            # Handle sign extension for verilator since it expects and
-            # unsigned c type
-            port_len = len(action.port)
-            value = BitVector(value, port_len).as_uint()
-        return [f&#34;{name} = {value};&#34;, f&#34;#{self.clock_step_delay}&#34;]}</code></pre>
+    # For now we assume that verilog can handle big ints
+    value = action.value
+    if isinstance(action.port, m.SIntType) and value &lt; 0:
+        # Handle sign extension for verilator since it expects and
+        # unsigned c type
+        port_len = len(action.port)
+        value = BitVector(value, port_len).as_uint()
+    return [f&#34;{name} = {value};&#34;, f&#34;#{self.clock_step_delay}&#34;]}</code></pre>
 </details>
 </dd>
 <dt id="fault.system_verilog_target.SystemVerilogTarget.make_print"><code class="name flex">

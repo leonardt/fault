@@ -28,14 +28,19 @@ from pathlib import Path
 import subprocess
 import magma as m
 import fault.actions as actions
+from fault.actions import Poke, Eval
 from fault.verilog_target import VerilogTarget, verilog_name
 import fault.value_utils as value_utils
 import fault.verilator_utils as verilator_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from bit_vector import BitVector, SIntVector
+from hwtypes import BitVector, SIntVector
 import subprocess
+from fault.random import random_bv
+import fault.utils as utils
+import platform
+import os
 
 
 src_tpl = &#34;&#34;&#34;\
@@ -138,10 +143,14 @@ class VerilatorTarget(VerilogTarget):
             path = action.port.path.replace(&#34;.&#34;, &#34;-&gt;&#34;)
             name = f&#34;{prefix}-&gt;{path}&#34;
         elif isinstance(action.port, SelectPath):
-            # TODO: Find the version that they changed this, 3.874 is known to
-            # use top-&gt;v instead of top-&gt;{circuit_name}
-            name = f&#34;{prefix}-&gt;&#34; + action.port.verilator_path
-            self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
+            name = &#34;&#34;
+            if len(action.port) &gt; 2:
+                # TODO: Find the version that they changed this, 3.874 is known
+                # to use top-&gt;v instead of top-&gt;{circuit_name}
+                name += f&#34;{prefix}-&gt;&#34;
+            name += action.port.verilator_path
+            if len(action.port) &gt; 2:
+                self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
             for item in action.port[1:-1]:
                 circuit = type(item.instance)
                 circuit_name = circuit.verilog_name
@@ -152,6 +161,11 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name += &#34;_&#34;
                     circuit_name += f&#34;_I{circuit.coreir_configargs[&#39;init&#39;]}&#34;
                     circuit_name += f&#34;_W{circuit.coreir_genargs[&#39;width&#39;]}&#34;
+                elif circuit_name == &#34;coreir_reg_arst&#34;:
+                    circuit_name += &#34;_&#34;
+                    circuit_name += f&#34;_I{circuit.coreir_configargs[&#39;init&#39;]}&#34;
+                    if circuit.coreir_genargs[&#39;width&#39;] != 1:
+                        circuit_name += f&#34;_W{circuit.coreir_genargs[&#39;width&#39;]}&#34;
                 self.debug_includes.add(f&#34;{circuit_name}&#34;)
         else:
             name = verilog_name(action.port.name)
@@ -161,12 +175,13 @@ class VerilatorTarget(VerilogTarget):
             isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
             and action.port[-1].path == &#34;outReg&#34;
 
+        max_bits = 64 if platform.architecture()[0] == &#34;64bit&#34; else 32
         if isinstance(action.value, BitVector) and \
-                action.value.num_bits &gt; 32:
+                action.value.num_bits &gt; max_bits:
             asserts = []
-            for i in range(math.ceil(action.value.num_bits / 32)):
-                value = action.value[i * 32:min(
-                    (i + 1) * 32, action.value.num_bits)]
+            for i in range(math.ceil(action.value.num_bits / max_bits)):
+                value = action.value[i * max_bits:min(
+                    (i + 1) * max_bits, action.value.num_bits)]
                 asserts += [f&#34;top-&gt;{name}[{i}] = {value};&#34;]
             if is_reg_poke:
                 raise NotImplementedError()
@@ -212,8 +227,12 @@ class VerilatorTarget(VerilogTarget):
             name = f&#34;{prefix}-&gt;{path}&#34;
             debug_name = name
         elif isinstance(action.port, SelectPath):
-            name = f&#34;{prefix}-&gt;&#34; + action.port.verilator_path
-            self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
+            name = action.port.verilator_path
+            if len(action.port) &gt; 2:
+                name = f&#34;{prefix}-&gt;&#34; + name
+            if self.verilator_version &gt;= 3.856:
+                if len(action.port) &gt; 2:
+                    self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f&#34;{circuit_name}&#34;)
@@ -229,14 +248,12 @@ class VerilatorTarget(VerilogTarget):
             else:
                 value = f&#34;top-&gt;{verilog_name(value.port.name)}&#34;
         elif isinstance(value, PortWrapper):
-            self.debug_includes.add(f&#34;{value.select_path[0].circuit.name}&#34;)
+            if self.verilator_version &gt;= 3.856:
+                if len(action.port) &gt; 2:
+                    self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f&#34;{circuit_name}&#34;)
-            if self.verilator_version &gt; 3.874:
-                prefix = f&#34;{self.circuit_name}&#34;
-            else:
-                prefix = f&#34;v&#34;
             value = f&#34;top-&gt;{prefix}-&gt;&#34; + value.select_path.verilator_path
         elif isinstance(action.port, m.SIntType) and value &lt; 0:
             # Handle sign extension for verilator since it expects and
@@ -263,7 +280,7 @@ class VerilatorTarget(VerilogTarget):
             code.append(f&#34;top-&gt;{name} ^= 1;&#34;)
         return code
 
-    def generate_code(self, actions, verilator_includes):
+    def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
             verilator_includes.insert(
@@ -285,6 +302,13 @@ class VerilatorTarget(VerilogTarget):
             for line in code:
                 main_body += f&#34;  {line}\n&#34;
 
+        for i in range(num_tests):
+            main_body += self.add_assumptions(circuit, actions, i)
+            code = self.make_eval(i, Eval())
+            for line in code:
+                main_body += f&#34;  {line}\n&#34;
+            main_body += self.add_guarantees(circuit, actions, i)
+
         includes += [f&#39;&#34;V{self.circuit_name}_{include}.h&#34;&#39; for include in
                      self.debug_includes]
 
@@ -300,10 +324,12 @@ class VerilatorTarget(VerilogTarget):
     def run_from_directory(self, cmd):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
-    def run(self, actions, verilator_includes=[]):
+    def run(self, actions, verilator_includes=[], num_tests=0,
+            _circuit=None):
         driver_file = self.directory / Path(f&#34;{self.circuit_name}_driver.cpp&#34;)
         # Write the verilator driver to file.
-        src = self.generate_code(actions, verilator_includes)
+        src = self.generate_code(actions, verilator_includes, num_tests,
+                                 _circuit)
         with open(driver_file, &#34;w&#34;) as f:
             f.write(src)
         # Run a series of commands: run the Makefile output by verilator, and
@@ -311,7 +337,59 @@ class VerilatorTarget(VerilogTarget):
         verilator_make_cmd = verilator_utils.verilator_make_cmd(
             self.circuit_name)
         assert not self.run_from_directory(verilator_make_cmd)
-        assert not self.run_from_directory(f&#34;./obj_dir/V{self.circuit_name}&#34;)}</code></pre>
+        assert not self.run_from_directory(f&#34;./obj_dir/V{self.circuit_name}&#34;)
+
+    def add_assumptions(self, circuit, actions, i):
+        main_body = &#34;&#34;
+        for port in circuit.interface.ports.values():
+            if port.isoutput():
+                for assumption in self.assumptions:
+                    # TODO: Chained assumptions?
+                    assume_port = assumption.port
+                    if isinstance(assume_port, SelectPath):
+                        assume_port = assume_port[-1]
+                    if assume_port is port:
+                        pred = assumption.value
+                        while True:
+                            randval = random_bv(len(assume_port))
+                            if pred(randval):
+                                break
+                        code = self.make_poke(
+                            len(actions) + i, Poke(port, randval))
+                        for line in code:
+                            main_body += f&#34;  {line}\n&#34;
+                        break
+        return main_body
+
+    def add_guarantees(self, circuit, actions, i):
+        main_body = &#34;&#34;
+        for name, port in circuit.interface.ports.items():
+            if port.isinput():
+                for guarantee in self.guarantees:
+                    guarantee_port = guarantee.port
+                    if isinstance(guarantee_port, SelectPath):
+                        guarantee_port = guarantee_port[-1]
+                    if guarantee_port is port:
+                        # TODO: Support functions too
+                        code = utils.get_short_lambda_body_text(guarantee.value)
+                        # TODO: More robust symbol replacer on AST
+                        for port in circuit.interface.ports:
+                            code = code.replace(&#34;and&#34;, &#34;&amp;&amp;&#34;)
+                            code = code.replace(port, f&#34;top-&gt;{port}&#34;)
+                        main_body += f&#34;&#34;&#34;\
+    if (!({code})) {{
+      std::cerr &lt;&lt; std::endl;  // end the current line
+      std::cerr &lt;&lt; \&#34;Got      : 0x\&#34; &lt;&lt; std::hex &lt;&lt; top-&gt;{name} &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;Expected : {code}&#34; &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;i        : {i}\&#34; &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;Port     : {name}\&#34; &lt;&lt; std::endl;
+      #if VM_TRACE
+        tracer-&gt;close();
+      #endif
+      exit(1);
+    }}
+&#34;&#34;&#34;
+        return main_body}</code></pre>
 </details>
 </section>
 <section>
@@ -379,10 +457,14 @@ class VerilatorTarget(VerilogTarget):
             path = action.port.path.replace(&#34;.&#34;, &#34;-&gt;&#34;)
             name = f&#34;{prefix}-&gt;{path}&#34;
         elif isinstance(action.port, SelectPath):
-            # TODO: Find the version that they changed this, 3.874 is known to
-            # use top-&gt;v instead of top-&gt;{circuit_name}
-            name = f&#34;{prefix}-&gt;&#34; + action.port.verilator_path
-            self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
+            name = &#34;&#34;
+            if len(action.port) &gt; 2:
+                # TODO: Find the version that they changed this, 3.874 is known
+                # to use top-&gt;v instead of top-&gt;{circuit_name}
+                name += f&#34;{prefix}-&gt;&#34;
+            name += action.port.verilator_path
+            if len(action.port) &gt; 2:
+                self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
             for item in action.port[1:-1]:
                 circuit = type(item.instance)
                 circuit_name = circuit.verilog_name
@@ -393,6 +475,11 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name += &#34;_&#34;
                     circuit_name += f&#34;_I{circuit.coreir_configargs[&#39;init&#39;]}&#34;
                     circuit_name += f&#34;_W{circuit.coreir_genargs[&#39;width&#39;]}&#34;
+                elif circuit_name == &#34;coreir_reg_arst&#34;:
+                    circuit_name += &#34;_&#34;
+                    circuit_name += f&#34;_I{circuit.coreir_configargs[&#39;init&#39;]}&#34;
+                    if circuit.coreir_genargs[&#39;width&#39;] != 1:
+                        circuit_name += f&#34;_W{circuit.coreir_genargs[&#39;width&#39;]}&#34;
                 self.debug_includes.add(f&#34;{circuit_name}&#34;)
         else:
             name = verilog_name(action.port.name)
@@ -402,12 +489,13 @@ class VerilatorTarget(VerilogTarget):
             isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
             and action.port[-1].path == &#34;outReg&#34;
 
+        max_bits = 64 if platform.architecture()[0] == &#34;64bit&#34; else 32
         if isinstance(action.value, BitVector) and \
-                action.value.num_bits &gt; 32:
+                action.value.num_bits &gt; max_bits:
             asserts = []
-            for i in range(math.ceil(action.value.num_bits / 32)):
-                value = action.value[i * 32:min(
-                    (i + 1) * 32, action.value.num_bits)]
+            for i in range(math.ceil(action.value.num_bits / max_bits)):
+                value = action.value[i * max_bits:min(
+                    (i + 1) * max_bits, action.value.num_bits)]
                 asserts += [f&#34;top-&gt;{name}[{i}] = {value};&#34;]
             if is_reg_poke:
                 raise NotImplementedError()
@@ -453,8 +541,12 @@ class VerilatorTarget(VerilogTarget):
             name = f&#34;{prefix}-&gt;{path}&#34;
             debug_name = name
         elif isinstance(action.port, SelectPath):
-            name = f&#34;{prefix}-&gt;&#34; + action.port.verilator_path
-            self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
+            name = action.port.verilator_path
+            if len(action.port) &gt; 2:
+                name = f&#34;{prefix}-&gt;&#34; + name
+            if self.verilator_version &gt;= 3.856:
+                if len(action.port) &gt; 2:
+                    self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f&#34;{circuit_name}&#34;)
@@ -470,14 +562,12 @@ class VerilatorTarget(VerilogTarget):
             else:
                 value = f&#34;top-&gt;{verilog_name(value.port.name)}&#34;
         elif isinstance(value, PortWrapper):
-            self.debug_includes.add(f&#34;{value.select_path[0].circuit.name}&#34;)
+            if self.verilator_version &gt;= 3.856:
+                if len(action.port) &gt; 2:
+                    self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f&#34;{circuit_name}&#34;)
-            if self.verilator_version &gt; 3.874:
-                prefix = f&#34;{self.circuit_name}&#34;
-            else:
-                prefix = f&#34;v&#34;
             value = f&#34;top-&gt;{prefix}-&gt;&#34; + value.select_path.verilator_path
         elif isinstance(action.port, m.SIntType) and value &lt; 0:
             # Handle sign extension for verilator since it expects and
@@ -504,7 +594,7 @@ class VerilatorTarget(VerilogTarget):
             code.append(f&#34;top-&gt;{name} ^= 1;&#34;)
         return code
 
-    def generate_code(self, actions, verilator_includes):
+    def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
             verilator_includes.insert(
@@ -526,6 +616,13 @@ class VerilatorTarget(VerilogTarget):
             for line in code:
                 main_body += f&#34;  {line}\n&#34;
 
+        for i in range(num_tests):
+            main_body += self.add_assumptions(circuit, actions, i)
+            code = self.make_eval(i, Eval())
+            for line in code:
+                main_body += f&#34;  {line}\n&#34;
+            main_body += self.add_guarantees(circuit, actions, i)
+
         includes += [f&#39;&#34;V{self.circuit_name}_{include}.h&#34;&#39; for include in
                      self.debug_includes]
 
@@ -541,10 +638,12 @@ class VerilatorTarget(VerilogTarget):
     def run_from_directory(self, cmd):
         return subprocess.call(cmd, cwd=self.directory, shell=True)
 
-    def run(self, actions, verilator_includes=[]):
+    def run(self, actions, verilator_includes=[], num_tests=0,
+            _circuit=None):
         driver_file = self.directory / Path(f&#34;{self.circuit_name}_driver.cpp&#34;)
         # Write the verilator driver to file.
-        src = self.generate_code(actions, verilator_includes)
+        src = self.generate_code(actions, verilator_includes, num_tests,
+                                 _circuit)
         with open(driver_file, &#34;w&#34;) as f:
             f.write(src)
         # Run a series of commands: run the Makefile output by verilator, and
@@ -552,7 +651,59 @@ class VerilatorTarget(VerilogTarget):
         verilator_make_cmd = verilator_utils.verilator_make_cmd(
             self.circuit_name)
         assert not self.run_from_directory(verilator_make_cmd)
-        assert not self.run_from_directory(f&#34;./obj_dir/V{self.circuit_name}&#34;)}</code></pre>
+        assert not self.run_from_directory(f&#34;./obj_dir/V{self.circuit_name}&#34;)
+
+    def add_assumptions(self, circuit, actions, i):
+        main_body = &#34;&#34;
+        for port in circuit.interface.ports.values():
+            if port.isoutput():
+                for assumption in self.assumptions:
+                    # TODO: Chained assumptions?
+                    assume_port = assumption.port
+                    if isinstance(assume_port, SelectPath):
+                        assume_port = assume_port[-1]
+                    if assume_port is port:
+                        pred = assumption.value
+                        while True:
+                            randval = random_bv(len(assume_port))
+                            if pred(randval):
+                                break
+                        code = self.make_poke(
+                            len(actions) + i, Poke(port, randval))
+                        for line in code:
+                            main_body += f&#34;  {line}\n&#34;
+                        break
+        return main_body
+
+    def add_guarantees(self, circuit, actions, i):
+        main_body = &#34;&#34;
+        for name, port in circuit.interface.ports.items():
+            if port.isinput():
+                for guarantee in self.guarantees:
+                    guarantee_port = guarantee.port
+                    if isinstance(guarantee_port, SelectPath):
+                        guarantee_port = guarantee_port[-1]
+                    if guarantee_port is port:
+                        # TODO: Support functions too
+                        code = utils.get_short_lambda_body_text(guarantee.value)
+                        # TODO: More robust symbol replacer on AST
+                        for port in circuit.interface.ports:
+                            code = code.replace(&#34;and&#34;, &#34;&amp;&amp;&#34;)
+                            code = code.replace(port, f&#34;top-&gt;{port}&#34;)
+                        main_body += f&#34;&#34;&#34;\
+    if (!({code})) {{
+      std::cerr &lt;&lt; std::endl;  // end the current line
+      std::cerr &lt;&lt; \&#34;Got      : 0x\&#34; &lt;&lt; std::hex &lt;&lt; top-&gt;{name} &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;Expected : {code}&#34; &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;i        : {i}\&#34; &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;Port     : {name}\&#34; &lt;&lt; std::endl;
+      #if VM_TRACE
+        tracer-&gt;close();
+      #endif
+      exit(1);
+    }}
+&#34;&#34;&#34;
+        return main_body}</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -611,14 +762,82 @@ Directory to search for includes</p>
     self.verilator_version = float(verilator_version.split()[1])}</code></pre>
 </details>
 </dd>
-<dt id="fault.verilator_target.VerilatorTarget.generate_code"><code class="name flex">
-<span>def <span class="ident">generate_code</span></span>(<span>self, actions, verilator_includes)</span>
+<dt id="fault.verilator_target.VerilatorTarget.add_assumptions"><code class="name flex">
+<span>def <span class="ident">add_assumptions</span></span>(<span>self, circuit, actions, i)</span>
 </code></dt>
 <dd>
 <section class="desc"></section>
 <details class="source">
 <summary>Source code</summary>
-<pre><code class="python">def generate_code(self, actions, verilator_includes):
+<pre><code class="python">def add_assumptions(self, circuit, actions, i):
+    main_body = &#34;&#34;
+    for port in circuit.interface.ports.values():
+        if port.isoutput():
+            for assumption in self.assumptions:
+                # TODO: Chained assumptions?
+                assume_port = assumption.port
+                if isinstance(assume_port, SelectPath):
+                    assume_port = assume_port[-1]
+                if assume_port is port:
+                    pred = assumption.value
+                    while True:
+                        randval = random_bv(len(assume_port))
+                        if pred(randval):
+                            break
+                    code = self.make_poke(
+                        len(actions) + i, Poke(port, randval))
+                    for line in code:
+                        main_body += f&#34;  {line}\n&#34;
+                    break
+    return main_body}</code></pre>
+</details>
+</dd>
+<dt id="fault.verilator_target.VerilatorTarget.add_guarantees"><code class="name flex">
+<span>def <span class="ident">add_guarantees</span></span>(<span>self, circuit, actions, i)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">    def add_guarantees(self, circuit, actions, i):
+        main_body = &#34;&#34;
+        for name, port in circuit.interface.ports.items():
+            if port.isinput():
+                for guarantee in self.guarantees:
+                    guarantee_port = guarantee.port
+                    if isinstance(guarantee_port, SelectPath):
+                        guarantee_port = guarantee_port[-1]
+                    if guarantee_port is port:
+                        # TODO: Support functions too
+                        code = utils.get_short_lambda_body_text(guarantee.value)
+                        # TODO: More robust symbol replacer on AST
+                        for port in circuit.interface.ports:
+                            code = code.replace(&#34;and&#34;, &#34;&amp;&amp;&#34;)
+                            code = code.replace(port, f&#34;top-&gt;{port}&#34;)
+                        main_body += f&#34;&#34;&#34;\
+    if (!({code})) {{
+      std::cerr &lt;&lt; std::endl;  // end the current line
+      std::cerr &lt;&lt; \&#34;Got      : 0x\&#34; &lt;&lt; std::hex &lt;&lt; top-&gt;{name} &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;Expected : {code}&#34; &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;i        : {i}\&#34; &lt;&lt; std::endl;
+      std::cerr &lt;&lt; \&#34;Port     : {name}\&#34; &lt;&lt; std::endl;
+      #if VM_TRACE
+        tracer-&gt;close();
+      #endif
+      exit(1);
+    }}
+&#34;&#34;&#34;
+        return main_body}</code></pre>
+</details>
+</dd>
+<dt id="fault.verilator_target.VerilatorTarget.generate_code"><code class="name flex">
+<span>def <span class="ident">generate_code</span></span>(<span>self, actions, verilator_includes, num_tests, circuit)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def generate_code(self, actions, verilator_includes, num_tests, circuit):
     if verilator_includes:
         # Include the top circuit by default
         verilator_includes.insert(
@@ -639,6 +858,13 @@ Directory to search for includes</p>
         code = self.generate_action_code(i, action)
         for line in code:
             main_body += f&#34;  {line}\n&#34;
+
+    for i in range(num_tests):
+        main_body += self.add_assumptions(circuit, actions, i)
+        code = self.make_eval(i, Eval())
+        for line in code:
+            main_body += f&#34;  {line}\n&#34;
+        main_body += self.add_guarantees(circuit, actions, i)
 
     includes += [f&#39;&#34;V{self.circuit_name}_{include}.h&#34;&#39; for include in
                  self.debug_includes]
@@ -686,8 +912,12 @@ Directory to search for includes</p>
         name = f&#34;{prefix}-&gt;{path}&#34;
         debug_name = name
     elif isinstance(action.port, SelectPath):
-        name = f&#34;{prefix}-&gt;&#34; + action.port.verilator_path
-        self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
+        name = action.port.verilator_path
+        if len(action.port) &gt; 2:
+            name = f&#34;{prefix}-&gt;&#34; + name
+        if self.verilator_version &gt;= 3.856:
+            if len(action.port) &gt; 2:
+                self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
         for item in action.port[1:-1]:
             circuit_name = type(item.instance).name
             self.debug_includes.add(f&#34;{circuit_name}&#34;)
@@ -703,14 +933,12 @@ Directory to search for includes</p>
         else:
             value = f&#34;top-&gt;{verilog_name(value.port.name)}&#34;
     elif isinstance(value, PortWrapper):
-        self.debug_includes.add(f&#34;{value.select_path[0].circuit.name}&#34;)
+        if self.verilator_version &gt;= 3.856:
+            if len(action.port) &gt; 2:
+                self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
         for item in value.select_path[1:-1]:
             circuit_name = type(item.instance).name
             self.debug_includes.add(f&#34;{circuit_name}&#34;)
-        if self.verilator_version &gt; 3.874:
-            prefix = f&#34;{self.circuit_name}&#34;
-        else:
-            prefix = f&#34;v&#34;
         value = f&#34;top-&gt;{prefix}-&gt;&#34; + value.select_path.verilator_path
     elif isinstance(action.port, m.SIntType) and value &lt; 0:
         # Handle sign extension for verilator since it expects and
@@ -738,10 +966,14 @@ Directory to search for includes</p>
         path = action.port.path.replace(&#34;.&#34;, &#34;-&gt;&#34;)
         name = f&#34;{prefix}-&gt;{path}&#34;
     elif isinstance(action.port, SelectPath):
-        # TODO: Find the version that they changed this, 3.874 is known to
-        # use top-&gt;v instead of top-&gt;{circuit_name}
-        name = f&#34;{prefix}-&gt;&#34; + action.port.verilator_path
-        self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
+        name = &#34;&#34;
+        if len(action.port) &gt; 2:
+            # TODO: Find the version that they changed this, 3.874 is known
+            # to use top-&gt;v instead of top-&gt;{circuit_name}
+            name += f&#34;{prefix}-&gt;&#34;
+        name += action.port.verilator_path
+        if len(action.port) &gt; 2:
+            self.debug_includes.add(f&#34;{action.port[0].circuit.name}&#34;)
         for item in action.port[1:-1]:
             circuit = type(item.instance)
             circuit_name = circuit.verilog_name
@@ -752,6 +984,11 @@ Directory to search for includes</p>
                 circuit_name += &#34;_&#34;
                 circuit_name += f&#34;_I{circuit.coreir_configargs[&#39;init&#39;]}&#34;
                 circuit_name += f&#34;_W{circuit.coreir_genargs[&#39;width&#39;]}&#34;
+            elif circuit_name == &#34;coreir_reg_arst&#34;:
+                circuit_name += &#34;_&#34;
+                circuit_name += f&#34;_I{circuit.coreir_configargs[&#39;init&#39;]}&#34;
+                if circuit.coreir_genargs[&#39;width&#39;] != 1:
+                    circuit_name += f&#34;_W{circuit.coreir_genargs[&#39;width&#39;]}&#34;
             self.debug_includes.add(f&#34;{circuit_name}&#34;)
     else:
         name = verilog_name(action.port.name)
@@ -761,12 +998,13 @@ Directory to search for includes</p>
         isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
         and action.port[-1].path == &#34;outReg&#34;
 
+    max_bits = 64 if platform.architecture()[0] == &#34;64bit&#34; else 32
     if isinstance(action.value, BitVector) and \
-            action.value.num_bits &gt; 32:
+            action.value.num_bits &gt; max_bits:
         asserts = []
-        for i in range(math.ceil(action.value.num_bits / 32)):
-            value = action.value[i * 32:min(
-                (i + 1) * 32, action.value.num_bits)]
+        for i in range(math.ceil(action.value.num_bits / max_bits)):
+            value = action.value[i * max_bits:min(
+                (i + 1) * max_bits, action.value.num_bits)]
             asserts += [f&#34;top-&gt;{name}[{i}] = {value};&#34;]
         if is_reg_poke:
             raise NotImplementedError()
@@ -828,16 +1066,18 @@ Directory to search for includes</p>
 </details>
 </dd>
 <dt id="fault.verilator_target.VerilatorTarget.run"><code class="name flex">
-<span>def <span class="ident">run</span></span>(<span>self, actions, verilator_includes=[])</span>
+<span>def <span class="ident">run</span></span>(<span>self, actions, verilator_includes=[], num_tests=0)</span>
 </code></dt>
 <dd>
 <section class="desc"></section>
 <details class="source">
 <summary>Source code</summary>
-<pre><code class="python">def run(self, actions, verilator_includes=[]):
+<pre><code class="python">def run(self, actions, verilator_includes=[], num_tests=0,
+        _circuit=None):
     driver_file = self.directory / Path(f&#34;{self.circuit_name}_driver.cpp&#34;)
     # Write the verilator driver to file.
-    src = self.generate_code(actions, verilator_includes)
+    src = self.generate_code(actions, verilator_includes, num_tests,
+                             _circuit)
     with open(driver_file, &#34;w&#34;) as f:
         f.write(src)
     # Run a series of commands: run the Makefile output by verilator, and
@@ -881,6 +1121,8 @@ Directory to search for includes</p>
 <h4><code><a title="fault.verilator_target.VerilatorTarget" href="verilog_target.html#fault.verilog_target.VerilogTarget">VerilatorTarget</a></code></h4>
 <ul class="two-column">
 <li><code><a title="fault.verilator_target.VerilatorTarget.__init__" href="#fault.verilator_target.VerilatorTarget.__init__">__init__</a></code></li>
+<li><code><a title="fault.verilator_target.VerilatorTarget.add_assumptions" href="#fault.verilator_target.VerilatorTarget.add_assumptions">add_assumptions</a></code></li>
+<li><code><a title="fault.verilator_target.VerilatorTarget.add_guarantees" href="#fault.verilator_target.VerilatorTarget.add_guarantees">add_guarantees</a></code></li>
 <li><code><a title="fault.verilator_target.VerilatorTarget.generate_code" href="#fault.verilator_target.VerilatorTarget.generate_code">generate_code</a></code></li>
 <li><code><a title="fault.verilator_target.VerilatorTarget.make_eval" href="#fault.verilator_target.VerilatorTarget.make_eval">make_eval</a></code></li>
 <li><code><a title="fault.verilator_target.VerilatorTarget.make_expect" href="#fault.verilator_target.VerilatorTarget.make_expect">make_expect</a></code></li>

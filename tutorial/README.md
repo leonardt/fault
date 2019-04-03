@@ -314,7 +314,6 @@ may find the function `fault.random.random_bv(width)`, which returns a random
 `hwtypes.BitVector` of a specified `width`, useful.
 
 ## Extending The Tester Class
-**TODO: Explain poke method API**
 
 The `fault.Tester` class can be extended using the standard Python subclassing
 pattern.  Here's an example that defines a `ResetTester` which exposes a
@@ -331,6 +330,11 @@ class ResetTester(fault.Tester):
         self.poke(self.reset_port, 0)
         self.eval()
 ```
+
+Notice that the `reset` method implementation uses the action method API (i.e.
+`self.poke`) rather than the `setattr`/`getattr` based interface described
+before.  This pattern is useful for writing generic `Tester`s parametrized over
+ports.
 
 Defining methods on a `Tester` subclass allows you to use the UVM driver
 pattern to lower high-level API calls into low-level port values.  It also

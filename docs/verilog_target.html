@@ -28,18 +28,9 @@ from fault.target import Target
 from pathlib import Path
 import fault.actions as actions
 from fault.util import flatten
-
-
-def verilog_name(name):
-    if isinstance(name, m.ref.DefnRef):
-        return str(name)
-    if isinstance(name, m.ref.ArrayRef):
-        array_name = verilog_name(name.array.name)
-        return f&#34;{array_name}_{name.index}&#34;
-    if isinstance(name, m.ref.TupleRef):
-        tuple_name = verilog_name(name.tuple.name)
-        return f&#34;{tuple_name}_{name.index}&#34;
-    raise NotImplementedError(name, type(name))
+import os
+from fault.select_path import SelectPath
+from fault.verilog_utils import verilog_name
 
 
 class VerilogTarget(Target):
@@ -57,6 +48,7 @@ class VerilogTarget(Target):
             self.circuit_name = circuit_name
 
         self.directory = Path(directory)
+        os.makedirs(directory, exist_ok=True)
 
         self.skip_compile = skip_compile
 
@@ -65,25 +57,44 @@ class VerilogTarget(Target):
         self.magma_output = magma_output
         self.magma_opts = magma_opts
 
-        self.verilog_file = Path(f&#34;{self.circuit_name}.v&#34;)
+        if hasattr(circuit, &#34;verilog_file_name&#34;) and \
+                os.path.splitext(circuit.verilog_file_name)[-1] == &#34;.sv&#34;:
+            suffix = &#34;sv&#34;
+        else:
+            suffix = &#34;v&#34;
+        self.verilog_file = Path(f&#34;{self.circuit_name}.{suffix}&#34;)
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
-            prefix = str(self.directory / self.verilog_file)[:-2]
+            prefix = os.path.splitext(self.directory / self.verilog_file)[0]
             m.compile(prefix, self.circuit, output=self.magma_output,
                       **self.magma_opts)
             if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f&#34;Compiling {self.circuit} failed&#34;)
 
+        self.assumptions = []
+        self.guarantees = []
+
+    def make_assume(self, i, action):
+        self.assumptions.append(action)
+        return &#34;&#34;
+
+    def make_guarantee(self, i, action):
+        self.guarantees.append(action)
+        return &#34;&#34;
+
     def generate_array_action_code(self, i, action):
         result = []
-        for j in range(action.port.N):
+        port = action.port
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        for j in range(port.N):
             if isinstance(action, actions.Print):
                 value = action.format_str
             else:
                 value = action.value[j]
             result += [
                 self.generate_action_code(
-                    i, type(action)(action.port[j], value)
+                    i, type(action)(port[j], value)
                 )]
         return flatten(result)
 
@@ -91,6 +102,11 @@ class VerilogTarget(Target):
         if isinstance(action, (actions.PortAction, actions.Print)) and \
                 isinstance(action.port, m.ArrayType) and \
                 not isinstance(action.port.T, m.BitKind):
+            return self.generate_array_action_code(i, action)
+        elif isinstance(action, (actions.PortAction, actions.Print)) and \
+                isinstance(action.port, SelectPath) and \
+                isinstance(action.port[-1], m.ArrayType) and \
+                not isinstance(action.port[-1].T, m.BitKind):
             return self.generate_array_action_code(i, action)
         if isinstance(action, actions.Poke):
             return self.make_poke(i, action)
@@ -103,6 +119,10 @@ class VerilogTarget(Target):
             return self.make_eval(i, action)
         if isinstance(action, actions.Step):
             return self.make_step(i, action)
+        if isinstance(action, actions.Assume):
+            return self.make_assume(i, action)
+        if isinstance(action, actions.Guarantee):
+            return self.make_guarantee(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -131,28 +151,6 @@ class VerilogTarget(Target):
 <section>
 </section>
 <section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="fault.verilog_target.verilog_name"><code class="name flex">
-<span>def <span class="ident">verilog_name</span></span>(<span>name)</span>
-</code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>Source code</summary>
-<pre><code class="python">def verilog_name(name):
-    if isinstance(name, m.ref.DefnRef):
-        return str(name)
-    if isinstance(name, m.ref.ArrayRef):
-        array_name = verilog_name(name.array.name)
-        return f&#34;{array_name}_{name.index}&#34;
-    if isinstance(name, m.ref.TupleRef):
-        tuple_name = verilog_name(name.tuple.name)
-        return f&#34;{tuple_name}_{name.index}&#34;
-    raise NotImplementedError(name, type(name))}</code></pre>
-</details>
-</dd>
-</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
@@ -180,6 +178,7 @@ class VerilogTarget(Target):
             self.circuit_name = circuit_name
 
         self.directory = Path(directory)
+        os.makedirs(directory, exist_ok=True)
 
         self.skip_compile = skip_compile
 
@@ -188,25 +187,44 @@ class VerilogTarget(Target):
         self.magma_output = magma_output
         self.magma_opts = magma_opts
 
-        self.verilog_file = Path(f&#34;{self.circuit_name}.v&#34;)
+        if hasattr(circuit, &#34;verilog_file_name&#34;) and \
+                os.path.splitext(circuit.verilog_file_name)[-1] == &#34;.sv&#34;:
+            suffix = &#34;sv&#34;
+        else:
+            suffix = &#34;v&#34;
+        self.verilog_file = Path(f&#34;{self.circuit_name}.{suffix}&#34;)
         # Optionally compile this module to verilog first.
         if not self.skip_compile:
-            prefix = str(self.directory / self.verilog_file)[:-2]
+            prefix = os.path.splitext(self.directory / self.verilog_file)[0]
             m.compile(prefix, self.circuit, output=self.magma_output,
                       **self.magma_opts)
             if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f&#34;Compiling {self.circuit} failed&#34;)
 
+        self.assumptions = []
+        self.guarantees = []
+
+    def make_assume(self, i, action):
+        self.assumptions.append(action)
+        return &#34;&#34;
+
+    def make_guarantee(self, i, action):
+        self.guarantees.append(action)
+        return &#34;&#34;
+
     def generate_array_action_code(self, i, action):
         result = []
-        for j in range(action.port.N):
+        port = action.port
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        for j in range(port.N):
             if isinstance(action, actions.Print):
                 value = action.format_str
             else:
                 value = action.value[j]
             result += [
                 self.generate_action_code(
-                    i, type(action)(action.port[j], value)
+                    i, type(action)(port[j], value)
                 )]
         return flatten(result)
 
@@ -214,6 +232,11 @@ class VerilogTarget(Target):
         if isinstance(action, (actions.PortAction, actions.Print)) and \
                 isinstance(action.port, m.ArrayType) and \
                 not isinstance(action.port.T, m.BitKind):
+            return self.generate_array_action_code(i, action)
+        elif isinstance(action, (actions.PortAction, actions.Print)) and \
+                isinstance(action.port, SelectPath) and \
+                isinstance(action.port[-1], m.ArrayType) and \
+                not isinstance(action.port[-1].T, m.BitKind):
             return self.generate_array_action_code(i, action)
         if isinstance(action, actions.Poke):
             return self.make_poke(i, action)
@@ -226,6 +249,10 @@ class VerilogTarget(Target):
             return self.make_eval(i, action)
         if isinstance(action, actions.Step):
             return self.make_step(i, action)
+        if isinstance(action, actions.Assume):
+            return self.make_assume(i, action)
+        if isinstance(action, actions.Guarantee):
+            return self.make_guarantee(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -262,6 +289,11 @@ class VerilogTarget(Target):
             isinstance(action.port, m.ArrayType) and \
             not isinstance(action.port.T, m.BitKind):
         return self.generate_array_action_code(i, action)
+    elif isinstance(action, (actions.PortAction, actions.Print)) and \
+            isinstance(action.port, SelectPath) and \
+            isinstance(action.port[-1], m.ArrayType) and \
+            not isinstance(action.port[-1].T, m.BitKind):
+        return self.generate_array_action_code(i, action)
     if isinstance(action, actions.Poke):
         return self.make_poke(i, action)
     if isinstance(action, actions.Print):
@@ -273,6 +305,10 @@ class VerilogTarget(Target):
         return self.make_eval(i, action)
     if isinstance(action, actions.Step):
         return self.make_step(i, action)
+    if isinstance(action, actions.Assume):
+        return self.make_assume(i, action)
+    if isinstance(action, actions.Guarantee):
+        return self.make_guarantee(i, action)
     raise NotImplementedError(action)}</code></pre>
 </details>
 </dd>
@@ -285,16 +321,31 @@ class VerilogTarget(Target):
 <summary>Source code</summary>
 <pre><code class="python">def generate_array_action_code(self, i, action):
     result = []
-    for j in range(action.port.N):
+    port = action.port
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    for j in range(port.N):
         if isinstance(action, actions.Print):
             value = action.format_str
         else:
             value = action.value[j]
         result += [
             self.generate_action_code(
-                i, type(action)(action.port[j], value)
+                i, type(action)(port[j], value)
             )]
     return flatten(result)}</code></pre>
+</details>
+</dd>
+<dt id="fault.verilog_target.VerilogTarget.make_assume"><code class="name flex">
+<span>def <span class="ident">make_assume</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_assume(self, i, action):
+    self.assumptions.append(action)
+    return &#34;&#34;}</code></pre>
 </details>
 </dd>
 <dt id="fault.verilog_target.VerilogTarget.make_eval"><code class="name flex">
@@ -319,6 +370,18 @@ def make_eval(self, i, action):
 <pre><code class="python">@abstractmethod
 def make_expect(self, i, action):
     pass}</code></pre>
+</details>
+</dd>
+<dt id="fault.verilog_target.VerilogTarget.make_guarantee"><code class="name flex">
+<span>def <span class="ident">make_guarantee</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_guarantee(self, i, action):
+    self.guarantees.append(action)
+    return &#34;&#34;}</code></pre>
 </details>
 </dd>
 <dt id="fault.verilog_target.VerilogTarget.make_poke"><code class="name flex">
@@ -381,11 +444,6 @@ def make_step(self, i, action):
 <li><code><a title="fault" href="index.html">fault</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="fault.verilog_target.verilog_name" href="#fault.verilog_target.verilog_name">verilog_name</a></code></li>
-</ul>
-</li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
@@ -393,8 +451,10 @@ def make_step(self, i, action):
 <ul class="two-column">
 <li><code><a title="fault.verilog_target.VerilogTarget.generate_action_code" href="#fault.verilog_target.VerilogTarget.generate_action_code">generate_action_code</a></code></li>
 <li><code><a title="fault.verilog_target.VerilogTarget.generate_array_action_code" href="#fault.verilog_target.VerilogTarget.generate_array_action_code">generate_array_action_code</a></code></li>
+<li><code><a title="fault.verilog_target.VerilogTarget.make_assume" href="#fault.verilog_target.VerilogTarget.make_assume">make_assume</a></code></li>
 <li><code><a title="fault.verilog_target.VerilogTarget.make_eval" href="#fault.verilog_target.VerilogTarget.make_eval">make_eval</a></code></li>
 <li><code><a title="fault.verilog_target.VerilogTarget.make_expect" href="#fault.verilog_target.VerilogTarget.make_expect">make_expect</a></code></li>
+<li><code><a title="fault.verilog_target.VerilogTarget.make_guarantee" href="#fault.verilog_target.VerilogTarget.make_guarantee">make_guarantee</a></code></li>
 <li><code><a title="fault.verilog_target.VerilogTarget.make_poke" href="#fault.verilog_target.VerilogTarget.make_poke">make_poke</a></code></li>
 <li><code><a title="fault.verilog_target.VerilogTarget.make_print" href="#fault.verilog_target.VerilogTarget.make_print">make_print</a></code></li>
 <li><code><a title="fault.verilog_target.VerilogTarget.make_step" href="#fault.verilog_target.VerilogTarget.make_step">make_step</a></code></li>

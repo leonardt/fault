@@ -32,7 +32,6 @@ from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
-from fault.select_path import SelectPath
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
 
@@ -111,8 +110,12 @@ class Tester:
         &#34;&#34;&#34;
         Set `port` to be `value`
         &#34;&#34;&#34;
-        value = make_value(port, value)
-        self.actions.append(actions.Poke(port, value))
+        if isinstance(port, m.TupleType):
+            for p, v in zip(port, value):
+                self.poke(p, v)
+        else:
+            value = make_value(port, value)
+            self.actions.append(actions.Poke(port, value))
 
     def peek(self, port):
         &#34;&#34;&#34;
@@ -362,8 +365,12 @@ execution of tests.</p>
         &#34;&#34;&#34;
         Set `port` to be `value`
         &#34;&#34;&#34;
-        value = make_value(port, value)
-        self.actions.append(actions.Poke(port, value))
+        if isinstance(port, m.TupleType):
+            for p, v in zip(port, value):
+                self.poke(p, v)
+        else:
+            value = make_value(port, value)
+            self.actions.append(actions.Poke(port, value))
 
     def peek(self, port):
         &#34;&#34;&#34;
@@ -687,8 +694,12 @@ corresponding target object.</p>
     &#34;&#34;&#34;
     Set `port` to be `value`
     &#34;&#34;&#34;
-    value = make_value(port, value)
-    self.actions.append(actions.Poke(port, value))}</code></pre>
+    if isinstance(port, m.TupleType):
+        for p, v in zip(port, value):
+            self.poke(p, v)
+    else:
+        value = make_value(port, value)
+        self.actions.append(actions.Poke(port, value))}</code></pre>
 </details>
 </dd>
 <dt id="fault.tester.Tester.print"><code class="name flex">
