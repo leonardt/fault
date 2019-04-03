@@ -142,9 +142,6 @@ environments.
 
 ## Tester Abstraction
 
-**TODO: Discuss staged metaprogramming (mainly that fault actions are recorded
-and generated into a test bench to be performed at a later stage)**
-
 The `fault.Tester` object is the main entity provided by the fault library.  It
 provides a mechanism for recording a set of test actions performed on a magma
 circuit.  Full documentation can be found at
@@ -193,6 +190,14 @@ tff_tester = fault.Tester(TFF, clock=TFF.CLK)
 ```
 
 ### Tester Actions
+The `Tester` class provides facilities to perform various testing *actions*.
+These actions are recorded by the object and used when compiling to a test
+execution target.  It is important to understand the staged metaprogramming
+architecture underlying the fault system. That is, fault tests are executed in
+at a different stage than when they are specified. This allows the users to
+metaprogram the description of test (stage 1), then execute the metaprogrammed
+test (stage 2).
+
 #### Poke
 With an instance of a `fault.Tester` object, you can now perform actions to
 verify your circuit.  The first actions introduced are `poke`, `eval`, and
