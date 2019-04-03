@@ -10,7 +10,7 @@ fixes and other improvements are always welcome!
 
 <!-- toc -->
 
-- [Testing Hardware Circuits using Fault](#testing-hardware-circuits-using-fault)
+- [Section 1: Testing Hardware Circuits using Fault](#section-1-testing-hardware-circuits-using-fault)
   * [Installation](#installation)
     + [Python 3.7.2](#python-372)
       - [MacOS](#macos)
@@ -33,7 +33,7 @@ fixes and other improvements are always welcome!
     + [Constrained Random](#constrained-random)
     + [Formal Verification](#formal-verification)
     + [Exercise 4](#exercise-4)
-- [Fault Internals](#fault-internals)
+- [Section 2: Fault Internals](#section-2-fault-internals)
   * [Testers](#testers)
     + [SymbolicTester](#symbolictester)
     + [FunctionalTester](#functionaltester)
@@ -52,7 +52,7 @@ fixes and other improvements are always welcome!
 
 <!-- tocstop -->
 
-# Testing Hardware Circuits using Fault
+# Section 1: Testing Hardware Circuits using Fault
 This section provides an introduction to using the `fault` system to
 meta-program hardware test generators.
 
@@ -637,7 +637,7 @@ have been overwritten).  It's important to remark that fault only supports the
 specification of *combinational* properties, adding support for the
 specification of temporal properties (ala LTL) is on the roadmap.
 
-# Fault Internals
+# Section 2: Fault Internals
 This section provides an introduction to the internal architecture of the fault
 system.  The goal is to provide the required knowledge for anyone interested in
 contributing bug fixes, features, or refactors to the fault codebase.  The
