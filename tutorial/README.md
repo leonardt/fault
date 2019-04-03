@@ -1,5 +1,6 @@
 # Testing Hardware Circuits using Fault
 
+<!-- generated using https://github.com/jonschlinkert/markdown-toc -->
 <!-- toc -->
 
   * [Installation](#installation)
