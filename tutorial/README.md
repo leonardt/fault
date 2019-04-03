@@ -1,3 +1,10 @@
+Welcome to the **fault tutorial**. The sources for these files are hosted in
+the [GitHub
+repository](https://github.com/leonardt/fault/tree/master/tutorial), please
+submit issues using the [GH issue
+tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
+fixes and other improvements are always welcome!
+
 # Table of Contents
 <!-- generated using https://github.com/jonschlinkert/markdown-toc -->
 
@@ -46,13 +53,8 @@
 <!-- tocstop -->
 
 # Testing Hardware Circuits using Fault
-
-Welcome to the **fault tutorial**. The sources for these files are hosted in
-the [GitHub
-repository](https://github.com/leonardt/fault/tree/master/tutorial), please
-submit issues using the [GH issue
-tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
-fixes and other improvements are always welcome!
+This section provides an introduction to using the `fault` system to
+meta-program hardware test generators.
 
 ## Installation
 ### Python 3.7.2
