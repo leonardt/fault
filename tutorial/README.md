@@ -125,7 +125,9 @@ cd mantle && pip install -e . && cd ..
 ```
 
 ## CoreIR
-Follow the instructions at https://github.com/rdaly525/coreir/blob/master/INSTALL.md
+Follow the instructions at
+https://github.com/rdaly525/coreir/blob/master/INSTALL.md (skip the Python
+bindings because those are installed by pip automatically)
 
 ## Overview
 The *fault* library abstracts circuit testing actions using Python objects.
