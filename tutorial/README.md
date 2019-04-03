@@ -637,6 +637,13 @@ have been overwritten).  It's important to remark that fault only supports the
 specification of *combinational* properties, adding support for the
 specification of temporal properties (ala LTL) is on the roadmap.
 
+## More Examples
+Armed with your understanding of fault, you should now be able to look at more
+complex examples of fault tests from real code bases. Here are some places to check
+out:
+* [canal](https://github.com/rsetaluri/canal/tree/master/tests)
+* [garnet](https://github.com/StanfordAHA/garnet/tree/master/tests)
+
 # Section 2: Fault Internals
 This section provides an introduction to the internal architecture of the fault
 system.  The goal is to provide the required knowledge for anyone interested in
