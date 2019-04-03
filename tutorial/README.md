@@ -649,6 +649,7 @@ complex examples of fault tests from real code bases. Here are some places to ch
 out:
 * [canal](https://github.com/rsetaluri/canal/tree/master/tests)
 * [garnet](https://github.com/StanfordAHA/garnet/tree/master/tests)
+* [gemstome](https://github.com/rsetaluri/gemstone/blob/master/gemstone/common/testers.py)
 
 # Section 2: Fault Internals
 This section provides an introduction to the internal architecture of the fault
