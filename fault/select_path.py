@@ -36,5 +36,9 @@ class SelectPath:
     def verilator_path(self):
         return self.make_path("->")
 
+    @property
+    def debug_name(self):
+        return self.make_path('.')
+
     def __len__(self):
         return len(self.path)
