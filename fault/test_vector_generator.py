@@ -1,7 +1,7 @@
 import fault
 from fault.random import random_bv, random_bit
 import magma as m
-from hwtypes import BitVector
+from hwtypes import BitVector, Bit
 from fault.common import get_renamed_port
 
 
@@ -10,7 +10,7 @@ def get_random_arr(name, port):
         # TODO: Hack, check the name and don't twiddle config ports, we
         # should add a config type
         if "config_" in name:
-            return BitVector(0, len(port))
+            return BitVector[len(port)](0)
         else:
             return random_bv(len(port))
     else:
@@ -29,9 +29,9 @@ def get_random_input(name, port):
         # TODO: Hack, check the name and don't twiddle config ports, we
         # should add a config type
         if "config_" in name:
-            return 0
+            return Bit(0)
         elif "reset" in name:
-            return 0
+            return Bit(0)
         else:
             return random_bit()
     else:
