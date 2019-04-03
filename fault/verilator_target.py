@@ -247,13 +247,14 @@ class VerilatorTarget(VerilogTarget):
     def make_step(self, i, action):
         name = verilog_name(action.clock.name)
         code = []
+        code.append("top->eval();")
         for step in range(action.steps):
+            code.append(f"top->{name} ^= 1;")
             code.append("top->eval();")
             code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
-            code.append(f"top->{name} ^= 1;")
         return code
 
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
