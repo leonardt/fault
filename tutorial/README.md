@@ -8,7 +8,66 @@ tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
 fixes and other improvements are always welcome!
 
 ## Installation
-**TODO**
+### Python 3.7.2
+
+Magma requires Python 3.7.2.
+If you don't have Python setup, we recommend using Miniconda
+
+#### MacOS
+```
+$ wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+$ bash Miniconda3-latest-MacOSX-x86_64.sh
+```
+
+#### Linux
+```
+$ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+$ bash Miniconda3-latest-Linux-x86_64.sh
+```
+
+Follow the prompts to install Miniconda and add Python to your PATH:
+
+```
+...
+Please, press ENTER to continue
+>>> [ENTER]
+...
+<scroll down>
+...
+Do you accept the license terms? [yes|no]
+[no] >>> yes
+...
+   - Press ENTER to confirm the location
+   - Press CRTL-C to abort the installation
+   - Or specify a different location below
+
+[/Users/yourusername/miniconda3] >>> [ENTER]
+...
+Do you wish the installer to prepend the Miniconda3 install location
+to PATH in your /Users/yourusername/.bash_profile ? [yes|no]
+[yes] >>> yes
+```
+
+### Using pip
+The simplest way to get started for this tutorial is to install fault, magma,
+and mantle using `pip`.
+
+```
+pip install fault magma-lang mantle
+```
+
+### From source
+You can also install the packages directly from the GitHub repository to access
+the bleeding edge versions.  This provides faster access to new features and
+bug fixes, but the code is less stable than the releases.
+```
+git clone https://github.com/leonardt/fault
+cd fault && pip install -e . && cd ..
+git clone https://github.com/phanrahan/magma
+cd magma && pip install -e . && cd ..
+git clone https://github.com/phanrahan/mantle
+cd mantle && pip install -e . && cd ..
+```
 
 ## Overview
 The *fault* library abstracts circuit testing actions using Python objects.
