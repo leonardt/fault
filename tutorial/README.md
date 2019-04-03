@@ -637,6 +637,23 @@ fault API docs are hosted at
 remember.
 
 ## Testers
+
+The `fault.Tester` class is the core entity that provides the testing
+abstractions.  Users instance a `Tester` object and use the API to record test
+actions, compile an action sequence to a concrete test harnesses for a specific
+target, and run the generated test harness.  The API documentation can be found
+at http://truong.io/fault/tester.html.  The source code can be found
+https://github.com/leonardt/fault/blob/master/fault/tester.py.  
+
+Those interested in adding new user facing features to fault will likely add
+them to the tester API (e.g. adding a new action).  Those wishing to extend
+fault with new targets should look at the `make_target` method.  More details
+on targets will be discussed later.
+
+The `circuit` property method returns a `CircuitWrapper` instance which is used
+to implement the `setattr`/`getattr` interface for `poke` and `expect` actions. 
+The core logic for this is defined in https://github.com/leonardt/fault/blob/master/fault/wrapper.py
+
 ### SimulationTester
 ### SymbolicTester
 

@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.5.1" />
+<title>fault.symbolic_tester API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id=^header-]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:1px solid #ddd;margin:1em 0 1em 4ch}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}#index .two-column{column-count:2}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.name small{font-weight:normal}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{background:#ffc;font-weight:400;font-size:.8em;width:11em;text-transform:uppercase;padding:0px 8px;border:1px solid #fd6;border-radius:5px;cursor:pointer}.source summary:hover{background:#fe9 !important}.source[open] summary{background:#fda}.source pre{max-height:500px;overflow-y:scroll;margin-bottom:15px}.hlist{list-syle:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink;]</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a,a:visited{text-decoration:underline}a[href]:after{content:" (" attr(href) ")"}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title"><code>fault.symbolic_tester</code> module</h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">import fault
+from fault.tester import Tester
+from fault.wrapper import Wrapper, PortWrapper, InstanceWrapper
+from fault.cosa_target import CoSATarget
+import fault.actions as actions
+
+
+class SymbolicWrapper(Wrapper):
+    def __init__(self, circuit, parent):
+        super().__init__(circuit, parent)
+
+    def __setattr__(self, attr, value):
+        # Hack to stage this after __init__ has been run, should redefine this
+        # method in a metaclass? Could also use a try/except pattern, so the
+        # exceptions only occur during object instantiation
+        if hasattr(self, &#34;circuit&#34;) and hasattr(self, &#34;instance_map&#34;):
+            if attr in self.circuit.interface.ports.keys():
+                if isinstance(self.parent, fault.Tester):
+                    self.parent.poke(self.circuit.interface.ports[attr], value)
+                else:
+                    exit(1)
+            else:
+                object.__setattr__(self, attr, value)
+        else:
+            object.__setattr__(self, attr, value)
+
+    def __getattr__(self, attr):
+        # Hack to stage this after __init__ has been run, should redefine this
+        # method in a metaclass?
+        try:
+            if attr in self.circuit.interface.ports.keys():
+                return SymbolicPortWrapper(self.circuit.interface.ports[attr],
+                                           self)
+            elif attr in self.instance_map:
+                return SymbolicInstanceWrapper(self.instance_map[attr], self)
+            else:
+                object.__getattribute__(self, attr)
+        except Exception as e:
+            object.__getattribute__(self, attr)
+
+
+class SymbolicCircuitWrapper(SymbolicWrapper):
+    pass
+
+
+class SymbolicPortWrapper(PortWrapper):
+    def assume(self, pred):
+        select_path = self.select_path
+        select_path.tester.assume(select_path, pred)
+
+    def guarantee(self, pred):
+        select_path = self.select_path
+        select_path.tester.guarantee(select_path, pred)
+
+
+class SymbolicInstanceWrapper(InstanceWrapper):
+    pass
+
+
+class SymbolicTester(Tester):
+    def __init__(self, circuit, clock=None, num_tests=100):
+        super().__init__(circuit, clock)
+        self.num_tests = num_tests
+
+    def assume(self, port, constraint):
+        &#34;&#34;&#34;
+        Place a constraint on an input port by providing a symbolic expression
+        as a Python lambda or function
+
+            symbolic_tester_inst.assume(top.I, lambda x : x &gt;= 0)
+        &#34;&#34;&#34;
+        self.actions.append(actions.Assume(port, constraint))
+
+    def guarantee(self, port, constraint):
+        &#34;&#34;&#34;
+        Assert a property about an output port by providing a symbolic
+        expression as a Python lambda or function
+
+            symbolic_tester_inst.assume(top.O, lambda x : x &gt;= 0)
+        &#34;&#34;&#34;
+        self.actions.append(actions.Guarantee(port, constraint))
+
+    @property
+    def circuit(self):
+        return SymbolicCircuitWrapper(self._circuit, self)
+
+    def run(self, target=&#34;verilator&#34;):
+        if target == &#34;verilator&#34;:
+            self.targets[target].run(self.actions, self.verilator_includes,
+                                     self.num_tests, self._circuit)
+        elif target == &#34;cosa&#34;:
+            self.targets[target].run(self.actions)
+        else:
+            raise NotImplementedError()
+
+    def make_target(self, target: str, **kwargs):
+        if target == &#34;cosa&#34;:
+            return CoSATarget(self._circuit, **kwargs)
+        else:
+            return super().make_target(target, **kwargs)}</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="fault.symbolic_tester.SymbolicCircuitWrapper"><code class="flex name class">
+<span>class <span class="ident">SymbolicCircuitWrapper</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.symbolic_tester.SymbolicWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicWrapper</a>, <a title="fault.wrapper.Wrapper" href="wrapper.html#fault.wrapper.Wrapper">Wrapper</a>)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.symbolic_tester.SymbolicWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicWrapper</a></code>
+</p>
+<section class="desc inherited"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class SymbolicCircuitWrapper(SymbolicWrapper):
+    pass}</code></pre>
+</details>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.symbolic_tester.SymbolicWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicWrapper</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.symbolic_tester.SymbolicWrapper.__init__" href="wrapper.html#fault.wrapper.Wrapper.__init__">__init__</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="fault.symbolic_tester.SymbolicInstanceWrapper"><code class="flex name class">
+<span>class <span class="ident">SymbolicInstanceWrapper</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.wrapper.InstanceWrapper" href="wrapper.html#fault.wrapper.Wrapper">InstanceWrapper</a>, <a title="fault.wrapper.Wrapper" href="wrapper.html#fault.wrapper.Wrapper">Wrapper</a>)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.wrapper.InstanceWrapper" href="wrapper.html#fault.wrapper.Wrapper">InstanceWrapper</a></code>
+</p>
+<section class="desc inherited"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class SymbolicInstanceWrapper(InstanceWrapper):
+    pass}</code></pre>
+</details>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.wrapper.InstanceWrapper" href="wrapper.html#fault.wrapper.Wrapper">InstanceWrapper</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.wrapper.InstanceWrapper.__init__" href="wrapper.html#fault.wrapper.Wrapper.__init__">__init__</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="fault.symbolic_tester.SymbolicPortWrapper"><code class="flex name class">
+<span>class <span class="ident">SymbolicPortWrapper</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.wrapper.PortWrapper" href="wrapper.html#fault.wrapper.PortWrapper">PortWrapper</a>)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.wrapper.PortWrapper" href="wrapper.html#fault.wrapper.PortWrapper">PortWrapper</a></code>
+</p>
+<section class="desc inherited"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class SymbolicPortWrapper(PortWrapper):
+    def assume(self, pred):
+        select_path = self.select_path
+        select_path.tester.assume(select_path, pred)
+
+    def guarantee(self, pred):
+        select_path = self.select_path
+        select_path.tester.guarantee(select_path, pred)}</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="fault.symbolic_tester.SymbolicPortWrapper.assume"><code class="name flex">
+<span>def <span class="ident">assume</span></span>(<span>self, pred)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def assume(self, pred):
+    select_path = self.select_path
+    select_path.tester.assume(select_path, pred)}</code></pre>
+</details>
+</dd>
+<dt id="fault.symbolic_tester.SymbolicPortWrapper.guarantee"><code class="name flex">
+<span>def <span class="ident">guarantee</span></span>(<span>self, pred)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def guarantee(self, pred):
+    select_path = self.select_path
+    select_path.tester.guarantee(select_path, pred)}</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.wrapper.PortWrapper" href="wrapper.html#fault.wrapper.PortWrapper">PortWrapper</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.wrapper.PortWrapper.__init__" href="wrapper.html#fault.wrapper.PortWrapper.__init__">__init__</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="fault.symbolic_tester.SymbolicTester"><code class="flex name class">
+<span>class <span class="ident">SymbolicTester</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.tester.Tester" href="tester.html#fault.tester.Tester">Tester</a>)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.tester.Tester" href="tester.html#fault.tester.Tester">Tester</a></code>
+</p>
+<section class="desc inherited"><p>The fault <code>Tester</code> object provides a mechanism in Python to construct tests
+for magma circuits.
+The <code>Tester</code> is instantiated with a specific magma
+…</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class SymbolicTester(Tester):
+    def __init__(self, circuit, clock=None, num_tests=100):
+        super().__init__(circuit, clock)
+        self.num_tests = num_tests
+
+    def assume(self, port, constraint):
+        &#34;&#34;&#34;
+        Place a constraint on an input port by providing a symbolic expression
+        as a Python lambda or function
+
+            symbolic_tester_inst.assume(top.I, lambda x : x &gt;= 0)
+        &#34;&#34;&#34;
+        self.actions.append(actions.Assume(port, constraint))
+
+    def guarantee(self, port, constraint):
+        &#34;&#34;&#34;
+        Assert a property about an output port by providing a symbolic
+        expression as a Python lambda or function
+
+            symbolic_tester_inst.assume(top.O, lambda x : x &gt;= 0)
+        &#34;&#34;&#34;
+        self.actions.append(actions.Guarantee(port, constraint))
+
+    @property
+    def circuit(self):
+        return SymbolicCircuitWrapper(self._circuit, self)
+
+    def run(self, target=&#34;verilator&#34;):
+        if target == &#34;verilator&#34;:
+            self.targets[target].run(self.actions, self.verilator_includes,
+                                     self.num_tests, self._circuit)
+        elif target == &#34;cosa&#34;:
+            self.targets[target].run(self.actions)
+        else:
+            raise NotImplementedError()
+
+    def make_target(self, target: str, **kwargs):
+        if target == &#34;cosa&#34;:
+            return CoSATarget(self._circuit, **kwargs)
+        else:
+            return super().make_target(target, **kwargs)}</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="fault.symbolic_tester.SymbolicTester.circuit"><code class="name">var <span class="ident">circuit</span></code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">@property
+def circuit(self):
+    return SymbolicCircuitWrapper(self._circuit, self)}</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="fault.symbolic_tester.SymbolicTester.assume"><code class="name flex">
+<span>def <span class="ident">assume</span></span>(<span>self, port, constraint)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Place a constraint on an input port by providing a symbolic expression
+as a Python lambda or function</p>
+<pre><code>symbolic_tester_inst.assume(top.I, lambda x : x &gt;= 0)
+</code></pre></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def assume(self, port, constraint):
+    &#34;&#34;&#34;
+    Place a constraint on an input port by providing a symbolic expression
+    as a Python lambda or function
+
+        symbolic_tester_inst.assume(top.I, lambda x : x &gt;= 0)
+    &#34;&#34;&#34;
+    self.actions.append(actions.Assume(port, constraint))}</code></pre>
+</details>
+</dd>
+<dt id="fault.symbolic_tester.SymbolicTester.guarantee"><code class="name flex">
+<span>def <span class="ident">guarantee</span></span>(<span>self, port, constraint)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Assert a property about an output port by providing a symbolic
+expression as a Python lambda or function</p>
+<pre><code>symbolic_tester_inst.assume(top.O, lambda x : x &gt;= 0)
+</code></pre></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def guarantee(self, port, constraint):
+    &#34;&#34;&#34;
+    Assert a property about an output port by providing a symbolic
+    expression as a Python lambda or function
+
+        symbolic_tester_inst.assume(top.O, lambda x : x &gt;= 0)
+    &#34;&#34;&#34;
+    self.actions.append(actions.Guarantee(port, constraint))}</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.tester.Tester" href="tester.html#fault.tester.Tester">Tester</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.tester.Tester.__init__" href="tester.html#fault.tester.Tester.__init__">__init__</a></code></li>
+<li><code><a title="fault.tester.Tester.clear" href="tester.html#fault.tester.Tester.clear">clear</a></code></li>
+<li><code><a title="fault.tester.Tester.compile" href="tester.html#fault.tester.Tester.compile">compile</a></code></li>
+<li><code><a title="fault.tester.Tester.compile_and_run" href="tester.html#fault.tester.Tester.compile_and_run">compile_and_run</a></code></li>
+<li><code><a title="fault.tester.Tester.eval" href="tester.html#fault.tester.Tester.eval">eval</a></code></li>
+<li><code><a title="fault.tester.Tester.expect" href="tester.html#fault.tester.Tester.expect">expect</a></code></li>
+<li><code><a title="fault.tester.Tester.make_target" href="tester.html#fault.tester.Tester.make_target">make_target</a></code></li>
+<li><code><a title="fault.tester.Tester.peek" href="tester.html#fault.tester.Tester.peek">peek</a></code></li>
+<li><code><a title="fault.tester.Tester.poke" href="tester.html#fault.tester.Tester.poke">poke</a></code></li>
+<li><code><a title="fault.tester.Tester.print" href="tester.html#fault.tester.Tester.print">print</a></code></li>
+<li><code><a title="fault.tester.Tester.retarget" href="tester.html#fault.tester.Tester.retarget">retarget</a></code></li>
+<li><code><a title="fault.tester.Tester.run" href="tester.html#fault.tester.Tester.run">run</a></code></li>
+<li><code><a title="fault.tester.Tester.serialize" href="tester.html#fault.tester.Tester.serialize">serialize</a></code></li>
+<li><code><a title="fault.tester.Tester.step" href="tester.html#fault.tester.Tester.step">step</a></code></li>
+<li><code><a title="fault.tester.Tester.zero_inputs" href="tester.html#fault.tester.Tester.zero_inputs">zero_inputs</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="fault.symbolic_tester.SymbolicWrapper"><code class="flex name class">
+<span>class <span class="ident">SymbolicWrapper</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.wrapper.Wrapper" href="wrapper.html#fault.wrapper.Wrapper">Wrapper</a>)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.wrapper.Wrapper" href="wrapper.html#fault.wrapper.Wrapper">Wrapper</a></code>
+</p>
+<section class="desc inherited"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class SymbolicWrapper(Wrapper):
+    def __init__(self, circuit, parent):
+        super().__init__(circuit, parent)
+
+    def __setattr__(self, attr, value):
+        # Hack to stage this after __init__ has been run, should redefine this
+        # method in a metaclass? Could also use a try/except pattern, so the
+        # exceptions only occur during object instantiation
+        if hasattr(self, &#34;circuit&#34;) and hasattr(self, &#34;instance_map&#34;):
+            if attr in self.circuit.interface.ports.keys():
+                if isinstance(self.parent, fault.Tester):
+                    self.parent.poke(self.circuit.interface.ports[attr], value)
+                else:
+                    exit(1)
+            else:
+                object.__setattr__(self, attr, value)
+        else:
+            object.__setattr__(self, attr, value)
+
+    def __getattr__(self, attr):
+        # Hack to stage this after __init__ has been run, should redefine this
+        # method in a metaclass?
+        try:
+            if attr in self.circuit.interface.ports.keys():
+                return SymbolicPortWrapper(self.circuit.interface.ports[attr],
+                                           self)
+            elif attr in self.instance_map:
+                return SymbolicInstanceWrapper(self.instance_map[attr], self)
+            else:
+                object.__getattribute__(self, attr)
+        except Exception as e:
+            object.__getattribute__(self, attr)}</code></pre>
+</details>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="fault.symbolic_tester.SymbolicCircuitWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicCircuitWrapper</a></li>
+</ul>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.wrapper.Wrapper" href="wrapper.html#fault.wrapper.Wrapper">Wrapper</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.wrapper.Wrapper.__init__" href="wrapper.html#fault.wrapper.Wrapper.__init__">__init__</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="fault" href="index.html">fault</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="fault.symbolic_tester.SymbolicCircuitWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicCircuitWrapper</a></code></h4>
+</li>
+<li>
+<h4><code><a title="fault.symbolic_tester.SymbolicInstanceWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicInstanceWrapper</a></code></h4>
+</li>
+<li>
+<h4><code><a title="fault.symbolic_tester.SymbolicPortWrapper" href="wrapper.html#fault.wrapper.PortWrapper">SymbolicPortWrapper</a></code></h4>
+<ul class="">
+<li><code><a title="fault.symbolic_tester.SymbolicPortWrapper.assume" href="#fault.symbolic_tester.SymbolicPortWrapper.assume">assume</a></code></li>
+<li><code><a title="fault.symbolic_tester.SymbolicPortWrapper.guarantee" href="#fault.symbolic_tester.SymbolicPortWrapper.guarantee">guarantee</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="fault.symbolic_tester.SymbolicTester" href="tester.html#fault.tester.Tester">SymbolicTester</a></code></h4>
+<ul class="">
+<li><code><a title="fault.symbolic_tester.SymbolicTester.assume" href="#fault.symbolic_tester.SymbolicTester.assume">assume</a></code></li>
+<li><code><a title="fault.symbolic_tester.SymbolicTester.circuit" href="#fault.symbolic_tester.SymbolicTester.circuit">circuit</a></code></li>
+<li><code><a title="fault.symbolic_tester.SymbolicTester.guarantee" href="#fault.symbolic_tester.SymbolicTester.guarantee">guarantee</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="fault.symbolic_tester.SymbolicWrapper" href="wrapper.html#fault.wrapper.Wrapper">SymbolicWrapper</a></code></h4>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.1</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
