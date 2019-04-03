@@ -616,12 +616,6 @@ symbolic_tester.compile_and_run(
 )
 ```
 
-Note that in order to work with internal signals, you must set the
-`"verilator_debug"` option for the magma/coreir compiler so it generates the
-correct comments for Verilator to preserve internal signals.  The `magma_opts`
-parameter is a dictionary that is passed through to the magma `compile`
-function.
-
 ### Formal Verification
 For formal verification, assumptions are provided to the formal checker as
 properties that can be assumed to be true. Guarantees are provided as
