@@ -334,7 +334,8 @@ class ResetTester(fault.Tester):
 Notice that the `reset` method implementation uses the action method API (i.e.
 `self.poke`) rather than the `setattr`/`getattr` based interface described
 before.  This pattern is useful for writing generic `Tester`s parametrized over
-ports.
+ports.  More information about the action method API interfaces can be found in
+the [Tester documentation](http://truong.io/fault/tester.html).
 
 Defining methods on a `Tester` subclass allows you to use the UVM driver
 pattern to lower high-level API calls into low-level port values.  It also
