@@ -5,6 +5,12 @@ submit issues using the [GH issue
 tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
 fixes and other improvements are always welcome!
 
+Section 1 provides an introduction to using the fault system including a set of
+examples and exercises and is intended to be read by those interested in using
+the fault system.  Section 2 provides an overview of the fault system
+architecture as well as a roadmap and is intended to be read by those
+interested in contributing to the fault source code.
+
 # Table of Contents
 <!-- generated using https://github.com/jonschlinkert/markdown-toc -->
 
