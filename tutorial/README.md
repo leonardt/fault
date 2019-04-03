@@ -652,15 +652,90 @@ on targets will be discussed later.
 
 The `circuit` property method returns a `CircuitWrapper` instance which is used
 to implement the `setattr`/`getattr` interface for `poke` and `expect` actions. 
-The core logic for this is defined in https://github.com/leonardt/fault/blob/master/fault/wrapper.py
+The core logic for this is defined in
+hgttps://github.com/leonardt/fault/blob/master/fault/wrapper.py.
 
-### SimulationTester
+Fault provides two standard extensions to the `Tester` class: the
+`SymbolicTester` and the `FunctionalTester`.
+
 ### SymbolicTester
+The source code for the `SymbolicTester` can be found in
+https://github.com/leonardt/fault/blob/master/fault/symbolic_tester.py
+
+This tester extends the `__init__` method to accept a parameter for the number
+of tests to run (for constrained random) and adds the `assume`/`guarantee`
+methods for recording assumptions and guarantees.
+
+### FunctionalTester
+The source code for the `FunctionalTester` can be found in
+https://github.com/leonardt/fault/blob/master/fault/functional_tester.py
+
+This Tester provides a convenience mechanism for verifying a DUT against a
+functional model.  The basic pattern is that every time `eval` is invoked on
+the Tester, a check is done to verify that the current outputs of the
+functional model are equivalent to the outputs of the DUT.  This pattern works
+best with a model that is fairly low-level (e.g. cycle accurate). The user has
+the flexibility to relax accuracy of the model by setting the outputs of the
+functional model to be `fault.AnyValue`.  Anything is equal to
+`fault.AnyValue`, so the user can manage when to actually perform the
+consistency check by only updating `fault.AnyValue` at the appropriate time.
 
 ## Targets
-### Verilator
-### SystemVerilog
+A `fault.Target` is an abstract base class defined in
+https://github.com/leonardt/fault/blob/master/fault/target.py
+
+Currently it only requires that a concrete subclass implement the `run` method
+which corresponds to running a test with a specific sequence of actions. 
+
+### VerilogTarget
+The `VerilogTarget` is a parent class shared by both the `Verilator` and
+`SystemVerilog` targets.  The source code can be found in
+https://github.com/leonardt/fault/blob/master/fault/verilog_target.py
+
+It provides common functionality for generating Verilog code for actions and
+requires that subclasses implement the specific `make_<action>` method for each
+action.  The `__init__` method compiles the circuit into verilog using magma.
+
+### VerilatorTarget
+The source code for the `VerilatorTarget` can be found in
+https://github.com/leonardt/fault/blob/master/fault/verilator_target.py
+
+It provides concrete implementations for the `make_<action>` methods and `run`
+method which generate a C++ file used as the verilator test harness.  The
+generation of the test harness is done using string templating of C++ code.
+
+### SystemVerilogTarget
+The source code for the `SystemVerilog` can be found in
+https://github.com/leonardt/fault/blob/master/fault/system_verilog_target.py
+
+Similarly to the `VerilatorTarget` it provides concrete implementations of the
+`make_<action>` and `run` methods using string templating to generate system
+verilog code.
+
+One key `__init__` parameter is `simulator` which selects between `ncsim` and
+`vcs`. This parameter mainly affects the `run` method, which dispatches on the
+value to determine the correct CLI to use for invoking the simulator. 
+
 ### CoSA
+The source code for the `CoSATarget` can be found in
+https://github.com/leonardt/fault/blob/master/fault/cosa_target.py
+
+It has only been tested with the `SymbolicTester` with at least one assumption
+and guarantee.  
+
+Non assume or guarantee actions are used to generate an `ets` file (e.g. for
+generating a sequences of pokes to set up the state of the circuit).
+
+Assumptions are compiled to the `assume:` field of the CoSA problem file
+format, and guarantees are compiled to the `formula: ` field.
+
+Notice that the compilation of assumptions and formulas rely on rewriting the
+Python lambda expressions into the format expected by CoSA (e.g.
+https://github.com/leonardt/fault/blob/master/fault/cosa_target.py#L142). The
+current mechanism for rewriting is not robust nor complete and should be
+improved by developing a clear specification for the property language and a
+generic rewriter of the Python AST into an AST that can be serialized into the
+syntax expected by CoSA.
 
 ## Roadmap
 ### Simulation Actions

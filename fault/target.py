@@ -6,5 +6,5 @@ class Target(ABC):
         self.circuit = circuit
 
     @abstractmethod
-    def run(self):
+    def run(self, actions):
         pass
