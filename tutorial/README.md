@@ -1,15 +1,9 @@
-# Testing Hardware Circuits using Fault
-
-Welcome to the **fault tutorial**. The sources for these files are hosted in
-the [GitHub
-repository](https://github.com/leonardt/fault/tree/master/tutorial), please
-submit issues using the [GH issue
-tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
-fixes and other improvements are always welcome!
-
+# Table of Contents
 <!-- generated using https://github.com/jonschlinkert/markdown-toc -->
+
 <!-- toc -->
 
+- [Testing Hardware Circuits using Fault](#testing-hardware-circuits-using-fault)
   * [Installation](#installation)
     + [Python 3.7.2](#python-372)
       - [MacOS](#macos)
@@ -34,18 +28,31 @@ fixes and other improvements are always welcome!
     + [Exercise 4](#exercise-4)
 - [Fault Internals](#fault-internals)
   * [Testers](#testers)
-    + [SimulationTester](#simulationtester)
     + [SymbolicTester](#symbolictester)
+    + [FunctionalTester](#functionaltester)
   * [Targets](#targets)
-    + [Verilator](#verilator)
-    + [SystemVerilog](#systemverilog)
+    + [VerilogTarget](#verilogtarget)
+    + [VerilatorTarget](#verilatortarget)
+    + [SystemVerilogTarget](#systemverilogtarget)
     + [CoSA](#cosa)
   * [Roadmap](#roadmap)
     + [Simulation Actions](#simulation-actions)
+      - [Loops](#loops)
+      - [File IO](#file-io)
+      - [Monitors](#monitors)
     + [Constrained Random](#constrained-random-1)
     + [Formal](#formal)
 
 <!-- tocstop -->
+
+# Testing Hardware Circuits using Fault
+
+Welcome to the **fault tutorial**. The sources for these files are hosted in
+the [GitHub
+repository](https://github.com/leonardt/fault/tree/master/tutorial), please
+submit issues using the [GH issue
+tracker](https://github.com/leonardt/fault/issues).  Pull requests with typo
+fixes and other improvements are always welcome!
 
 ## Installation
 ### Python 3.7.2
