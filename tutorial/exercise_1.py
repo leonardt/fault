@@ -3,7 +3,7 @@ import mantle
 
 
 class ConfigReg(m.Circuit):
-    IO = ["D", m.In(m.Bits(2)), "Q", m.Out(m.Bits(2))] + \
+    IO = ["D", m.In(m.Bits[2]), "Q", m.Out(m.Bits[2])] + \
         m.ClockInterface(has_ce=True)
 
     @classmethod
@@ -13,10 +13,10 @@ class ConfigReg(m.Circuit):
 
 
 class SimpleALU(m.Circuit):
-    IO = ["a", m.In(m.UInt(16)),
-          "b", m.In(m.UInt(16)),
-          "c", m.Out(m.UInt(16)),
-          "config_data", m.In(m.Bits(2)),
+    IO = ["a", m.In(m.UInt[16]),
+          "b", m.In(m.UInt[16]),
+          "c", m.Out(m.UInt[16]),
+          "config_data", m.In(m.Bits[2]),
           "config_en", m.In(m.Enable),
           ] + m.ClockInterface()
 
