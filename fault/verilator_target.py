@@ -13,7 +13,7 @@ from fault.wrapper import PortWrapper, InstanceWrapper
 import math
 from hwtypes import BitVector, SIntVector
 import subprocess
-from fault.random import random_bv
+from fault.random import random_bv, constrained_random_bv
 import fault.utils as utils
 import platform
 import os
@@ -327,10 +327,7 @@ class VerilatorTarget(VerilogTarget):
                         assume_port = assume_port[-1]
                     if assume_port is port:
                         pred = assumption.value
-                        while True:
-                            randval = random_bv(len(assume_port))
-                            if pred(randval):
-                                break
+                        randval = constrained_random_bv(len(assume_port), pred) 
                         code = self.make_poke(
                             len(actions) + i, Poke(port, randval))
                         for line in code:
