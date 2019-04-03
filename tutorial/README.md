@@ -1,5 +1,44 @@
 # Testing Hardware Circuits using Fault
 
+<!-- toc -->
+
+  * [Installation](#installation)
+    + [Python 3.7.2](#python-372)
+      - [MacOS](#macos)
+      - [Linux](#linux)
+    + [Using pip](#using-pip)
+    + [From source](#from-source)
+  * [Overview](#overview)
+  * [Tester Abstraction](#tester-abstraction)
+    + [Tester Actions](#tester-actions)
+      - [Poke](#poke)
+      - [Eval](#eval)
+      - [Expect](#expect)
+    + [Executing Tests](#executing-tests)
+    + [Exercise 1](#exercise-1)
+  * [Extending The Tester Class](#extending-the-tester-class)
+    + [Exercise 2](#exercise-2)
+  * [pytest Parametrization](#pytest-parametrization)
+    + [Exercise 3](#exercise-3)
+  * [Assume/Guarantee](#assumeguarantee)
+    + [Constrained Random](#constrained-random)
+    + [Formal Verification](#formal-verification)
+    + [Exercise 4](#exercise-4)
+- [Fault Internals](#fault-internals)
+  * [Testers](#testers)
+    + [SimulationTester](#simulationtester)
+    + [SymbolicTester](#symbolictester)
+  * [Targets](#targets)
+    + [Verilator](#verilator)
+    + [SystemVerilog](#systemverilog)
+    + [CoSA](#cosa)
+  * [Roadmap](#roadmap)
+    + [Simulation Actions](#simulation-actions)
+    + [Constrained Random](#constrained-random-1)
+    + [Formal](#formal)
+
+<!-- tocstop -->
+
 Welcome to the **fault tutorial**. The sources for these files are hosted in
 the [GitHub
 repository](https://github.com/leonardt/fault/tree/master/tutorial), please
