@@ -151,7 +151,8 @@ class VerilatorTarget(VerilogTarget):
             isinstance(action.port[-1], fault.WrappedVerilogInternalPort) \
             and action.port[-1].path == "outReg"
 
-        max_bits = 64 if platform.architecture()[0] == "64bit" else 32
+        # max_bits = 64 if platform.architecture()[0] == "64bit" else 32
+        max_bits = 32
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
             asserts = []
