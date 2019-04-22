@@ -10,6 +10,9 @@ def pytest_generate_tests(metafunc):
 
 
 def test_tester_magma_internal_signals_verilator(target):
+    if target == "cosa":
+        import pytest
+        pytest.skip("Regression introduced by latest cosa version")
     circ = common.SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)

@@ -287,7 +287,6 @@ def test_tester_loop(target, simulator):
                                  Expect(circ.O, loop.index)]):
         check(actual, expected)
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
