@@ -2,7 +2,7 @@ import magma as m
 import random
 from hwtypes import BitVector
 import fault
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
 import common
 import tempfile
 import os
@@ -266,6 +266,28 @@ def test_tester_verilog_wrapped(target, simulator):
                 "SimpleALU_inst0.config_reg.Q", m.Bits[2]),
             signal)
     with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_loop(target, simulator):
+    circ = common.TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    loop = tester.loop(7)
+    loop.poke(circ.I, loop.index)
+    loop.eval()
+    loop.expect(circ.O, loop.index)
+    assert tester.actions[1].n_iter == 7
+    for actual, expected in zip(tester.actions[1].actions,
+                                [Poke(circ.I, loop.index),
+                                 Eval(),
+                                 Expect(circ.O, loop.index)]):
+        check(actual, expected)
+    with tempfile.TemporaryDirectory() as _dir:
+        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:

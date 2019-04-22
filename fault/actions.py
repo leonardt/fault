@@ -139,9 +139,10 @@ class Step(Action):
 
 
 class Loop(Action):
-    def __init__(self, n_iter, actions):
+    def __init__(self, n_iter, loop_var, actions):
         self.n_iter = n_iter
         self.actions = actions
+        self.loop_var = loop_var
 
     def __str__(self):
         # TODO: Might be nice to format this print output over multiple lines

@@ -4,7 +4,7 @@ import fault
 from hwtypes import BitVector
 import common
 import random
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
 from fault.random import random_bv
 import copy
 import os.path
