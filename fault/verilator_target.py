@@ -194,9 +194,6 @@ class VerilatorTarget(VerilogTarget):
             return [f'printf("'
                     f'{action.format_str}");']
 
-        #return [f'printf("{action.port.debug_name} = '
-        #        f'{action.format_str}\\n", top->{name});']
-
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
         # perform the expect.
