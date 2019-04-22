@@ -225,13 +225,12 @@ class Tester:
     def circuit(self):
         return CircuitWrapper(self._circuit, self)
 
-
     def loop(self, n_iter):
         """
         Returns a new tester with a special
         """
         loop_tester = LoopTester(self.circuit, self.clock,
-                             self.default_print_format_str)
+                                 self.default_print_format_str)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
@@ -247,6 +246,7 @@ class LoopIndex:
 
 class LoopTester(Tester):
     __unique_index_id = -1
+
     def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
                  default_print_format_str: str = "%x"):
         super().__init__(circuit, clock, default_print_format_str)
