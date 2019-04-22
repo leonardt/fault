@@ -147,7 +147,7 @@ class Loop(Action):
     def __str__(self):
         # TODO: Might be nice to format this print output over multiple lines
         # for actions
-        return f"Loop({self.n_iter}, {self.actions})"
+        return f"Loop({self.n_iter}, {self.loop_var}, {self.actions})"
 
     def retarget(self, new_circuit, clock):
         actions = [action.retarget(new_circuit, clock) for action in
