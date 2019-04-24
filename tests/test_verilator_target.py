@@ -35,7 +35,7 @@ def test_verilator_trace():
         Poke(circ.CLK, 0),
         Print(circ.O),
         Step(circ.CLK, 1),
-        Poke(circ.I, BitVector(1, 1)),
+        Poke(circ.I, BitVector[1](1)),
         Eval(),
         Print(circ.O),
     ]
