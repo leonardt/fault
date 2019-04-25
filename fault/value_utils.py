@@ -4,7 +4,7 @@ from hwtypes import BitVector, Bit
 from fault.value import AnyValue, UnknownValue
 from fault.array import Array
 from fault.select_path import SelectPath
-from hwtypes.adt import Enum
+from enum import Enum
 
 
 def make_value(port, value):
@@ -57,7 +57,6 @@ def make_bit_vector(N, value):
     if value is AnyValue or value is UnknownValue:
         return value
     if isinstance(value, Enum):
-        N = type(value).bit_length()
         return BitVector[N](value.value)
     raise NotImplementedError(N, value, type(value))
 
