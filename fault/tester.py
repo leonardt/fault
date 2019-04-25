@@ -6,7 +6,7 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
-from fault.actions import , Expect, Step, Print
+from fault.actions import Poke, Expect, Step, Print
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
