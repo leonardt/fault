@@ -48,6 +48,7 @@ void my_assert(
     std::cerr << \"i        : \" << std::dec << i << std::endl;
     std::cerr << \"Port     : \" << port << std::endl;
 #if VM_TRACE
+    tracer->dump(main_time);
     tracer->close();
 #endif
     exit(1);
@@ -362,6 +363,7 @@ class VerilatorTarget(VerilogTarget):
       std::cerr << \"i        : {i}\" << std::endl;
       std::cerr << \"Port     : {name}\" << std::endl;
       #if VM_TRACE
+        tracer->dump(main_time);
         tracer->close();
       #endif
       exit(1);
