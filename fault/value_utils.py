@@ -57,7 +57,6 @@ def make_bit_vector(N, value):
     if value is AnyValue or value is UnknownValue:
         return value
     if isinstance(value, Enum):
-        N = type(value).bit_length()
         return BitVector[N](value.value)
     raise NotImplementedError(N, value, type(value))
 
