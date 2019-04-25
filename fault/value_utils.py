@@ -4,7 +4,7 @@ from hwtypes import BitVector, Bit
 from fault.value import AnyValue, UnknownValue
 from fault.array import Array
 from fault.select_path import SelectPath
-from enum import Enum
+from hwtypes.adt import Enum
 
 
 def make_value(port, value):
