@@ -10,7 +10,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_tester_magma_internal_signals_verilator(target):
-    circ = common.SimpleALU
+    circ = common.SimpleALU4
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
     tester.circuit.config_en = 1
@@ -21,8 +21,8 @@ def test_tester_magma_internal_signals_verilator(target):
     tester.circuit.config_en = 0
     tester.step(2)
     tester.circuit.config_reg.Q.expect(0)
-    tester.circuit.a.assume(lambda a: a < BitVector(32768, 16))
-    tester.circuit.b.assume(lambda b: b < BitVector(32768, 16))
+    tester.circuit.a.assume(lambda a: a < BitVector(8, 4))
+    tester.circuit.b.assume(lambda b: b < BitVector(8, 4))
     # tester.circuit.b.assume(lambda b: b >= BitVector(32768, 16))
 
     # tester.circuit.a.assume(lambda a: a < ((1 << 16) - 1))
