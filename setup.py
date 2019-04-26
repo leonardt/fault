@@ -20,7 +20,7 @@ setup(
         "astor",
         "coreir==2.0.*",
         "cosa",
-        "hwtypes>=1.0.*"
+        "hwtypes==1.0.3"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
