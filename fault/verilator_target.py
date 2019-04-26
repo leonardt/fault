@@ -327,7 +327,7 @@ class VerilatorTarget(VerilogTarget):
                         assume_port = assume_port[-1]
                     if assume_port is port:
                         pred = assumption.value
-                        randval = constrained_random_bv(len(assume_port), pred) 
+                        randval = constrained_random_bv(len(assume_port), pred)
                         code = self.make_poke(
                             len(actions) + i, Poke(port, randval))
                         for line in code:

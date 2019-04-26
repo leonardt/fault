@@ -7,17 +7,21 @@ from hwtypes import z3BitVector, z3Bit
 from collections.abc import Mapping
 import z3
 
+
 def constrained_random_bv(width, pred):
     while True:
         randval = random_bv(width)
         if pred(randval):
             return randval
 
+
 def random_bv(width):
     return BitVector[width](random.randint(0, (1 << width) - 1))
 
+
 def random_bit():
     return Bit(random.randint(0, 1))
+
 
 class FrozenDict(Mapping):
     def __init__(self, d=None):
@@ -43,21 +47,26 @@ class FrozenDict(Mapping):
     def __eq__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
+        elif isinstance(other, FrozenDict):
+            return self._d == other._d
         else:
             return self._d == dict(other)
 
     def __ne__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
+        elif isinstance(other, FrozenDict):
+            return self._d != other._d
         else:
             return self._d != dict(other)
 
     def __repr__(self):
         return f'{type(self).__name__}({repr(self._d)})'
 
+
 def _model_to_frozendict(v_map, model):
     d = {}
-    for k,v in v_map.items():
+    for k, v in v_map.items():
         if isinstance(v, AbstractBitVector):
             d[k] = BitVector[v.size](model[v.value].as_long())
         elif isinstance(v, AbstractBit):
@@ -66,16 +75,18 @@ def _model_to_frozendict(v_map, model):
             raise TypeError()
     return FrozenDict(d)
 
+
 class ConstrainedRandomGenerator:
     def __init__(self,
-            alpha_min : float = 0.1,
-            epoch_length : int = 6,
-            max_epochs   : int = 100,
-            call_timeout : int = 10,
-            ):
+                 alpha_min: float = 0.1,
+                 epoch_length: int = 6,
+                 max_epochs: int = 100,
+                 call_timeout: int = 10,
+                 ):
         '''
         alpha_min : Min hit rate before beginning a new epoch,
-        epoch_length : Number of rounds in a epoch, smaller will produce more random but be slower
+        epoch_length : Number of rounds in a epoch, smaller will produce more
+        random outputs but be slower
         max_epochs : maximum number of epochs to run for
         call_timout : per call timeout
         for full details see:
@@ -83,31 +94,30 @@ class ConstrainedRandomGenerator:
         '''
         self.alpha_min = alpha_min
         self.epoch_length = epoch_length
-        self.max_epochs   = max_epochs
+        self.max_epochs = max_epochs
         self.call_timeout = call_timeout
 
     def _init_solver(self):
         self.solver = z3.Optimize()
         self.solver.set('timeout', self.call_timeout)
 
-
-    def __call__(
-            self,
-            v_map : tp.Mapping[str, tp.Optional[int]],
-            pred : tp.Callable[..., AbstractBit],
-            N : int,
-            ) -> tp.AbstractSet[tp.Mapping[str, BitVector]]:
+    def __call__(self,
+                 v_map: tp.Mapping[str, tp.Optional[int]],
+                 pred: tp.Callable[..., AbstractBit],
+                 N: int,
+                 ) -> tp.AbstractSet[tp.Mapping[str, BitVector]]:
         '''
         v_map: map of labels to bitvector sizes, size is None indicates a Bit
-        pred: function with signature (v : AbstractBitVector[w] for v,w in v_map.items()) -> AbstractBit
+        pred: function with signature
+            (v : AbstractBitVector[w] for v,w in v_map.items()) -> AbstractBit
         N: Numbers of samples
         '''
         self._init_solver()
-        solver = self.solver
         alpha_min = self.alpha_min
         epoch_length = self.epoch_length
 
-        v_map = {k : z3BitVector[w]() if w is not None else z3Bit() for k,w in v_map.items()}
+        v_map = {k: z3BitVector[w]() if w is not None else z3Bit()
+                 for k, w in v_map.items()}
         solutions = set()
 
         for _ in range(self.max_epochs):
@@ -134,10 +144,11 @@ class ConstrainedRandomGenerator:
 
             Sk = S1
             alpha = 1
-            for k in range(1, epoch_length+1):
+            for k in range(1, epoch_length + 1):
                 if alpha < alpha_min or len(solutions) >= N:
                     break
-                Sk, alpha, seen = self._combine(v_map, Sk, S1, init, seen, pred, N-len(solutions))
+                Sk, alpha, seen = self._combine(v_map, Sk, S1, init, seen,
+                                                pred, N - len(solutions))
                 solutions |= Sk
 
         return solutions
@@ -147,7 +158,7 @@ class ConstrainedRandomGenerator:
         Generates a random seed for an epoch
         '''
         assignment = {}
-        for k,v in v_map.items():
+        for k, v in v_map.items():
             if isinstance(v, AbstractBitVector):
                 assignment[k] = random_bv(v.size)
             elif isinstance(v, AbstractBit):
@@ -156,7 +167,6 @@ class ConstrainedRandomGenerator:
                 TypeError()
 
         return FrozenDict(assignment)
-
 
     def _find_closest(self, v_map, pred, seed):
         '''
@@ -167,13 +177,13 @@ class ConstrainedRandomGenerator:
         '''
         solver = self.solver
         solver.push()
-        solver.set('timeout', self.call_timeout*4)
+        solver.set('timeout', self.call_timeout * 4)
         solver.add(pred(**v_map).value)
-        for k,v in v_map.items():
+        for k, v in v_map.items():
             assignment = seed[k]
             if isinstance(v, AbstractBitVector):
                 for i in range(v.size):
-                    solver.add_soft((v[i:i+1] == assignment[i:i+1]).value)
+                    solver.add_soft((v[i:i + 1] == assignment[i:i + 1]).value)
             elif isinstance(v, AbstractBit):
                 solver.add_soft((v == assignment).value)
             else:
@@ -187,10 +197,11 @@ class ConstrainedRandomGenerator:
 
     def _compute_neighbors(self, v_map, pred, init, seen):
         '''
-        Find the closest solutions to the initial solution with each bit flipped.
+        Find the closest solutions to the initial solution with each bit
+        flipped.
         '''
         conditions = []
-        for k,v in v_map.items():
+        for k, v in v_map.items():
             if isinstance(v, AbstractBitVector):
                 for i in range(v.size):
                     conditions.append(v[i] == init[k][i])
@@ -215,14 +226,14 @@ class ConstrainedRandomGenerator:
         solver.add(pred(**v_map).value)
         solver.add((~c).value)
         solver.push()
-        for c_ in  conditions:
+        for c_ in conditions:
             if c_ is not c:
                 solver.add_soft(c_.value)
         res = solver.check()
 
         if res == z3.unknown:
             solver.pop()
-            solver.set('timeout', self.call_timeout*2)
+            solver.set('timeout', self.call_timeout * 2)
             if solver.check() == z3.sat:
                 model = solver.model()
                 solver.pop()
@@ -251,7 +262,7 @@ class ConstrainedRandomGenerator:
         valid = 0
         checks = 0
         Sk1 = set()
-        for sa,sb in it.product(Sk, S1):
+        for sa, sb in it.product(Sk, S1):
             if valid >= n:
                 break
             candidate = self._mix(init, sa, sb)
@@ -264,7 +275,7 @@ class ConstrainedRandomGenerator:
         if not checks:
             return Sk1, 0.0, seen
         else:
-            return Sk1, valid/checks, seen
+            return Sk1, valid / checks, seen
 
     def _mix(self, init, sa, sb):
         '''
@@ -272,6 +283,6 @@ class ConstrainedRandomGenerator:
         other solution (sb) to generate a new potential solution.
         '''
         assignment = dict()
-        for k,v in init.items():
+        for k, v in init.items():
             assignment[k] = v ^ ((v ^ sa[k]) | (v ^ sb[k]))
         return FrozenDict(assignment)
