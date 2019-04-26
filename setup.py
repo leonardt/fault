@@ -21,7 +21,7 @@ setup(
         "coreir==2.0.*",
         "cosa",
         "hwtypes>=1.0.*"
-        "z3",
+        "z3-solver",
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
