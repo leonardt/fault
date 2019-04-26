@@ -36,7 +36,7 @@ install:
 # End setup CoSA dependencies
 
 script:
-- pytest --cov fault --codestyle fault -v --cov-report term-missing tests -s
+- pytest --cov fault --codestyle fault -v --cov-report term-missing tests
 after_success:
 - coveralls
 deploy:

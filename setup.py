@@ -19,7 +19,7 @@ setup(
     install_requires=[
         "astor",
         "coreir==2.0.*",
-        "cosa==0.3.0",
+        "cosa",
         "hwtypes>=1.0.*"
     ],
     license='BSD License',
