@@ -18,9 +18,9 @@ setup(
     ],
     install_requires=[
         "astor",
-        "coreir==2.0.*",
+        "coreir==2.0.6",
         "cosa",
-        "hwtypes==1.0.3"
+        "hwtypes==1.0.*"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
