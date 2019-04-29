@@ -275,8 +275,10 @@ passthrough_tester.circuit.O.expect(1)
 The `step` action is used to step the `clock` port provided to the `__init__`
 function.  The semantics are equivalent to:
 ```python
-tester.circuit.CLK ^=1  # invert the clock
-tester.eval()           # evaluate the circuit
+tester.eval()
+for i in range(n_step):
+    tester.circuit.CLK ^=1  # invert the clock
+    tester.eval()           # evaluate the circuit
 ```
 
 ### Executing Tests
