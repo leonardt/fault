@@ -18,7 +18,7 @@ setup(
     ],
     install_requires=[
         "astor",
-        "coreir==2.0.6",
+        "coreir",
         "cosa",
         "hwtypes==1.0.*"
     ],
