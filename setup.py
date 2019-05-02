@@ -20,7 +20,8 @@ setup(
         "astor",
         "coreir",
         "cosa",
-        "hwtypes==1.0.*"
+        "hwtypes==1.0.*",
+        "magma-lang"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
