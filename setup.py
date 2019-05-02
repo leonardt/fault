@@ -20,6 +20,7 @@ setup(
         "astor",
         "coreir",
         "cosa",
+        "z3-solver",
         "hwtypes==1.0.*",
         "magma-lang"
     ],
