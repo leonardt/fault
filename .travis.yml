@@ -26,7 +26,6 @@ install:
 - source install_coreir.sh
 - pip install python-coveralls
 - pip install pytest-cov pytest-codestyle
-- pip install -r requirements.txt
 - pip install -e .
 # Begin setup CoSA dependencies
 - pysmt-install --msat --confirm-agreement

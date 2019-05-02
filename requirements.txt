@@ -1,3 +1,0 @@
--e git://github.com/phanrahan/magma.git#egg=magma-lang
--e git://github.com/phanrahan/mantle.git#egg=mantle
-git+git://github.com/leonardt/Pyverilog.git#egg=pyverilog
