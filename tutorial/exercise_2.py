@@ -20,7 +20,7 @@ class ROM(m.Circuit):
 
     @classmethod
     def definition(io):
-        regs = [mantle.Register(data_width, init=init[i])
+        regs = [mantle.Register(data_width, init=int(init[i]))
                 for i in range(1 << addr_width)]
         for reg in regs:
             reg.I <= reg.O
@@ -34,12 +34,14 @@ class RAM(m.Circuit):
         "WADDR", m.In(m.Bits[addr_width]),
         "WDATA", m.In(m.Bits[data_width]),
         "WE", m.In(m.Bit),
-        "CLK", m.In(m.Clock)
+        "CLK", m.In(m.Clock),
+        "RESET", m.In(m.Reset)
     ]
 
     @classmethod
     def definition(io):
-        regs = [mantle.Register(data_width, init=init[i], has_ce=True)
+        regs = [mantle.Register(data_width, init=int(init[i]), has_ce=True,
+                                has_reset=True)
                 for i in range(1 << addr_width)]
         for i, reg in enumerate(regs):
             reg.I <= io.WDATA

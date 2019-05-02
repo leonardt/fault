@@ -275,8 +275,10 @@ passthrough_tester.circuit.O.expect(1)
 The `step` action is used to step the `clock` port provided to the `__init__`
 function.  The semantics are equivalent to:
 ```python
-tester.circuit.CLK ^=1  # invert the clock
-tester.eval()           # evaluate the circuit
+tester.eval()
+for i in range(n_step):
+    tester.circuit.CLK ^=1  # invert the clock
+    tester.eval()           # evaluate the circuit
 ```
 
 ### Executing Tests
@@ -418,11 +420,12 @@ class ROM(m.Circuit):
     IO = [
         "RADDR", m.In(m.Bits[addr_width]),
         "RDATA", m.Out(m.Bits[data_width]),
-    ] + m.ClockInterface(has_reset=True)
+        "CLK", m.In(m.Clock)
+    ]
 
     @classmethod
     def definition(io):
-        regs = [mantle.Register(data_width, init=init[i], has_reset=True)
+        regs = [mantle.Register(data_width, init=int(init[i]))
                 for i in range(1 << addr_width)]
         for reg in regs:
             reg.I <= reg.O
@@ -436,11 +439,13 @@ class RAM(m.Circuit):
         "WADDR", m.In(m.Bits[addr_width]),
         "WDATA", m.In(m.Bits[data_width]),
         "WE", m.In(m.Bit),
-    ] + m.ClockInterface(has_reset=True)
+        "CLK", m.In(m.Clock),
+        "RESET", m.In(m.Reset)
+    ]
 
     @classmethod
     def definition(io):
-        regs = [mantle.Register(data_width, init=init[i], has_ce=True,
+        regs = [mantle.Register(data_width, init=int(init[i]), has_ce=True,
                                 has_reset=True)
                 for i in range(1 << addr_width)]
         for i, reg in enumerate(regs):
@@ -615,12 +620,6 @@ symbolic_tester.compile_and_run(
     "verilator", flags=["-Wno-fatal"], magma_opts={"verilator_debug": True}
 )
 ```
-
-Note that in order to work with internal signals, you must set the
-`"verilator_debug"` option for the magma/coreir compiler so it generates the
-correct comments for Verilator to preserve internal signals.  The `magma_opts`
-parameter is a dictionary that is passed through to the magma `compile`
-function.
 
 ### Formal Verification
 For formal verification, assumptions are provided to the formal checker as

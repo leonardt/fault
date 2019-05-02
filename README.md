@@ -8,6 +8,11 @@ A Python package for testing hardware (part of the magma ecosystem).
 
 [CHANGELOG](./CHANGELOG.md)
 
+## Installation
+```
+pip install fault
+```
+
 ## Documentation
 * [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
 * [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)

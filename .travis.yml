@@ -26,14 +26,14 @@ install:
 - source install_coreir.sh
 - pip install python-coveralls
 - pip install pytest-cov pytest-codestyle
-- pip install -r requirements.txt
+- pip install mantle  # for tests.common
 - pip install -e .
 # Begin setup CoSA dependencies
 - pysmt-install --msat --confirm-agreement
 - pysmt-install --z3 --confirm-agreement
 - export PYTHONPATH="/home/travis/.smt_solvers/python-bindings-3.6:${PYTHONPATH}"
 - export LD_LIBRARY_PATH="/home/travis/.smt_solvers/python-bindings-3.6:${LD_LIBRARY_PATH}"
-- pysmt-install --check
+# - pysmt-install --check
 # End setup CoSA dependencies
 
 script:
