@@ -97,32 +97,33 @@ def test_target_clock(capfd, target, simulator):
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
-        Print(circ.I),
+        Print("%x\n", circ.I),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
-        Print(circ.O),
+        Print("%x\n", circ.O),
         Step(circ.CLK, 1),
         Poke(circ.I, BitVector(1, 1)),
         Eval(),
-        Print(circ.O),
+        Print("%x", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
     out, err = capfd.readouterr()
 
     lines = out.splitlines()
+    print(lines)
     if target == fault.verilator_target.VerilatorTarget:
-        assert lines[-3] == "BasicClkCircuit.I = 0", out
-        assert lines[-2] == "BasicClkCircuit.O = 0", out
-        assert lines[-1] == "BasicClkCircuit.O = 1", out
+        assert lines[-3] == "0", out
+        assert lines[-2] == "0", out
+        assert lines[-1] == "1", out
     else:
         if simulator == "ncsim":
-            assert lines[-6] == "BasicClkCircuit.I = 0", out
-            assert lines[-5] == "BasicClkCircuit.O = 0", out
-            assert lines[-4] == "BasicClkCircuit.O = 1", out
+            assert lines[-6] == "0", out
+            assert lines[-5] == "0", out
+            assert lines[-4] == "1", out
         elif simulator == "vcs":
-            assert lines[-9] == "BasicClkCircuit.I = 0", out
-            assert lines[-8] == "BasicClkCircuit.O = 0", out
-            assert lines[-7] == "BasicClkCircuit.O = 1", out
+            assert lines[-9] == "0", out
+            assert lines[-8] == "0", out
+            assert lines[-7] == "1", out
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
 
@@ -131,14 +132,14 @@ def test_print_nested_arrays(capfd, target, simulator):
     circ = common.TestNestedArraysCircuit
     actions = [
         Poke(circ.I, [BitVector(i, 4) for i in range(3)]),
-        Print(circ.I),
+    ] + [Print("%x\n", i) for i in circ.I] + [
         Eval(),
         Expect(circ.O, [BitVector(i, 4) for i in range(3)]),
-        Print(circ.O),
+    ] + [Print("%x\n", i) for i in circ.O] + [
         Poke(circ.I, [BitVector(4 - i, 4) for i in range(3)]),
         Eval(),
-        Print(circ.O),
-    ]
+    ] + [Print("%x\n", i) for i in circ.O]
+
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
     out, err = capfd.readouterr()
     if target == fault.verilator_target.VerilatorTarget:
@@ -151,15 +152,15 @@ def test_print_nested_arrays(capfd, target, simulator):
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
-NestedArraysCircuit.I[0] = 0
-NestedArraysCircuit.I[1] = 1
-NestedArraysCircuit.I[2] = 2
-NestedArraysCircuit.O[0] = 0
-NestedArraysCircuit.O[1] = 1
-NestedArraysCircuit.O[2] = 2
-NestedArraysCircuit.O[0] = 4
-NestedArraysCircuit.O[1] = 3
-NestedArraysCircuit.O[2] = 2""", out
+0
+1
+2
+0
+1
+2
+4
+3
+2""", out
 
 
 def test_print_double_nested_arrays(capfd, target, simulator):
@@ -167,16 +168,15 @@ def test_print_double_nested_arrays(capfd, target, simulator):
     actions = [
         Poke(circ.I, [[BitVector(i + j * 3, 4) for i in range(3)]
                       for j in range(2)]),
-        Print(circ.I),
+    ] + [Print("%x\n", j) for i in circ.I for j in i] + [
         Eval(),
         Expect(circ.O, [[BitVector(i + j * 3, 4) for i in range(3)]
                         for j in range(2)]),
-        Print(circ.O),
+    ] + [Print("%x\n", j) for i in circ.O for j in i] + [
         Poke(circ.I, [[BitVector(i + (j + 1) * 3, 4) for i in range(3)]
                       for j in range(2)]),
         Eval(),
-        Print(circ.O),
-    ]
+    ] + [Print("%x\n", j) for i in circ.O for j in i]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
     out, err = capfd.readouterr()
     print(out)
@@ -190,24 +190,24 @@ def test_print_double_nested_arrays(capfd, target, simulator):
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
-DoubleNestedArraysCircuit.I[0][0] = 0
-DoubleNestedArraysCircuit.I[0][1] = 1
-DoubleNestedArraysCircuit.I[0][2] = 2
-DoubleNestedArraysCircuit.I[1][0] = 3
-DoubleNestedArraysCircuit.I[1][1] = 4
-DoubleNestedArraysCircuit.I[1][2] = 5
-DoubleNestedArraysCircuit.O[0][0] = 0
-DoubleNestedArraysCircuit.O[0][1] = 1
-DoubleNestedArraysCircuit.O[0][2] = 2
-DoubleNestedArraysCircuit.O[1][0] = 3
-DoubleNestedArraysCircuit.O[1][1] = 4
-DoubleNestedArraysCircuit.O[1][2] = 5
-DoubleNestedArraysCircuit.O[0][0] = 3
-DoubleNestedArraysCircuit.O[0][1] = 4
-DoubleNestedArraysCircuit.O[0][2] = 5
-DoubleNestedArraysCircuit.O[1][0] = 6
-DoubleNestedArraysCircuit.O[1][1] = 7
-DoubleNestedArraysCircuit.O[1][2] = 8\
+0
+1
+2
+3
+4
+5
+0
+1
+2
+3
+4
+5
+3
+4
+5
+6
+7
+8\
 """, out
 
 

@@ -186,13 +186,11 @@ class VerilatorTarget(VerilogTarget):
             return result
 
     def make_print(self, i, action):
-        name = verilog_name(action.port.name)
-        if action.format_str.__contains__("%x") or action.format_str.__contains__("%d"):
-            return [f'printf("'
-                    f'{action.format_str}", top->{name});']
-        else:
-            return [f'printf("'
-                    f'{action.format_str}");']
+        ports = ", ".join(f"top->{verilog_name(port.name)}" for port in
+                          action.ports)
+        if ports:
+            ports = ", " + ports
+        return [f'printf("{action.format_str}"{ports});']
 
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to

@@ -48,14 +48,16 @@ class MagmaSimulatorTarget(Target):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
             elif isinstance(action, fault.actions.Print):
-                got = simulator.get_value(action.port)
-                if isinstance(action.port, m.ArrayType) and \
-                        isinstance(action.port.T, (m._BitType, m._BitKind)):
-                    got = BitVector(got).as_uint()
-                elif isinstance(action.port, m.ArrayType):
-                    raise NotImplementedError("Printing complex nested arrays")
-                print(f'{action.port.debug_name} = {action.format_str}' %
-                      got)
+                got = [simulator.get_value(port) for port in action.ports]
+                values = ()
+                for value, port in zip(got, action.ports):
+                    if isinstance(port, m.ArrayType) and \
+                            isinstance(port.T, (m._BitType, m._BitKind)):
+                        value = BitVector(value).as_uint()
+                    elif isinstance(port, m.ArrayType):
+                        raise NotImplementedError("Printing complex nested arrays")
+                    values += (value, )
+                print(f'{action.format_str}' % values)
             elif isinstance(action, fault.actions.Expect):
                 got = simulator.get_value(action.port)
                 expected = action.value

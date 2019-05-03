@@ -30,14 +30,14 @@ def test_verilator_trace():
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
-        Print(circ.I),
+        Print("%x", circ.I),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
-        Print(circ.O),
+        Print("%x", circ.O),
         Step(circ.CLK, 1),
         Poke(circ.I, BitVector[1](1)),
         Eval(),
-        Print(circ.O),
+        Print("%x", circ.O),
     ]
     flags = ["-Wno-lint", "--trace"]
 

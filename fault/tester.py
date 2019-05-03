@@ -44,20 +44,16 @@ class Tester:
 
     __test__ = False  # Tell pytest to skip this class for discovery
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
-                 default_print_format_str: str = "%x"):
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
-        `default_print_format_str`: optional, this sets the default format
-            string used for the `print` method
         """
         self._circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
-        self.default_print_format_str = default_print_format_str
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
@@ -99,16 +95,14 @@ class Tester:
         """
         return actions.Peek(port)
 
-    def print(self, port, format_str=None):
+    def print(self, format_str, *args):
         """
-        Print out the current value of `port`.
+        Prints out `format_str`
 
-        If `format_str` is not specified, it will use
-        `self.default_print_format_str`
+        `*args` should be a variable number of magma ports used to fill in the
+        format string
         """
-        if format_str is None:
-            format_str = self.default_print_format_str
-        self.actions.append(actions.Print(port, format_str))
+        self.actions.append(actions.Print(format_str, *args))
 
     def expect(self, port, value):
         """
@@ -187,7 +181,7 @@ class Tester:
         # Check that the interface of self._circuit is a subset of new_circuit
         check_interface_is_subset(self._circuit, new_circuit)
 
-        new_tester = Tester(new_circuit, clock, self.default_print_format_str)
+        new_tester = Tester(new_circuit, clock)
         new_tester.actions = [action.retarget(new_circuit, clock) for action in
                               self.actions]
         return new_tester

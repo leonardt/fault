@@ -22,7 +22,7 @@ def test_tester_clock():
     circ = common.TestBasicClkCircuit
     builder = VectorBuilder(circ)
     builder.process(Poke(circ.I, BitVector(0, 1)))
-    builder.process(Print(circ.O))
+    builder.process(Print("%x", circ.O))
     builder.process(Expect(circ.O, BitVector(0, 1)))
     assert builder.vectors == [
         [BitVector(0, 1), BitVector(0, 1), fault.AnyValue]

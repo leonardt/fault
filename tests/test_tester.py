@@ -34,11 +34,13 @@ def test_tester_basic(target, simulator):
     tester.poke(circ.I, 1)
     tester.eval()
     tester.expect(circ.O, 1)
-    tester.print(circ.O, "%08x")
+    tester.print("%08x", circ.O)
     check(tester.actions[1], Poke(circ.I, 1))
     check(tester.actions[2], Eval())
     check(tester.actions[3], Expect(circ.O, 1))
-    check(tester.actions[4], Print(circ.O, "%08x"))
+    print(tester.actions[4])
+    print(Print("%08x", circ.O))
+    check(tester.actions[4], Print("%08x", circ.O))
     tester.eval()
     check(tester.actions[5], Eval())
     with tempfile.TemporaryDirectory() as _dir:
@@ -132,28 +134,27 @@ def test_retarget_tester(target, simulator):
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
         Step(circ.CLK, 1),
-        Print(circ.O, "%08x")
+        Print("%08x", circ.O)
     ]
-    tester = fault.Tester(circ, circ.CLK, default_print_format_str="%08x")
+    tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
     tester.poke(circ.CLK, 0)
     tester.step()
-    tester.print(circ.O)
+    tester.print("%08x", circ.O)
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 
     circ_copy = common.TestBasicClkCircuitCopy
     copy = tester.retarget(circ_copy, circ_copy.CLK)
-    assert copy.default_print_format_str == "%08x"
     copy_expected = [
         Poke(circ_copy.I, 0),
         Eval(),
         Expect(circ_copy.O, 0),
         Poke(circ_copy.CLK, 0),
         Step(circ_copy.CLK, 1),
-        Print(circ_copy.O, "%08x")
+        Print("%08x", circ_copy.O)
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)
@@ -175,13 +176,13 @@ def test_run_error():
 
 def test_print_tester(capsys):
     circ = common.TestBasicClkCircuit
-    tester = fault.Tester(circ, circ.CLK, default_print_format_str="%08x")
+    tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
     tester.poke(circ.CLK, 0)
     tester.step()
-    tester.print(circ.O)
+    tester.print("%08x", circ.O)
     print(tester)
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
@@ -191,17 +192,17 @@ Actions:
     2: Expect(BasicClkCircuit.O, 0)
     3: Poke(BasicClkCircuit.CLK, 0)
     4: Step(BasicClkCircuit.CLK, steps=1)
-    5: Print(BasicClkCircuit.O, "%08x")
+    5: Print("%08x", BasicClkCircuit.O)
 """
 
 
 def test_print_arrays(capsys):
     circ = common.TestDoubleNestedArraysCircuit
-    tester = fault.Tester(circ, default_print_format_str="%08x")
+    tester = fault.Tester(circ)
     tester.poke(circ.I, [[0, 1, 2], [3, 4, 5]])
     tester.eval()
     tester.expect(circ.O, [[0, 1, 2], [3, 4, 5]])
-    tester.print(circ.O)
+    tester.print("%08x", circ.O)
     print(tester)
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
@@ -209,7 +210,7 @@ Actions:
     0: Poke(DoubleNestedArraysCircuit.I, Array([Array([BitVector[4](0), BitVector[4](1), BitVector[4](2)], 3), Array([BitVector[4](3), BitVector[4](4), BitVector[4](5)], 3)], 2))
     1: Eval()
     2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector[4](0), BitVector[4](1), BitVector[4](2)], 3), Array([BitVector[4](3), BitVector[4](4), BitVector[4](5)], 3)], 2))
-    3: Print(DoubleNestedArraysCircuit.O, "%08x")
+    3: Print("%08x", DoubleNestedArraysCircuit.O)
 """  # nopep8
 
 
