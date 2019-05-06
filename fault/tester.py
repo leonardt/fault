@@ -227,7 +227,9 @@ class Tester:
 
     def loop(self, n_iter):
         """
-        Returns a new tester with a special
+        Returns a new tester to record actions inside the loop.  The created
+        loop action object maintains a references to the return Tester's
+        `actions` list.
         """
         loop_tester = LoopTester(self.circuit, self.clock,
                                  self.default_print_format_str)
