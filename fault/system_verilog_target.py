@@ -98,7 +98,6 @@ class SystemVerilogTarget(VerilogTarget):
                           action.ports)
         if ports:
             ports = ", " + ports
-        name = verilog_name(action.port.name)
         return [f'$display("{action.format_str}"{ports});']
 
     def make_expect(self, i, action):
