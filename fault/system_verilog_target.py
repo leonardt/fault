@@ -101,7 +101,7 @@ class SystemVerilogTarget(VerilogTarget):
         ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
         if ports:
             ports = ", " + ports
-        return [f'$display("{action.format_str}"{ports});']
+        return [f'$write("{action.format_str}"{ports});']
 
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
