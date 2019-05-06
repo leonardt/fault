@@ -1,10 +1,7 @@
 language: python
 addons:
   apt:
-    sources:
-    - ubuntu-toolchain-r-test
     packages:
-    - g++-4.9
     - verilator
 # python managed by conda until 3.7 available
 # python:
@@ -22,8 +19,6 @@ install:
 - source activate test-env
 - conda install pip
 # End install conda
-- wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
-- source install_coreir.sh
 - pip install python-coveralls
 - pip install pytest-cov pytest-codestyle
 - pip install mantle  # for tests.common
