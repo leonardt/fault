@@ -237,6 +237,14 @@ class Tester:
                                  loop_tester.actions))
         return loop_tester
 
+    def file_open(self, file_name):
+        file = File(file_name, self)
+        self.actions.append(actions.FileOpen(file))
+        return file
+
+    def file_close(self, file):
+        self.actions.append(actions.FileClose(file))
+
 
 class LoopIndex:
     def __init__(self, name):

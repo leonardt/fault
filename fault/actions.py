@@ -153,3 +153,53 @@ class Loop(Action):
         actions = [action.retarget(new_circuit, clock) for action in
                    self.actions]
         return Loop(self.n_iter, actions)
+
+class FileOpen(Action):
+    def __init__(self, file):
+        super().__init__()
+        self.file = file
+
+    def __str__(self):
+        return f"FileOpen({self.file})"
+
+    def retarget(self, new_circuit, clock):
+        return FileOpen(self.file)
+
+
+class FileRead(Action):
+    def __init__(self, file, n_char):
+        super().__init__()
+        self.file = file
+        self.n_char = n_char
+
+    def __str__(self):
+        return f"FileRead({self.file}, {self.n_char})"
+
+    def retarget(self, new_circuit, clock):
+        return FileRead(self.file)
+
+
+class FileWrite(Action):
+    def __init__(self, file, value, n_char):
+        super().__init__()
+        self.file = file
+        self.value = value
+        self.n_char = n_char
+
+    def __str__(self):
+        return f"FileWrite({self.file}, {self.value}, {self.n_char})"
+
+    def retarget(self, new_circuit, clock):
+        return FileWrite(self.file, self.value)
+
+
+class FileClose(Action):
+    def __init__(self, file):
+        super().__init__()
+        self.file = file
+
+    def __str__(self):
+        return f"FileClose({self.file})"
+
+    def retarget(self, new_circuit, clock):
+        return FileClose(self.file)
