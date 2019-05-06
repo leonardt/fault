@@ -55,7 +55,8 @@ class MagmaSimulatorTarget(Target):
                             isinstance(port.T, (m._BitType, m._BitKind)):
                         value = BitVector(value).as_uint()
                     elif isinstance(port, m.ArrayType):
-                        raise NotImplementedError("Printing complex nested arrays")
+                        raise NotImplementedError("Printing complex nested"
+                                                  " arrays")
                     values += (value, )
                 print(f'{action.format_str}' % values)
             elif isinstance(action, fault.actions.Expect):
