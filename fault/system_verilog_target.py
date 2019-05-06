@@ -86,7 +86,6 @@ class SystemVerilogTarget(VerilogTarget):
             name = verilog_name(port.name)
         return name
 
-
     def make_poke(self, i, action):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
