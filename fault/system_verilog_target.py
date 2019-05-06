@@ -94,7 +94,7 @@ class SystemVerilogTarget(VerilogTarget):
         return [f"{name} = {value};", f"#{self.clock_step_delay}"]
 
     def make_print(self, i, action):
-        ports = ", ".join(f"top->{verilog_name(port.name)}" for port in
+        ports = ", ".join(f"top.{verilog_name(port.name)}" for port in
                           action.ports)
         if ports:
             ports = ", " + ports
