@@ -36,6 +36,9 @@ install:
 # - pysmt-install --check
 # End setup CoSA dependencies
 
+# For deploy
+- pip install twine
+
 script:
 - pytest --cov fault --codestyle fault -v --cov-report term-missing tests
 after_success:
