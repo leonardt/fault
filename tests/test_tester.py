@@ -273,7 +273,7 @@ def test_tester_verilog_wrapped(target, simulator):
 
 
 def test_tester_loop(target, simulator):
-    circ = common.TestBasicCircuit
+    circ = common.TestArrayCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     loop = tester.loop(7)
