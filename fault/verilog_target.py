@@ -99,6 +99,8 @@ class VerilogTarget(Target):
             return self.make_assume(i, action)
         if isinstance(action, actions.Guarantee):
             return self.make_guarantee(i, action)
+        if isinstance(action, actions.Loop):
+            return self.make_loop(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -119,4 +121,8 @@ class VerilogTarget(Target):
 
     @abstractmethod
     def make_step(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_loop(self, i, action):
         pass

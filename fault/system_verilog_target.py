@@ -98,6 +98,20 @@ class SystemVerilogTarget(VerilogTarget):
         return [f'$display("{action.port.debug_name} = '
                 f'{action.format_str}", {name});']
 
+    def make_loop(self, i, action):
+        code = []
+        code.append(f"for (int {action.loop_var} = 0;"
+                    f" {action.loop_var} < {action.n_iter};"
+                    f" {action.loop_var}++) begin")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("end")
+        return code
+
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []

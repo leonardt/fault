@@ -258,6 +258,20 @@ class VerilatorTarget(VerilogTarget):
             code.append("#endif")
         return code
 
+    def make_loop(self, i, action):
+        code = []
+        code.append(f"for (int {action.loop_var} = 0;"
+                    f" {action.loop_var} < {action.n_iter};"
+                    f" {action.loop_var}++) {{")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("}")
+        return code
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default

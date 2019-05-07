@@ -20,7 +20,9 @@ def test_tester_magma_internal_signals_verilator(target):
     # become assumptions
     tester.circuit.config_en = 0
     tester.step(2)
-    tester.circuit.config_reg.Q.expect(0)
+    if target == "verilator":
+        # TODO: We could turn this expect into a CoSA assert
+        tester.circuit.config_reg.Q.expect(0)
     tester.circuit.a.assume(lambda a: a < BitVector(32768, 16))
     tester.circuit.b.assume(lambda b: b < BitVector(32768, 16))
     # tester.circuit.b.assume(lambda b: b >= BitVector(32768, 16))

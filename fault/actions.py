@@ -11,6 +11,9 @@ class Action(ABC):
         """
         raise NotImplementedError()
 
+    def __repr__(self):
+        return str(self)
+
 
 class PortAction(Action):
     def __init__(self, port, value):
@@ -133,3 +136,20 @@ class Step(Action):
 
     def retarget(self, new_circuit, clock):
         return Step(clock, self.steps)
+
+
+class Loop(Action):
+    def __init__(self, n_iter, loop_var, actions):
+        self.n_iter = n_iter
+        self.actions = actions
+        self.loop_var = loop_var
+
+    def __str__(self):
+        # TODO: Might be nice to format this print output over multiple lines
+        # for actions
+        return f"Loop({self.n_iter}, {self.loop_var}, {self.actions})"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return Loop(self.n_iter, actions)
