@@ -154,6 +154,7 @@ class Loop(Action):
                    self.actions]
         return Loop(self.n_iter, actions)
 
+
 class FileOpen(Action):
     def __init__(self, file):
         """

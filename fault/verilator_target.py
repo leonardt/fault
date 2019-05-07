@@ -282,7 +282,8 @@ class VerilatorTarget(VerilogTarget):
             mode = "out"
         code = f"""\
 char {name}_in[{action.file.chunk_size}] = {{0}};
-std::fstream {name}_file("{action.file.name}", std::ios::{mode} | std::ios::binary);
+std::fstream {name}_file("{action.file.name}", std::ios::{mode} |
+                                               std::ios::binary);
 if (!{name}_file.is_open()) {{
     std::cout << "Could not open file {action.file.name}" << std::endl;
     return 1;
@@ -295,15 +296,18 @@ if (!{name}_file.is_open()) {{
     def make_file_write(self, i, action):
         value = f"top->{verilog_name(action.value.name)}"
         code = f"""\
-{action.file.name_without_ext}_file.write((char *)&{value}, {action.file.chunk_size});
+{action.file.name_without_ext}_file.write((char *)&{value},
+                                          {action.file.chunk_size});
 """
         return [code]
 
     def make_file_read(self, i, action):
         code = f"""\
-{action.file.name_without_ext}_file.read({action.file.name_without_ext}_in, {action.file.chunk_size});
+{action.file.name_without_ext}_file.read({action.file.name_without_ext}_in,
+                                         {action.file.chunk_size});
 if ({action.file.name_without_ext}_file.eof()) {{
-    std::cout << "Reached end of file {action.file.name_without_ext}" << std::endl;
+    std::cout << "Reached end of file {action.file.name_without_ext}"
+              << std::endl;
     break;
 }}
 """
