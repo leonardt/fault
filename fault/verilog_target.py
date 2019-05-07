@@ -75,11 +75,11 @@ class VerilogTarget(Target):
         return flatten(result)
 
     def generate_action_code(self, i, action):
-        if isinstance(action, (actions.PortAction, actions.Print)) and \
+        if isinstance(action, (actions.PortAction)) and \
                 isinstance(action.port, m.ArrayType) and \
                 not isinstance(action.port.T, m.BitKind):
             return self.generate_array_action_code(i, action)
-        elif isinstance(action, (actions.PortAction, actions.Print)) and \
+        elif isinstance(action, (actions.PortAction)) and \
                 isinstance(action.port, SelectPath) and \
                 isinstance(action.port[-1], m.ArrayType) and \
                 not isinstance(action.port[-1].T, m.BitKind):
@@ -87,7 +87,6 @@ class VerilogTarget(Target):
         if isinstance(action, actions.Poke):
             return self.make_poke(i, action)
         if isinstance(action, actions.Print):
-            name = verilog_name(action.port.name)
             return self.make_print(i, action)
         if isinstance(action, actions.Expect):
             return self.make_expect(i, action)

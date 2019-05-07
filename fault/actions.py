@@ -49,18 +49,21 @@ class Poke(PortAction):
 
 
 class Print(Action):
-    def __init__(self, port, format_str="%x"):
+    def __init__(self, format_str, *args):
         super().__init__()
-        self.port = port
+        format_str = format_str.replace("\n", "\\n")
         self.format_str = format_str
+        self.ports = args
 
     def __str__(self):
-        return f"Print({self.port.debug_name}, \"{self.format_str}\")"
+        ports_str = ", ".join(port.debug_name for port in self.ports)
+        return f"Print(\"{self.format_str}\", {ports_str})"
 
     def retarget(self, new_circuit, clock):
         cls = type(self)
-        new_port = new_circuit.interface.ports[str(self.port.name)]
-        return cls(new_port, self.format_str)
+        new_ports = (new_circuit.interface.ports[str(port.name)] for port in
+                     self.ports)
+        return cls(self.format_str, *new_ports)
 
 
 def is_output(port):

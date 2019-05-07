@@ -73,17 +73,21 @@ class SystemVerilogTarget(VerilogTarget):
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
 
-    def make_poke(self, i, action):
-        if isinstance(action.port, SelectPath):
-            if len(action.port) > 2:
-                name = f"dut.{action.port.system_verilog_path}"
+    def make_name(self, port):
+        if isinstance(port, SelectPath):
+            if len(port) > 2:
+                name = f"dut.{port.system_verilog_path}"
             else:
                 # Top level ports assign to the external reg
-                name = verilog_name(action.port[-1].name)
-        elif isinstance(action.port, fault.WrappedVerilogInternalPort):
-            name = f"dut.{action.port.path}"
+                name = verilog_name(port[-1].name)
+        elif isinstance(port, fault.WrappedVerilogInternalPort):
+            name = f"dut.{port.path}"
         else:
-            name = verilog_name(action.port.name)
+            name = verilog_name(port.name)
+        return name
+
+    def make_poke(self, i, action):
+        name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
         value = action.value
         if isinstance(action.port, m.SIntType) and value < 0:
@@ -94,9 +98,10 @@ class SystemVerilogTarget(VerilogTarget):
         return [f"{name} = {value};", f"#{self.clock_step_delay}"]
 
     def make_print(self, i, action):
-        name = verilog_name(action.port.name)
-        return [f'$display("{action.port.debug_name} = '
-                f'{action.format_str}", {name});']
+        ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
+        if ports:
+            ports = ", " + ports
+        return [f'$write("{action.format_str}"{ports});']
 
     def make_loop(self, i, action):
         code = []
@@ -115,14 +120,12 @@ class SystemVerilogTarget(VerilogTarget):
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []
+        name = self.make_name(action.port)
         if isinstance(action.port, SelectPath):
-            name = f"dut.{action.port.system_verilog_path}"
             debug_name = action.port[-1].name
         elif isinstance(action.port, fault.WrappedVerilogInternalPort):
-            name = f"dut.{action.port.path}"
             debug_name = name
         else:
-            name = verilog_name(action.port.name)
             debug_name = action.port.name
         value = action.value
         if isinstance(value, actions.Peek):

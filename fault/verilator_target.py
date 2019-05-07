@@ -186,9 +186,11 @@ class VerilatorTarget(VerilogTarget):
             return result
 
     def make_print(self, i, action):
-        name = verilog_name(action.port.name)
-        return [f'printf("{action.port.debug_name} = '
-                f'{action.format_str}\\n", top->{name});']
+        ports = ", ".join(f"top->{verilog_name(port.name)}" for port in
+                          action.ports)
+        if ports:
+            ports = ", " + ports
+        return [f'printf("{action.format_str}"{ports});']
 
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
@@ -329,7 +331,9 @@ class VerilatorTarget(VerilogTarget):
         verilator_make_cmd = verilator_utils.verilator_make_cmd(
             self.circuit_name)
         assert not self.run_from_directory(verilator_make_cmd)
-        assert not self.run_from_directory(f"./obj_dir/V{self.circuit_name}")
+        assert not self.run_from_directory(
+            f"./obj_dir/V{self.circuit_name} | tee "
+            f"./obj_dir/{self.circuit_name}.log")
 
     def add_assumptions(self, circuit, actions, i):
         main_body = ""
