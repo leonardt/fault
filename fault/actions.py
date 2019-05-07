@@ -156,6 +156,9 @@ class Loop(Action):
 
 class FileOpen(Action):
     def __init__(self, file):
+        """
+        mode: "r" or "w" for read/write permissions
+        """
         super().__init__()
         self.file = file
 
@@ -167,27 +170,25 @@ class FileOpen(Action):
 
 
 class FileRead(Action):
-    def __init__(self, file, n_char):
+    def __init__(self, file):
         super().__init__()
         self.file = file
-        self.n_char = n_char
 
     def __str__(self):
-        return f"FileRead({self.file}, {self.n_char})"
+        return f"FileRead({self.file})"
 
     def retarget(self, new_circuit, clock):
         return FileRead(self.file)
 
 
 class FileWrite(Action):
-    def __init__(self, file, value, n_char):
+    def __init__(self, file, value):
         super().__init__()
         self.file = file
         self.value = value
-        self.n_char = n_char
 
     def __str__(self):
-        return f"FileWrite({self.file}, {self.value}, {self.n_char})"
+        return f"FileWrite({self.file}, {self.value})"
 
     def retarget(self, new_circuit, clock):
         return FileWrite(self.file, self.value)
