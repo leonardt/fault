@@ -49,10 +49,10 @@ class CoSATarget(VerilogTarget):
         self.solver = solver
 
     def make_eval(self, i, action):
-        return
+        raise NotImplementedError()
 
     def make_expect(self, i, action):
-        return
+        raise NotImplementedError()
 
     def make_poke(self, i, action):
         name = verilog_name(action.port.name)
@@ -64,7 +64,10 @@ class CoSATarget(VerilogTarget):
             f"self.{name} = {value}_{width}")
 
     def make_print(self, i, action):
-        return
+        raise NotImplementedError()
+
+    def make_loop(self, i, action):
+        raise NotImplementedError()
 
     def make_step(self, i, action):
         self.step_offset += action.steps

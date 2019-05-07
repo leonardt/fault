@@ -13,7 +13,7 @@ from fault.wrapper import PortWrapper, InstanceWrapper
 import math
 from hwtypes import BitVector, SIntVector
 import subprocess
-from fault.random import random_bv
+from fault.random import random_bv, constrained_random_bv
 import fault.utils as utils
 import platform
 import os
@@ -260,6 +260,20 @@ class VerilatorTarget(VerilogTarget):
             code.append("#endif")
         return code
 
+    def make_loop(self, i, action):
+        code = []
+        code.append(f"for (int {action.loop_var} = 0;"
+                    f" {action.loop_var} < {action.n_iter};"
+                    f" {action.loop_var}++) {{")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("}")
+        return code
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
@@ -332,10 +346,7 @@ class VerilatorTarget(VerilogTarget):
                         assume_port = assume_port[-1]
                     if assume_port is port:
                         pred = assumption.value
-                        while True:
-                            randval = random_bv(len(assume_port))
-                            if pred(randval):
-                                break
+                        randval = constrained_random_bv(len(assume_port), pred)
                         code = self.make_poke(
                             len(actions) + i, Poke(port, randval))
                         for line in code:

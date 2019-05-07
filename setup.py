@@ -10,7 +10,7 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='2.0.4',
+    version='2.0.6',
     description=description,
     scripts=[],
     packages=[
@@ -20,6 +20,7 @@ setup(
         "astor",
         "coreir",
         "cosa",
+        "z3-solver",
         "hwtypes==1.0.*",
         "magma-lang"
     ],

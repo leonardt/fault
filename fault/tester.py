@@ -6,7 +6,7 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
-from fault.actions import Poke, Expect, Step, Print
+from fault.actions import Poke, Expect, Step, Print, Loop
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 import copy
@@ -86,7 +86,8 @@ class Tester:
             for p, v in zip(port, value):
                 self.poke(p, v)
         else:
-            value = make_value(port, value)
+            if not isinstance(value, LoopIndex):
+                value = make_value(port, value)
             self.actions.append(actions.Poke(port, value))
 
     def peek(self, port):
@@ -108,9 +109,7 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
-        is_peek = isinstance(value, actions.Peek)
-        is_port_wrapper = isinstance(value, PortWrapper)
-        if not (is_peek or is_port_wrapper):
+        if not isinstance(value, (actions.Peek, PortWrapper, LoopIndex)):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
@@ -219,3 +218,34 @@ class Tester:
     @property
     def circuit(self):
         return CircuitWrapper(self._circuit, self)
+
+    def loop(self, n_iter):
+        """
+        Returns a new tester to record actions inside the loop.  The created
+        loop action object maintains a references to the return Tester's
+        `actions` list.
+        """
+        loop_tester = LoopTester(self.circuit, self.clock,
+                                 self.default_print_format_str)
+        self.actions.append(Loop(n_iter, loop_tester.index,
+                                 loop_tester.actions))
+        return loop_tester
+
+
+class LoopIndex:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+
+class LoopTester(Tester):
+    __unique_index_id = -1
+
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
+                 default_print_format_str: str = "%x"):
+        super().__init__(circuit, clock, default_print_format_str)
+        LoopTester.__unique_index_id += 1
+        self.index = LoopIndex(
+            f"__fault_loop_var_action_{LoopTester.__unique_index_id}")

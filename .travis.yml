@@ -1,10 +1,7 @@
 language: python
 addons:
   apt:
-    sources:
-    - ubuntu-toolchain-r-test
     packages:
-    - g++-4.9
     - verilator
 # python managed by conda until 3.7 available
 # python:
@@ -22,14 +19,13 @@ install:
 - source activate test-env
 - conda install pip
 # End install conda
-- wget https://raw.githubusercontent.com/phanrahan/magma/master/.travis/install_coreir.sh
-- source install_coreir.sh
 - pip install python-coveralls
 - pip install pytest-cov pytest-codestyle
 - pip install mantle  # for tests.common
 - pip install -e .
 # Begin setup CoSA dependencies
 - pysmt-install --msat --confirm-agreement
+- pysmt-install --z3 --confirm-agreement
 - export PYTHONPATH="/home/travis/.smt_solvers/python-bindings-3.6:${PYTHONPATH}"
 - export LD_LIBRARY_PATH="/home/travis/.smt_solvers/python-bindings-3.6:${LD_LIBRARY_PATH}"
 # - pysmt-install --check
@@ -40,10 +36,9 @@ script:
 after_success:
 - coveralls
 deploy:
-  provider: pypi
-  user: leonardt
-  password:
-    secure: gC4qDP7fsWexRrqQ4R5LvQ7NQWAnbQoU618WDdSngmm9ex7eqJtvbIocAG3eIW7VK/ZhhBcgCMiKYPVO/Emr9mX995qWAXBBdlMh0+7BK7A2TJ4Hj6pj2Pt4a0YXkRcZb771iby33ORZDqIhl0wf3mUyHNl/MN2d4g22EBeBl7Y2RBo1LG6F6wo79D3EO5fUWKV30/Zf6yTvaOxWmBksZrtOUdNpcBRcWdjXG+dNYQ3Udv56YwkNAhwjNksR2bfHSadarxahszw5lLBwjq3mEIrkv7Oh772B7jbfYg3EfCzHwv/KlBEv9hruFVxfVxNvniT8JpRxksOTP/F3VCFRX8/c4wiARL6EfHd42qDTx01Sv7t1DjzK4RirMEzD3NpQ9ODE5ztTrIQXQJn93vyhQ2mBM2EMKi1d/5+NedHIiB86X8djtkLVnElVvEzAumAPd6Q0AmUxkPuudlucXuZVFPQ34a18298R5IvFdigH80IaY6TvEOuQ8/czvGCOe6ivwOhS5ABay+dSAIlDtYYW6CHukDsPsuW4pbG95TTGqEXzZa7UQnY1SXVOn+QIhWd3utYlZEcy/OimS6wNPmheQ+Xm8AoXC2bDsWa0PD/Np+3laZi6hztiz0EuKIaZc+e1C4wum9EhqDqiyF8MKiD4dwkmKspoi3GEANJPEQonzUk=
+  provider: script
+  script: /bin/bash .travis/deploy.sh
+  skip_cleanup: true
   on:
     tags: true
     branch: master
