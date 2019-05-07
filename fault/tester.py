@@ -225,8 +225,7 @@ class Tester:
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        loop_tester = LoopTester(self.circuit, self.clock,
-                                 self.default_print_format_str)
+        loop_tester = LoopTester(self.circuit, self.clock)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
@@ -243,9 +242,8 @@ class LoopIndex:
 class LoopTester(Tester):
     __unique_index_id = -1
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
-                 default_print_format_str: str = "%x"):
-        super().__init__(circuit, clock, default_print_format_str)
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+        super().__init__(circuit, clock)
         LoopTester.__unique_index_id += 1
         self.index = LoopIndex(
             f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
