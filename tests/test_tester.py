@@ -294,7 +294,7 @@ def test_tester_loop(target, simulator):
 
 
 def test_tester_file_io(target, simulator):
-    circ = common.TestArrayCircuit
+    circ = common.TestByteCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     file_in = tester.file_open("test_file_in.raw", "r")
