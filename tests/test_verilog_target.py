@@ -104,7 +104,7 @@ def test_target_clock(capfd, target, simulator):
         Step(circ.CLK, 1),
         Poke(circ.I, BitVector(1, 1)),
         Eval(),
-        Print("%x", circ.O),
+        Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
     out, err = capfd.readouterr()
