@@ -156,3 +156,27 @@ class Loop(Action):
         actions = [action.retarget(new_circuit, clock) for action in
                    self.actions]
         return Loop(self.n_iter, actions)
+
+
+class While(Action):
+    def __init__(self, loop_cond, actions):
+        # TODO: might be nice to define loop_var to captuare condition
+        # and use in loop? e.g. if you're looping until you get a HALT
+        # back from whatever you're expecting but want to switch on
+        # the other opcodes?
+
+        # TODO would really benefit from a NOT in fault so you can
+        # negate the condition. currently have to do while(var = 0)
+        # instead of while(var != termination_condition).
+        self.loop_cond = loop_cond
+        self.actions = actions
+
+    def __str__(self):
+        # TODO: Might be nice to format this print output over multiple lines
+        # for actions
+        return f"While({self.loop_cond}, {self.actions})"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return While(self.loop_cond, actions)

@@ -274,6 +274,72 @@ class VerilatorTarget(VerilogTarget):
         code.append("}")
         return code
 
+    def make_while(self, i, action):
+        code = []
+
+        cond_action = action.loop_cond
+        # For verilator, if an expect is "AnyValue" we don't need to
+        # perform the expect.
+        if value_utils.is_any(cond_action.value):
+            return []
+        if self.verilator_version > 3.874:
+            prefix = f"{self.circuit_name}"
+        else:
+            prefix = f"v"
+        if isinstance(cond_action.port, fault.WrappedVerilogInternalPort):
+            path = cond_action.port.path.replace(".", "->")
+            name = f"{prefix}->{path}"
+            debug_name = name
+        elif isinstance(cond_action.port, SelectPath):
+            name = cond_action.port.verilator_path
+            if len(cond_action.port) > 2:
+                name = f"{prefix}->" + name
+            if self.verilator_version >= 3.856:
+                if len(cond_action.port) > 2:
+                    self.debug_includes.add(f"{cond_action.port[0].circuit.name}")
+            for item in cond_action.port[1:-1]:
+                circuit_name = type(item.instance).name
+                self.debug_includes.add(f"{circuit_name}")
+            debug_name = cond_action.port[-1].debug_name
+        else:
+            name = verilog_name(cond_action.port.name)
+            debug_name = cond_action.port.debug_name
+        value = cond_action.value
+        if isinstance(value, actions.Peek):
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                path = cond_action.port.path.replace(".", "->")
+                value = f"top->{prefix}->{path}"
+            else:
+                value = f"top->{verilog_name(value.port.name)}"
+        elif isinstance(value, PortWrapper):
+            if self.verilator_version >= 3.856:
+                if len(cond_action.port) > 2:
+                    self.debug_includes.add(f"{cond_action.port[0].circuit.name}")
+            for item in value.select_path[1:-1]:
+                circuit_name = type(item.instance).name
+                self.debug_includes.add(f"{circuit_name}")
+            value = f"top->{prefix}->" + value.select_path.verilator_path
+        elif isinstance(cond_action.port, m.SIntType) and value < 0:
+            # Handle sign extension for verilator since it expects and
+            # unsigned c type
+            port_len = len(cond_action.port)
+            value = BitVector(value, port_len).as_uint()
+
+        # return [f"my_assert(top->{name}, {value}, "
+        #         f"{i}, \"{debug_name}\");"]
+
+        # TODO: i want to pass in an expect to the while loop
+        code.append(f"while (top->{name} == {value}) {{")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("}")
+
+        return code
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default

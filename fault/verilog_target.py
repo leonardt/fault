@@ -100,6 +100,8 @@ class VerilogTarget(Target):
             return self.make_guarantee(i, action)
         if isinstance(action, actions.Loop):
             return self.make_loop(i, action)
+        if isinstance(action, actions.While):
+            return self.make_while(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
