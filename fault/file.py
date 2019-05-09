@@ -8,7 +8,10 @@ class File:
         self.tester = tester
         self.mode = mode
         self.chunk_size = chunk_size
-        self.name_without_ext = os.path.splitext(self.name)[0]
+        basename = os.path.basename(self.name)
+        filename = os.path.splitext(basename)[0]
+        filename = filename.replace(".", "_")
+        self.name_without_ext = filename
 
     def __str__(self):
         return f'File<"{self.name}">'
