@@ -5,6 +5,7 @@ from hwtypes import BitVector
 import common
 import random
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
+from fault.tester import Tester
 from fault.random import random_bv
 import copy
 import os.path
@@ -24,6 +25,27 @@ def test_verilator_peeks():
             circ, directory=f"{tempdir}/",
             flags=flags, skip_compile=True)
         target.run(actions)
+
+
+def test_verilator_skip_build():
+    circ = common.TestBasicCircuit
+    flags = ["-Wno-lint"]
+    tester = Tester(circ)
+    with tempfile.TemporaryDirectory() as tempdir:
+        tester.compile_and_run(target="verilator",
+                               directory=tempdir,
+                               flags=flags)
+        # get the timestamp on generated verilator obj files
+        obj_filename = os.path.join(tempdir, "obj_dir", "VBasicCircuit__ALL.a")
+        mtime = os.path.getmtime(obj_filename)
+
+        # run without building the verilator
+        tester.compile_and_run(target="verilator",
+                               directory=tempdir,
+                               skip_verilator=True,
+                               flags=flags)
+        new_mtime = os.path.getmtime(obj_filename)
+        assert mtime == new_mtime
 
 
 def test_verilator_trace():
