@@ -294,6 +294,9 @@ def test_tester_loop(target, simulator):
 
 
 def test_tester_file_io(target, simulator):
+    if target == "system-verilog":
+        import pytest
+        pytest.skip("File IO not yet implemented for system-verilog target")
     circ = common.TestByteCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
