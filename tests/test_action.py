@@ -1,4 +1,8 @@
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
+from fault import Tester
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek, FileOpen, \
+    FileRead, FileWrite, FileClose, Loop
+from fault.file import File
 import common
 
 
@@ -14,3 +18,8 @@ def test_action_strs():
     assert str(Loop(12, index, [Peek(circ.O), Poke(circ.I, 1)])) == \
         f'Loop(12, {index}, ' \
         f'[Peek(BasicClkCircuit.O), Poke(BasicClkCircuit.I, 1)])'
+    file = File("my_file", Tester(circ), "r", 1)
+    assert str(FileOpen(file)) == 'FileOpen(File<"my_file">)'
+    assert str(FileRead(file)) == 'FileRead(File<"my_file">)'
+    assert str(FileWrite(file, 3)) == 'FileWrite(File<"my_file">, 3)'
+    assert str(FileClose(file)) == 'FileClose(File<"my_file">)'

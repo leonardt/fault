@@ -100,6 +100,14 @@ class VerilogTarget(Target):
             return self.make_guarantee(i, action)
         if isinstance(action, actions.Loop):
             return self.make_loop(i, action)
+        if isinstance(action, actions.FileOpen):
+            return self.make_file_open(i, action)
+        if isinstance(action, actions.FileWrite):
+            return self.make_file_write(i, action)
+        if isinstance(action, actions.FileRead):
+            return self.make_file_read(i, action)
+        if isinstance(action, actions.FileClose):
+            return self.make_file_close(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -124,4 +132,20 @@ class VerilogTarget(Target):
 
     @abstractmethod
     def make_loop(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_file_open(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_file_close(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_file_read(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_file_write(self, i, action):
         pass

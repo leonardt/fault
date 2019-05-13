@@ -9,6 +9,7 @@ from fault.system_verilog_target import SystemVerilogTarget
 from fault.actions import Poke, Expect, Step, Print, Loop
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
+from fault.file import File
 import copy
 
 
@@ -86,7 +87,7 @@ class Tester:
             for p, v in zip(port, value):
                 self.poke(p, v)
         else:
-            if not isinstance(value, LoopIndex):
+            if not isinstance(value, (LoopIndex, actions.FileRead)):
                 value = make_value(port, value)
             self.actions.append(actions.Poke(port, value))
 
@@ -229,6 +230,26 @@ class Tester:
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
+
+    def file_open(self, file_name, mode="r", chunk_size=1):
+        """
+        mode : "r" for read, "w" for write
+        chunk_size : number of bytes per read/write
+        """
+        file = File(file_name, self, mode, chunk_size)
+        self.actions.append(actions.FileOpen(file))
+        return file
+
+    def file_close(self, file):
+        self.actions.append(actions.FileClose(file))
+
+    def file_read(self, file):
+        read_action = actions.FileRead(file)
+        self.actions.append(read_action)
+        return read_action
+
+    def file_write(self, file, value):
+        self.actions.append(actions.FileWrite(file, value))
 
 
 class LoopIndex:

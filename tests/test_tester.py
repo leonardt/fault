@@ -292,3 +292,31 @@ def test_tester_loop(target, simulator):
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_file_io(target, simulator):
+    if target == "system-verilog":
+        import pytest
+        pytest.skip("File IO not yet implemented for system-verilog target")
+    circ = common.TestByteCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    file_in = tester.file_open("test_file_in.raw", "r")
+    file_out = tester.file_open("test_file_out.raw", "w")
+    loop = tester.loop(8)
+    value = loop.file_read(file_in)
+    loop.poke(circ.I, value)
+    loop.eval()
+    loop.expect(circ.O, loop.index)
+    loop.file_write(file_out, circ.O)
+    tester.file_close(file_in)
+    tester.file_close(file_out)
+    with tempfile.TemporaryDirectory() as _dir:
+        with open(_dir + "/test_file_in.raw", "wb") as file:
+            file.write(bytes([i for i in range(8)]))
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+        with open(_dir + "/test_file_out.raw", "rb") as file:
+            assert file.read(8) == bytes([i for i in range(8)])

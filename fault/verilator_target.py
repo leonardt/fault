@@ -167,6 +167,8 @@ class VerilatorTarget(VerilogTarget):
             return asserts
         else:
             value = action.value
+            if isinstance(value, actions.FileRead):
+                value = f"*{value.file.name_without_ext}_in"
             if isinstance(action.port, m.SIntType) and value < 0:
                 # Handle sign extension for verilator since it expects and
                 # unsigned c type
@@ -276,6 +278,45 @@ class VerilatorTarget(VerilogTarget):
         code.append("}")
         return code
 
+    def make_file_open(self, i, action):
+        name = action.file.name_without_ext
+        if action.file.mode == "r":
+            mode = "in"
+        else:
+            mode = "out"
+        code = f"""\
+char {name}_in[{action.file.chunk_size}] = {{0}};
+std::fstream {name}_file("{action.file.name}", std::ios::{mode} |
+                                               std::ios::binary);
+if (!{name}_file.is_open()) {{
+    std::cout << "Could not open file {action.file.name}" << std::endl;
+    return 1;
+}}"""
+        return code.splitlines()
+
+    def make_file_close(self, i, action):
+        return [f"{action.file.name_without_ext}_file.close();"]
+
+    def make_file_write(self, i, action):
+        value = f"top->{verilog_name(action.value.name)}"
+        code = f"""\
+{action.file.name_without_ext}_file.write((char *)&{value},
+                                          {action.file.chunk_size});
+"""
+        return [code]
+
+    def make_file_read(self, i, action):
+        code = f"""\
+{action.file.name_without_ext}_file.read({action.file.name_without_ext}_in,
+                                         {action.file.chunk_size});
+if ({action.file.name_without_ext}_file.eof()) {{
+    std::cout << "Reached end of file {action.file.name_without_ext}"
+              << std::endl;
+    break;
+}}
+"""
+        return code.splitlines()
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
@@ -287,6 +328,7 @@ class VerilatorTarget(VerilogTarget):
              verilator_includes] + [
             '"verilated.h"',
             '<iostream>',
+            '<fstream>',
             '<verilated_vcd_c.h>',
             '<sys/types.h>',
             '<sys/stat.h>',
