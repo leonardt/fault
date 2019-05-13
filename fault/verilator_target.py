@@ -79,7 +79,7 @@ class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=[], skip_compile=False, include_verilog_libraries=[],
                  include_directories=[], magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts={}):
+                 circuit_name=None, magma_opts={}, skip_verilator=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -95,14 +95,16 @@ class VerilatorTarget(VerilogTarget):
         self.flags = flags
         self.include_directories = include_directories
 
-        # Compile the design using `verilator`
-        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
-        verilator_cmd = verilator_utils.verilator_cmd(
-            self.circuit_name, self.verilog_file.name,
-            self.include_verilog_libraries, self.include_directories,
-            driver_file.name, self.flags)
-        if self.run_from_directory(verilator_cmd):
-            raise Exception(f"Running verilator cmd {verilator_cmd} failed")
+        # Compile the design using `verilator`, if not skip
+        if not skip_verilator:
+            driver_file = self.directory / Path(
+                f"{self.circuit_name}_driver.cpp")
+            verilator_cmd = verilator_utils.verilator_cmd(
+                self.circuit_name, self.verilog_file.name,
+                self.include_verilog_libraries, self.include_directories,
+                driver_file.name, self.flags)
+            if self.run_from_directory(verilator_cmd):
+                raise Exception(f"Running verilator cmd {verilator_cmd} failed")
         self.debug_includes = set()
         verilator_version = subprocess.check_output("verilator --version",
                                                     shell=True)
