@@ -112,6 +112,18 @@ class SystemVerilogTarget(VerilogTarget):
         code.append("end")
         return code
 
+    def make_file_open(self, i, action):
+        raise NotImplementedError()
+
+    def make_file_close(self, i, action):
+        raise NotImplementedError()
+
+    def make_file_read(self, i, action):
+        raise NotImplementedError()
+
+    def make_file_write(self, i, action):
+        raise NotImplementedError()
+
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
             return []
