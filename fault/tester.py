@@ -11,6 +11,9 @@ from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 from fault.file import File
 import copy
+import os
+import inspect
+from fault.config import get_test_dir
 
 
 class Tester:
@@ -138,7 +141,25 @@ class Tester:
             builder.process(action)
         return builder.vectors
 
-    def compile(self, target="verilator", **kwargs):
+    def _make_directory(self, directory):
+        """
+        Handles support for `set_test_dir('callee_file_dir')`
+
+        When configured in this mode, fault will generate the test
+        collateral treating `directory` as relative to the file calling
+        `compile_and_run` or `compile`.
+
+        The default behvaior is to generate the collateral relative to where
+        Python is invoked.
+        """
+        if get_test_dir() == 'callee_file_dir':
+            (_, filename, _, _, _, _) = inspect.getouterframes(
+                inspect.currentframe())[2]
+            file_path = os.path.abspath(os.path.dirname(filename))
+            directory = os.path.join(file_path, directory)
+        return directory
+
+    def _compile(self, target="verilator", **kwargs):
         """
         Create an instance of the target backend.
 
@@ -149,6 +170,16 @@ class Tester:
         this avoids having to call verilator multiple times)
         """
         self.targets[target] = self.make_target(target, **kwargs)
+
+    def compile(self, target="verilator", **kwargs):
+        """
+        Logic deferred to `_compile` method, one level of indirection in order
+        to avoid calling `_make_directory` twice in `compile` and
+        `compile_and_run`
+        """
+        if "directory" in kwargs:
+            kwargs["directory"] = self._make_directory(kwargs["directory"])
+        self._compile(target, directory, **kwargs)
 
     def run(self, target="verilator"):
         """
@@ -168,7 +199,9 @@ class Tester:
         """
         Compile and run the current action sequence using `target`
         """
-        self.compile(target, **kwargs)
+        if "directory" in kwargs:
+            kwargs["directory"] = self._make_directory(kwargs["directory"])
+        self._compile(target, **kwargs)
         self.run(target)
 
     def retarget(self, new_circuit, clock=None):
