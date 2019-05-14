@@ -13,7 +13,6 @@ from fault.file import File
 import copy
 import os
 import inspect
-from pathlib import Path
 from fault.config import get_test_dir
 
 
