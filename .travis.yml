@@ -5,7 +5,7 @@ addons:
     - sourceline: 'ppa:team-electronics/ppa'
     packages:
     - verilator
-    - iverilog
+    - verilog
 # python managed by conda until 3.7 available
 # python:
 # - '3.6'
