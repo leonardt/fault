@@ -12,6 +12,7 @@ import fault
 
 src_tpl = """\
 module {circuit_name}_tb;
+integer __error_occurred = 0;
 {declarations}
 
     {circuit_name} dut (
@@ -20,7 +21,12 @@ module {circuit_name}_tb;
 
     initial begin
 {initial_body}
-        #20 $finish;
+        #20 begin
+            if (__error_occurred)
+                $stop;
+            else
+                $finish;
+        end;
     end
 
 endmodule
@@ -181,9 +187,12 @@ end
             debug_name = action.port.name
         value = self.process_value(action.port, action.value)
 
-        return [f"if ({name} != {value}) $error(\"Failed on action={i}"
-                f" checking port {debug_name}. Expected %x, got %x\""
-                f", {value}, {name});"]
+        return f"""
+if ({name} != {value}) begin
+    $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
+    __error_occurred |= 1;
+end
+""".splitlines()  # noqa
 
     def make_eval(self, i, action):
         # Eval implicit in SV simulations
@@ -273,7 +282,7 @@ irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notim
 vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
         elif self.simulator == "iverilog":
-            cmd = f"iverilog {test_bench_file} {self.verilog_file}"
+            cmd = f"iverilog -o {self.circuit_name}_tb {test_bench_file} {self.verilog_file}"
         else:
             raise NotImplementedError(self.simulator)
 
@@ -282,3 +291,5 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         if self.simulator == "vcs":
             print(f"Running command: {cmd}")
             assert not subprocess.call("./simv", cwd=self.directory, shell=True)
+        elif self.simulator == "iverilog":
+            assert not subprocess.call(f"vvp -N {self.circuit_name}_tb", cwd=self.directory, shell=True)
