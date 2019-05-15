@@ -70,3 +70,11 @@ class SimpleALU(m.Circuit):
             # [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
             # use arbitrary fourth op
             [io.a + io.b, io.a - io.b, io.a * io.b, io.b - io.a], opcode)
+
+
+class AndCircuit(m.Circuit):
+    IO = ["I0", m.In(m.Bit), "I1", m.In(m.Bit), "O", m.Out(m.Bit)]
+
+    @classmethod
+    def definition(io):
+        io.O <= io.I0 & io.I1

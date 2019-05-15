@@ -67,7 +67,7 @@ class SystemVerilogTarget(VerilogTarget):
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
-        if simulator not in ["vcs", "ncsim"]:
+        if simulator not in {"vcs", "ncsim", "iverilog"}:
             raise ValueError(f"Unsupported simulator {simulator}")
         self.simulator = simulator
         self.timescale = timescale
@@ -86,15 +86,27 @@ class SystemVerilogTarget(VerilogTarget):
             name = verilog_name(port.name)
         return name
 
+    def process_value(self, port, value):
+        if isinstance(port, m.SIntType) and value < 0:
+            # Handle sign extension for verilator since it expects and
+            # unsigned c type
+            port_len = len(port)
+            value = BitVector(value, port_len).as_uint()
+        elif value is fault.UnknownValue:
+            value = "'X"
+        elif isinstance(value, actions.Peek):
+            if isinstance(value.port, fault.WrappedVerilogInternalPort):
+                value = f"dut.{value.port.path}"
+            else:
+                value = f"{value.port.name}"
+        elif isinstance(value, PortWrapper):
+            value = f"dut.{value.select_path.system_verilog_path}"
+        return value
+
     def make_poke(self, i, action):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
-        value = action.value
-        if isinstance(action.port, m.SIntType) and value < 0:
-            # Handle sign extension for verilator since it expects and
-            # unsigned c type
-            port_len = len(action.port)
-            value = BitVector(value, port_len).as_uint()
+        value = self.process_value(action.port, action.value)
         return [f"{name} = {value};", f"#{self.clock_step_delay}"]
 
     def make_print(self, i, action):
@@ -139,19 +151,7 @@ class SystemVerilogTarget(VerilogTarget):
             debug_name = name
         else:
             debug_name = action.port.name
-        value = action.value
-        if isinstance(value, actions.Peek):
-            if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                value = f"dut.{value.port.path}"
-            else:
-                value = f"{value.port.name}"
-        elif isinstance(value, PortWrapper):
-            value = f"dut.{value.select_path.system_verilog_path}"
-        elif isinstance(action.port, m.SIntType) and value < 0:
-            # Handle sign extension for verilator since it expects and
-            # unsigned c type
-            port_len = len(action.port)
-            value = BitVector(value, port_len).as_uint()
+        value = self.process_value(action.port, action.value)
 
         return [f"if ({name} != {value}) $error(\"Failed on action={i}"
                 f" checking port {debug_name}. Expected %x, got %x\""
@@ -246,10 +246,14 @@ class SystemVerilogTarget(VerilogTarget):
             cmd = f"""\
 irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
-        else:
+        elif self.simulator == "vcs":
             cmd = f"""\
 vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
+        elif self.simulator == "iverilog":
+            cmd = f"iverilog {test_bench_file} {self.verilog_file}"
+        else:
+            raise NotImplementedError(self.simulator)
 
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
