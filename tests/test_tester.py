@@ -18,6 +18,9 @@ def pytest_generate_tests(metafunc):
         if shutil.which("vcs"):
             targets.append(
                 ("system-verilog", "vcs"))
+        if shutil.which("iverilog"):
+            targets.append(
+                ("system-verilog", "iverilog"))
         metafunc.parametrize("target,simulator", targets)
 
 
@@ -295,9 +298,6 @@ def test_tester_loop(target, simulator):
 
 
 def test_tester_file_io(target, simulator):
-    if target == "system-verilog":
-        import pytest
-        pytest.skip("File IO not yet implemented for system-verilog target")
     circ = common.TestByteCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
@@ -312,6 +312,7 @@ def test_tester_file_io(target, simulator):
     tester.file_close(file_in)
     tester.file_close(file_out)
     with tempfile.TemporaryDirectory() as _dir:
+        _dir = "build"
         with open(_dir + "/test_file_in.raw", "wb") as file:
             file.write(bytes([i for i in range(8)]))
         if target == "verilator":

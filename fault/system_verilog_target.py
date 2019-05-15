@@ -72,6 +72,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.simulator = simulator
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
+        self.declarations = []
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -101,6 +102,12 @@ class SystemVerilogTarget(VerilogTarget):
                 value = f"{value.port.name}"
         elif isinstance(value, PortWrapper):
             value = f"dut.{value.select_path.system_verilog_path}"
+        elif isinstance(value, actions.FileRead):
+            new_value = f"{value.file.name_without_ext}_in"
+            if value.file.chunk_size == 1:
+                # Assume that the user didn't want an array 1 byte, so unpack
+                new_value += "[0]"
+            value = new_value
         return value
 
     def make_poke(self, i, action):
@@ -116,8 +123,9 @@ class SystemVerilogTarget(VerilogTarget):
         return [f'$write("{action.format_str}"{ports});']
 
     def make_loop(self, i, action):
+        self.declarations.append(f"integer {action.loop_var};")
         code = []
-        code.append(f"for (int {action.loop_var} = 0;"
+        code.append(f"for ({action.loop_var} = 0;"
                     f" {action.loop_var} < {action.n_iter};"
                     f" {action.loop_var}++) begin")
 
@@ -130,16 +138,36 @@ class SystemVerilogTarget(VerilogTarget):
         return code
 
     def make_file_open(self, i, action):
-        raise NotImplementedError()
+        if action.file.mode not in {"r", "w"}:
+            raise NotImplementedError(action.file.mode)
+        name = action.file.name_without_ext
+        self.declarations.append(
+            f"reg [7:0] {name}_in[0:{action.file.chunk_size - 1}];")
+        self.declarations.append(f"integer {name}_file;")
+        code = f"""\
+{name}_file = $fopen(\"{action.file.name}\", \"{action.file.mode}\");
+if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_file);
+"""  # noqa
+        return code.splitlines()
 
     def make_file_close(self, i, action):
-        raise NotImplementedError()
+        return [f"$fclose({action.file.name_without_ext}_file);"]
 
     def make_file_read(self, i, action):
-        raise NotImplementedError()
+        decl = f"integer __i;"
+        if decl not in self.declarations:
+            self.declarations.append(decl)
+        code = f"""\
+for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+    {action.file.name_without_ext}_in[__i] = $fgetc({action.file.name_without_ext}_file);
+end
+"""  # noqa
+        return code.splitlines()
 
     def make_file_write(self, i, action):
-        raise NotImplementedError()
+        value = self.make_name(action.value)
+        return [f"$fwrite({action.file.name_without_ext}_file, \"%u\", "
+                f"{value});"]
 
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
@@ -168,32 +196,27 @@ class SystemVerilogTarget(VerilogTarget):
             code.append(f"#5 {name} ^= 1;")
         return code
 
-    @staticmethod
-    def generate_recursive_port_code(name, type_):
-        declarations = ""
+    def generate_recursive_port_code(self, name, type_):
         port_list = []
         if isinstance(type_, m.ArrayKind):
             for j in range(type_.N):
-                result = SystemVerilogTarget.generate_port_code(
+                result = self.generate_port_code(
                     name + "_" + str(j), type_.T
                 )
-                declarations += result[0]
-                port_list.extend(result[1])
+                port_list.extend(result)
         elif isinstance(type_, m.TupleKind):
             for k, t in zip(type_.Ks, type_.Ts):
-                result = SystemVerilogTarget.generate_port_code(
+                result = self.generate_port_code(
                     name + "_" + str(k), t
                 )
-                declarations += result[0]
-                port_list.extend(result[1])
-        return declarations, port_list
+                port_list.extend(result)
+        return port_list
 
-    @staticmethod
-    def generate_port_code(name, type_):
+    def generate_port_code(self, name, type_):
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
         if is_array_of_bits or isinstance(type_, m.TupleKind):
-            return SystemVerilogTarget.generate_recursive_port_code(name, type_)
+            return self.generate_recursive_port_code(name, type_)
         else:
             width_str = ""
             if isinstance(type_, m.ArrayKind) and \
@@ -205,16 +228,15 @@ class SystemVerilogTarget(VerilogTarget):
                 t = "reg"
             else:
                 raise NotImplementedError()
-            return f"    {t} {width_str}{name};\n", [f".{name}({name})"]
+            self.declarations.append(f"    {t} {width_str}{name};\n")
+            return [f".{name}({name})"]
 
     def generate_code(self, actions):
         initial_body = ""
-        declarations = ""
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
-            result = SystemVerilogTarget.generate_port_code(name, type_)
-            declarations += result[0]
-            port_list.extend(result[1])
+            result = self.generate_port_code(name, type_)
+            port_list.extend(result)
 
         for i, action in enumerate(actions):
             code = self.generate_action_code(i, action)
@@ -222,7 +244,7 @@ class SystemVerilogTarget(VerilogTarget):
                 initial_body += f"        {line}\n"
 
         src = src_tpl.format(
-            declarations=declarations,
+            declarations="\n".join(self.declarations),
             initial_body=initial_body,
             port_list=",\n        ".join(port_list),
             circuit_name=self.circuit_name,
