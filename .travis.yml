@@ -3,6 +3,7 @@ addons:
   apt:
     packages:
     - verilator
+    - iverilog
 # python managed by conda until 3.7 available
 # python:
 # - '3.6'
