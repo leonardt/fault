@@ -60,7 +60,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         magma_opts: Options dictionary for `magma.compile` command
 
-        simulator: "ncsim" or "vcs"
+        simulator: "ncsim", "vcs", or "iverilog"
 
         timescale: Set the timescale for the verilog simulation
                    (default 1ns/1ns)
