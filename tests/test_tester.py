@@ -312,7 +312,6 @@ def test_tester_file_io(target, simulator):
     tester.file_close(file_in)
     tester.file_close(file_out)
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         with open(_dir + "/test_file_in.raw", "wb") as file:
             file.write(bytes([i for i in range(8)]))
         if target == "verilator":
