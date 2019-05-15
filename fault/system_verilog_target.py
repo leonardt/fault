@@ -289,8 +289,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
         if self.simulator == "vcs":
-            print(f"Running command: {cmd}")
-            assert not subprocess.call("./simv", cwd=self.directory, shell=True)
+            assert not subprocess.call("./simv | tee /dev/stdout | grep Error || exit 0 && exit 1", cwd=self.directory, shell=True)
         elif self.simulator == "iverilog":
             assert not subprocess.call(f"vvp -N {self.circuit_name}_tb",
                                        cwd=self.directory, shell=True)
