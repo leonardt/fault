@@ -282,7 +282,7 @@ irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notim
 vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
         elif self.simulator == "iverilog":
-            cmd = f"iverilog -o {self.circuit_name}_tb {test_bench_file} {self.verilog_file}"
+            cmd = f"iverilog -o {self.circuit_name}_tb {test_bench_file} {self.verilog_file}"  # noqa
         else:
             raise NotImplementedError(self.simulator)
 
@@ -292,4 +292,5 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             print(f"Running command: {cmd}")
             assert not subprocess.call("./simv", cwd=self.directory, shell=True)
         elif self.simulator == "iverilog":
-            assert not subprocess.call(f"vvp -N {self.circuit_name}_tb", cwd=self.directory, shell=True)
+            assert not subprocess.call(f"vvp -N {self.circuit_name}_tb",
+                                       cwd=self.directory, shell=True)
