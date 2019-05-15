@@ -172,7 +172,7 @@ end
 
     def make_file_write(self, i, action):
         value = self.make_name(action.value)
-        return [f"$fwrite({action.file.name_without_ext}_file, \"%u\", "
+        return [f"$fwrite({action.file.name_without_ext}_file, \"%c\", "
                 f"{value});"]
 
     def make_expect(self, i, action):
@@ -191,7 +191,7 @@ end
 if ({name} != {value}) begin
     $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
     __error_occurred |= 1;
-end
+end;
 """.splitlines()  # noqa
 
     def make_eval(self, i, action):
