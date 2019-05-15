@@ -23,7 +23,7 @@ integer __error_occurred = 0;
 {initial_body}
         #20 begin
             if (__error_occurred)
-                $stop;
+                $fatal(1);
             else
                 $finish;
         end;
