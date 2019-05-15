@@ -112,6 +112,16 @@ class VerilatorTarget(VerilogTarget):
         # works
         self.verilator_version = float(verilator_version.split()[1])
 
+    def process_signed_values(self, port, value):
+        if isinstance(value, (int, BitVector)) and value < 0:
+            # Handle sign extension for verilator since it expects and unsigned
+            # c type
+            if isinstance(port, SelectPath):
+                port = port[-1]
+            port_len = len(port)
+            value = BitVector(value, port_len).as_uint()
+        return value
+
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
             prefix = f"{self.circuit_name}"
@@ -169,11 +179,7 @@ class VerilatorTarget(VerilogTarget):
             value = action.value
             if isinstance(value, actions.FileRead):
                 value = f"*{value.file.name_without_ext}_in"
-            if isinstance(action.port, m.SIntType) and value < 0:
-                # Handle sign extension for verilator since it expects and
-                # unsigned c type
-                port_len = len(action.port)
-                value = BitVector(value, port_len).as_uint()
+            value = self.process_signed_values(action.port, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
@@ -238,11 +244,7 @@ class VerilatorTarget(VerilogTarget):
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
-        elif isinstance(action.port, m.SIntType) and value < 0:
-            # Handle sign extension for verilator since it expects and
-            # unsigned c type
-            port_len = len(action.port)
-            value = BitVector(value, port_len).as_uint()
+        value = self.process_signed_values(action.port, value)
 
         return [f"my_assert(top->{name}, {value}, "
                 f"{i}, \"{debug_name}\");"]
