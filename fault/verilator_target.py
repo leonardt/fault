@@ -376,7 +376,7 @@ if ({action.file.name_without_ext}_file.eof()) {{
             self.circuit_name)
         assert not self.run_from_directory(verilator_make_cmd)
         assert not self.run_from_directory(
-            f"./obj_dir/V{self.circuit_name} | tee "
+            f"set -e -o pipefail; ./obj_dir/V{self.circuit_name} | tee "
             f"./obj_dir/{self.circuit_name}.log")
 
     def add_assumptions(self, circuit, actions, i):

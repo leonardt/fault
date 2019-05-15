@@ -7,6 +7,7 @@ import common
 import tempfile
 import os
 import shutil
+import pytest
 
 
 def pytest_generate_tests(metafunc):
@@ -54,6 +55,21 @@ def test_tester_basic(target, simulator):
     tester.compile_and_run("coreir")
     tester.clear()
     assert tester.actions == []
+
+
+@pytest.mark.xfail(strict=True)
+def test_tester_basic_fail(target, simulator):
+    circ = common.TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    tester.expect(circ.O, 0)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
 def test_tester_clock(target, simulator):
