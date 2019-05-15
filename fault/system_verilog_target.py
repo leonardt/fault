@@ -12,7 +12,6 @@ import fault
 
 src_tpl = """\
 module {circuit_name}_tb;
-integer __error_occurred = 0;
 {declarations}
 
     {circuit_name} dut (
@@ -21,12 +20,7 @@ integer __error_occurred = 0;
 
     initial begin
 {initial_body}
-        #20 begin
-            if (__error_occurred)
-                $fatal(1);
-            else
-                $finish;
-        end;
+        #20 $finish;
     end
 
 endmodule
@@ -190,7 +184,6 @@ end
         return f"""
 if ({name} != {value}) begin
     $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
-    __error_occurred |= 1;
 end;
 """.splitlines()  # noqa
 
