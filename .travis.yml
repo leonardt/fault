@@ -1,11 +1,8 @@
 language: python
 addons:
   apt:
-    sources:
-    - sourceline: 'ppa:team-electronics/ppa'
     packages:
     - verilator
-    - verilog
 # python managed by conda until 3.7 available
 # python:
 # - '3.6'
