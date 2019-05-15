@@ -2,7 +2,7 @@ language: python
 addons:
   apt:
     sources:
-    - team-electronics
+    - sourceline: 'ppa:team-electronics/ppa'
     packages:
     - verilator
     - iverilog-daily
