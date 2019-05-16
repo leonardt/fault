@@ -282,6 +282,9 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
         if self.simulator == "vcs":
+            # VCS doesn't set the return code when a simulation exits with an
+            # error, so we check the result of stdout to see if "Error" is
+            # present
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
                                     capture_output=True)
             assert not result.returncode, "Running vcs binary failed"
