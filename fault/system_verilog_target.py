@@ -287,6 +287,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             # present
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
                                     capture_output=True)
+            print(result.stdout)
             assert not result.returncode, "Running vcs binary failed"
             assert "Error" not in str(result.stdout), \
                 "String \"Error\" found in stdout of vcs run"
