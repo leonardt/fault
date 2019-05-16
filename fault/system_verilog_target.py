@@ -282,7 +282,11 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
         if self.simulator == "vcs":
-            assert not subprocess.call("./simv | tee /dev/stdout | grep Error || exit 0 && exit 1", cwd=self.directory, shell=True)  # noqa
+            result = subprocess.run("./simv", cwd=self.directory, shell=True,
+                                    capture_output=True)
+            assert not result.returncode, "Running vcs binary failed"
+            assert "Error" not in str(result.stdout), \
+                "String \"Error\" found in stdout of vcs run"
         elif self.simulator == "iverilog":
             assert not subprocess.call(f"vvp -N {self.circuit_name}_tb",
                                        cwd=self.directory, shell=True)
