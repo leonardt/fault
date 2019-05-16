@@ -32,19 +32,12 @@ integer __error_occurred = 0;
 endmodule
 """
 
-ncsim_cmd_string = """\
-database -open -vcd vcddb -into verilog.vcd -default -timescale ps
-probe -create -all -vcd -depth all
-run 10000ns
-quit
-"""
-
 
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, magma_output="coreir-verilog",
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
-                 timescale="1ns/1ns", clock_step_delay=5):
+                 timescale="1ns/1ns", clock_step_delay=5, num_cycle=10000):
         """
         circuit: a magma circuit
 
@@ -78,6 +71,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.simulator = simulator
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
+        self.num_cycle = num_cycle
         self.declarations = []
 
     def make_name(self, port):
@@ -272,6 +266,11 @@ end;
                                      self.include_verilog_libraries)
         cmd_file = Path(f"{self.circuit_name}_cmd.tcl")
         if self.simulator == "ncsim":
+            ncsim_cmd_string = f"""\
+database -open -vcd vcddb -into verilog.vcd -default -timescale ps
+probe -create -all -vcd -depth all
+run {self.num_cycle}ns
+quit"""
             with open(self.directory / cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
