@@ -37,7 +37,7 @@ class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, magma_output="coreir-verilog",
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
-                 timescale="1ns/1ns", clock_step_delay=5, num_cycle=10000,
+                 timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
                  dump_vcd=True, no_warning=False):
         """
         circuit: a magma circuit
@@ -72,7 +72,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.simulator = simulator
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
-        self.num_cycle = num_cycle
+        self.num_cycles = num_cycles
         self.dump_vcd = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
@@ -277,7 +277,7 @@ probe -create -all -vcd -depth all"""
                 vcd_command = ""
             ncsim_cmd_string = f"""\
 {vcd_command}
-run {self.num_cycle}ns
+run {self.num_cycles}ns
 quit"""
             if self.no_warning:
                 warning = "-neverwarn"
