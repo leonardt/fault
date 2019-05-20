@@ -1,8 +1,10 @@
 import common
 import tempfile
+import fault
 from fault import Tester
 import shutil
 import random
+import pytest
 
 
 def pytest_generate_tests(metafunc):
@@ -12,6 +14,8 @@ def pytest_generate_tests(metafunc):
             targets.append(("system-verilog", "ncsim"))
         if shutil.which("vcs"):
             targets.append(("system-verilog", "vcs"))
+        if shutil.which("iverilog"):
+            targets.append(("system-verilog", "iverilog"))
         metafunc.parametrize("target,simulator", targets)
 
 
@@ -112,4 +116,24 @@ def test_setattr_tuple(target, simulator):
     tester.eval()
     tester.circuit.O.a.expect(5)
     tester.circuit.O.b.expect(11)
+    run_test(target, simulator, tester)
+
+
+def test_setattr_x(target, simulator):
+    if target == "verilator":
+        pytest.skip("X not support with Verilator")
+    circ = common.AndCircuit
+    tester = Tester(circ)
+    tester.circuit.I0 = 0
+    tester.circuit.I1 = 1
+    tester.eval()
+    tester.circuit.O.expect(0)
+    tester.circuit.I0 = fault.UnknownValue
+    tester.circuit.I1 = 1
+    tester.eval()
+    tester.circuit.O.expect(0)
+    tester.circuit.I0 = fault.UnknownValue
+    tester.circuit.I1 = fault.UnknownValue
+    tester.eval()
+    tester.circuit.O.expect(fault.UnknownValue)
     run_test(target, simulator, tester)

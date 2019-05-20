@@ -6,6 +6,7 @@ addons:
 # python managed by conda until 3.7 available
 # python:
 # - '3.6'
+
 install:
 # install conda for py 3.7
 - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
