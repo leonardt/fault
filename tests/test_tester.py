@@ -1,6 +1,7 @@
 import magma as m
 import random
 from hwtypes import BitVector
+import hwtypes
 import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
 import common
@@ -344,3 +345,24 @@ def test_tester_file_io(target, simulator):
                 # this first value is skipped
                 expected = expected[1:]
             assert file.read(8) == expected
+
+
+def test_sint_circuit(target, simulator):
+    circ = common.TestSIntCircuit
+    tester = fault.Tester(circ)
+
+    inputs = [hwtypes.SIntVector.random(3) for _ in range(10)]
+
+    # have at least a few negative tests
+    while sum(bool(x < 0) for x in inputs) < 3:
+        inputs = [hwtypes.SIntVector.random(3) for _ in range(10)]
+
+    for i in range(10):
+        tester.circuit.I = inputs[i]
+        tester.eval()
+        tester.circuit.O.expect(inputs[i])
+    with tempfile.TemporaryDirectory() as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)

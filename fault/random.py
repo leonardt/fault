@@ -1,8 +1,9 @@
+
 import typing as tp
 import random
 import itertools as it
 from hwtypes import AbstractBitVector, AbstractBit
-from hwtypes import BitVector, Bit
+from hwtypes import BitVector, Bit, SIntVector
 from hwtypes import z3BitVector, z3Bit
 from collections.abc import Mapping
 import z3

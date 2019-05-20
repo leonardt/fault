@@ -282,15 +282,18 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
         if self.simulator == "vcs":
-            # VCS doesn't set the return code when a simulation exits with an
-            # error, so we check the result of stdout to see if "Error" is
-            # present
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
                                     capture_output=True)
-            print(result.stdout.decode())
-            assert not result.returncode, "Running vcs binary failed"
-            assert "Error" not in str(result.stdout), \
-                "String \"Error\" found in stdout of vcs run"
         elif self.simulator == "iverilog":
-            assert not subprocess.call(f"vvp -N {self.circuit_name}_tb",
-                                       cwd=self.directory, shell=True)
+            result = subprocess.run(f"vvp -N {self.circuit_name}_tb",
+                                    cwd=self.directory, shell=True)
+        if self.simulator in {"vcs", "iverilog"}:
+            assert not result.returncode, \
+                f"Running {self.simulator} binary failed"
+            # VCS and iverilog do not set the return code when a
+            # simulation exits with an error, so we check the result
+            # of stdout to see if "Error" is present
+            if result.stdout:
+                print(result.stdout.decode())
+                assert "Error" not in str(result.stdout), \
+                    f"\"Error\" found during {self.simulator} run"
