@@ -32,19 +32,13 @@ integer __error_occurred = 0;
 endmodule
 """
 
-ncsim_cmd_string = """\
-database -open -vcd vcddb -into verilog.vcd -default -timescale ps
-probe -create -all -vcd -depth all
-run 10000ns
-quit
-"""
-
 
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, magma_output="coreir-verilog",
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
-                 timescale="1ns/1ns", clock_step_delay=5):
+                 timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
+                 dump_vcd=True, no_warning=False):
         """
         circuit: a magma circuit
 
@@ -78,6 +72,9 @@ class SystemVerilogTarget(VerilogTarget):
         self.simulator = simulator
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
+        self.num_cycles = num_cycles
+        self.dump_vcd = dump_vcd
+        self.no_warning = no_warning
         self.declarations = []
 
     def make_name(self, port):
@@ -272,10 +269,24 @@ end;
                                      self.include_verilog_libraries)
         cmd_file = Path(f"{self.circuit_name}_cmd.tcl")
         if self.simulator == "ncsim":
+            if self.dump_vcd:
+                vcd_command = """
+database -open -vcd vcddb -into verilog.vcd -default -timescale ps
+probe -create -all -vcd -depth all"""
+            else:
+                vcd_command = ""
+            ncsim_cmd_string = f"""\
+{vcd_command}
+run {self.num_cycles}ns
+quit"""
+            if self.no_warning:
+                warning = "-neverwarn"
+            else:
+                warning = ""
             with open(self.directory / cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
-irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
+irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks {warning} -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
         elif self.simulator == "vcs":
             cmd = f"""\
