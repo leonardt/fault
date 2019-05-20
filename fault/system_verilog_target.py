@@ -286,14 +286,14 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
                                     capture_output=True)
         elif self.simulator == "iverilog":
             result = subprocess.run(f"vvp -N {self.circuit_name}_tb",
-                                    cwd=self.directory, shell=True)
+                                    cwd=self.directory, shell=True,
+                                    capture_output=True)
         if self.simulator in {"vcs", "iverilog"}:
-            assert not result.returncode, \
-                f"Running {self.simulator} binary failed"
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
             # of stdout to see if "Error" is present
-            if result.stdout:
-                print(result.stdout.decode())
-                assert "Error" not in str(result.stdout), \
-                    f"\"Error\" found during {self.simulator} run"
+            print(result.stdout.decode())
+            assert not result.returncode, \
+                f"Running {self.simulator} binary failed"
+            assert "Error" not in str(result.stdout), \
+                f"\"Error\" found in stdout of {self.simulator} run"

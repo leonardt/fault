@@ -351,16 +351,16 @@ def test_sint_circuit(target, simulator):
     circ = common.TestSIntCircuit
     tester = fault.Tester(circ)
 
-    inputs = [hwtypes.SIntVector.random(3) for _ in range(10)]
+    inputs = [hwtypes.SIntVector.random(4) for _ in range(10)]
 
     # have at least a few negative tests
     while sum(bool(x < 0) for x in inputs) < 3:
-        inputs = [hwtypes.SIntVector.random(3) for _ in range(10)]
+        inputs = [hwtypes.SIntVector.random(4) for _ in range(10)]
 
     for i in range(10):
-        tester.circuit.I = inputs[i]
+        tester.circuit.I = int(inputs[i])
         tester.eval()
-        tester.circuit.O.expect(inputs[i])
+        tester.circuit.O.expect(int(inputs[i]))
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
