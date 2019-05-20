@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.8]
+### Added
+- https://github.com/leonardt/fault/pull/96 adds support for
+  `fault.config.set_test_dir`. Call with 'callee_file_dir' to have the
+  `directory` parameter to `compile_and_run` relative to the calling file
+  (default is relative to where Python is invoked)
+- Adds support for poking `fault.AnyValue` (X) using the `"system-verilog"`
+  target
+- https://github.com/leonardt/fault/pull/102 Adds support for more options for
+  `"ncsim"` simulator
+    - Adds switch to suppress warnings.
+    - Adds switch to dump VCD
+    - Adds parameter to specify the number of cycles
+- https://github.com/leonardt/fault/pull/98 Adds support for file i/o for
+  system verilog targets
+
+### Fixed
+- https://github.com/leonardt/fault/pull/99 fixes a bug for equality checks
+- https://github.com/leonardt/fault/pull/100 fixes a bug for checking the
+  status code of verilator commands
+- https://github.com/leonardt/fault/pull/101 fixes a bug for expect/poke of
+  signed values
+
 ## [2.0.7]
 ### Added
 - Adds support for loop and file i/o actions
