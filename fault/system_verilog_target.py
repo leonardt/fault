@@ -12,7 +12,6 @@ import fault
 
 src_tpl = """\
 module {circuit_name}_tb;
-integer __error_occurred = 0;
 {declarations}
 
     {circuit_name} dut (
@@ -21,12 +20,7 @@ integer __error_occurred = 0;
 
     initial begin
 {initial_body}
-        #20 begin
-            if (__error_occurred)
-                $stop;
-            else
-                $finish;
-        end;
+        #20 $finish;
     end
 
 endmodule
@@ -54,7 +48,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         magma_opts: Options dictionary for `magma.compile` command
 
-        simulator: "ncsim" or "vcs"
+        simulator: "ncsim", "vcs", or "iverilog"
 
         timescale: Set the timescale for the verilog simulation
                    (default 1ns/1ns)
@@ -187,7 +181,6 @@ end
         return f"""
 if ({name} != {value}) begin
     $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
-    __error_occurred |= 1;
 end;
 """.splitlines()  # noqa
 
@@ -300,8 +293,15 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         print(f"Running command: {cmd}")
         assert not subprocess.call(cmd, cwd=self.directory, shell=True)
         if self.simulator == "vcs":
-            print(f"Running command: {cmd}")
-            assert not subprocess.call("./simv", cwd=self.directory, shell=True)
+            # VCS doesn't set the return code when a simulation exits with an
+            # error, so we check the result of stdout to see if "Error" is
+            # present
+            result = subprocess.run("./simv", cwd=self.directory, shell=True,
+                                    capture_output=True)
+            print(result.stdout.decode())
+            assert not result.returncode, "Running vcs binary failed"
+            assert "Error" not in str(result.stdout), \
+                "String \"Error\" found in stdout of vcs run"
         elif self.simulator == "iverilog":
             assert not subprocess.call(f"vvp -N {self.circuit_name}_tb",
                                        cwd=self.directory, shell=True)
