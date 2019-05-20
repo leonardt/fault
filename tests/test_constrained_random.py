@@ -1,4 +1,5 @@
 import pytest
+import random
 from fault.random import ConstrainedRandomGenerator
 
 N = 8
@@ -6,6 +7,7 @@ WIDTH = 8
 
 
 def test_constrained_random():
+    random.seed(0)
     v = dict(x=WIDTH, y=WIDTH, z=WIDTH)
 
     def pred(x, y, z):
