@@ -222,11 +222,11 @@ end;
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
-            if name in power_args["supply0s"]:
+            if name in power_args.get("supply0s", []):
                 t = "supply0"
-            elif name in power_args["supply1s"]:
+            elif name in power_args.get("supply1s", []):
                 t = "supply1"
-            elif name in power_args["tris"]:
+            elif name in power_args.get("tris", []):
                 t = "tri"
             elif type_.isoutput():
                 t = "wire"
