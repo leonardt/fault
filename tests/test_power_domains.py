@@ -52,5 +52,18 @@ def test_simple_alu_pd():
     tester.circuit.b = b
     tester.circuit.c.expect(a + b)
 
-    tester.compile_and_run(target="system-verilog", simulator="iverilog",
-                           directory="tests/build", skip_compile=True)
+    try:
+        tester.compile_and_run(target="system-verilog", simulator="ncsim",
+                               directory="tests/build", skip_compile=True)
+    except AssertionError:
+        # Won't run because we don't have concrete DUT or ncsim, but we check
+        # that the output has the right types for the special ports
+        with open("tests/build/simple_alu_pd_tb.sv", "r") as f:
+            for line in f.read().splitlines():
+                if "VDD_HIGH_TOP_VIRTUAL;" in line:
+                    assert line.lstrip().rstrip() == \
+                        "tri VDD_HIGH_TOP_VIRTUAL;"
+                elif "VDD_HIGH;" in line:
+                    assert line.lstrip().rstrip() == "supply1 VDD_HIGH;"
+                elif "VSS;" in line:
+                    assert line.lstrip().rstrip() == "supply0 VSS;"
