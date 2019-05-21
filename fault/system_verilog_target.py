@@ -196,18 +196,18 @@ end;
             code.append(f"#5 {name} ^= 1;")
         return code
 
-    def generate_recursive_port_code(self, name, type_):
+    def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
         if isinstance(type_, m.ArrayKind):
             for j in range(type_.N):
                 result = self.generate_port_code(
-                    name + "_" + str(j), type_.T
+                    name + "_" + str(j), type_.T, power_args
                 )
                 port_list.extend(result)
         elif isinstance(type_, m.TupleKind):
             for k, t in zip(type_.Ks, type_.Ts):
                 result = self.generate_port_code(
-                    name + "_" + str(k), t
+                    name + "_" + str(k), t, power_args
                 )
                 port_list.extend(result)
         return port_list
@@ -216,7 +216,7 @@ end;
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
         if is_array_of_bits or isinstance(type_, m.TupleKind):
-            return self.generate_recursive_port_code(name, type_)
+            return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
             if isinstance(type_, m.ArrayKind) and \
