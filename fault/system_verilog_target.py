@@ -1,7 +1,6 @@
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
-
 import fault.actions as actions
 from hwtypes import BitVector
 import fault.value_utils as value_utils
