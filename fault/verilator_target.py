@@ -178,7 +178,8 @@ class VerilatorTarget(VerilogTarget):
         else:
             value = action.value
             if isinstance(value, actions.FileRead):
-                value = f"*{value.file.name_without_ext}_in"
+                mask = "FF" * value.file.chunk_size
+                value = f"(*{value.file.name_without_ext}_in) & 0x{mask}"
             value = self.process_signed_values(action.port, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
