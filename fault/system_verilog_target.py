@@ -1,6 +1,7 @@
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
+
 import fault.actions as actions
 from hwtypes import BitVector
 import fault.value_utils as value_utils
@@ -211,7 +212,7 @@ end;
                 port_list.extend(result)
         return port_list
 
-    def generate_port_code(self, name, type_):
+    def generate_port_code(self, name, type_, power_args):
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
         if is_array_of_bits or isinstance(type_, m.TupleKind):
@@ -221,7 +222,13 @@ end;
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
-            if type_.isoutput():
+            if name in power_args["supply0s"]:
+                t = "supply0"
+            elif name in power_args["supply1s"]:
+                t = "supply1"
+            elif name in power_args["tris"]:
+                t = "tri"
+            elif type_.isoutput():
                 t = "wire"
             elif type_.isinput():
                 t = "reg"
@@ -230,11 +237,11 @@ end;
             self.declarations.append(f"    {t} {width_str}{name};\n")
             return [f".{name}({name})"]
 
-    def generate_code(self, actions):
+    def generate_code(self, actions, power_args):
         initial_body = ""
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
-            result = self.generate_port_code(name, type_)
+            result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
 
         for i, action in enumerate(actions):
@@ -251,11 +258,11 @@ end;
 
         return src
 
-    def run(self, actions):
+    def run(self, actions, power_args={}):
         test_bench_file = Path(f"{self.circuit_name}_tb.sv")
 
         # Write the verilator driver to file.
-        src = self.generate_code(actions)
+        src = self.generate_code(actions, power_args)
         with open(self.directory / test_bench_file, "w") as f:
             f.write(src)
         verilog_libraries = " ".join(str(x) for x in
