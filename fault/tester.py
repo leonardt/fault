@@ -179,7 +179,7 @@ class Tester:
         """
         if "directory" in kwargs:
             kwargs["directory"] = self._make_directory(kwargs["directory"])
-        self._compile(target, directory, **kwargs)
+        self._compile(target, **kwargs)
 
     def run(self, target="verilator"):
         """
