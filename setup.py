@@ -1,17 +1,20 @@
+"""
+Setup file for fault
+"""
+
 from setuptools import setup
-import sys
 
 with open("README.md", "r") as fh:
-    long_description = fh.read()
+    LONG_DESCRIPTION = fh.read()
 
-description = """\
+DESCRIPTION = """\
 A Python package for testing hardware (part of the magma ecosystem)\
 """
 
 setup(
     name='fault',
     version='2.0.10',
-    description=description,
+    description=DESCRIPTION,
     scripts=[],
     packages=[
         "fault",
@@ -29,6 +32,6 @@ setup(
     author='Leonard Truong',
     author_email='lenny@cs.stanford.edu',
     python_requires='>=3.6',
-    long_description=long_description,
+    long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown"
 )
