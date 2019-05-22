@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.10]
 ### Fixed
+- https://github.com/leonardt/fault/pull/107 fixes a bug in how SV integer
+  literals are generated
+
+## [2.0.10]
+### Fixed
 - Fixes bug in tester.compile
 
 ## [2.0.9]
