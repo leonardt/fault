@@ -85,11 +85,12 @@ class SystemVerilogTarget(VerilogTarget):
         return name
 
     def process_value(self, port, value):
-        if isinstance(port, m.SIntType) and value < 0:
-            # Handle sign extension for verilator since it expects and
-            # unsigned c type
+        if isinstance(value, BitVector):
+            value = f"{len(value)}'d{value.as_uint()}"
+        elif isinstance(port, m.SIntType) and value < 0:
             port_len = len(port)
             value = BitVector(value, port_len).as_uint()
+            value = f"{port_len}'d{value.as_uint()}"
         elif value is fault.UnknownValue:
             value = "'X"
         elif isinstance(value, actions.Peek):
