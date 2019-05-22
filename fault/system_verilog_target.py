@@ -90,7 +90,7 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(port, m.SIntType) and value < 0:
             port_len = len(port)
             value = BitVector(value, port_len).as_uint()
-            value = f"{port_len}'d{value.as_uint()}"
+            value = f"{port_len}'d{value}"
         elif value is fault.UnknownValue:
             value = "'X"
         elif isinstance(value, actions.Peek):
