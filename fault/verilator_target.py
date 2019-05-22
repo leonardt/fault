@@ -119,7 +119,7 @@ class VerilatorTarget(VerilogTarget):
             if isinstance(port, SelectPath):
                 port = port[-1]
             port_len = len(port)
-            value = BitVector(value, port_len).as_uint()
+            value = BitVector[port_len](value).as_uint()
         return value
 
     def make_poke(self, i, action):
