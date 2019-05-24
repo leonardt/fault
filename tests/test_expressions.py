@@ -29,6 +29,9 @@ def pytest_generate_tests(metafunc):
 
 
 def test_and_two_signals(target, simulator):
+    """
+    Test that we can and two output signals for an expect
+    """
     class ANDCircuit(m.Circuit):
         """
         Pass through I0 and I1 as outputs so we can assert a function
@@ -44,15 +47,13 @@ def test_and_two_signals(target, simulator):
             io.I1_out <= io.I1
             io.O <= io.I0 & io.I1 
 
-
     tester = fault.Tester(ANDCircuit)
     for _ in range(5):
         tester.circuit.I0 = hwtypes.BitVector.random(5)
         tester.circuit.I1 = hwtypes.BitVector.random(5)
         tester.eval()
-        tester.circuit.O.expect(tester.circuit.I0_out &
-                                tester.circuit.I1_out)
-    
+        tester.circuit.O.expect(tester.circuit.I0_out & tester.circuit.I1_out)
+
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {
             "target": target,
