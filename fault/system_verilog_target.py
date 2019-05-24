@@ -290,7 +290,6 @@ end;
 
         # Write the verilator driver to file.
         src = self.generate_code(actions)
-        print(src)
         with open(self.directory / test_bench_file, "w") as f:
             f.write(src)
         verilog_libraries = " ".join(str(x) for x in
