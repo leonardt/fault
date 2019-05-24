@@ -120,7 +120,7 @@ class VerilatorTarget(VerilogTarget):
             return self.process_signed_values(port, value)
         elif isinstance(value, (int, BitVector)):
             return value
-        raise NotImplementedError(value, type(value))
+        return value
 
     def process_signed_values(self, port, value):
         # Handle sign extension for verilator since it expects and unsigned
