@@ -334,6 +334,18 @@ def test_tester_file_io(target, simulator):
             os.remove(_dir + "/" + out_file)
         with open(_dir + "/test_file_in.raw", "wb") as file:
             file.write(bytes([i for i in range(8)]))
+
+
+def test_tester_while(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 0)
+    loop = tester._while(tester.expect(circ.O, 1))
+    loop.poke(circ.I, 1)
+    loop.eval()
+    tester.expect(circ.O, 1)
+    with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:

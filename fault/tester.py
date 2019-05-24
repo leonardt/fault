@@ -6,7 +6,7 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
-from fault.actions import Poke, Expect, Step, Print, Loop
+from fault.actions import Poke, Expect, Step, Print, Loop, While
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 from fault.file import File
@@ -118,6 +118,11 @@ class Tester:
                                   LoopIndex, expression.Expression)):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
+
+        # TODO hack for while loop, might want to replace it with
+        # something that constructs an expect but does not add it to
+        # self.actions??? or the while loop can take in port and value
+        return self.actions[len(self.actions)-1]
 
     def eval(self):
         """
@@ -285,6 +290,16 @@ class Tester:
 
     def file_write(self, file, value):
         self.actions.append(actions.FileWrite(file, value))
+
+    def _while(self, cond):
+        """
+        Returns a new tester to record actions inside the loop.  The created
+        loop action object maintains a references to the return Tester's
+        `actions` list.
+        """
+        while_tester = LoopTester(self.circuit, self.clock)
+        self.actions.append(While(cond, while_tester.actions))
+        return while_tester
 
 
 class LoopIndex:
