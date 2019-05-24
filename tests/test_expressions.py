@@ -45,7 +45,7 @@ def test_and_two_signals(target, simulator):
         def definition(io):
             io.I0_out <= io.I0
             io.I1_out <= io.I1
-            io.O <= io.I0 & io.I1 
+            io.O <= io.I0 & io.I1
 
     tester = fault.Tester(ANDCircuit)
     for _ in range(5):
