@@ -108,7 +108,7 @@ class SystemVerilogTarget(VerilogTarget):
                 new_value += "[0]"
             value = new_value
         elif isinstance(value, expression.Expression):
-            value = self.compile_expression(port, value)
+            value = f"({self.compile_expression(port, value)})"
         return value
 
     def compile_expression(self, port, value):
