@@ -334,6 +334,17 @@ def test_tester_file_io(target, simulator):
             os.remove(_dir + "/" + out_file)
         with open(_dir + "/test_file_in.raw", "wb") as file:
             file.write(bytes([i for i in range(8)]))
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+        with open(_dir + "/test_file_out.raw", "rb") as file:
+            expected = bytes([i for i in range(8)])
+            if simulator == "iverilog":
+                # iverilog doesn't support writing a NULL byte out using %c, so
+                # this first value is skipped
+                expected = expected[1:]
+            assert file.read(8) == expected
 
 
 def test_tester_while(target, simulator):
@@ -350,13 +361,6 @@ def test_tester_while(target, simulator):
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
-        with open(_dir + "/test_file_out.raw", "rb") as file:
-            expected = bytes([i for i in range(8)])
-            if simulator == "iverilog":
-                # iverilog doesn't support writing a NULL byte out using %c, so
-                # this first value is skipped
-                expected = expected[1:]
-            assert file.read(8) == expected
 
 
 def test_sint_circuit(target, simulator):

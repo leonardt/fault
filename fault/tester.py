@@ -119,11 +119,6 @@ class Tester:
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
-        # TODO hack for while loop, might want to replace it with
-        # something that constructs an expect but does not add it to
-        # self.actions??? or the while loop can take in port and value
-        return self.actions[len(self.actions)-1]
-
     def eval(self):
         """
         Evaluate the DUT given the current input port values
