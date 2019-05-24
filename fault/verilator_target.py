@@ -17,6 +17,7 @@ from fault.random import random_bv, constrained_random_bv
 import fault.utils as utils
 import platform
 import os
+import fault.expression as expression
 
 
 src_tpl = """\
@@ -112,15 +113,31 @@ class VerilatorTarget(VerilogTarget):
         # works
         self.verilator_version = float(verilator_version.split()[1])
 
+    def process_value(self, port, value):
+        if isinstance(value, expression.Expression):
+            return self.compile_expression(port, value)
+        elif isinstance(value, (int, BitVector)) and value < 0:
+            return self.process_signed_values(port, value)
+        elif isinstance(value, (int, BitVector)):
+            return value
+        raise NotImplementedError(value, type(value))
+
     def process_signed_values(self, port, value):
-        if isinstance(value, (int, BitVector)) and value < 0:
-            # Handle sign extension for verilator since it expects and unsigned
-            # c type
-            if isinstance(port, SelectPath):
-                port = port[-1]
-            port_len = len(port)
-            value = BitVector[port_len](value).as_uint()
-        return value
+        # Handle sign extension for verilator since it expects and unsigned
+        # c type
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        port_len = len(port)
+        return BitVector[port_len](value).as_uint()
+
+    def compile_expression(self, port, value):
+        if isinstance(value, expression.And):
+            left = self.compile_expression(port, value.left)
+            right = self.compile_expression(port, value.right)
+            return f"{left} & {right}"
+        elif isinstance(value, PortWrapper):
+            return f"top->{value.select_path.verilator_path}"
+        raise NotImplementedError(value)
 
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
@@ -180,7 +197,7 @@ class VerilatorTarget(VerilogTarget):
             if isinstance(value, actions.FileRead):
                 mask = "FF" * value.file.chunk_size
                 value = f"(*{value.file.name_without_ext}_in) & 0x{mask}"
-            value = self.process_signed_values(action.port, value)
+            value = self.process_value(action.port, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
@@ -245,7 +262,7 @@ class VerilatorTarget(VerilogTarget):
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
-        value = self.process_signed_values(action.port, value)
+        value = self.process_value(action.port, value)
 
         return [f"my_assert(top->{name}, {value}, "
                 f"{i}, \"{debug_name}\");"]

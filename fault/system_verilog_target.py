@@ -8,6 +8,7 @@ from fault.select_path import SelectPath
 import subprocess
 from fault.wrapper import PortWrapper
 import fault
+import fault.expression as expression
 
 
 src_tpl = """\
@@ -106,7 +107,18 @@ class SystemVerilogTarget(VerilogTarget):
                 # Assume that the user didn't want an array 1 byte, so unpack
                 new_value += "[0]"
             value = new_value
+        elif isinstance(value, expression.Expression):
+            value = self.compile_expression(port, value)
         return value
+
+    def compile_expression(self, port, value):
+        if isinstance(value, expression.And):
+            left = self.compile_expression(port, value.left)
+            right = self.compile_expression(port, value.right)
+            return f"{left} & {right}"
+        elif isinstance(value, PortWrapper):
+            return f"dut.{value.select_path.system_verilog_path}"
+        raise NotImplementedError(value)
 
     def make_poke(self, i, action):
         name = self.make_name(action.port)

@@ -1,5 +1,6 @@
 import fault
 from fault.select_path import SelectPath
+import fault.expression as expression
 import magma as m
 
 
@@ -102,6 +103,9 @@ class PortWrapper:
             parent = parent.parent
         select_path.tester = parent
         return select_path
+
+    def __and__(self, other):
+        return expression.And(self, other)
 
 
 class InstanceWrapper(Wrapper):

@@ -10,6 +10,7 @@ from fault.actions import Poke, Expect, Step, Print, Loop
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 from fault.file import File
+import fault.expression as expression
 import copy
 import os
 import inspect
@@ -113,7 +114,8 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
-        if not isinstance(value, (actions.Peek, PortWrapper, LoopIndex)):
+        if not isinstance(value, (actions.Peek, PortWrapper,
+                                  LoopIndex, expression.Expression)):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
