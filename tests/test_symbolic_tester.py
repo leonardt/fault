@@ -10,6 +10,15 @@ def pytest_generate_tests(metafunc):
 
 
 def test_tester_magma_internal_signals_verilator(target):
+    if target == "cosa":
+        from pysmt.shortcuts import Solver
+        from pysmt.exceptions import NoSolverAvailableError
+        import pytest
+        try:
+            with Solver(name="msat"):
+                pass
+        except NoSolverAvailableError:
+            pytest.skip("msat not available")
     circ = common.SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
