@@ -130,7 +130,7 @@ class SystemVerilogTarget(VerilogTarget):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
         value = self.process_value(action.port, action.value)
-        return [f"{name} = {value};"]
+        return [f"{name} = {value};", f"#{self.clock_step_delay};"]
 
     def make_print(self, i, action):
         ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
