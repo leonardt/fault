@@ -107,6 +107,12 @@ class PortWrapper:
     def __and__(self, other):
         return expression.And(self, other)
 
+    def __eq__(self, other):
+        return expression.EQ(self, other)
+
+    def __ne__(self, other):
+        return expression.NE(self, other)
+
 
 class InstanceWrapper(Wrapper):
     def __init__(self, instance, parent):

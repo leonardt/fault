@@ -115,7 +115,7 @@ class VerilatorTarget(VerilogTarget):
 
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
-            return self.compile_expression(port, value)
+            return self.compile_expression(value)
         elif isinstance(value, (int, BitVector)) and value < 0:
             return self.process_signed_values(port, value)
         elif isinstance(value, (int, BitVector)):
@@ -130,14 +130,20 @@ class VerilatorTarget(VerilogTarget):
         port_len = len(port)
         return BitVector[port_len](value).as_uint()
 
-    def compile_expression(self, port, value):
-        if isinstance(value, expression.And):
-            left = self.compile_expression(port, value.left)
-            right = self.compile_expression(port, value.right)
-            return f"{left} & {right}"
+    def compile_expression(self, value):
+        if isinstance(value, expression.BinaryOp):
+            left = self.compile_expression(value.left)
+            right = self.compile_expression(value.right)
+            if isinstance(value, expression.And):
+                op = "&"
+            elif isinstance(value, expression.NE):
+                op = "!="
+            else:
+                raise NotImplementedError(value)
+            return f"{left} {op} {right}"
         elif isinstance(value, PortWrapper):
             return f"top->{value.select_path.verilator_path}"
-        raise NotImplementedError(value)
+        return value
 
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
@@ -339,60 +345,9 @@ if ({action.file.name_without_ext}_file.eof()) {{
 
     def make_while(self, i, action):
         code = []
+        cond = self.compile_expression(action.loop_cond)
 
-        cond_action = action.loop_cond
-        # For verilator, if an expect is "AnyValue" we don't need to
-        # perform the expect.
-        if value_utils.is_any(cond_action.value):
-            return []
-        if self.verilator_version > 3.874:
-            prefix = f"{self.circuit_name}"
-        else:
-            prefix = f"v"
-        if isinstance(cond_action.port, fault.WrappedVerilogInternalPort):
-            path = cond_action.port.path.replace(".", "->")
-            name = f"{prefix}->{path}"
-            debug_name = name
-        elif isinstance(cond_action.port, SelectPath):
-            name = cond_action.port.verilator_path
-            if len(cond_action.port) > 2:
-                name = f"{prefix}->" + name
-            if self.verilator_version >= 3.856:
-                if len(cond_action.port) > 2:
-                    self.debug_includes.add(f"{cond_action.port[0].circuit.name}")
-            for item in cond_action.port[1:-1]:
-                circuit_name = type(item.instance).name
-                self.debug_includes.add(f"{circuit_name}")
-            debug_name = cond_action.port[-1].debug_name
-        else:
-            name = verilog_name(cond_action.port.name)
-            debug_name = cond_action.port.debug_name
-        value = cond_action.value
-        if isinstance(value, actions.Peek):
-            if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                path = cond_action.port.path.replace(".", "->")
-                value = f"top->{prefix}->{path}"
-            else:
-                value = f"top->{verilog_name(value.port.name)}"
-        elif isinstance(value, PortWrapper):
-            if self.verilator_version >= 3.856:
-                if len(cond_action.port) > 2:
-                    self.debug_includes.add(f"{cond_action.port[0].circuit.name}")
-            for item in value.select_path[1:-1]:
-                circuit_name = type(item.instance).name
-                self.debug_includes.add(f"{circuit_name}")
-            value = f"top->{prefix}->" + value.select_path.verilator_path
-        elif isinstance(cond_action.port, m.SIntType) and value < 0:
-            # Handle sign extension for verilator since it expects and
-            # unsigned c type
-            port_len = len(cond_action.port)
-            value = BitVector(value, port_len).as_uint()
-
-        # return [f"my_assert(top->{name}, {value}, "
-        #         f"{i}, \"{debug_name}\");"]
-
-        # TODO: i want to pass in an expect to the while loop
-        code.append(f"while (top->{name} == {value}) {{")
+        code.append(f"while ({cond}) {{")
 
         for inner_action in action.actions:
             # TODO: Handle relative offset of sub-actions

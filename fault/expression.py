@@ -10,3 +10,11 @@ class BinaryOp(Expression):
 
 class And(BinaryOp):
     pass
+
+
+class EQ(BinaryOp):
+    pass
+
+
+class NE(BinaryOp):
+    pass

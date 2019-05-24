@@ -352,7 +352,7 @@ def test_tester_while(target, simulator):
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 0)
-    loop = tester._while(tester.expect(circ.O, 1))
+    loop = tester._while(tester.circuit.O != 1)
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)

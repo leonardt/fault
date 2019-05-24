@@ -108,23 +108,29 @@ class SystemVerilogTarget(VerilogTarget):
                 new_value += "[0]"
             value = new_value
         elif isinstance(value, expression.Expression):
-            value = f"({self.compile_expression(port, value)})"
+            value = f"({self.compile_expression(value)})"
         return value
 
-    def compile_expression(self, port, value):
-        if isinstance(value, expression.And):
-            left = self.compile_expression(port, value.left)
-            right = self.compile_expression(port, value.right)
-            return f"{left} & {right}"
+    def compile_expression(self, value):
+        if isinstance(value, expression.BinaryOp):
+            left = self.compile_expression(value.left)
+            right = self.compile_expression(value.right)
+            if isinstance(value, expression.And):
+                op = "&"
+            elif isinstance(value, expression.NE):
+                op = "!="
+            else:
+                raise NotImplementedError(value)
+            return f"{left} {op} {right}"
         elif isinstance(value, PortWrapper):
             return f"dut.{value.select_path.system_verilog_path}"
-        raise NotImplementedError(value)
+        return value
 
     def make_poke(self, i, action):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
         value = self.process_value(action.port, action.value)
-        return [f"{name} = {value};", f"#{self.clock_step_delay}"]
+        return [f"{name} = {value};"]
 
     def make_print(self, i, action):
         ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
@@ -208,6 +214,21 @@ end;
             code.append(f"#5 {name} ^= 1;")
         return code
 
+    def make_while(self, i, action):
+        code = []
+        cond = self.compile_expression(action.loop_cond)
+
+        code.append(f"while ({cond}) begin")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("end")
+
+        return code
+
     def generate_recursive_port_code(self, name, type_):
         port_list = []
         if isinstance(type_, m.ArrayKind):
@@ -269,6 +290,7 @@ end;
 
         # Write the verilator driver to file.
         src = self.generate_code(actions)
+        print(src)
         with open(self.directory / test_bench_file, "w") as f:
             f.write(src)
         verilog_libraries = " ".join(str(x) for x in
