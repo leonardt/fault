@@ -138,9 +138,37 @@ class VerilatorTarget(VerilogTarget):
                 op = "&"
             elif isinstance(value, expression.NE):
                 op = "!="
+            elif isinstance(value, expression.Div):
+                op = "/"
+            elif isinstance(value, expression.Add):
+                op = "+"
+            elif isinstance(value, expression.XOr):
+                op = "^"
+            elif isinstance(value, expression.Or):
+                op = "|"
+            elif isinstance(value, expression.LShift):
+                op = "<<"
+            elif isinstance(value, expression.RShift):
+                op = ">>"
+            elif isinstance(value, expression.Mod):
+                op = "%"
+            elif isinstance(value, expression.Mul):
+                op = "*"
+            elif isinstance(value, expression.Sub):
+                op = "-"
+            elif isinstance(value, expression.LT):
+                op = "<"
+            elif isinstance(value, expression.LE):
+                op = "<="
+            elif isinstance(value, expression.GT):
+                op = ">"
+            elif isinstance(value, expression.GE):
+                op = ">="
+            elif isinstance(value, expression.EQ):
+                op = "=="
             else:
                 raise NotImplementedError(value)
-            return f"{left} {op} {right}"
+            return f"({left} {op} {right})"
         elif isinstance(value, PortWrapper):
             return f"top->{value.select_path.verilator_path}"
         return value
@@ -269,8 +297,16 @@ class VerilatorTarget(VerilogTarget):
                 self.debug_includes.add(f"{circuit_name}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
         value = self.process_value(action.port, value)
+        port = action.port
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, m._BitType):
+            port_len = 1
+        else:
+            port_len = len(port)
+        mask = (1 << port_len) - 1
 
-        return [f"my_assert(top->{name}, {value}, "
+        return [f"my_assert(top->{name}, {value} & {mask}, "
                 f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):

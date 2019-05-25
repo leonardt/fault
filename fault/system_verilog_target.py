@@ -119,6 +119,34 @@ class SystemVerilogTarget(VerilogTarget):
                 op = "&"
             elif isinstance(value, expression.NE):
                 op = "!="
+            elif isinstance(value, expression.Div):
+                op = "/"
+            elif isinstance(value, expression.Add):
+                op = "+"
+            elif isinstance(value, expression.XOr):
+                op = "^"
+            elif isinstance(value, expression.Or):
+                op = "|"
+            elif isinstance(value, expression.LShift):
+                op = "<<"
+            elif isinstance(value, expression.RShift):
+                op = ">>"
+            elif isinstance(value, expression.Mod):
+                op = "%"
+            elif isinstance(value, expression.Mul):
+                op = "*"
+            elif isinstance(value, expression.Sub):
+                op = "-"
+            elif isinstance(value, expression.LT):
+                op = "<"
+            elif isinstance(value, expression.LE):
+                op = "<="
+            elif isinstance(value, expression.GT):
+                op = ">"
+            elif isinstance(value, expression.GE):
+                op = ">="
+            elif isinstance(value, expression.EQ):
+                op = "=="
             else:
                 raise NotImplementedError(value)
             return f"{left} {op} {right}"
