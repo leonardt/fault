@@ -300,6 +300,8 @@ class VerilatorTarget(VerilogTarget):
         port = action.port
         if isinstance(port, SelectPath):
             port = port[-1]
+        elif isinstance(port, fault.WrappedVerilogInternalPort):
+            port = port.type_
         if isinstance(port, m._BitType):
             port_len = 1
         else:
