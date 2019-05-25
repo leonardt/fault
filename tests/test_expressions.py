@@ -46,7 +46,7 @@ def test_binop_two_signals(target, simulator, op):
         of I0 and I1 as the result
         """
         IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5]),
-              "I0_out", m.Out(m.UInt[5]), "I1_out", m.Out(m.UInt[5]) ]
+              "I0_out", m.Out(m.UInt[5]), "I1_out", m.Out(m.UInt[5])]
         if op in {"lt", "le", "gt", "ge", "ne", "eq"}:
             IO += ["O", m.Out(m.Bit)]
         else:
