@@ -62,7 +62,7 @@ def test_binop_two_signals_setattr(target, simulator, op):
     tester = fault.Tester(BinaryOpCircuit)
     for _ in range(5):
         tester.circuit.I0 = hwtypes.BitVector.random(5)
-        if op == {"lshift", "truediv"}:
+        if op in {"lshift", "truediv"}:
             # avoid C overflow exception
             I1 = hwtypes.BitVector.random(2)
             if op == "truediv":
@@ -115,7 +115,7 @@ def test_binop_two_signals_raw(target, simulator, op):
     tester = fault.Tester(BinaryOpCircuit)
     for _ in range(5):
         tester.poke(tester._circuit.I0, hwtypes.BitVector.random(5))
-        if op == {"lshift", "truediv"}:
+        if op in {"lshift", "truediv"}:
             # avoid C overflow exception
             I1 = hwtypes.BitVector.random(2)
             if op == "truediv":
