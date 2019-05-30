@@ -154,7 +154,7 @@ def test_op_tree(target, simulator):
         def definition(io):
             io.I0_out <= io.I0
             io.I1_out <= io.I1
-            m.wire(io.O, io.I0 + io.I1 & io.I1)
+            m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
 
     tester = fault.Tester(BinaryOpCircuit)
     for _ in range(5):
@@ -163,7 +163,8 @@ def test_op_tree(target, simulator):
         tester.eval()
         expected = tester.peek(tester._circuit.I0_out) + \
             tester.peek(tester._circuit.I1_out) & \
-            tester.peek(tester._circuit.I1_out)
+            (tester.peek(tester._circuit.I1_out) -
+             tester.peek(tester._circuit.I0_out))
         tester.expect(tester._circuit.O, expected)
 
     with tempfile.TemporaryDirectory() as _dir:
