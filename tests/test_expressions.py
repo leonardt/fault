@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import operator
 import pytest
+import itertools
 
 import fault
 import magma as m
@@ -128,6 +129,42 @@ def test_binop_two_signals_raw(target, simulator, op):
             tester._circuit.O,
             getattr(operator, op)(tester.peek(tester._circuit.I0_out),
                                   tester.peek(tester._circuit.I1_out)))
+
+    with tempfile.TemporaryDirectory() as _dir:
+        kwargs = {
+            "target": target,
+            "directory": _dir,
+        }
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)
+
+
+def test_op_tree(target, simulator):
+    class BinaryOpCircuit(m.Circuit):
+        """
+        Pass through I0 and I1 as outputs so we can assert a function
+        of I0 and I1 as the result
+        """
+        IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5]),
+              "I0_out", m.Out(m.UInt[5]), "I1_out", m.Out(m.UInt[5])]
+        IO += ["O", m.Out(m.UInt[5])]
+
+        @classmethod
+        def definition(io):
+            io.I0_out <= io.I0
+            io.I1_out <= io.I1
+            m.wire(io.O, io.I0 + io.I1 & io.I1)
+
+    tester = fault.Tester(BinaryOpCircuit)
+    for _ in range(5):
+        tester.poke(tester._circuit.I0, hwtypes.BitVector.random(5))
+        tester.poke(tester._circuit.I1, hwtypes.BitVector.random(5))
+        tester.eval()
+        expected = tester.peek(tester._circuit.I0_out) + \
+            tester.peek(tester._circuit.I1_out) & \
+            tester.peek(tester._circuit.I1_out)
+        tester.expect(tester._circuit.O, expected)
 
     with tempfile.TemporaryDirectory() as _dir:
         kwargs = {
