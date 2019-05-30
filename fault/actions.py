@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import fault
 from fault.select_path import SelectPath
+import fault.expression as expression
 
 
 class Action(ABC):
@@ -114,6 +115,66 @@ class Peek(Action):
 
     def __str__(self):
         return f"Peek({self.port.debug_name})"
+
+    def __and__(self, other):
+        return expression.And(self, other)
+
+    def __eq__(self, other):
+        return expression.EQ(self, other)
+
+    def __ne__(self, other):
+        return expression.NE(self, other)
+
+    def __lt__(self, other):
+        return expression.LT(self, other)
+
+    def __le__(self, other):
+        return expression.LE(self, other)
+
+    def __gt__(self, other):
+        return expression.GT(self, other)
+
+    def __ge__(self, other):
+        return expression.GE(self, other)
+
+    def __add__(self, other):
+        return expression.Add(self, other)
+
+    def __invert__(self):
+        return expression.Invert(self)
+
+    def __lshift__(self, other):
+        return expression.LShift(self, other)
+
+    def __rshift__(self, other):
+        return expression.RShift(self, other)
+
+    def __mod__(self, other):
+        return expression.Mod(self, other)
+
+    def __mul__(self, other):
+        return expression.Mul(self, other)
+
+    def __neg__(self):
+        return expression.Neg(self)
+
+    def __pos__(self):
+        return expression.Pos(self)
+
+    def __pow__(self, other):
+        return expression.Pow(self, other)
+
+    def __sub__(self, other):
+        return expression.Sub(self, other)
+
+    def __truediv__(self, other):
+        return expression.Div(self, other)
+
+    def __or__(self, other):
+        return expression.Or(self, other)
+
+    def __xor__(self, other):
+        return expression.XOr(self, other)
 
 
 class Eval(Action):

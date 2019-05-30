@@ -113,6 +113,19 @@ class VerilatorTarget(VerilogTarget):
         # works
         self.verilator_version = float(verilator_version.split()[1])
 
+    def get_verilator_prefix(self):
+        if self.verilator_version > 3.874:
+            return f"{self.circuit_name}"
+        else:
+            return f"v"
+
+    def process_peek(self, value):
+        if isinstance(value.port, fault.WrappedVerilogInternalPort):
+            path = value.port.path.replace(".", "->")
+            return f"top->{self.get_verilator_prefix()}->{path}"
+        else:
+            return f"top->{verilog_name(value.port.name)}"
+
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
             return self.compile_expression(value)
@@ -171,6 +184,8 @@ class VerilatorTarget(VerilogTarget):
             return f"({left} {op} {right})"
         elif isinstance(value, PortWrapper):
             return f"top->{value.select_path.verilator_path}"
+        elif isinstance(value, actions.Peek):
+            return self.process_peek(value)
         return value
 
     def make_poke(self, i, action):
@@ -259,10 +274,7 @@ class VerilatorTarget(VerilogTarget):
         # perform the expect.
         if value_utils.is_any(action.value):
             return []
-        if self.verilator_version > 3.874:
-            prefix = f"{self.circuit_name}"
-        else:
-            prefix = f"v"
+        prefix = self.get_verilator_prefix()
         if isinstance(action.port, fault.WrappedVerilogInternalPort):
             path = action.port.path.replace(".", "->")
             name = f"{prefix}->{path}"
@@ -283,11 +295,7 @@ class VerilatorTarget(VerilogTarget):
             debug_name = action.port.debug_name
         value = action.value
         if isinstance(value, actions.Peek):
-            if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                path = action.port.path.replace(".", "->")
-                value = f"top->{prefix}->{path}"
-            else:
-                value = f"top->{verilog_name(value.port.name)}"
+            value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
             if self.verilator_version >= 3.856:
                 if len(action.port) > 2:

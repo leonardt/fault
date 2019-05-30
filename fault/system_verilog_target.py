@@ -85,6 +85,12 @@ class SystemVerilogTarget(VerilogTarget):
             name = verilog_name(port.name)
         return name
 
+    def process_peek(self, value):
+        if isinstance(value.port, fault.WrappedVerilogInternalPort):
+            return f"dut.{value.port.path}"
+        else:
+            return f"{value.port.name}"
+
     def process_value(self, port, value):
         if isinstance(value, BitVector):
             value = f"{len(value)}'d{value.as_uint()}"
@@ -95,10 +101,7 @@ class SystemVerilogTarget(VerilogTarget):
         elif value is fault.UnknownValue:
             value = "'X"
         elif isinstance(value, actions.Peek):
-            if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                value = f"dut.{value.port.path}"
-            else:
-                value = f"{value.port.name}"
+            value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
             value = f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.FileRead):
@@ -152,6 +155,8 @@ class SystemVerilogTarget(VerilogTarget):
             return f"{left} {op} {right}"
         elif isinstance(value, PortWrapper):
             return f"dut.{value.select_path.system_verilog_path}"
+        elif isinstance(value, actions.Peek):
+            return self.process_peek(value)
         return value
 
     def make_poke(self, i, action):
