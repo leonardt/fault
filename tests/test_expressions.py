@@ -66,7 +66,7 @@ def test_binop_two_signals_setattr(target, simulator, op):
             # avoid C overflow exception
             I1 = hwtypes.BitVector.random(2)
             if op == "truediv":
-                pytest.skip("Need to generate random numbers that don't trigger a C exception")
+                pytest.skip("Need to generate random numbers that don't trigger a C exception")  # noqa
                 while I1 == 0:
                     I1 = hwtypes.BitVector.random(2)
         else:
@@ -121,7 +121,7 @@ def test_binop_two_signals_raw(target, simulator, op):
             # avoid C overflow exception
             I1 = hwtypes.BitVector.random(2)
             if op == "truediv":
-                pytest.skip("Need to generate random numbers that don't trigger a C exception")
+                pytest.skip("Need to generate random numbers that don't trigger a C exception")  # noqa
                 while I1 == 0:
                     I1 = hwtypes.BitVector.random(2)
         else:
