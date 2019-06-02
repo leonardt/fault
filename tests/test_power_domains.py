@@ -2,68 +2,74 @@ import magma as m
 import mantle
 import fault
 from hwtypes import BitVector
+import glob
+import shutil
 
-
-def test_simple_alu_pd():
-    type_map = {"CLK": m.In(m.Clock)}
-    circ = m.DefineFromVerilogFile("tests/verilog/simple_alu_pd.sv",
-                                   type_map=type_map)[0]
-    tester = fault.PowerTester(circ, circ.CLK)
-    tester.add_power(circ.VDD_HIGH)
+def test_power_domains():
+    type_map = {"clk": m.In(m.Clock)}
+    circ = m.DefineFromVerilogFile("./tests/verilog/pnr.pg.v",
+                                   type_map=type_map, target_modules=["Tile_PE"])[0]
+    tester = fault.PowerTester(circ, circ.clk)
+    tester.add_power(circ.VDD)
     tester.add_ground(circ.VSS)
-    tester.add_tri(circ.VDD_HIGH_TOP_VIRTUAL)
+    tester.add_tri(circ.VDD_SW)
 
-    tester.circuit.CLK = 0
+    tester.circuit.clk = 0
+    tester.circuit.config_config_addr = 0 
 
-    # Enable the power switch
-    tester.circuit.config_addr = 0x00080000
-    tester.circuit.config_data = 0xFFFFFFF0
-    tester.circuit.config_en = 1
+    #======================================
+    # TEST 1 - RESET TILE 
+    # Check if tile is turned ON after reset 
+    #======================================
+    tester.circuit.reset = 1
     tester.step(2)
-    tester.circuit.config_en = 0
-
-    # rest of test...
-    a, b = BitVector.random(16), BitVector.random(16)
-    tester.circuit.a = a
-    tester.circuit.b = b
-    tester.circuit.c.expect(a + b)
-
-    # Disable the power switch
-    tester.circuit.config_addr = 0x00080000
-    tester.circuit.config_data = 0xFFFFFFF0
-    tester.circuit.config_en = 1
+    tester.circuit.reset = 0
+    tester.eval()
     tester.step(2)
-    tester.circuit.config_en = 0
-    # Stall global signal should be on when tile is off
-    tester.circuit.stall_out.expect(1)
-    # reset signal should be on when tile is off
-    tester.circuit.reset.expect(1)
+    tester.circuit.VDD_SW.expect(0)  
 
-    # Enable the power switch
-    tester.circuit.config_addr = 0x00080000
-    tester.circuit.config_data = 0xFFFFFFF0
-    tester.circuit.config_en = 1
+    #====================================== 
+    # TEST 2 - ENABLE PS REGISTER   
+    # Check power switch register write 
+    #====================================== 
+    # Disable before enabling
+    tester.circuit.tile_id = 0  
+    tester.circuit.config_write = 1
+    tester.circuit.config_read = 0
+    tester.circuit.stall = 0
+    tester.circuit.read_config_data_in = 0x0    
+    tester.circuit.config_config_addr = 0x00080000
+    tester.circuit.config_config_data = 0xFFFFFFF1
+    tester.circuit.config_write = 1
+    tester.circuit.config_config_addr = 0x00080000
+    tester.circuit.config_config_data = 0xFFFFFFF0
+    tester.eval()
     tester.step(2)
-    tester.circuit.config_en = 0
+    tester.circuit.VDD_SW.expect(0) 
 
-    # rest of test...
-    a, b = BitVector.random(16), BitVector.random(16)
-    tester.circuit.a = a
-    tester.circuit.b = b
-    tester.circuit.c.expect(a + b)
+    #======================================     
+    # TEST 3 - VERIFY GLOBAL SIGNALS       
+    # Check global signals are ON after tile is OFF      
+    #======================================     
+    tester.circuit.config_config_addr = 0x00080000
+    tester.circuit.config_config_data = 0xFFFFFFF1
+    tester.circuit.tile_id = 0
+    tester.circuit.config_write = 1
+    tester.circuit.config_read = 0
+    tester.circuit.stall = 0
+    tester.circuit.read_config_data_in = 0x0
+    tester.eval()
+    tester.step(2)
+    tester.circuit.clk_out.expect(tester.circuit.clk)
+    tester.circuit.reset_out.expect(tester.circuit.reset)
+    tester.circuit.config_out_write.expect(tester.circuit.config_write)
+    tester.circuit.config_out_read.expect(tester.circuit.config_read)
+    tester.circuit.config_out_config_addr.expect(tester.circuit.config_config_addr)
+    tester.circuit.config_out_config_data.expect(tester.circuit.config_config_data)
+    tester.circuit.stall_out.expect(tester.circuit.stall)
+    tester.circuit.read_config_data.expect(tester.circuit.read_config_data)  
 
-    try:
-        tester.compile_and_run(target="system-verilog", simulator="ncsim",
-                               directory="tests/build", skip_compile=True)
-    except AssertionError:
-        # Won't run because we don't have concrete DUT or ncsim, but we check
-        # that the output has the right types for the special ports
-        with open("tests/build/simple_alu_pd_tb.sv", "r") as f:
-            for line in f.read().splitlines():
-                if "VDD_HIGH_TOP_VIRTUAL;" in line:
-                    assert line.lstrip().rstrip() == \
-                        "tri VDD_HIGH_TOP_VIRTUAL;"
-                elif "VDD_HIGH;" in line:
-                    assert line.lstrip().rstrip() == "supply1 VDD_HIGH;"
-                elif "VSS;" in line:
-                    assert line.lstrip().rstrip() == "supply0 VSS;"
+    for cells in glob.glob("./tests/verilog/*.v"):
+        shutil.copy(cells, "tests/build")
+    tester.compile_and_run(target="system-verilog", simulator="ncsim",
+                           directory="tests/build", skip_compile=False)
