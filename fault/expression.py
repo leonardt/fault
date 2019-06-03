@@ -72,80 +72,80 @@ class UnaryOp(Expression):
 
 
 class And(BinaryOp):
-    pass
+    op_str = "&"
 
 
 class EQ(BinaryOp):
-    pass
+    op_str = "=="
 
 
 class NE(BinaryOp):
-    pass
+    op_str = "!="
 
 
 class LT(BinaryOp):
-    pass
+    op_str = "<"
 
 
 class LE(BinaryOp):
-    pass
+    op_str = "<="
 
 
 class GT(BinaryOp):
-    pass
+    op_str = ">"
 
 
 class GE(BinaryOp):
-    pass
+    op_str = ">="
 
 
 class Add(BinaryOp):
-    pass
+    op_str = "+"
 
 
 class Invert(UnaryOp):
-    pass
+    op_str = "~"
 
 
 class LShift(BinaryOp):
-    pass
+    op_str = "<<"
 
 
 class RShift(BinaryOp):
-    pass
+    op_str = ">>"
 
 
 class Mod(BinaryOp):
-    pass
+    op_str = "%"
 
 
 class Mul(BinaryOp):
-    pass
+    op_str = "*"
 
 
 class Neg(UnaryOp):
-    pass
+    op_str = "-"
 
 
 class Pos(UnaryOp):
-    pass
+    op_str = "+"
 
 
 class Pow(BinaryOp):
-    pass
+    op_str = "**"
 
 
 class Sub(BinaryOp):
-    pass
+    op_str = "-"
 
 
 class Div(BinaryOp):
-    pass
+    op_str = "/"
 
 
 class XOr(BinaryOp):
-    pass
+    op_str = "^"
 
 
 class Or(BinaryOp):
-    pass
+    op_str = "|"

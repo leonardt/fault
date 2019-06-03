@@ -118,40 +118,7 @@ class SystemVerilogTarget(VerilogTarget):
         if isinstance(value, expression.BinaryOp):
             left = self.compile_expression(value.left)
             right = self.compile_expression(value.right)
-            if isinstance(value, expression.And):
-                op = "&"
-            elif isinstance(value, expression.NE):
-                op = "!="
-            elif isinstance(value, expression.Div):
-                op = "/"
-            elif isinstance(value, expression.Add):
-                op = "+"
-            elif isinstance(value, expression.XOr):
-                op = "^"
-            elif isinstance(value, expression.Or):
-                op = "|"
-            elif isinstance(value, expression.LShift):
-                op = "<<"
-            elif isinstance(value, expression.RShift):
-                op = ">>"
-            elif isinstance(value, expression.Mod):
-                op = "%"
-            elif isinstance(value, expression.Mul):
-                op = "*"
-            elif isinstance(value, expression.Sub):
-                op = "-"
-            elif isinstance(value, expression.LT):
-                op = "<"
-            elif isinstance(value, expression.LE):
-                op = "<="
-            elif isinstance(value, expression.GT):
-                op = ">"
-            elif isinstance(value, expression.GE):
-                op = ">="
-            elif isinstance(value, expression.EQ):
-                op = "=="
-            else:
-                raise NotImplementedError(value)
+            op = value.op_str
             return f"{left} {op} {right}"
         elif isinstance(value, PortWrapper):
             return f"dut.{value.select_path.system_verilog_path}"
