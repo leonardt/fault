@@ -144,7 +144,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.declarations.append(f"integer {name}_file;")
         code = f"""\
 {name}_file = $fopen(\"{action.file.name}\", \"{action.file.mode}\");
-if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_file);
+if (!{name}_file) $error("FAULT_ERROR: Could not open file {action.file.name}: %0d", {name}_file);
 """  # noqa
         return code.splitlines()
 
@@ -181,7 +181,7 @@ end
 
         return f"""
 if ({name} != {value}) begin
-    $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
+    $error(\"FAULT_ERROR: Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
 end;
 """.splitlines()  # noqa
 
@@ -297,21 +297,20 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         else:
             raise NotImplementedError(self.simulator)
 
-        print(f"Running command: {cmd}")
-        assert not subprocess.call(cmd, cwd=self.directory, shell=True)
+        result = subprocess.run(cmd, cwd=self.directory, shell=True,
+                                capture_output=True)
+        print(result.stdout.decode())
+        assert not result.returncode, f"Error running command: {cmd}"
         if self.simulator == "vcs":
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
                                     capture_output=True)
+            print(result.stdout.decode())
+            assert not result.returncode, "Running vcs binary failed"
         elif self.simulator == "iverilog":
             result = subprocess.run(f"vvp -N {self.circuit_name}_tb",
                                     cwd=self.directory, shell=True,
                                     capture_output=True)
-        if self.simulator in {"vcs", "iverilog"}:
-            # VCS and iverilog do not set the return code when a
-            # simulation exits with an error, so we check the result
-            # of stdout to see if "Error" is present
             print(result.stdout.decode())
-            assert not result.returncode, \
-                f"Running {self.simulator} binary failed"
-            assert "Error" not in str(result.stdout), \
-                f"\"Error\" found in stdout of {self.simulator} run"
+            assert not result.returncode, "Running iverilog binary failed"
+        assert "FAULT_ERROR" not in str(result.stdout), \
+            f"\"FAULT_ERROR\" found in stdout of {self.simulator} run"
