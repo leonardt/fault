@@ -217,19 +217,28 @@ class While(Action):
         # and use in loop? e.g. if you're looping until you get a HALT
         # back from whatever you're expecting but want to switch on
         # the other opcodes?
-
-        # TODO would really benefit from a NOT in fault so you can
-        # negate the condition. currently have to do while(var = 0)
-        # instead of while(var != termination_condition).
         self.loop_cond = loop_cond
         self.actions = actions
 
     def __str__(self):
-        # TODO: Might be nice to format this print output over multiple lines
-        # for actions
         return f"While({self.loop_cond}, {self.actions})"
 
     def retarget(self, new_circuit, clock):
         actions = [action.retarget(new_circuit, clock) for action in
                    self.actions]
         return While(self.loop_cond, actions)
+
+
+class If(Action):
+    def __init__(self, cond, actions, else_actions):
+        self.cond = cond
+        self.actions = actions
+        self.else_actions = else_actions
+
+    def __str__(self):
+        return f"If({self.cond}, {self.actions})"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return If(self.cond, actions)

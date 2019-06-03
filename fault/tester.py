@@ -6,7 +6,7 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
-from fault.actions import Poke, Expect, Step, Print, Loop, While
+from fault.actions import Poke, Expect, Step, Print, Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 from fault.file import File
@@ -15,6 +15,7 @@ import copy
 import os
 import inspect
 from fault.config import get_test_dir
+from typing import List
 
 
 class Tester:
@@ -261,7 +262,7 @@ class Tester:
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        loop_tester = LoopTester(self.circuit, self.clock)
+        loop_tester = LoopTester(self._circuit, self.clock)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
@@ -292,9 +293,15 @@ class Tester:
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        while_tester = LoopTester(self.circuit, self.clock)
+        while_tester = LoopTester(self._circuit, self.clock)
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
+
+    def _if(self, cond):
+        if_tester = IfTester(self._circuit, self.clock)
+        self.actions.append(If(cond, if_tester.actions,
+                               if_tester.else_actions))
+        return if_tester
 
 
 class LoopIndex:
@@ -313,3 +320,19 @@ class LoopTester(Tester):
         LoopTester.__unique_index_id += 1
         self.index = LoopIndex(
             f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
+
+
+class ElseTester(Tester):
+    def __init__(self, else_actions: List, circuit: m.Circuit,
+                 clock: m.ClockType = None):
+        super().__init__(circuit, clock)
+        self.actions = else_actions
+
+
+class IfTester(Tester):
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+        super().__init__(circuit, clock)
+        self.else_actions = []
+
+    def _else(self):
+        return ElseTester(self.else_actions, self.circuit, self.clock)

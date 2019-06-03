@@ -376,6 +376,30 @@ if ({action.file.name_without_ext}_file.eof()) {{
 
         return code
 
+    def make_if(self, i, action):
+        code = []
+        cond = self.compile_expression(action.cond)
+
+        code.append(f"if ({cond}) {{")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("}")
+
+        if action.else_actions:
+            code[-1] += " else {"
+            for inner_action in action.else_actions:
+                # TODO: Handle relative offset of sub-actions
+                inner_code = self.generate_action_code(i, inner_action)
+                code += ["    " + x for x in inner_code]
+
+            code.append("}")
+
+        return code
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default

@@ -229,6 +229,30 @@ end;
 
         return code
 
+    def make_if(self, i, action):
+        code = []
+        cond = self.compile_expression(action.cond)
+
+        code.append(f"if ({cond}) begin")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("end")
+
+        if action.else_actions:
+            code[-1] += " else begin"
+            for inner_action in action.else_actions:
+                # TODO: Handle relative offset of sub-actions
+                inner_code = self.generate_action_code(i, inner_action)
+                code += ["    " + x for x in inner_code]
+
+            code.append("end")
+
+        return code
+
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
         if isinstance(type_, m.ArrayKind):

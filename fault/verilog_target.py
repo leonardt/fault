@@ -110,6 +110,8 @@ class VerilogTarget(Target):
             return self.make_file_close(i, action)
         if isinstance(action, actions.While):
             return self.make_while(i, action)
+        if isinstance(action, actions.If):
+            return self.make_if(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
