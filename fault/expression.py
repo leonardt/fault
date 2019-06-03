@@ -45,6 +45,8 @@ class Expression:
         return Pos(self)
 
     def __pow__(self, other):
+        raise NotImplementedError("Pow not supported as an operator in magma,"
+                                  " C, or hwtypes")
         return Pow(self, other)
 
     def __sub__(self, other):
