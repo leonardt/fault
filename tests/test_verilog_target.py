@@ -102,7 +102,7 @@ def test_target_clock(capfd, target, simulator):
         Poke(circ.CLK, 0),
         Print("%x\n", circ.O),
         Step(circ.CLK, 1),
-        Poke(circ.I, BitVector(1, 1)),
+        Poke(circ.I, BitVector[1](1)),
         Eval(),
         Print("%x\n", circ.O),
     ]
@@ -131,12 +131,12 @@ def test_target_clock(capfd, target, simulator):
 def test_print_nested_arrays(capfd, target, simulator):
     circ = common.TestNestedArraysCircuit
     actions = [
-        Poke(circ.I, [BitVector(i, 4) for i in range(3)]),
+        Poke(circ.I, [BitVector[4](i) for i in range(3)]),
     ] + [Print("%x\n", i) for i in circ.I] + [
         Eval(),
-        Expect(circ.O, [BitVector(i, 4) for i in range(3)]),
+        Expect(circ.O, [BitVector[4](i) for i in range(3)]),
     ] + [Print("%x\n", i) for i in circ.O] + [
-        Poke(circ.I, [BitVector(4 - i, 4) for i in range(3)]),
+        Poke(circ.I, [BitVector[4](4 - i) for i in range(3)]),
         Eval(),
     ] + [Print("%x\n", i) for i in circ.O]
 
@@ -166,14 +166,14 @@ def test_print_nested_arrays(capfd, target, simulator):
 def test_print_double_nested_arrays(capfd, target, simulator):
     circ = common.TestDoubleNestedArraysCircuit
     actions = [
-        Poke(circ.I, [[BitVector(i + j * 3, 4) for i in range(3)]
+        Poke(circ.I, [[BitVector[4](i + j * 3) for i in range(3)]
                       for j in range(2)]),
     ] + [Print("%x\n", j) for i in circ.I for j in i] + [
         Eval(),
-        Expect(circ.O, [[BitVector(i + j * 3, 4) for i in range(3)]
+        Expect(circ.O, [[BitVector[4](i + j * 3) for i in range(3)]
                         for j in range(2)]),
     ] + [Print("%x\n", j) for i in circ.O for j in i] + [
-        Poke(circ.I, [[BitVector(i + (j + 1) * 3, 4) for i in range(3)]
+        Poke(circ.I, [[BitVector[4](i + (j + 1) * 3) for i in range(3)]
                       for j in range(2)]),
         Eval(),
     ] + [Print("%x\n", j) for i in circ.O for j in i]

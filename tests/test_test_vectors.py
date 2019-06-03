@@ -51,10 +51,10 @@ def test_combinational_circuit():
             assert vec[3] == AnyValue
             continue
         prev_inputs = test_vectors[i - 1].test_vector[:3]
-        expected = BitVector(f(*prev_inputs), 1)
+        expected = BitVector[1](f(*prev_inputs))
         assert vec[3] == expected
     # Checking the pattern above for the last vector.
     vec = test_vectors[-1].test_vector
     prev_inputs = test_vectors[-2].test_vector[:3]
-    expected = BitVector(f(*prev_inputs), 1)
+    expected = BitVector[1](f(*prev_inputs))
     assert vec[3] == expected
