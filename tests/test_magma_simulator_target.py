@@ -24,16 +24,16 @@ def test_magma_simulator_target_basic(backend):
     """
     circ = common.TestBasicCircuit
     actions = [
-        Poke(circ.I, BitVector(0, 1)),
-        Expect(circ.O, BitVector(0, 1)),
+        Poke(circ.I, BitVector[1](0)),
+        Expect(circ.O, BitVector[1](0)),
         Eval(),
-        Poke(circ.I, BitVector(1, 1)),
-        Expect(circ.O, BitVector(0, 1)),
+        Poke(circ.I, BitVector[1](1)),
+        Expect(circ.O, BitVector[1](0)),
         Eval(),
-        Poke(circ.I, BitVector(0, 1)),
-        Expect(circ.O, BitVector(1, 1)),
+        Poke(circ.I, BitVector[1](0)),
+        Expect(circ.O, BitVector[1](1)),
         Eval(),
-        Expect(circ.O, BitVector(0, 1)),
+        Expect(circ.O, BitVector[1](0)),
     ]
     run(circ, actions, None, backend)
 
@@ -63,14 +63,14 @@ def test_magma_simulator_target_nested_arrays_bulk(backend):
 def test_magma_simulator_target_clock(backend, capfd):
     circ = common.TestBasicClkCircuit
     actions = [
-        Poke(circ.I, BitVector(0, 1)),
+        Poke(circ.I, BitVector[1](0)),
         Print("%d", circ.I),
-        Expect(circ.O, BitVector(0, 1)),
+        Expect(circ.O, BitVector[1](0)),
         # TODO(rsetaluri): Figure out how to set clock value directly with the
         # coreir simulator. Currently it does not allow this.
-        # Poke(circ.CLK, BitVector(0, 1)),
+        # Poke(circ.CLK, BitVector[1](0)),
         Step(circ.CLK, 1),
-        Poke(circ.I, BitVector(1, 1)),
+        Poke(circ.I, BitVector[1](1)),
         Eval(),
         Print("%d", circ.O),
     ]

@@ -10,6 +10,15 @@ def pytest_generate_tests(metafunc):
 
 
 def test_tester_magma_internal_signals_verilator(target):
+    if target == "cosa":
+        from pysmt.shortcuts import Solver
+        from pysmt.exceptions import NoSolverAvailableError
+        import pytest
+        try:
+            with Solver(name="msat"):
+                pass
+        except NoSolverAvailableError:
+            pytest.skip("msat not available")
     circ = common.SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
@@ -23,9 +32,9 @@ def test_tester_magma_internal_signals_verilator(target):
     if target == "verilator":
         # TODO: We could turn this expect into a CoSA assert
         tester.circuit.config_reg.Q.expect(0)
-    tester.circuit.a.assume(lambda a: a < BitVector(32768, 16))
-    tester.circuit.b.assume(lambda b: b < BitVector(32768, 16))
-    # tester.circuit.b.assume(lambda b: b >= BitVector(32768, 16))
+    tester.circuit.a.assume(lambda a: a < BitVector[16](32768))
+    tester.circuit.b.assume(lambda b: b < BitVector[16](32768))
+    # tester.circuit.b.assume(lambda b: b >= BitVector[16](32768))
 
     # tester.circuit.a.assume(lambda a: a < ((1 << 16) - 1))
     # tester.circuit.b.assume(lambda b: b < ((1 << 16) - 1))

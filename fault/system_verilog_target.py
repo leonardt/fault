@@ -262,33 +262,39 @@ end;
 
         return code
 
-    def generate_recursive_port_code(self, name, type_):
+    def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
         if isinstance(type_, m.ArrayKind):
             for j in range(type_.N):
                 result = self.generate_port_code(
-                    name + "_" + str(j), type_.T
+                    name + "_" + str(j), type_.T, power_args
                 )
                 port_list.extend(result)
         elif isinstance(type_, m.TupleKind):
             for k, t in zip(type_.Ks, type_.Ts):
                 result = self.generate_port_code(
-                    name + "_" + str(k), t
+                    name + "_" + str(k), t, power_args
                 )
                 port_list.extend(result)
         return port_list
 
-    def generate_port_code(self, name, type_):
+    def generate_port_code(self, name, type_, power_args):
         is_array_of_bits = isinstance(type_, m.ArrayKind) and \
             not isinstance(type_.T, m.BitKind)
         if is_array_of_bits or isinstance(type_, m.TupleKind):
-            return self.generate_recursive_port_code(name, type_)
+            return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
-            if type_.isoutput():
+            if name in power_args.get("supply0s", []):
+                t = "supply0"
+            elif name in power_args.get("supply1s", []):
+                t = "supply1"
+            elif name in power_args.get("tris", []):
+                t = "tri"
+            elif type_.isoutput():
                 t = "wire"
             elif type_.isinput():
                 t = "reg"
@@ -297,11 +303,11 @@ end;
             self.declarations.append(f"    {t} {width_str}{name};\n")
             return [f".{name}({name})"]
 
-    def generate_code(self, actions):
+    def generate_code(self, actions, power_args):
         initial_body = ""
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
-            result = self.generate_port_code(name, type_)
+            result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
 
         for i, action in enumerate(actions):
@@ -318,11 +324,11 @@ end;
 
         return src
 
-    def run(self, actions):
+    def run(self, actions, power_args={}):
         test_bench_file = Path(f"{self.circuit_name}_tb.sv")
 
         # Write the verilator driver to file.
-        src = self.generate_code(actions)
+        src = self.generate_code(actions, power_args)
         with open(self.directory / test_bench_file, "w") as f:
             f.write(src)
         verilog_libraries = " ".join(str(x) for x in

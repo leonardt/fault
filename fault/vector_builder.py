@@ -54,7 +54,7 @@ class VectorBuilder:
             indices = self.__indices(action.clock)
             val = self.__get(indices)
             for step in range(action.steps):
-                val ^= BitVector(1, 1)
+                val ^= BitVector[1](1)
                 self.__eval()
                 self.__set(indices, val)
         elif isinstance(action, actions.Print):
