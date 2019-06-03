@@ -10,31 +10,31 @@ from fault.vector_builder import VectorBuilder
 def test_tester_basic():
     circ = common.TestBasicCircuit
     builder = VectorBuilder(circ)
-    builder.process(Poke(circ.I, BitVector(0, 1)))
-    builder.process(Expect(circ.O, BitVector(0, 1)))
-    assert builder.vectors == [[BitVector(0, 1), BitVector(0, 1)]]
+    builder.process(Poke(circ.I, BitVector[1](0)))
+    builder.process(Expect(circ.O, BitVector[1](0)))
+    assert builder.vectors == [[BitVector[1](0), BitVector[1](0)]]
     builder.process(Eval())
-    assert builder.vectors == [[BitVector(0, 1), BitVector(0, 1)],
-                               [BitVector(0, 1), fault.AnyValue]]
+    assert builder.vectors == [[BitVector[1](0), BitVector[1](0)],
+                               [BitVector[1](0), fault.AnyValue]]
 
 
 def test_tester_clock():
     circ = common.TestBasicClkCircuit
     builder = VectorBuilder(circ)
-    builder.process(Poke(circ.I, BitVector(0, 1)))
+    builder.process(Poke(circ.I, BitVector[1](0)))
     builder.process(Print("%x", circ.O))
-    builder.process(Expect(circ.O, BitVector(0, 1)))
+    builder.process(Expect(circ.O, BitVector[1](0)))
     assert builder.vectors == [
-        [BitVector(0, 1), BitVector(0, 1), fault.AnyValue]
+        [BitVector[1](0), BitVector[1](0), fault.AnyValue]
     ]
-    builder.process(Poke(circ.CLK, BitVector(0, 1)))
+    builder.process(Poke(circ.CLK, BitVector[1](0)))
     assert builder.vectors == [
-        [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)]
+        [BitVector[1](0), BitVector[1](0), BitVector[1](0)]
     ]
     builder.process(Step(circ.CLK, 1))
     assert builder.vectors == [
-        [BitVector(0, 1), BitVector(0, 1), BitVector(0, 1)],
-        [BitVector(0, 1), fault.AnyValue, BitVector(1, 1)]
+        [BitVector[1](0), BitVector[1](0), BitVector[1](0)],
+        [BitVector[1](0), fault.AnyValue, BitVector[1](1)]
     ]
 
 
@@ -44,7 +44,7 @@ def test_tester_nested_arrays():
     expected = []
     for i in range(3):
         val = random.randint(0, (1 << 4) - 1)
-        builder.process(Poke(circ.I[i], BitVector(val, 4)))
-        builder.process(Expect(circ.O[i], BitVector(val, 4)))
+        builder.process(Poke(circ.I[i], BitVector[4](val)))
+        builder.process(Expect(circ.O[i], BitVector[4](val)))
         expected.append(val)
     assert builder.vectors == [[Array(expected, 3), Array(expected, 3)]]
