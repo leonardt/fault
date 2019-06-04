@@ -21,9 +21,9 @@ def pytest_generate_tests(metafunc):
         if shutil.which("vcs"):
             targets.append(
                 ("system-verilog", "vcs"))
-        # if shutil.which("iverilog"):
-        #     targets.append(
-        #         ("system-verilog", "iverilog"))
+        if shutil.which("iverilog"):
+            targets.append(
+                ("system-verilog", "iverilog"))
         metafunc.parametrize("target,simulator", targets)
 
 
