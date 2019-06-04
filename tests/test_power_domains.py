@@ -47,6 +47,8 @@ def test_power_domains():
     tester.step(2)
     tester.circuit.VDD_SW.expect(0) 
 
+    #======================================
+    # RUN POINTWISE
     #======================================     
     # TEST 3 - VERIFY GLOBAL SIGNALS       
     # Check global signals are ON after tile is OFF      
