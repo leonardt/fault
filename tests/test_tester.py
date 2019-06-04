@@ -437,6 +437,7 @@ def test_tester_if(target, simulator):
     if_tester = tester._if(tester.circuit.O != 0)
     if_tester.poke(circ.I, 0)
     if_tester._else().poke(circ.I, 1)
+    tester.eval()
     tester.expect(circ.O, 1)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
