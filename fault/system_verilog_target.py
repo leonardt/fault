@@ -102,9 +102,6 @@ class SystemVerilogTarget(VerilogTarget):
             value = f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
-            if value.file.chunk_size == 1:
-                # Assume that the user didn't want an array 1 byte, so unpack
-                new_value += "[0]"
             value = new_value
         return value
 
