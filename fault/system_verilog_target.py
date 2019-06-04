@@ -139,8 +139,9 @@ class SystemVerilogTarget(VerilogTarget):
         if action.file.mode not in {"r", "w"}:
             raise NotImplementedError(action.file.mode)
         name = action.file.name_without_ext
+        bit_size = action.file.chunk_size * 8 - 1
         self.declarations.append(
-            f"reg [7:0] {name}_in[0:{action.file.chunk_size - 1}];")
+            f"reg [{bit_size}:0] {name}_in;")
         self.declarations.append(f"integer {name}_file;")
         code = f"""\
 {name}_file = $fopen(\"{action.file.name}\", \"{action.file.mode}\");
@@ -155,17 +156,25 @@ if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_f
         decl = f"integer __i;"
         if decl not in self.declarations:
             self.declarations.append(decl)
+        # notice that this is little endian
         code = f"""\
+{action.file.name_without_ext}_in = 0;
 for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
-    {action.file.name_without_ext}_in[__i] = $fgetc({action.file.name_without_ext}_file);
+    {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
 end
 """  # noqa
         return code.splitlines()
 
     def make_file_write(self, i, action):
         value = self.make_name(action.value)
-        return [f"$fwrite({action.file.name_without_ext}_file, \"%c\", "
-                f"{value});"]
+        mask_size = action.file.chunk_size * 8
+        # this is little endian as well
+        code = f"""\
+for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+    $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
+end
+"""  # noqa
+        return code.splitlines()
 
     def make_expect(self, i, action):
         if value_utils.is_any(action.value):
