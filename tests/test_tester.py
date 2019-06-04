@@ -30,11 +30,11 @@ def pytest_generate_tests(metafunc):
 def check(got, expected):
     assert type(got) == type(expected)
     if isinstance(got, actions.PortAction):
-        assert got.port == expected.port
+        assert got.port is expected.port
         assert got.value == expected.value
     elif isinstance(got, Print):
         assert got.format_str == expected.format_str
-        assert got.ports == expected.ports
+        assert all(p0 is p1 for p0, p1 in zip(got.ports, expected.ports))
     elif isinstance(got, Step):
         assert got.clock == expected.clock
         assert got.steps == expected.steps
