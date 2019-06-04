@@ -434,11 +434,11 @@ def test_tester_if(target, simulator):
     loop = tester._while(tester.circuit.O != 1)
     loop._if(tester.circuit.O == 0).poke(circ.I, 1)
     loop.eval()
-    if_tester = tester._if(tester.circuit.O != 0)
-    if_tester.poke(circ.I, 0)
-    if_tester._else().poke(circ.I, 1)
+    if_tester = tester._if(tester.circuit.O == 0)
+    if_tester.poke(circ.I, 1)
+    if_tester._else().poke(circ.I, 0)
     tester.eval()
-    tester.expect(circ.O, 1)
+    tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])

@@ -370,5 +370,9 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             print(result.stdout.decode())
             assert not result.returncode, \
                 f"Running {self.simulator} binary failed"
-            assert "Error" not in str(result.stdout), \
-                f"\"Error\" found in stdout of {self.simulator} run"
+            if self.simulator == "vcs":
+                error_str = "Error"
+            elif self.simulator == "iverilog":
+                error_str = "ERROR"
+            assert error_str not in str(result.stdout), \
+                f"\"{error_str}\" found in stdout of {self.simulator} run"
