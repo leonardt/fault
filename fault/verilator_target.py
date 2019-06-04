@@ -17,6 +17,7 @@ from fault.random import random_bv, constrained_random_bv
 import fault.utils as utils
 import platform
 import os
+import fault.expression as expression
 
 
 # max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -116,14 +117,49 @@ class VerilatorTarget(VerilogTarget):
         # works
         self.verilator_version = float(verilator_version.split()[1])
 
+    def get_verilator_prefix(self):
+        if self.verilator_version > 3.874:
+            return f"{self.circuit_name}"
+        else:
+            return f"v"
+
+    def process_peek(self, value):
+        if isinstance(value.port, fault.WrappedVerilogInternalPort):
+            path = value.port.path.replace(".", "->")
+            return f"top->{self.get_verilator_prefix()}->{path}"
+        else:
+            return f"top->{verilog_name(value.port.name)}"
+
+    def process_value(self, port, value):
+        if isinstance(value, expression.Expression):
+            return self.compile_expression(value)
+        elif isinstance(value, (int, BitVector)) and value < 0:
+            return self.process_signed_values(port, value)
+        elif isinstance(value, (int, BitVector)):
+            return value
+        return value
+
     def process_signed_values(self, port, value):
-        if isinstance(value, (int, BitVector)) and value < 0:
-            # Handle sign extension for verilator since it expects and unsigned
-            # c type
-            if isinstance(port, SelectPath):
-                port = port[-1]
-            port_len = len(port)
-            value = BitVector[port_len](value).as_uint()
+        # Handle sign extension for verilator since it expects and unsigned
+        # c type
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        port_len = len(port)
+        return BitVector[port_len](value).as_uint()
+
+    def compile_expression(self, value):
+        if isinstance(value, expression.BinaryOp):
+            left = self.compile_expression(value.left)
+            right = self.compile_expression(value.right)
+            if isinstance(value, expression.Pow):
+                raise NotImplementedError("C does not have a pow operator")
+            else:
+                op = value.op_str
+            return f"({left} {op} {right})"
+        elif isinstance(value, PortWrapper):
+            return f"top->{value.select_path.verilator_path}"
+        elif isinstance(value, actions.Peek):
+            return self.process_peek(value)
         return value
 
     def make_poke(self, i, action):
@@ -182,7 +218,7 @@ class VerilatorTarget(VerilogTarget):
             if isinstance(value, actions.FileRead):
                 mask = "FF" * value.file.chunk_size
                 value = f"(*{value.file.name_without_ext}_in) & 0x{mask}"
-            value = self.process_signed_values(action.port, value)
+            value = self.process_value(action.port, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
@@ -210,10 +246,7 @@ class VerilatorTarget(VerilogTarget):
         # perform the expect.
         if value_utils.is_any(action.value):
             return []
-        if self.verilator_version > 3.874:
-            prefix = f"{self.circuit_name}"
-        else:
-            prefix = f"v"
+        prefix = self.get_verilator_prefix()
         if isinstance(action.port, fault.WrappedVerilogInternalPort):
             path = action.port.path.replace(".", "->")
             name = f"{prefix}->{path}"
@@ -234,11 +267,7 @@ class VerilatorTarget(VerilogTarget):
             debug_name = action.port.debug_name
         value = action.value
         if isinstance(value, actions.Peek):
-            if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                path = action.port.path.replace(".", "->")
-                value = f"top->{prefix}->{path}"
-            else:
-                value = f"top->{verilog_name(value.port.name)}"
+            value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
             if self.verilator_version >= 3.856:
                 if len(action.port) > 2:
@@ -247,9 +276,19 @@ class VerilatorTarget(VerilogTarget):
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
-        value = self.process_signed_values(action.port, value)
+        value = self.process_value(action.port, value)
+        port = action.port
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        elif isinstance(port, fault.WrappedVerilogInternalPort):
+            port = port.type_
+        if isinstance(port, m._BitType):
+            port_len = 1
+        else:
+            port_len = len(port)
+        mask = (1 << port_len) - 1
 
-        return [f"my_assert(top->{name}, {value}, "
+        return [f"my_assert(top->{name}, {value} & {mask}, "
                 f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
@@ -321,6 +360,45 @@ if ({action.file.name_without_ext}_file.eof()) {{
 }}
 """
         return code.splitlines()
+
+    def make_while(self, i, action):
+        code = []
+        cond = self.compile_expression(action.loop_cond)
+
+        code.append(f"while ({cond}) {{")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("}")
+
+        return code
+
+    def make_if(self, i, action):
+        code = []
+        cond = self.compile_expression(action.cond)
+
+        code.append(f"if ({cond}) {{")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("}")
+
+        if action.else_actions:
+            code[-1] += " else {"
+            for inner_action in action.else_actions:
+                # TODO: Handle relative offset of sub-actions
+                inner_code = self.generate_action_code(i, inner_action)
+                code += ["    " + x for x in inner_code]
+
+            code.append("}")
+
+        return code
 
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import fault
 from fault.select_path import SelectPath
+import fault.expression as expression
 
 
 class Action(ABC):
@@ -96,21 +97,15 @@ class Guarantee(PortAction):
         super().__init__(port, value)
 
 
-class Peek(Action):
+class Peek(Action, expression.Expression):
     def __init__(self, port):
         super().__init__()
-        if not is_output(port):
-            raise ValueError(f"Can only peek on outputs: {port.debug_name} "
-                             f"{type(port)}")
         self.port = port
 
     def retarget(self, new_circuit, clock):
         cls = type(self)
         new_port = new_circuit.interface.ports[str(self.port.name)]
         return cls(new_port)
-
-    def __eq__(self, other):
-        return self.port is other.port
 
     def __str__(self):
         return f"Peek({self.port.debug_name})"
@@ -208,3 +203,36 @@ class FileClose(Action):
 
     def retarget(self, new_circuit, clock):
         return FileClose(self.file)
+
+
+class While(Action):
+    def __init__(self, loop_cond, actions):
+        # TODO: might be nice to define loop_var to captuare condition
+        # and use in loop? e.g. if you're looping until you get a HALT
+        # back from whatever you're expecting but want to switch on
+        # the other opcodes?
+        self.loop_cond = loop_cond
+        self.actions = actions
+
+    def __str__(self):
+        return f"While({self.loop_cond}, {self.actions})"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return While(self.loop_cond, actions)
+
+
+class If(Action):
+    def __init__(self, cond, actions, else_actions):
+        self.cond = cond
+        self.actions = actions
+        self.else_actions = else_actions
+
+    def __str__(self):
+        return f"If({self.cond}, {self.actions})"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return If(self.cond, actions)

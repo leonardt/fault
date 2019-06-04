@@ -4,6 +4,7 @@ from hwtypes import BitVector
 import hwtypes
 import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
+import fault.actions as actions
 import common
 import tempfile
 import os
@@ -28,7 +29,19 @@ def pytest_generate_tests(metafunc):
 
 def check(got, expected):
     assert type(got) == type(expected)
-    assert got.__dict__ == expected.__dict__
+    if isinstance(got, actions.PortAction):
+        assert got.port is expected.port
+        assert got.value == expected.value
+    elif isinstance(got, Print):
+        assert got.format_str == expected.format_str
+        assert all(p0 is p1 for p0, p1 in zip(got.ports, expected.ports))
+    elif isinstance(got, Step):
+        assert got.clock == expected.clock
+        assert got.steps == expected.steps
+    elif isinstance(got, Eval):
+        pass
+    else:
+        raise NotImplementedError(type(got))
 
 
 def test_tester_basic(target, simulator):
@@ -98,6 +111,22 @@ def test_tester_peek(target, simulator):
     check(tester.actions[2], Poke(circ.CLK, 0))
     tester.step()
     check(tester.actions[3], Step(circ.CLK, 1))
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_peek_input(target, simulator):
+    circ = common.TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.poke(circ.I, 1)
+    tester.eval()
+    tester.expect(circ.O, tester.peek(circ.I))
+    check(tester.actions[0], Poke(circ.I, 1))
+    check(tester.actions[1], Eval())
+    check(tester.actions[2], Expect(circ.O, Peek(circ.I)))
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
@@ -345,6 +374,76 @@ def test_tester_file_io(target, simulator):
                 # this first value is skipped
                 expected = expected[1:]
             assert file.read(8) == expected
+
+
+def test_tester_while(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 0)
+    loop = tester._while(tester.circuit.O != 1)
+    loop.poke(circ.I, 1)
+    loop.eval()
+    tester.expect(circ.O, 1)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_while2(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    loop = tester._while(tester.circuit.O == 0)
+    loop.poke(circ.I, 1)
+    loop.eval()
+    tester.expect(circ.O, 1)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_while3(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    loop = tester._while(tester.peek(tester._circuit.O) == 0)
+    loop.poke(circ.I, 1)
+    loop.eval()
+    tester.expect(circ.O, 1)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_if(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 0)
+    loop = tester._while(tester.circuit.O != 1)
+    loop._if(tester.circuit.O == 0).poke(circ.I, 1)
+    loop.eval()
+    if_tester = tester._if(tester.circuit.O == 0)
+    if_tester.poke(circ.I, 1)
+    if_tester._else().poke(circ.I, 0)
+    tester.eval()
+    tester.expect(circ.O, 0)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
 def test_sint_circuit(target, simulator):
