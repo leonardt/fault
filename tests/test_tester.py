@@ -4,6 +4,7 @@ from hwtypes import BitVector
 import hwtypes
 import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
+import fault.actions as actions
 import common
 import tempfile
 import os
@@ -28,7 +29,19 @@ def pytest_generate_tests(metafunc):
 
 def check(got, expected):
     assert type(got) == type(expected)
-    assert got.__dict__ == expected.__dict__
+    if isinstance(got, actions.PortAction):
+        assert got.port == expected.port
+        assert got.value == expected.value
+    elif isinstance(got, Print):
+        assert got.format_str == expected.format_str
+        assert got.ports == expected.ports
+    elif isinstance(got, Step):
+        assert got.clock == expected.clock
+        assert got.steps == expected.steps
+    elif isinstance(got, Eval):
+        pass
+    else:
+        raise NotImplementedError(type(got))
 
 
 def test_tester_basic(target, simulator):
@@ -353,6 +366,40 @@ def test_tester_while(target, simulator):
     tester.zero_inputs()
     tester.poke(circ.I, 0)
     loop = tester._while(tester.circuit.O != 1)
+    loop.poke(circ.I, 1)
+    loop.eval()
+    tester.expect(circ.O, 1)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_while2(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    loop = tester._while(tester.circuit.O == 0)
+    loop.poke(circ.I, 1)
+    loop.eval()
+    tester.expect(circ.O, 1)
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_while3(target, simulator):
+    circ = common.TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    loop = tester._while(tester.peek(tester._circuit.O) == 0)
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)

@@ -110,9 +110,6 @@ class Peek(Action, expression.Expression):
         new_port = new_circuit.interface.ports[str(self.port.name)]
         return cls(new_port)
 
-    def __eq__(self, other):
-        return self.port is other.port
-
     def __str__(self):
         return f"Peek({self.port.debug_name})"
 
