@@ -21,9 +21,9 @@ def pytest_generate_tests(metafunc):
         if shutil.which("vcs"):
             targets.append(
                 ("system-verilog", "vcs"))
-        if shutil.which("iverilog"):
-            targets.append(
-                ("system-verilog", "iverilog"))
+        # if shutil.which("iverilog"):
+        #     targets.append(
+        #         ("system-verilog", "iverilog"))
         metafunc.parametrize("target,simulator", targets)
 
 
@@ -111,6 +111,22 @@ def test_tester_peek(target, simulator):
     check(tester.actions[2], Poke(circ.CLK, 0))
     tester.step()
     check(tester.actions[3], Step(circ.CLK, 1))
+    with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_peek_input(target, simulator):
+    circ = common.TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.poke(circ.I, 1)
+    tester.eval()
+    tester.expect(circ.O, tester.peek(circ.I))
+    check(tester.actions[0], Poke(circ.I, 1))
+    check(tester.actions[1], Eval())
+    check(tester.actions[2], Expect(circ.O, Peek(circ.I)))
     with tempfile.TemporaryDirectory() as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])

@@ -100,9 +100,6 @@ class Guarantee(PortAction):
 class Peek(Action, expression.Expression):
     def __init__(self, port):
         super().__init__()
-        if not is_output(port):
-            raise ValueError(f"Can only peek on outputs: {port.debug_name} "
-                             f"{type(port)}")
         self.port = port
 
     def retarget(self, new_circuit, clock):
