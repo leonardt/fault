@@ -117,9 +117,9 @@ def test_target_clock(capfd, target, simulator):
         assert lines[-1] == "1", out
     else:
         if simulator == "ncsim":
+            assert lines[-7] == "0", out
             assert lines[-6] == "0", out
-            assert lines[-5] == "0", out
-            assert lines[-4] == "1", out
+            assert lines[-5] == "1", out
         elif simulator == "vcs":
             assert lines[-10] == "0", out
             assert lines[-9] == "0", out
@@ -146,7 +146,7 @@ def test_print_nested_arrays(capfd, target, simulator):
         actual = "\n".join(out.splitlines()[-9:])
     else:
         if simulator == "ncsim":
-            actual = "\n".join(out.splitlines()[-9 - 3: -3])
+            actual = "\n".join(out.splitlines()[-9 - 4: -4])
         elif simulator == "vcs":
             actual = "\n".join(out.splitlines()[-9 - 7: -7])
         else:
@@ -184,7 +184,7 @@ def test_print_double_nested_arrays(capfd, target, simulator):
         actual = "\n".join(out.splitlines()[-18:])
     else:
         if simulator == "ncsim":
-            actual = "\n".join(out.splitlines()[-18 - 3: -3])
+            actual = "\n".join(out.splitlines()[-18 - 4: -4])
         elif simulator == "vcs":
             actual = "\n".join(out.splitlines()[-18 - 7: -7])
         else:
