@@ -183,6 +183,9 @@ end
     def make_file_write(self, i, action):
         value = self.make_name(action.value)
         mask_size = action.file.chunk_size * 8
+        decl = f"integer __i;"
+        if decl not in self.declarations:
+            self.declarations.append(decl)
         # this is little endian as well
         code = f"""\
 for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
