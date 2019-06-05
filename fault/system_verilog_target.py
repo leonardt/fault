@@ -8,10 +8,23 @@ from fault.select_path import SelectPath
 import subprocess
 from fault.wrapper import PortWrapper
 import fault
+import random
+
+
+# From https://github.com/joestump/python-oauth2/blob/
+# 81326a07d1936838d844690b468660452aafdea9/oauth2/__init__.py#L165
+def generate_nonce(length=8):
+    """Generate pseudorandom number."""
+    return ''.join([str(random.SystemRandom().randint(0, 9)) for i in
+                    range(length)])
 
 
 src_tpl = """\
 module {circuit_name}_tb;
+// Adding a random nonce string to try to force ncsim to recompile, see
+// https://github.com/StanfordAHA/lassen/issues/111 for the issue
+string nonce = {nonce}
+
 {declarations}
 
     {circuit_name} dut (
@@ -256,6 +269,7 @@ end;
                 initial_body += f"        {line}\n"
 
         src = src_tpl.format(
+            nonce=generate_nonce(),
             declarations="\n".join(self.declarations),
             initial_body=initial_body,
             port_list=",\n        ".join(port_list),
