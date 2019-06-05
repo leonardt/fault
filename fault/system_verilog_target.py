@@ -23,7 +23,7 @@ src_tpl = """\
 module {circuit_name}_tb;
 // Adding a random nonce string to try to force ncsim to recompile, see
 // https://github.com/StanfordAHA/lassen/issues/111 for the issue
-string nonce = {nonce}
+string nonce = "{nonce}";
 
 {declarations}
 
