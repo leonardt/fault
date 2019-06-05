@@ -286,8 +286,8 @@ end;
         if check_timestamp:
             new_stat_result = os.stat(tb_file)
             new_times = (new_stat_result.st_atime, new_stat_result.st_mtime)
-            if new_times[1] - old_times[1] == 0:
-                new_times = (new_times[0] + 1, new_times[1] + 1)
+            if new_times[1] <= old_times[1]:
+                new_times = (new_times[0], old_times[1] + 1)
                 os.utime(tb_file, times=new_times)
         verilog_libraries = " ".join(str(x) for x in
                                      self.include_verilog_libraries)
