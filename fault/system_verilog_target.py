@@ -32,7 +32,7 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=False, magma_output="coreir-verilog",
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
-                 dump_vcd=True, no_warning=False):
+                 dump_vcd=True, no_warning=False, allow_redefinition=False):
         """
         circuit: a magma circuit
 
@@ -69,6 +69,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.num_cycles = num_cycles
         self.dump_vcd = dump_vcd
         self.no_warning = no_warning
+        self.allow_redefinition = allow_redefinition
         self.declarations = []
 
     def make_name(self, port):
@@ -283,10 +284,15 @@ quit"""
                 warning = "-neverwarn"
             else:
                 warning = ""
+
+            if self.allow_redefinition:
+                redefinition = "-ALLOWREDEFINITION"
+            else:
+                redefinition = ""
             with open(self.directory / cmd_file, "w") as f:
                 f.write(ncsim_cmd_string)
             cmd = f"""\
-irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks {warning} -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
+irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks {warning} {redefinition} -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
 """  # nopep8
         elif self.simulator == "vcs":
             cmd = f"""\
