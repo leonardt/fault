@@ -405,8 +405,8 @@ def test_tester_file_io_chunk_size_4(target, simulator):
             expected = bytes([i for i in range(8 * 32)])
             for i in range(8):
                 if simulator == "iverilog":
-                    # iverilog doesn't support writing a NULL byte out using %c, so
-                    # this first values are skipped
+                    # iverilog doesn't support writing a NULL byte out using
+                    # %c, so this first values are skipped
                     if i == 0:
                         continue
                     assert file.read(1) == bytes([i])
