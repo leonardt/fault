@@ -93,7 +93,7 @@ class Tester:
                 self.poke(p, v)
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
-                                      actions.Var)):
+                                      expression.Expression)):
                 value = make_value(port, value)
             self.actions.append(actions.Poke(port, value))
 

@@ -253,7 +253,7 @@ class FileScanFormat(Action):
         return FileScanFormat(self.file, self._format, self.args)
 
 
-class Var(Action):
+class Var(Action, expression.Expression):
     def __init__(self, name, _type):
         super().__init__()
         self.name = name

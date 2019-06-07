@@ -455,7 +455,6 @@ for (int i = 0; i < {action.file.chunk_size}; i++) {{
             main_body=main_body,
             circuit_name=self.circuit_name,
         )
-        print(src)
 
         return src
 
