@@ -162,6 +162,7 @@ class VerilatorTarget(VerilogTarget):
             return f"top->{value.select_path.verilator_path}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
+        return value
 
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
