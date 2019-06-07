@@ -392,7 +392,6 @@ def test_tester_file_io_chunk_size_4(target, simulator):
     tester.file_close(file_in)
     tester.file_close(file_out)
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         if os.path.exists(_dir + "/" + out_file):
             os.remove(_dir + "/" + out_file)
         with open(_dir + "/test_file_in.raw", "wb") as file:
@@ -502,7 +501,6 @@ def test_tester_file_scanf(target, simulator):
     loop.expect(circ.O, config_data)
     tester.file_close(file_in)
     with tempfile.TemporaryDirectory() as _dir:
-        _dir = "build"
         with open(_dir + "/test_file_in.txt", "w") as file:
             file.write(hex(int(BitVector.random(32)))[2:])
         if target == "verilator":
