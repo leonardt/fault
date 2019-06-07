@@ -1,0 +1,53 @@
+Processing module: unknownBit
+Processing module: Sub16
+Processing module: SimpleALU
+NOT ALL CLOCKS: self.config_en connects to config_reg$conf_reg$enable_mux$coreir_commonlib_mux2x2_inst0$_join, which is not a wrap node
+Processing module: Register_has_ce_True_has_reset_False_has_async_reset_False_type_Bits_n_2
+NOT ALL CLOCKS: self.CE connects to enable_mux$coreir_commonlib_mux2x2_inst0$_join, which is not a wrap node
+Processing module: Mux4xOutUInt16
+Processing module: Mux2xOutBits2
+NOT ALL CLOCKS: self.S connects to coreir_commonlib_mux2x2_inst0$_join, which is not a wrap node
+Processing module: ConfigReg
+NOT ALL CLOCKS: self.CE connects to conf_reg$enable_mux$coreir_commonlib_mux2x2_inst0$_join, which is not a wrap node
+Processing module: Add16_cin
+NOT ALL CLOCKS: self.CIN connects to coreir_add16_inst1.in0, which is not an instance
+Processing module Add16_cin
+# of zero bit consts = 1
+# of one bit consts  = 0
+Done with bitconst removal
+Processing module ConfigReg
+# of zero bit consts = 0
+# of one bit consts  = 0
+Done with bitconst removal
+Processing module Mux2xOutBits2
+# of zero bit consts = 0
+# of one bit consts  = 0
+Done with bitconst removal
+Processing module Mux4xOutUInt16
+# of zero bit consts = 0
+# of one bit consts  = 0
+Done with bitconst removal
+Processing module Register_has_ce_True_has_reset_False_has_async_reset_False_type_Bits_n_2
+# of zero bit consts = 0
+# of one bit consts  = 0
+Done with bitconst removal
+Processing module SimpleALU
+# of zero bit consts = 2
+# of one bit consts  = 2
+Removing duplicate zero bitconsts 
+Removing duplicate one bitconsts 
+Done with bitconst removal
+Processing module Sub16
+# of zero bit consts = 1
+# of one bit consts  = 1
+Done with bitconst removal
+Processing module: SimpleALU
+Connections
+Deleting zexts in Module: global.SimpleALU
+  Type: {'a':BitIn[16], 'b':BitIn[16], 'c':Bit[16], 'config_data':BitIn[2], 'config_en':BitIn, 'CLK':coreir.clkIn}
+  Def? Yes
+# of instance in Module: global.SimpleALU
+  Type: {'a':BitIn[16], 'b':BitIn[16], 'c':Bit[16], 'config_data':BitIn[2], 'config_en':BitIn, 'CLK':coreir.clkIn}
+  Def? Yes = 17
+Deleting 0 id zexts
+Done culling zero extends

@@ -446,6 +446,32 @@ def test_tester_if(target, simulator):
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
+def test_tester_file_scanf(target, simulator):
+    circ = common.TestUInt32Circuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    file_in = tester.file_open("test_file_in.txt", "r")
+    config_addr = tester.Var("config_addr", BitVector[32])
+    config_data = tester.Var("config_data", BitVector[32])
+    loop = tester.loop(8)
+    loop.file_scanf(file_in, "%x %x", config_addr, config_data)
+    loop.poke(circ.I, config_addr)
+    loop.eval()
+    loop.expect(circ.O, config_addr)
+    loop.poke(circ.I, config_data)
+    loop.eval()
+    loop.expect(circ.O, config_data)
+    tester.file_close(file_in)
+    with tempfile.TemporaryDirectory() as _dir:
+        _dir = "build"
+        with open(_dir + "/test_file_in.txt", "w") as file:
+            file.write(hex(int(BitVector.random(32)))[2:])
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
 def test_sint_circuit(target, simulator):
     circ = common.TestSIntCircuit
     tester = fault.Tester(circ)

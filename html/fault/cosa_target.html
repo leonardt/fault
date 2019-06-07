@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.5.1" />
+<title>fault.cosa_target API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id=^header-]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:1px solid #ddd;margin:1em 0 1em 4ch}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}#index .two-column{column-count:2}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.name small{font-weight:normal}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{background:#ffc;font-weight:400;font-size:.8em;width:11em;text-transform:uppercase;padding:0px 8px;border:1px solid #fd6;border-radius:5px;cursor:pointer}.source summary:hover{background:#fe9 !important}.source[open] summary{background:#fda}.source pre{max-height:500px;overflow-y:scroll;margin-bottom:15px}.hlist{list-syle:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink;]</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a,a:visited{text-decoration:underline}a[href]:after{content:" (" attr(href) ")"}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title"><code>fault.cosa_target</code> module</h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">import magma as m
+from fault.verilog_target import VerilogTarget, verilog_name
+from pathlib import Path
+import fault.utils as utils
+import os
+import ast
+import astor
+
+
+class BVReplacer(ast.NodeTransformer):
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name) and node.func.id == &#34;BitVector&#34;:
+            assert isinstance(node.args[0], ast.Num), \
+                &#34;Non constant BVs not implemented&#34;
+            assert isinstance(node.args[1], ast.Num), \
+                &#34;Non constant BVs not implemented&#34;
+            return ast.Name(str(node.args[0].n) + &#34;_&#34; + str(node.args[1].n),
+                            ast.Load())
+        return node
+
+
+class SelfPrefixer(ast.NodeTransformer):
+    def __init__(self, name):
+        self.name = name
+
+    def visit_Name(self, node):
+        if node.id == self.name:
+            return ast.Attribute(ast.Name(&#34;self&#34;, ast.Load()),
+                                 node.id, node.ctx)
+        return node
+
+
+def get_width(port):
+    if isinstance(port, m._BitType):
+        return 1
+    return len(port)
+
+
+class CoSATarget(VerilogTarget):
+    def __init__(self, circuit, directory=&#34;build/&#34;, skip_compile=False,
+                 include_verilog_libraries=[], magma_output=&#34;coreir-verilog&#34;,
+                 circuit_name=None, magma_opts={}, solver=&#34;msat&#34;):
+        super().__init__(circuit, circuit_name, directory, skip_compile,
+                         include_verilog_libraries, magma_output, magma_opts)
+        self.state_index = 0
+        self.curr_state_pokes = []
+        self.step_offset = 0
+        self.states = []
+        self.solver = solver
+
+    def make_eval(self, i, action):
+        return
+
+    def make_expect(self, i, action):
+        return
+
+    def make_poke(self, i, action):
+        name = verilog_name(action.port.name)
+        value = action.value
+        width = get_width(action.port)
+        # self.curr_state_pokes.append(
+        #     f&#34;{name} = {value}_{width}&#34;)
+        self.curr_state_pokes.append(
+            f&#34;self.{name} = {value}_{width}&#34;)
+
+    def make_print(self, i, action):
+        return
+
+    def make_step(self, i, action):
+        self.step_offset += action.steps
+        if self.step_offset % 2 == 0:
+            if len(self.states) &gt; 0:
+                prefix = f&#34;S{len(self.states) - 1}&#34;
+            else:
+                prefix = &#34;I&#34;
+            self.states.append(&#34;\n&#34;.join(
+                f&#34;{prefix}: {poke}&#34; for poke in
+                self.curr_state_pokes))
+            self.states[-1] += f&#34;\n{prefix}: pokes_done = False\n&#34;
+            self.curr_state_pokes = []
+
+    def add_assumptions(self):
+        assumptions = []
+        for assumption in self.assumptions:
+            code = utils.get_short_lambda_body_text(assumption.value)
+            tree = ast.parse(code)
+            tree = self.prefix_io_with_self(tree)
+            tree = self.replace_bvs(tree)
+
+            code = astor.to_source(tree).rstrip()
+            assumptions.append(code)
+        assumptions = &#34;;&#34;.join(x for x in assumptions)
+        return assumptions
+
+    def prefix_io_with_self(self, tree):
+        for name in self.circuit.interface.ports.keys():
+            tree = SelfPrefixer(name).visit(tree)
+        return tree
+
+    def replace_bvs(self, tree):
+        tree = BVReplacer().visit(tree)
+        return tree
+
+    def generate_code(self, actions):
+        for i, action in enumerate(actions):
+            code = self.generate_action_code(i, action)
+        ets = &#34;&#34;
+        # model_files = f&#34;{self.circuit_name}.v[{self.circuit_name}]&#34;
+        model_files = f&#34;{self.circuit_name}.json&#34;
+        if len(self.states) &gt; 0:
+            for state in self.states:
+                ets += state + &#34;\n&#34;
+            if len(self.states) &gt; 0:
+                prefix = f&#34;S{len(self.states) - 2}&#34;
+            else:
+                prefix = &#34;I&#34;
+            ets = &#34;\n&#34;.join(ets.splitlines()[:-2])
+            ets += f&#34;\n{prefix}: pokes_done = True\n\n&#34;
+
+            ets += f&#34;I -&gt; S{0}\n&#34;
+            for i in range(1, len(self.states) - 1):
+                ets += f&#34;S{i - 1} -&gt; S{i}\n&#34;
+            last_i = len(self.states) - 2
+            ets += f&#34;S{last_i} -&gt; S{last_i}\n&#34;
+            model_files += f&#34;,{self.circuit_name}.ets&#34;
+        assumptions = self.add_assumptions()
+
+        src = f&#34;&#34;&#34;\
+[GENERAL]
+model_file: {model_files}
+add_clock: True
+
+[DEFAULT]
+strategy: ALL
+&#34;&#34;&#34;
+        for i, guarantee in enumerate(self.guarantees):
+            formula = utils.get_short_lambda_body_text(guarantee.value)
+            tree = ast.parse(formula)
+            tree = self.prefix_io_with_self(tree)
+            formula = astor.to_source(tree).rstrip()
+            # TODO: More robust symbol replacer on AST
+            formula = formula.replace(&#34;and&#34;, &#34;&amp;&#34;)
+            src += f&#34;&#34;&#34;\
+[Problem {i}]
+assumptions: {assumptions}
+formula: pokes_done -&gt; ({formula})
+verification: safety
+prove: True
+expected: True
+&#34;&#34;&#34;
+        return src, ets
+
+    def run(self, actions):
+        problem_file = self.directory / Path(f&#34;{self.circuit_name}_problem.txt&#34;)
+        ets_file = self.directory / Path(f&#34;{self.circuit_name}.ets&#34;)
+        src, ets = self.generate_code(actions)
+        with open(problem_file, &#34;w&#34;) as f:
+            f.write(src)
+        with open(ets_file, &#34;w&#34;) as f:
+            f.write(ets)
+        assert not os.system(
+            f&#34;CoSA --problem {problem_file} --solver {self.solver}&#34;)}</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="fault.cosa_target.get_width"><code class="name flex">
+<span>def <span class="ident">get_width</span></span>(<span>port)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_width(port):
+    if isinstance(port, m._BitType):
+        return 1
+    return len(port)}</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="fault.cosa_target.BVReplacer"><code class="flex name class">
+<span>class <span class="ident">BVReplacer</span></span>
+<span>(</span><span><small>ancestors:</small> ast.NodeTransformer, ast.NodeVisitor)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>A</code></strong> :&ensp;<code>class</code>:<code>NodeVisitor</code> <code>subclass</code> <code>that</code> <code>walks</code> <code>the</code> <code>abstract</code> <code>syntax</code> <code>tree</code> <code>and</code></dt>
+<dd>&nbsp;</dd>
+</dl>
+<p>allows modification of nodes.</p>
+<p>The <code>NodeTransformer</code> will walk the AST and use the return value of the
+visitor methods to replace or remove the old node.
+If the return value of
+the visitor method is <code>None</code>, the node will be removed from its location,
+otherwise it is replaced with the return value.
+The return value may be the
+original node in which case no replacement takes place.</p>
+<p>Here is an example transformer that rewrites all occurrences of name lookups
+(<code>foo</code>) to <code>data['foo']</code>::</p>
+<p>class RewriteName(NodeTransformer):</p>
+<pre><code>   def visit_Name(self, node):
+       return copy_location(Subscript(
+           value=Name(id='data', ctx=Load()),
+           slice=Index(value=Str(s=node.id)),
+           ctx=node.ctx
+       ), node)
+</code></pre>
+<p>Keep in mind that if the node you're operating on has child nodes you must
+either transform the child nodes yourself or call the :meth:<code>generic_visit</code>
+method for the node first.</p>
+<p>For nodes that were part of a collection of statements (that applies to all
+statement nodes), the visitor may also return a list of nodes rather than
+just a single node.</p>
+<p>Usually you use the transformer like this::</p>
+<p>node = YourTransformer().visit(node)</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class BVReplacer(ast.NodeTransformer):
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name) and node.func.id == &#34;BitVector&#34;:
+            assert isinstance(node.args[0], ast.Num), \
+                &#34;Non constant BVs not implemented&#34;
+            assert isinstance(node.args[1], ast.Num), \
+                &#34;Non constant BVs not implemented&#34;
+            return ast.Name(str(node.args[0].n) + &#34;_&#34; + str(node.args[1].n),
+                            ast.Load())
+        return node}</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="fault.cosa_target.BVReplacer.visit_Call"><code class="name flex">
+<span>def <span class="ident">visit_Call</span></span>(<span>self, node)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def visit_Call(self, node):
+    if isinstance(node.func, ast.Name) and node.func.id == &#34;BitVector&#34;:
+        assert isinstance(node.args[0], ast.Num), \
+            &#34;Non constant BVs not implemented&#34;
+        assert isinstance(node.args[1], ast.Num), \
+            &#34;Non constant BVs not implemented&#34;
+        return ast.Name(str(node.args[0].n) + &#34;_&#34; + str(node.args[1].n),
+                        ast.Load())
+    return node}</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="fault.cosa_target.CoSATarget"><code class="flex name class">
+<span>class <span class="ident">CoSATarget</span></span>
+<span>(</span><span><small>ancestors:</small> <a title="fault.verilog_target.VerilogTarget" href="verilog_target.html#fault.verilog_target.VerilogTarget">VerilogTarget</a>, <a title="fault.target.Target" href="target.html#fault.target.Target">Target</a>, abc.ABC)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="fault.verilog_target.VerilogTarget" href="verilog_target.html#fault.verilog_target.VerilogTarget">VerilogTarget</a></code>
+</p>
+<section class="desc inherited"><p>Provides reuseable target logic for compiling circuits into verilog files.</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class CoSATarget(VerilogTarget):
+    def __init__(self, circuit, directory=&#34;build/&#34;, skip_compile=False,
+                 include_verilog_libraries=[], magma_output=&#34;coreir-verilog&#34;,
+                 circuit_name=None, magma_opts={}, solver=&#34;msat&#34;):
+        super().__init__(circuit, circuit_name, directory, skip_compile,
+                         include_verilog_libraries, magma_output, magma_opts)
+        self.state_index = 0
+        self.curr_state_pokes = []
+        self.step_offset = 0
+        self.states = []
+        self.solver = solver
+
+    def make_eval(self, i, action):
+        return
+
+    def make_expect(self, i, action):
+        return
+
+    def make_poke(self, i, action):
+        name = verilog_name(action.port.name)
+        value = action.value
+        width = get_width(action.port)
+        # self.curr_state_pokes.append(
+        #     f&#34;{name} = {value}_{width}&#34;)
+        self.curr_state_pokes.append(
+            f&#34;self.{name} = {value}_{width}&#34;)
+
+    def make_print(self, i, action):
+        return
+
+    def make_step(self, i, action):
+        self.step_offset += action.steps
+        if self.step_offset % 2 == 0:
+            if len(self.states) &gt; 0:
+                prefix = f&#34;S{len(self.states) - 1}&#34;
+            else:
+                prefix = &#34;I&#34;
+            self.states.append(&#34;\n&#34;.join(
+                f&#34;{prefix}: {poke}&#34; for poke in
+                self.curr_state_pokes))
+            self.states[-1] += f&#34;\n{prefix}: pokes_done = False\n&#34;
+            self.curr_state_pokes = []
+
+    def add_assumptions(self):
+        assumptions = []
+        for assumption in self.assumptions:
+            code = utils.get_short_lambda_body_text(assumption.value)
+            tree = ast.parse(code)
+            tree = self.prefix_io_with_self(tree)
+            tree = self.replace_bvs(tree)
+
+            code = astor.to_source(tree).rstrip()
+            assumptions.append(code)
+        assumptions = &#34;;&#34;.join(x for x in assumptions)
+        return assumptions
+
+    def prefix_io_with_self(self, tree):
+        for name in self.circuit.interface.ports.keys():
+            tree = SelfPrefixer(name).visit(tree)
+        return tree
+
+    def replace_bvs(self, tree):
+        tree = BVReplacer().visit(tree)
+        return tree
+
+    def generate_code(self, actions):
+        for i, action in enumerate(actions):
+            code = self.generate_action_code(i, action)
+        ets = &#34;&#34;
+        # model_files = f&#34;{self.circuit_name}.v[{self.circuit_name}]&#34;
+        model_files = f&#34;{self.circuit_name}.json&#34;
+        if len(self.states) &gt; 0:
+            for state in self.states:
+                ets += state + &#34;\n&#34;
+            if len(self.states) &gt; 0:
+                prefix = f&#34;S{len(self.states) - 2}&#34;
+            else:
+                prefix = &#34;I&#34;
+            ets = &#34;\n&#34;.join(ets.splitlines()[:-2])
+            ets += f&#34;\n{prefix}: pokes_done = True\n\n&#34;
+
+            ets += f&#34;I -&gt; S{0}\n&#34;
+            for i in range(1, len(self.states) - 1):
+                ets += f&#34;S{i - 1} -&gt; S{i}\n&#34;
+            last_i = len(self.states) - 2
+            ets += f&#34;S{last_i} -&gt; S{last_i}\n&#34;
+            model_files += f&#34;,{self.circuit_name}.ets&#34;
+        assumptions = self.add_assumptions()
+
+        src = f&#34;&#34;&#34;\
+[GENERAL]
+model_file: {model_files}
+add_clock: True
+
+[DEFAULT]
+strategy: ALL
+&#34;&#34;&#34;
+        for i, guarantee in enumerate(self.guarantees):
+            formula = utils.get_short_lambda_body_text(guarantee.value)
+            tree = ast.parse(formula)
+            tree = self.prefix_io_with_self(tree)
+            formula = astor.to_source(tree).rstrip()
+            # TODO: More robust symbol replacer on AST
+            formula = formula.replace(&#34;and&#34;, &#34;&amp;&#34;)
+            src += f&#34;&#34;&#34;\
+[Problem {i}]
+assumptions: {assumptions}
+formula: pokes_done -&gt; ({formula})
+verification: safety
+prove: True
+expected: True
+&#34;&#34;&#34;
+        return src, ets
+
+    def run(self, actions):
+        problem_file = self.directory / Path(f&#34;{self.circuit_name}_problem.txt&#34;)
+        ets_file = self.directory / Path(f&#34;{self.circuit_name}.ets&#34;)
+        src, ets = self.generate_code(actions)
+        with open(problem_file, &#34;w&#34;) as f:
+            f.write(src)
+        with open(ets_file, &#34;w&#34;) as f:
+            f.write(ets)
+        assert not os.system(
+            f&#34;CoSA --problem {problem_file} --solver {self.solver}&#34;)}</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="fault.cosa_target.CoSATarget.add_assumptions"><code class="name flex">
+<span>def <span class="ident">add_assumptions</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def add_assumptions(self):
+    assumptions = []
+    for assumption in self.assumptions:
+        code = utils.get_short_lambda_body_text(assumption.value)
+        tree = ast.parse(code)
+        tree = self.prefix_io_with_self(tree)
+        tree = self.replace_bvs(tree)
+
+        code = astor.to_source(tree).rstrip()
+        assumptions.append(code)
+    assumptions = &#34;;&#34;.join(x for x in assumptions)
+    return assumptions}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.generate_code"><code class="name flex">
+<span>def <span class="ident">generate_code</span></span>(<span>self, actions)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">    def generate_code(self, actions):
+        for i, action in enumerate(actions):
+            code = self.generate_action_code(i, action)
+        ets = &#34;&#34;
+        # model_files = f&#34;{self.circuit_name}.v[{self.circuit_name}]&#34;
+        model_files = f&#34;{self.circuit_name}.json&#34;
+        if len(self.states) &gt; 0:
+            for state in self.states:
+                ets += state + &#34;\n&#34;
+            if len(self.states) &gt; 0:
+                prefix = f&#34;S{len(self.states) - 2}&#34;
+            else:
+                prefix = &#34;I&#34;
+            ets = &#34;\n&#34;.join(ets.splitlines()[:-2])
+            ets += f&#34;\n{prefix}: pokes_done = True\n\n&#34;
+
+            ets += f&#34;I -&gt; S{0}\n&#34;
+            for i in range(1, len(self.states) - 1):
+                ets += f&#34;S{i - 1} -&gt; S{i}\n&#34;
+            last_i = len(self.states) - 2
+            ets += f&#34;S{last_i} -&gt; S{last_i}\n&#34;
+            model_files += f&#34;,{self.circuit_name}.ets&#34;
+        assumptions = self.add_assumptions()
+
+        src = f&#34;&#34;&#34;\
+[GENERAL]
+model_file: {model_files}
+add_clock: True
+
+[DEFAULT]
+strategy: ALL
+&#34;&#34;&#34;
+        for i, guarantee in enumerate(self.guarantees):
+            formula = utils.get_short_lambda_body_text(guarantee.value)
+            tree = ast.parse(formula)
+            tree = self.prefix_io_with_self(tree)
+            formula = astor.to_source(tree).rstrip()
+            # TODO: More robust symbol replacer on AST
+            formula = formula.replace(&#34;and&#34;, &#34;&amp;&#34;)
+            src += f&#34;&#34;&#34;\
+[Problem {i}]
+assumptions: {assumptions}
+formula: pokes_done -&gt; ({formula})
+verification: safety
+prove: True
+expected: True
+&#34;&#34;&#34;
+        return src, ets}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.make_eval"><code class="name flex">
+<span>def <span class="ident">make_eval</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_eval(self, i, action):
+    return}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.make_expect"><code class="name flex">
+<span>def <span class="ident">make_expect</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_expect(self, i, action):
+    return}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.make_poke"><code class="name flex">
+<span>def <span class="ident">make_poke</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_poke(self, i, action):
+    name = verilog_name(action.port.name)
+    value = action.value
+    width = get_width(action.port)
+    # self.curr_state_pokes.append(
+    #     f&#34;{name} = {value}_{width}&#34;)
+    self.curr_state_pokes.append(
+        f&#34;self.{name} = {value}_{width}&#34;)}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.make_print"><code class="name flex">
+<span>def <span class="ident">make_print</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_print(self, i, action):
+    return}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.make_step"><code class="name flex">
+<span>def <span class="ident">make_step</span></span>(<span>self, i, action)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def make_step(self, i, action):
+    self.step_offset += action.steps
+    if self.step_offset % 2 == 0:
+        if len(self.states) &gt; 0:
+            prefix = f&#34;S{len(self.states) - 1}&#34;
+        else:
+            prefix = &#34;I&#34;
+        self.states.append(&#34;\n&#34;.join(
+            f&#34;{prefix}: {poke}&#34; for poke in
+            self.curr_state_pokes))
+        self.states[-1] += f&#34;\n{prefix}: pokes_done = False\n&#34;
+        self.curr_state_pokes = []}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.prefix_io_with_self"><code class="name flex">
+<span>def <span class="ident">prefix_io_with_self</span></span>(<span>self, tree)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def prefix_io_with_self(self, tree):
+    for name in self.circuit.interface.ports.keys():
+        tree = SelfPrefixer(name).visit(tree)
+    return tree}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.replace_bvs"><code class="name flex">
+<span>def <span class="ident">replace_bvs</span></span>(<span>self, tree)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def replace_bvs(self, tree):
+    tree = BVReplacer().visit(tree)
+    return tree}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.CoSATarget.run"><code class="name flex">
+<span>def <span class="ident">run</span></span>(<span>self, actions)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def run(self, actions):
+    problem_file = self.directory / Path(f&#34;{self.circuit_name}_problem.txt&#34;)
+    ets_file = self.directory / Path(f&#34;{self.circuit_name}.ets&#34;)
+    src, ets = self.generate_code(actions)
+    with open(problem_file, &#34;w&#34;) as f:
+        f.write(src)
+    with open(ets_file, &#34;w&#34;) as f:
+        f.write(ets)
+    assert not os.system(
+        f&#34;CoSA --problem {problem_file} --solver {self.solver}&#34;)}</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="fault.verilog_target.VerilogTarget" href="verilog_target.html#fault.verilog_target.VerilogTarget">VerilogTarget</a></b></code>:
+<ul class="hlist">
+<li><code><a title="fault.verilog_target.VerilogTarget.__init__" href="target.html#fault.target.Target.__init__">__init__</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="fault.cosa_target.SelfPrefixer"><code class="flex name class">
+<span>class <span class="ident">SelfPrefixer</span></span>
+<span>(</span><span><small>ancestors:</small> ast.NodeTransformer, ast.NodeVisitor)</span>
+</code></dt>
+<dd>
+<section class="desc"><dl>
+<dt><strong><code>A</code></strong> :&ensp;<code>class</code>:<code>NodeVisitor</code> <code>subclass</code> <code>that</code> <code>walks</code> <code>the</code> <code>abstract</code> <code>syntax</code> <code>tree</code> <code>and</code></dt>
+<dd>&nbsp;</dd>
+</dl>
+<p>allows modification of nodes.</p>
+<p>The <code>NodeTransformer</code> will walk the AST and use the return value of the
+visitor methods to replace or remove the old node.
+If the return value of
+the visitor method is <code>None</code>, the node will be removed from its location,
+otherwise it is replaced with the return value.
+The return value may be the
+original node in which case no replacement takes place.</p>
+<p>Here is an example transformer that rewrites all occurrences of name lookups
+(<code>foo</code>) to <code>data['foo']</code>::</p>
+<p>class RewriteName(NodeTransformer):</p>
+<pre><code>   def visit_Name(self, node):
+       return copy_location(Subscript(
+           value=Name(id='data', ctx=Load()),
+           slice=Index(value=Str(s=node.id)),
+           ctx=node.ctx
+       ), node)
+</code></pre>
+<p>Keep in mind that if the node you're operating on has child nodes you must
+either transform the child nodes yourself or call the :meth:<code>generic_visit</code>
+method for the node first.</p>
+<p>For nodes that were part of a collection of statements (that applies to all
+statement nodes), the visitor may also return a list of nodes rather than
+just a single node.</p>
+<p>Usually you use the transformer like this::</p>
+<p>node = YourTransformer().visit(node)</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class SelfPrefixer(ast.NodeTransformer):
+    def __init__(self, name):
+        self.name = name
+
+    def visit_Name(self, node):
+        if node.id == self.name:
+            return ast.Attribute(ast.Name(&#34;self&#34;, ast.Load()),
+                                 node.id, node.ctx)
+        return node}</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="fault.cosa_target.SelfPrefixer.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, name)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Initialize self.
+See help(type(self)) for accurate signature.</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def __init__(self, name):
+    self.name = name}</code></pre>
+</details>
+</dd>
+<dt id="fault.cosa_target.SelfPrefixer.visit_Name"><code class="name flex">
+<span>def <span class="ident">visit_Name</span></span>(<span>self, node)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def visit_Name(self, node):
+    if node.id == self.name:
+        return ast.Attribute(ast.Name(&#34;self&#34;, ast.Load()),
+                             node.id, node.ctx)
+    return node}</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="fault" href="index.html">fault</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="fault.cosa_target.get_width" href="#fault.cosa_target.get_width">get_width</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="fault.cosa_target.BVReplacer" href="#fault.cosa_target.BVReplacer">BVReplacer</a></code></h4>
+<ul class="">
+<li><code><a title="fault.cosa_target.BVReplacer.visit_Call" href="#fault.cosa_target.BVReplacer.visit_Call">visit_Call</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="fault.cosa_target.CoSATarget" href="verilog_target.html#fault.verilog_target.VerilogTarget">CoSATarget</a></code></h4>
+<ul class="two-column">
+<li><code><a title="fault.cosa_target.CoSATarget.add_assumptions" href="#fault.cosa_target.CoSATarget.add_assumptions">add_assumptions</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.generate_code" href="#fault.cosa_target.CoSATarget.generate_code">generate_code</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.make_eval" href="#fault.cosa_target.CoSATarget.make_eval">make_eval</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.make_expect" href="#fault.cosa_target.CoSATarget.make_expect">make_expect</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.make_poke" href="#fault.cosa_target.CoSATarget.make_poke">make_poke</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.make_print" href="#fault.cosa_target.CoSATarget.make_print">make_print</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.make_step" href="#fault.cosa_target.CoSATarget.make_step">make_step</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.prefix_io_with_self" href="#fault.cosa_target.CoSATarget.prefix_io_with_self">prefix_io_with_self</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.replace_bvs" href="#fault.cosa_target.CoSATarget.replace_bvs">replace_bvs</a></code></li>
+<li><code><a title="fault.cosa_target.CoSATarget.run" href="#fault.cosa_target.CoSATarget.run">run</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="fault.cosa_target.SelfPrefixer" href="#fault.cosa_target.SelfPrefixer">SelfPrefixer</a></code></h4>
+<ul class="">
+<li><code><a title="fault.cosa_target.SelfPrefixer.__init__" href="#fault.cosa_target.SelfPrefixer.__init__">__init__</a></code></li>
+<li><code><a title="fault.cosa_target.SelfPrefixer.visit_Name" href="#fault.cosa_target.SelfPrefixer.visit_Name">visit_Name</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.5.1</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
