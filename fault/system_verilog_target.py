@@ -99,7 +99,7 @@ class SystemVerilogTarget(VerilogTarget):
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
-        var_args = ", ".join(f"&{var.name}" for var in action.args)
+        var_args = ", ".join(f"{var.name}" for var in action.args)
         return [f"$fscanf({action.file.name_without_ext}_file, "
                 f"\"{action._format}\", {var_args});"]
 
