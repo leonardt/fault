@@ -14,6 +14,8 @@ pip install fault
 ```
 
 ## Documentation
+Check out the [fault tutorial](https://github.com/leonardt/fault/tree/master/tutorial)
+
 * [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
 * [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)
 
