@@ -341,7 +341,8 @@ if ({name}_file == NULL) {{
         value = f"top->{verilog_name(action.value.name)}"
         code = f"""\
 for (int i = 0; i < {action.file.chunk_size}; i++) {{
-    int result = fputc(*(((char *)&{value}) + i), {action.file.name_without_ext}_file);
+    int result = fputc(*(((char *)&{value}) + i),
+                       {action.file.name_without_ext}_file);
     if (result == EOF) {{
         std::cout << "Error writing to {action.file.name_without_ext}"
                   << std::endl;
@@ -405,13 +406,15 @@ for (int i = 0; i < {action.file.chunk_size}; i++) {{
         return code
 
     def make_var(self, i, action):
-        if isinstance(action._type, AbstractBitVectorMeta) and action._type.size == 32:
+        if isinstance(action._type, AbstractBitVectorMeta) and \
+                action._type.size == 32:
             return [f"unsigned int {action.name};"]
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
         var_args = ", ".join(f"&{var.name}" for var in action.args)
-        return [f"fscanf({action.file.name_without_ext}_file, \"{action._format}\", {var_args});"]
+        return [f"fscanf({action.file.name_without_ext}_file, "
+                f"\"{action._format}\", {var_args});"]
 
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:

@@ -100,7 +100,8 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_file_scan_format(self, i, action):
         var_args = ", ".join(f"&{var.name}" for var in action.args)
-        return [f"$fscanf({action.file.name_without_ext}_file, \"{action._format}\", {var_args});"]
+        return [f"$fscanf({action.file.name_without_ext}_file, "
+                f"\"{action._format}\", {var_args});"]
 
     def process_value(self, port, value):
         if isinstance(value, BitVector):
