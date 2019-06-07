@@ -188,7 +188,7 @@ if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_f
         # notice that this is little endian
         code = f"""\
 {action.file.name_without_ext}_in = 0;
-for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
     {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
 end
 """  # noqa
@@ -202,7 +202,7 @@ end
             self.declarations.append(decl)
         # this is little endian as well
         code = f"""\
-for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
     $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
 end
 """  # noqa

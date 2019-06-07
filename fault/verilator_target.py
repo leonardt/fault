@@ -162,6 +162,8 @@ class VerilatorTarget(VerilogTarget):
             return f"top->{value.select_path.verilator_path}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
+        elif isinstance(value, actions.Var):
+            return value.name
         return value
 
     def make_poke(self, i, action):
@@ -219,7 +221,9 @@ class VerilatorTarget(VerilogTarget):
             value = action.value
             if isinstance(value, actions.FileRead):
                 mask = "FF" * value.file.chunk_size
-                value = f"(*{value.file.name_without_ext}_in) & 0x{mask}"
+                value = " | ".join(f"{value.file.name_without_ext}_in[{i}]" for
+                                   i in range(value.file.chunk_size))
+                value = f"({value}) & 0x{mask}"
             value = self.process_value(action.port, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
@@ -341,8 +345,8 @@ if ({name}_file == NULL) {{
     def make_file_write(self, i, action):
         value = f"top->{verilog_name(action.value.name)}"
         code = f"""\
-for (int i = 0; i < {action.file.chunk_size}; i++) {{
-    int result = fputc(*(((char *)&{value}) + i),
+for (int i = {action.file.chunk_size - 1}; i >= 0; i--) {{
+    int result = fputc(({value} >> (i * 8)) & 0xFF,
                        {action.file.name_without_ext}_file);
     if (result == EOF) {{
         std::cout << "Error writing to {action.file.name_without_ext}"
@@ -351,7 +355,7 @@ for (int i = 0; i < {action.file.chunk_size}; i++) {{
     }}
 }}
 """
-        return [code]
+        return code.splitlines()
 
     def make_file_read(self, i, action):
         code = f"""\
@@ -362,7 +366,7 @@ for (int i = 0; i < {action.file.chunk_size}; i++) {{
                   << std::endl;
         break;
     }}
-    *(((char *)&{action.file.name_without_ext}_in) + i) = result;
+    {action.file.name_without_ext}_in[i] = result;
 }}
 """
         return code.splitlines()
