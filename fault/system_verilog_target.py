@@ -9,6 +9,7 @@ import subprocess
 from fault.wrapper import PortWrapper
 import fault
 import fault.expression as expression
+import os
 
 
 src_tpl = """\
@@ -343,8 +344,25 @@ end;
 
         # Write the verilator driver to file.
         src = self.generate_code(actions, power_args)
-        with open(self.directory / test_bench_file, "w") as f:
+        tb_file = self.directory / test_bench_file
+        # If there's an old test bench file, ncsim might not recompile based on
+        # the timestamp (1s granularity), see
+        # https://github.com/StanfordAHA/lassen/issues/111
+        # so we check if the new/old file have the same timestamp and edit them
+        # to force an ncsim recompile
+        check_timestamp = os.path.isfile(tb_file)
+        if check_timestamp:
+            check_timestamp = True
+            old_stat_result = os.stat(tb_file)
+            old_times = (old_stat_result.st_atime, old_stat_result.st_mtime)
+        with open(tb_file, "w") as f:
             f.write(src)
+        if check_timestamp:
+            new_stat_result = os.stat(tb_file)
+            new_times = (new_stat_result.st_atime, new_stat_result.st_mtime)
+            if old_times[0] <= new_times[0] or new_times[1] <= old_times[1]:
+                new_times = (old_times[0] + 1, old_times[1] + 1)
+                os.utime(tb_file, times=new_times)
         verilog_libraries = " ".join(str(x) for x in
                                      self.include_verilog_libraries)
         cmd_file = Path(f"{self.circuit_name}_cmd.tcl")
