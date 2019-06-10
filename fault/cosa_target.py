@@ -127,7 +127,7 @@ class CoSATarget(VerilogTarget):
         for i, action in enumerate(actions):
             code = self.generate_action_code(i, action)
         ets = ""
-        # model_files = f"{self.circuit_name}.v[{self.circuit_name}]"
+        # model_files = f"{self.circuit_name}.json"
         model_files = f"{self.circuit_name}.v[{self.circuit_name}]"
         if self.include_verilog_libraries:
             model_files += ", " + ", ".join(self.include_verilog_libraries)
@@ -165,10 +165,14 @@ strategy: ALL
             formula = astor.to_source(tree).rstrip()
             # TODO: More robust symbol replacer on AST
             formula = formula.replace("and", "&")
+            if len(self.states) > 0:
+                implication = "pokes_done -> "
+            else:
+                implication = ""
             src += f"""\
 [Problem {i}]
 assumptions: {assumptions}
-formula: pokes_done -> ({formula})
+formula: {implication}({formula})
 verification: safety
 prove: True
 expected: True
@@ -183,6 +187,7 @@ expected: True
             f.write(src)
         with open(self.directory / ets_file, "w") as f:
             f.write(ets)
+        print(f"CoSA --problem {problem_file} --solver {self.solver}")
         assert not subprocess.call(
             f"CoSA --problem {problem_file} --solver {self.solver}",
             cwd=self.directory, shell=True)
