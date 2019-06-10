@@ -5,6 +5,7 @@ import fault.utils as utils
 import os
 import ast
 import astor
+import subprocess
 
 
 class BVReplacer(ast.NodeTransformer):
@@ -127,7 +128,10 @@ class CoSATarget(VerilogTarget):
             code = self.generate_action_code(i, action)
         ets = ""
         # model_files = f"{self.circuit_name}.v[{self.circuit_name}]"
-        model_files = f"{self.circuit_name}.json"
+        model_files = f"{self.circuit_name}.v[{self.circuit_name}]"
+        if self.include_verilog_libraries:
+            model_files += ", " + ", ".join(self.include_verilog_libraries)
+
         if len(self.states) > 0:
             for state in self.states:
                 ets += state + "\n"
@@ -172,12 +176,13 @@ expected: True
         return src, ets
 
     def run(self, actions):
-        problem_file = self.directory / Path(f"{self.circuit_name}_problem.txt")
-        ets_file = self.directory / Path(f"{self.circuit_name}.ets")
+        problem_file = Path(f"{self.circuit_name}_problem.txt")
+        ets_file = Path(f"{self.circuit_name}.ets")
         src, ets = self.generate_code(actions)
-        with open(problem_file, "w") as f:
+        with open(self.directory / problem_file, "w") as f:
             f.write(src)
-        with open(ets_file, "w") as f:
+        with open(self.directory / ets_file, "w") as f:
             f.write(ets)
-        assert not os.system(
-            f"CoSA --problem {problem_file} --solver {self.solver}")
+        assert not subprocess.call(
+            f"CoSA --problem {problem_file} --solver {self.solver}",
+            cwd=self.directory, shell=True)
