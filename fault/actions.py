@@ -236,3 +236,31 @@ class If(Action):
         actions = [action.retarget(new_circuit, clock) for action in
                    self.actions]
         return If(self.cond, actions)
+
+
+class FileScanFormat(Action):
+    def __init__(self, file, _format, *args):
+        super().__init__()
+        self.file = file
+        self._format = _format
+        assert len(args) >= 1, "Expect at least on arg for scanf"
+        self.args = args
+
+    def __str__(self):
+        return f"FileScanFormat({self.file}, {self._format}, {self.args})"
+
+    def retarget(self, new_circuit, clock):
+        return FileScanFormat(self.file, self._format, self.args)
+
+
+class Var(Action, expression.Expression):
+    def __init__(self, name, _type):
+        super().__init__()
+        self.name = name
+        self._type = _type
+
+    def __str__(self):
+        return f"Var({self.name}, {self._type})"
+
+    def retarget(self, new_circuit, clock):
+        return Var(self.name, self._type)

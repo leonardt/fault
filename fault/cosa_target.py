@@ -81,6 +81,12 @@ class CoSATarget(VerilogTarget):
     def make_file_write(self, i, action):
         raise NotImplementedError()
 
+    def make_file_scan_format(self, i, action):
+        raise NotImplementedError()
+
+    def make_var(self, i, action):
+        raise NotImplementedError()
+
     def make_step(self, i, action):
         self.step_offset += action.steps
         if self.step_offset % 2 == 0:

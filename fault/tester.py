@@ -92,7 +92,8 @@ class Tester:
             for p, v in zip(port, value):
                 self.poke(p, v)
         else:
-            if not isinstance(value, (LoopIndex, actions.FileRead)):
+            if not isinstance(value, (LoopIndex, actions.FileRead,
+                                      expression.Expression)):
                 value = make_value(port, value)
             self.actions.append(actions.Poke(port, value))
 
@@ -302,6 +303,14 @@ class Tester:
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester
+
+    def file_scanf(self, file, _format, *args):
+        self.actions.append(actions.FileScanFormat(file, _format, *args))
+
+    def Var(self, name, _type):
+        var = actions.Var(name, _type)
+        self.actions.append(var)
+        return var
 
 
 class LoopIndex:

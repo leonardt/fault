@@ -2,7 +2,7 @@ from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from hwtypes import BitVector
+from hwtypes import BitVector, AbstractBitVectorMeta
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 import subprocess
@@ -91,6 +91,18 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             return f"{value.port.name}"
 
+    def make_var(self, i, action):
+        if isinstance(action._type, AbstractBitVectorMeta):
+            self.declarations.append(
+                f"reg [{action._type.size - 1}:0] {action.name};")
+            return []
+        raise NotImplementedError(action._type)
+
+    def make_file_scan_format(self, i, action):
+        var_args = ", ".join(f"{var.name}" for var in action.args)
+        return [f"$fscanf({action.file.name_without_ext}_file, "
+                f"\"{action._format}\", {var_args});"]
+
     def process_value(self, port, value):
         if isinstance(value, BitVector):
             value = f"{len(value)}'d{value.as_uint()}"
@@ -121,6 +133,8 @@ class SystemVerilogTarget(VerilogTarget):
             return f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
+        elif isinstance(value, actions.Var):
+            value = value.name
         return value
 
     def make_poke(self, i, action):
@@ -174,7 +188,7 @@ if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_f
         # notice that this is little endian
         code = f"""\
 {action.file.name_without_ext}_in = 0;
-for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
     {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
 end
 """  # noqa
@@ -188,7 +202,7 @@ end
             self.declarations.append(decl)
         # this is little endian as well
         code = f"""\
-for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
     $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
 end
 """  # noqa

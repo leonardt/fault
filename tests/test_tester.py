@@ -376,6 +376,44 @@ def test_tester_file_io(target, simulator):
             assert file.read(8) == expected
 
 
+def test_tester_file_io_chunk_size_4(target, simulator):
+    circ = common.TestUInt32Circuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4)
+    out_file = "test_file_out.raw"
+    file_out = tester.file_open(out_file, "w", chunk_size=4)
+    loop = tester.loop(8)
+    value = loop.file_read(file_in)
+    loop.poke(circ.I, value)
+    loop.eval()
+    loop.expect(circ.O, loop.index)
+    loop.file_write(file_out, circ.O)
+    tester.file_close(file_in)
+    tester.file_close(file_out)
+    with tempfile.TemporaryDirectory() as _dir:
+        if os.path.exists(_dir + "/" + out_file):
+            os.remove(_dir + "/" + out_file)
+        with open(_dir + "/test_file_in.raw", "wb") as file:
+            for i in range(8):
+                file.write(bytes([0, 0, 0, i]))
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+        with open(_dir + "/test_file_out.raw", "rb") as file:
+            expected = bytes([i for i in range(8 * 32)])
+            for i in range(8):
+                if simulator == "iverilog":
+                    # iverilog doesn't support writing a NULL byte out using
+                    # %c, so this first values are skipped
+                    if i == 0:
+                        continue
+                    assert file.read(1) == bytes([i])
+                else:
+                    assert file.read(4) == bytes([0, 0, 0, i])
+
+
 def test_tester_while(target, simulator):
     circ = common.TestArrayCircuit
     tester = fault.Tester(circ)
@@ -440,6 +478,31 @@ def test_tester_if(target, simulator):
     tester.eval()
     tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory() as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_file_scanf(target, simulator):
+    circ = common.TestUInt32Circuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    file_in = tester.file_open("test_file_in.txt", "r")
+    config_addr = tester.Var("config_addr", BitVector[32])
+    config_data = tester.Var("config_data", BitVector[32])
+    loop = tester.loop(8)
+    loop.file_scanf(file_in, "%x %x", config_addr, config_data)
+    loop.poke(circ.I, config_addr + 1)
+    loop.eval()
+    loop.expect(circ.O, config_addr + 1)
+    loop.poke(circ.I, config_data)
+    loop.eval()
+    loop.expect(circ.O, config_data)
+    tester.file_close(file_in)
+    with tempfile.TemporaryDirectory() as _dir:
+        with open(_dir + "/test_file_in.txt", "w") as file:
+            file.write(hex(int(BitVector.random(32)))[2:])
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:

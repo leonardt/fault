@@ -11,7 +11,7 @@ import fault.verilator_utils as verilator_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from hwtypes import BitVector, SIntVector
+from hwtypes import BitVector, SIntVector, AbstractBitVectorMeta
 import subprocess
 from fault.random import random_bv, constrained_random_bv
 import fault.utils as utils
@@ -137,6 +137,8 @@ class VerilatorTarget(VerilogTarget):
             return self.process_signed_values(port, value)
         elif isinstance(value, (int, BitVector)):
             return value
+        elif isinstance(value, actions.Var):
+            return value.name
         return value
 
     def process_signed_values(self, port, value):
@@ -160,6 +162,8 @@ class VerilatorTarget(VerilogTarget):
             return f"top->{value.select_path.verilator_path}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
+        elif isinstance(value, actions.Var):
+            return value.name
         return value
 
     def make_poke(self, i, action):
@@ -217,7 +221,9 @@ class VerilatorTarget(VerilogTarget):
             value = action.value
             if isinstance(value, actions.FileRead):
                 mask = "FF" * value.file.chunk_size
-                value = f"(*{value.file.name_without_ext}_in) & 0x{mask}"
+                value = " | ".join(f"{value.file.name_without_ext}_in[{i}]" for
+                                   i in range(value.file.chunk_size))
+                value = f"({value}) & 0x{mask}"
             value = self.process_value(action.port, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
@@ -324,39 +330,43 @@ class VerilatorTarget(VerilogTarget):
 
     def make_file_open(self, i, action):
         name = action.file.name_without_ext
-        if action.file.mode == "r":
-            mode = "in"
-        else:
-            mode = "out"
         code = f"""\
 char {name}_in[{action.file.chunk_size}] = {{0}};
-std::fstream {name}_file("{action.file.name}", std::ios::{mode} |
-                                               std::ios::binary);
-if (!{name}_file.is_open()) {{
+FILE *{name}_file = fopen("{action.file.name}", \"{action.file.mode}\");
+if ({name}_file == NULL) {{
     std::cout << "Could not open file {action.file.name}" << std::endl;
     return 1;
 }}"""
         return code.splitlines()
 
     def make_file_close(self, i, action):
-        return [f"{action.file.name_without_ext}_file.close();"]
+        return [f"fclose({action.file.name_without_ext}_file);"]
 
     def make_file_write(self, i, action):
         value = f"top->{verilog_name(action.value.name)}"
         code = f"""\
-{action.file.name_without_ext}_file.write((char *)&{value},
-                                          {action.file.chunk_size});
+for (int i = {action.file.chunk_size - 1}; i >= 0; i--) {{
+    int result = fputc(({value} >> (i * 8)) & 0xFF,
+                       {action.file.name_without_ext}_file);
+    if (result == EOF) {{
+        std::cout << "Error writing to {action.file.name_without_ext}"
+                  << std::endl;
+        break;
+    }}
+}}
 """
-        return [code]
+        return code.splitlines()
 
     def make_file_read(self, i, action):
         code = f"""\
-{action.file.name_without_ext}_file.read({action.file.name_without_ext}_in,
-                                         {action.file.chunk_size});
-if ({action.file.name_without_ext}_file.eof()) {{
-    std::cout << "Reached end of file {action.file.name_without_ext}"
-              << std::endl;
-    break;
+for (int i = 0; i < {action.file.chunk_size}; i++) {{
+    int result =  fgetc({action.file.name_without_ext}_file);
+    if (result == EOF) {{
+        std::cout << "Reached end of file {action.file.name_without_ext}"
+                  << std::endl;
+        break;
+    }}
+    {action.file.name_without_ext}_in[i] = result;
 }}
 """
         return code.splitlines()
@@ -399,6 +409,17 @@ if ({action.file.name_without_ext}_file.eof()) {{
             code.append("}")
 
         return code
+
+    def make_var(self, i, action):
+        if isinstance(action._type, AbstractBitVectorMeta) and \
+                action._type.size == 32:
+            return [f"unsigned int {action.name};"]
+        raise NotImplementedError(action._type)
+
+    def make_file_scan_format(self, i, action):
+        var_args = ", ".join(f"&{var.name}" for var in action.args)
+        return [f"fscanf({action.file.name_without_ext}_file, "
+                f"\"{action._format}\", {var_args});"]
 
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
