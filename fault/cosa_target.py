@@ -6,6 +6,7 @@ import os
 import ast
 import astor
 import subprocess
+import hwtypes as ht
 
 
 class BVReplacer(ast.NodeTransformer):
@@ -104,6 +105,9 @@ class CoSATarget(VerilogTarget):
     def add_assumptions(self):
         assumptions = []
         for assumption in self.assumptions:
+            if isinstance(assumption.value, ht.BitVector):
+                assumptions.append(f"{assumption.port[-1].name}={str(assumption.value.as_uint())}_{str(assumption.value.size)}")
+                continue
             code = utils.get_short_lambda_body_text(assumption.value)
             tree = ast.parse(code)
             tree = self.prefix_io_with_self(tree)
@@ -130,7 +134,7 @@ class CoSATarget(VerilogTarget):
         # model_files = f"{self.circuit_name}.json"
         model_files = f"{self.circuit_name}.v[{self.circuit_name}]"
         if self.include_verilog_libraries:
-            model_files += ", " + ", ".join(self.include_verilog_libraries)
+            model_files += "," + ",".join(self.include_verilog_libraries)
 
         if len(self.states) > 0:
             for state in self.states:
@@ -152,27 +156,30 @@ class CoSATarget(VerilogTarget):
 
         src = f"""\
 [GENERAL]
-model_file: {model_files}
+model_files: {model_files}
 add_clock: True
 
 [DEFAULT]
 strategy: ALL
 """
+        if len(self.states) > 0:
+            implication = "pokes_done -> "
+        else:
+            implication = ""
         for i, guarantee in enumerate(self.guarantees):
-            formula = utils.get_short_lambda_body_text(guarantee.value)
-            tree = ast.parse(formula)
-            tree = self.prefix_io_with_self(tree)
-            formula = astor.to_source(tree).rstrip()
-            # TODO: More robust symbol replacer on AST
-            formula = formula.replace("and", "&")
-            if len(self.states) > 0:
-                implication = "pokes_done -> "
+            if isinstance(guarantee.value, (ht.SMTBitVector, ht.SMTBit)):
+                formula = f"{guarantee.port[-1].name} = {guarantee.value._value.serialize()}"
             else:
-                implication = ""
+                formula = utils.get_short_lambda_body_text(guarantee.value)
+                tree = ast.parse(formula)
+                tree = self.prefix_io_with_self(tree)
+                formula = astor.to_source(tree).rstrip()
+                # TODO: More robust symbol replacer on AST
+                formula = formula.replace("and", "&")
             src += f"""\
 [Problem {i}]
 assumptions: {assumptions}
-formula: {implication}({formula})
+properties: {implication}({formula})
 verification: safety
 prove: True
 expected: True
@@ -187,7 +194,7 @@ expected: True
             f.write(src)
         with open(self.directory / ets_file, "w") as f:
             f.write(ets)
-        print(f"CoSA --problem {problem_file} --solver {self.solver}")
+        print(f"CoSA --problem {problem_file} --solver-name {self.solver}")
         assert not subprocess.call(
-            f"CoSA --problem {problem_file} --solver {self.solver}",
+            f"CoSA --problem {problem_file} --solver-name {self.solver}",
             cwd=self.directory, shell=True)
