@@ -2,12 +2,13 @@ from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from hwtypes import BitVector
+from hwtypes import BitVector, AbstractBitVectorMeta
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 import subprocess
 from fault.wrapper import PortWrapper
 import fault
+import fault.expression as expression
 import os
 
 
@@ -85,6 +86,24 @@ class SystemVerilogTarget(VerilogTarget):
             name = verilog_name(port.name)
         return name
 
+    def process_peek(self, value):
+        if isinstance(value.port, fault.WrappedVerilogInternalPort):
+            return f"dut.{value.port.path}"
+        else:
+            return f"{value.port.name}"
+
+    def make_var(self, i, action):
+        if isinstance(action._type, AbstractBitVectorMeta):
+            self.declarations.append(
+                f"reg [{action._type.size - 1}:0] {action.name};")
+            return []
+        raise NotImplementedError(action._type)
+
+    def make_file_scan_format(self, i, action):
+        var_args = ", ".join(f"{var.name}" for var in action.args)
+        return [f"$fscanf({action.file.name_without_ext}_file, "
+                f"\"{action._format}\", {var_args});"]
+
     def process_value(self, port, value):
         if isinstance(value, BitVector):
             value = f"{len(value)}'d{value.as_uint()}"
@@ -95,22 +114,35 @@ class SystemVerilogTarget(VerilogTarget):
         elif value is fault.UnknownValue:
             value = "'X"
         elif isinstance(value, actions.Peek):
-            if isinstance(value.port, fault.WrappedVerilogInternalPort):
-                value = f"dut.{value.port.path}"
-            else:
-                value = f"{value.port.name}"
+            value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
             value = f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
+        elif isinstance(value, expression.Expression):
+            value = f"({self.compile_expression(value)})"
+        return value
+
+    def compile_expression(self, value):
+        if isinstance(value, expression.BinaryOp):
+            left = self.compile_expression(value.left)
+            right = self.compile_expression(value.right)
+            op = value.op_str
+            return f"{left} {op} {right}"
+        elif isinstance(value, PortWrapper):
+            return f"dut.{value.select_path.system_verilog_path}"
+        elif isinstance(value, actions.Peek):
+            return self.process_peek(value)
+        elif isinstance(value, actions.Var):
+            value = value.name
         return value
 
     def make_poke(self, i, action):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
         value = self.process_value(action.port, action.value)
-        return [f"{name} = {value};", f"#{self.clock_step_delay}"]
+        return [f"{name} = {value};", f"#{self.clock_step_delay};"]
 
     def make_print(self, i, action):
         ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
@@ -157,7 +189,7 @@ if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_f
         # notice that this is little endian
         code = f"""\
 {action.file.name_without_ext}_in = 0;
-for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
     {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
 end
 """  # noqa
@@ -166,9 +198,12 @@ end
     def make_file_write(self, i, action):
         value = self.make_name(action.value)
         mask_size = action.file.chunk_size * 8
+        decl = f"integer __i;"
+        if decl not in self.declarations:
+            self.declarations.append(decl)
         # this is little endian as well
         code = f"""\
-for (__i = 0; __i < {action.file.chunk_size}; __i++) begin
+for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
     $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
 end
 """  # noqa
@@ -201,6 +236,45 @@ end;
         code = []
         for step in range(action.steps):
             code.append(f"#5 {name} ^= 1;")
+        return code
+
+    def make_while(self, i, action):
+        code = []
+        cond = self.compile_expression(action.loop_cond)
+
+        code.append(f"while ({cond}) begin")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("end")
+
+        return code
+
+    def make_if(self, i, action):
+        code = []
+        cond = self.compile_expression(action.cond)
+
+        code.append(f"if ({cond}) begin")
+
+        for inner_action in action.actions:
+            # TODO: Handle relative offset of sub-actions
+            inner_code = self.generate_action_code(i, inner_action)
+            code += ["    " + x for x in inner_code]
+
+        code.append("end")
+
+        if action.else_actions:
+            code[-1] += " else begin"
+            for inner_action in action.else_actions:
+                # TODO: Handle relative offset of sub-actions
+                inner_code = self.generate_action_code(i, inner_action)
+                code += ["    " + x for x in inner_code]
+
+            code.append("end")
+
         return code
 
     def generate_recursive_port_code(self, name, type_, power_args):
@@ -337,5 +411,9 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             print(result.stdout.decode())
             assert not result.returncode, \
                 f"Running {self.simulator} binary failed"
-            assert "Error" not in str(result.stdout), \
-                f"\"Error\" found in stdout of {self.simulator} run"
+            if self.simulator == "vcs":
+                error_str = "Error"
+            elif self.simulator == "iverilog":
+                error_str = "ERROR"
+            assert error_str not in str(result.stdout), \
+                f"\"{error_str}\" found in stdout of {self.simulator} run"

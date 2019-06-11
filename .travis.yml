@@ -23,7 +23,6 @@ install:
 - source activate test-env
 - conda install pip
 # End install conda
-- pip install python-coveralls
 - pip install pytest-cov pytest-codestyle
 - pip install mantle  # for tests.common
 - pip install -e .
@@ -37,8 +36,6 @@ install:
 
 script:
 - pytest --cov fault --codestyle fault -v --cov-report term-missing tests
-after_success:
-- coveralls
 deploy:
   provider: script
   script: /bin/bash .travis/deploy.sh

@@ -6,14 +6,16 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
-from fault.actions import Poke, Expect, Step, Print, Loop
+from fault.actions import Poke, Expect, Step, Print, Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
 from fault.file import File
+import fault.expression as expression
 import copy
 import os
 import inspect
 from fault.config import get_test_dir
+from typing import List
 
 
 class Tester:
@@ -90,7 +92,8 @@ class Tester:
             for p, v in zip(port, value):
                 self.poke(p, v)
         else:
-            if not isinstance(value, (LoopIndex, actions.FileRead)):
+            if not isinstance(value, (LoopIndex, actions.FileRead,
+                                      expression.Expression)):
                 value = make_value(port, value)
             self.actions.append(actions.Poke(port, value))
 
@@ -113,7 +116,8 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
-        if not isinstance(value, (actions.Peek, PortWrapper, LoopIndex)):
+        if not isinstance(value, (actions.Peek, PortWrapper,
+                                  LoopIndex, expression.Expression)):
             value = make_value(port, value)
         self.actions.append(actions.Expect(port, value))
 
@@ -259,7 +263,7 @@ class Tester:
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        loop_tester = LoopTester(self.circuit, self.clock)
+        loop_tester = LoopTester(self._circuit, self.clock)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
@@ -284,6 +288,30 @@ class Tester:
     def file_write(self, file, value):
         self.actions.append(actions.FileWrite(file, value))
 
+    def _while(self, cond):
+        """
+        Returns a new tester to record actions inside the loop.  The created
+        loop action object maintains a references to the return Tester's
+        `actions` list.
+        """
+        while_tester = LoopTester(self._circuit, self.clock)
+        self.actions.append(While(cond, while_tester.actions))
+        return while_tester
+
+    def _if(self, cond):
+        if_tester = IfTester(self._circuit, self.clock)
+        self.actions.append(If(cond, if_tester.actions,
+                               if_tester.else_actions))
+        return if_tester
+
+    def file_scanf(self, file, _format, *args):
+        self.actions.append(actions.FileScanFormat(file, _format, *args))
+
+    def Var(self, name, _type):
+        var = actions.Var(name, _type)
+        self.actions.append(var)
+        return var
+
 
 class LoopIndex:
     def __init__(self, name):
@@ -301,3 +329,19 @@ class LoopTester(Tester):
         LoopTester.__unique_index_id += 1
         self.index = LoopIndex(
             f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
+
+
+class ElseTester(Tester):
+    def __init__(self, else_actions: List, circuit: m.Circuit,
+                 clock: m.ClockType = None):
+        super().__init__(circuit, clock)
+        self.actions = else_actions
+
+
+class IfTester(Tester):
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+        super().__init__(circuit, clock)
+        self.else_actions = []
+
+    def _else(self):
+        return ElseTester(self.else_actions, self.circuit, self.clock)

@@ -1,5 +1,6 @@
 import fault
 from fault.select_path import SelectPath
+import fault.expression as expression
 import magma as m
 
 
@@ -46,7 +47,7 @@ class CircuitWrapper(Wrapper):
     pass
 
 
-class PortWrapper:
+class PortWrapper(expression.Expression):
     def __init__(self, port, parent):
         self.port = port
         self.parent = parent
