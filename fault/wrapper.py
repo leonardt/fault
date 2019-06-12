@@ -33,6 +33,7 @@ class Wrapper:
         # Hack to stage this after __init__ has been run, should redefine this
         # method in a metaclass?
         try:
+            assert not isinstance(self.circuit, Wrapper), "Infinite recursion"
             if attr in self.circuit.interface.ports.keys():
                 return PortWrapper(self.circuit.interface.ports[attr], self)
             elif attr in self.instance_map:
