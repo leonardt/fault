@@ -111,7 +111,6 @@ class InstanceWrapper(Wrapper):
     def __init__(self, instance, parent):
         self.instance = instance
         super().__init__(type(instance), parent)
-        self.init_done = True
 
     def __setattr__(self, attr, value):
         try:
