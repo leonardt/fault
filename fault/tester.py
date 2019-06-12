@@ -268,12 +268,12 @@ class Tester:
                                  loop_tester.actions))
         return loop_tester
 
-    def file_open(self, file_name, mode="r", chunk_size=1):
+    def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """
         mode : "r" for read, "w" for write
         chunk_size : number of bytes per read/write
         """
-        file = File(file_name, self, mode, chunk_size)
+        file = File(file_name, self, mode, chunk_size, endianness)
         self.actions.append(actions.FileOpen(file))
         return file
 
