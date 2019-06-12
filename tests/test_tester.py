@@ -380,7 +380,8 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
     circ = common.TestUInt32Circuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
-    file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4, endianness="big")
+    file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4,
+                               endianness="big")
     out_file = "test_file_out.raw"
     file_out = tester.file_open(out_file, "w", chunk_size=4, endianness="big")
     loop = tester.loop(8)
