@@ -13,6 +13,7 @@ class Wrapper:
         else:
             self.instance_map = None
         self.parent = parent
+        self.init_done = True
 
     def __setattr__(self, attr, value):
         # Hack to stage this after __init__ has been run, should redefine this
@@ -33,14 +34,14 @@ class Wrapper:
         # Hack to stage this after __init__ has been run, should redefine this
         # method in a metaclass?
         try:
-            assert not isinstance(self.circuit, Wrapper), "Infinite recursion"
+            object.__getattribute__(self, "init_done")
             if attr in self.circuit.interface.ports.keys():
                 return PortWrapper(self.circuit.interface.ports[attr], self)
             elif attr in self.instance_map:
                 return InstanceWrapper(self.instance_map[attr], self)
             else:
                 object.__getattribute__(self, attr)
-        except Exception as e:
+        except AttributeError:
             object.__getattribute__(self, attr)
 
 
