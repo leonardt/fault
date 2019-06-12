@@ -344,8 +344,12 @@ if ({name}_file == NULL) {{
 
     def make_file_write(self, i, action):
         value = f"top->{verilog_name(action.value.name)}"
+        if action.file.endianness == "big":
+            loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
+        else:
+            loop_expr = f"int i = 0; i < {action.file.chunk_size}; i++"
         code = f"""\
-for (int i = {action.file.chunk_size - 1}; i >= 0; i--) {{
+for ({loop_expr}) {{
     int result = fputc(({value} >> (i * 8)) & 0xFF,
                        {action.file.name_without_ext}_file);
     if (result == EOF) {{
@@ -358,8 +362,12 @@ for (int i = {action.file.chunk_size - 1}; i >= 0; i--) {{
         return code.splitlines()
 
     def make_file_read(self, i, action):
+        if action.file.endianness == "big":
+            loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
+        else:
+            loop_expr = f"int i = 0; i < {action.file.chunk_size}; i++"
         code = f"""\
-for (int i = 0; i < {action.file.chunk_size}; i++) {{
+for ({loop_expr}) {{
     int result =  fgetc({action.file.name_without_ext}_file);
     if (result == EOF) {{
         std::cout << "Reached end of file {action.file.name_without_ext}"

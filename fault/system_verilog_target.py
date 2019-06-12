@@ -186,10 +186,13 @@ if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_f
         decl = f"integer __i;"
         if decl not in self.declarations:
             self.declarations.append(decl)
-        # notice that this is little endian
+        if action.file.endianness == "big":
+            loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
+        else:
+            loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
         code = f"""\
 {action.file.name_without_ext}_in = 0;
-for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
+for ({loop_expr}) begin
     {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
 end
 """  # noqa
@@ -201,9 +204,12 @@ end
         decl = f"integer __i;"
         if decl not in self.declarations:
             self.declarations.append(decl)
-        # this is little endian as well
+        if action.file.endianness == "big":
+            loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
+        else:
+            loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
         code = f"""\
-for (__i = {action.file.chunk_size - 1}; __i >= 0; __i--) begin
+for ({loop_expr}) begin
     $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
 end
 """  # noqa
