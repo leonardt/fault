@@ -188,7 +188,7 @@ def test_print_double_nested_arrays(caplog, target, simulator):
         if simulator == "ncsim":
             actual = "\n".join(out.splitlines()[-18 - 3: -3])
         elif simulator == "vcs":
-            actual = "\n".join(out.splitlines()[3:18])
+            actual = "\n".join(out.splitlines()[3:21])
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
