@@ -109,7 +109,9 @@ class VerilatorTarget(VerilogTarget):
                 self.circuit_name, self.verilog_file.name,
                 self.include_verilog_libraries, self.include_directories,
                 driver_file.name, self.flags)
-            if self.run_from_directory(verilator_cmd):
+            result = self.run_from_directory(verilator_cmd)
+            logging.debug(result.stdout.decode())
+            if result.returncode:
                 raise Exception(f"Running verilator cmd {verilator_cmd} failed")
         self.debug_includes = set()
         verilator_version = subprocess.check_output("verilator --version",
