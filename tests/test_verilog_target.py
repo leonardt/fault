@@ -94,7 +94,8 @@ def test_target_double_nested_arrays_bulk(target, simulator):
     run(circ, actions, target, simulator)
 
 
-def test_target_clock(capfd, target, simulator):
+def test_target_clock(caplog, target, simulator):
+    caplog.set_level(logging.INFO)
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
@@ -108,10 +109,9 @@ def test_target_clock(capfd, target, simulator):
         Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out, err = capfd.readouterr()
+    out = caplog.record_tuples[0][2]
 
     lines = out.splitlines()
-    print(lines)
     if target == fault.verilator_target.VerilatorTarget:
         assert lines[-3] == "0", out
         assert lines[-2] == "0", out
