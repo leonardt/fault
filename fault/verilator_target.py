@@ -497,7 +497,7 @@ for ({loop_expr}) {{
         result = self.run_from_directory(
             f"/bin/bash -c \"set -e -o pipefail; ./obj_dir/V{self.circuit_name}"
             f" | tee ./obj_dir/{self.circuit_name}.log\"")
-        logging.debug(result.stdout.decode())
+        logging.info(result.stdout.decode())
         assert not result.returncode, "Running verilator binary failed"
 
     def add_assumptions(self, circuit, actions, i):
