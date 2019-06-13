@@ -1,3 +1,4 @@
+import logging
 import fault
 from .array import Array
 from pathlib import Path
@@ -108,7 +109,9 @@ class VerilatorTarget(VerilogTarget):
                 self.circuit_name, self.verilog_file.name,
                 self.include_verilog_libraries, self.include_directories,
                 driver_file.name, self.flags)
-            if self.run_from_directory(verilator_cmd):
+            result = self.run_from_directory(verilator_cmd)
+            logging.debug(result.stdout.decode())
+            if result.returncode:
                 raise Exception(f"Running verilator cmd {verilator_cmd} failed")
         self.debug_includes = set()
         verilator_version = subprocess.check_output("verilator --version",
@@ -472,7 +475,9 @@ for ({loop_expr}) {{
         return src
 
     def run_from_directory(self, cmd):
-        return subprocess.call(cmd, cwd=self.directory, shell=True)
+        logging.debug(cmd)
+        return subprocess.run(cmd, cwd=self.directory, shell=True,
+                              capture_output=True)
 
     def run(self, actions, verilator_includes=[], num_tests=0,
             _circuit=None):
@@ -486,10 +491,14 @@ for ({loop_expr}) {{
         # finally run the executable created by verilator.
         verilator_make_cmd = verilator_utils.verilator_make_cmd(
             self.circuit_name)
-        assert not self.run_from_directory(verilator_make_cmd)
-        assert not self.run_from_directory(
+        result = self.run_from_directory(verilator_make_cmd)
+        logging.debug(result.stdout.decode())
+        assert not result.returncode, "Running verilator make_cmd_failed"
+        result = self.run_from_directory(
             f"/bin/bash -c \"set -e -o pipefail; ./obj_dir/V{self.circuit_name}"
             f" | tee ./obj_dir/{self.circuit_name}.log\"")
+        logging.info(result.stdout.decode())
+        assert not result.returncode, "Running verilator binary failed"
 
     def add_assumptions(self, circuit, actions, i):
         main_body = ""

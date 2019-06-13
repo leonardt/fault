@@ -1,3 +1,4 @@
+import logging
 import tempfile
 import magma as m
 import fault
@@ -93,7 +94,8 @@ def test_target_double_nested_arrays_bulk(target, simulator):
     run(circ, actions, target, simulator)
 
 
-def test_target_clock(capfd, target, simulator):
+def test_target_clock(caplog, target, simulator):
+    caplog.set_level(logging.INFO)
     circ = common.TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
@@ -107,10 +109,9 @@ def test_target_clock(capfd, target, simulator):
         Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out, err = capfd.readouterr()
+    out = caplog.record_tuples[-1][2]
 
     lines = out.splitlines()
-    print(lines)
     if target == fault.verilator_target.VerilatorTarget:
         assert lines[-3] == "0", out
         assert lines[-2] == "0", out
@@ -121,14 +122,15 @@ def test_target_clock(capfd, target, simulator):
             assert lines[-5] == "0", out
             assert lines[-4] == "1", out
         elif simulator == "vcs":
-            assert lines[-10] == "0", out
-            assert lines[-9] == "0", out
-            assert lines[-8] == "1", out
+            assert lines[3] == "0", out
+            assert lines[4] == "0", out
+            assert lines[5] == "1", out
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
 
 
-def test_print_nested_arrays(capfd, target, simulator):
+def test_print_nested_arrays(caplog, target, simulator):
+    caplog.set_level(logging.INFO)
     circ = common.TestNestedArraysCircuit
     actions = [
         Poke(circ.I, [BitVector[4](i) for i in range(3)]),
@@ -141,14 +143,14 @@ def test_print_nested_arrays(capfd, target, simulator):
     ] + [Print("%x\n", i) for i in circ.O]
 
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out, err = capfd.readouterr()
+    out = caplog.record_tuples[-1][2]
     if target == fault.verilator_target.VerilatorTarget:
         actual = "\n".join(out.splitlines()[-9:])
     else:
         if simulator == "ncsim":
             actual = "\n".join(out.splitlines()[-9 - 3: -3])
         elif simulator == "vcs":
-            actual = "\n".join(out.splitlines()[-9 - 7: -7])
+            actual = "\n".join(out.splitlines()[3:12])
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
@@ -163,7 +165,8 @@ def test_print_nested_arrays(capfd, target, simulator):
 2""", out
 
 
-def test_print_double_nested_arrays(capfd, target, simulator):
+def test_print_double_nested_arrays(caplog, target, simulator):
+    caplog.set_level(logging.INFO)
     circ = common.TestDoubleNestedArraysCircuit
     actions = [
         Poke(circ.I, [[BitVector[4](i + j * 3) for i in range(3)]
@@ -178,15 +181,14 @@ def test_print_double_nested_arrays(capfd, target, simulator):
         Eval(),
     ] + [Print("%x\n", j) for i in circ.O for j in i]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out, err = capfd.readouterr()
-    print(out)
+    out = caplog.record_tuples[-1][2]
     if target == fault.verilator_target.VerilatorTarget:
         actual = "\n".join(out.splitlines()[-18:])
     else:
         if simulator == "ncsim":
             actual = "\n".join(out.splitlines()[-18 - 3: -3])
         elif simulator == "vcs":
-            actual = "\n".join(out.splitlines()[-18 - 7: -7])
+            actual = "\n".join(out.splitlines()[3:21])
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
