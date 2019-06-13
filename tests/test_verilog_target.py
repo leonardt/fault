@@ -109,7 +109,7 @@ def test_target_clock(caplog, target, simulator):
         Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out = caplog.record_tuples[0][2]
+    out = caplog.record_tuples[-1][2]
 
     lines = out.splitlines()
     if target == fault.verilator_target.VerilatorTarget:
@@ -143,7 +143,7 @@ def test_print_nested_arrays(caplog, target, simulator):
     ] + [Print("%x\n", i) for i in circ.O]
 
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out = caplog.record_tuples[0][2]
+    out = caplog.record_tuples[-1][2]
     if target == fault.verilator_target.VerilatorTarget:
         actual = "\n".join(out.splitlines()[-9:])
     else:
@@ -181,7 +181,7 @@ def test_print_double_nested_arrays(caplog, target, simulator):
         Eval(),
     ] + [Print("%x\n", j) for i in circ.O for j in i]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out = caplog.record_tuples[0][2]
+    out = caplog.record_tuples[-1][2]
     if target == fault.verilator_target.VerilatorTarget:
         actual = "\n".join(out.splitlines()[-18:])
     else:
