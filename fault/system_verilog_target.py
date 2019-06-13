@@ -1,3 +1,4 @@
+import logging
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
@@ -401,8 +402,11 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         else:
             raise NotImplementedError(self.simulator)
 
-        print(f"Running command: {cmd}")
-        assert not subprocess.call(cmd, cwd=self.directory, shell=True)
+        logging.debug(f"Running command: {cmd}")
+        result = subprocess.run(cmd, cwd=self.directory, shell=True,
+                                capture_output=True)
+        logging.debug(result.stdout.decode())
+        assert not result.returncode, "Error running system verilog simulator"
         if self.simulator == "vcs":
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
                                     capture_output=True)
@@ -414,7 +418,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
             # of stdout to see if "Error" is present
-            print(result.stdout.decode())
+            logging.debug(result.stdout.decode())
             assert not result.returncode, \
                 f"Running {self.simulator} binary failed"
             if self.simulator == "vcs":
