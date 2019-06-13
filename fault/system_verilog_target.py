@@ -405,7 +405,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
         logging.debug(f"Running command: {cmd}")
         result = subprocess.run(cmd, cwd=self.directory, shell=True,
                                 capture_output=True)
-        logging.debug(result.stdout.decode())
+        logging.info(result.stdout.decode())
         assert not result.returncode, "Error running system verilog simulator"
         if self.simulator == "vcs":
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
@@ -418,7 +418,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
             # of stdout to see if "Error" is present
-            logging.debug(result.stdout.decode())
+            logging.info(result.stdout.decode())
             assert not result.returncode, \
                 f"Running {self.simulator} binary failed"
             if self.simulator == "vcs":
