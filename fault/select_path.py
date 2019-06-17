@@ -6,6 +6,11 @@ class SelectPath:
     def __init__(self, init=None):
         self.path = [] if init is None else init
 
+    @property
+    def debug_name(self):
+        assert hasattr(self.path[1], "debug_name"), type(self.path[-1])
+        return self.path[-1].debug_name
+
     def insert(self, index, value):
         self.path.insert(index, value)
 
