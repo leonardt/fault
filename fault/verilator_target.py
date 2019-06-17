@@ -111,6 +111,7 @@ class VerilatorTarget(VerilogTarget):
                 driver_file.name, self.flags)
             result = self.run_from_directory(verilator_cmd)
             logging.debug(result.stdout.decode())
+            logging.debug(result.stderr.decode())
             if result.returncode:
                 raise Exception(f"Running verilator cmd {verilator_cmd} failed")
         self.debug_includes = set()
