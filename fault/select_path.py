@@ -8,7 +8,7 @@ class SelectPath:
 
     @property
     def debug_name(self):
-        assert hasatter(self.path[1], "debug_name"), type(self.path[-1])
+        assert hasattr(self.path[1], "debug_name"), type(self.path[-1])
         return self.path[-1].debug_name
 
     def insert(self, index, value):
