@@ -1,3 +1,4 @@
+import logging
 import magma as m
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
@@ -191,10 +192,12 @@ class Tester:
         should call `compile` with `target` before calling `run`.
         """
         try:
+            logging.info("Running tester...")
             if target == "verilator":
                 self.targets[target].run(self.actions, self.verilator_includes)
             else:
                 self.targets[target].run(self.actions)
+            logging.info("Success!")
         except KeyError:
             raise Exception(f"Could not find target={target}, did you compile"
                             " it first?")
