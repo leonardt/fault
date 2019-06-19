@@ -26,7 +26,8 @@ def log(logger, message):
     Helper function to ignore empty log messages
     """
     if message:
-        logger(message)
+        for line in message.splitlines():
+            logger(message)
 
 
 # max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -118,8 +119,8 @@ class VerilatorTarget(VerilogTarget):
                 self.include_verilog_libraries, self.include_directories,
                 driver_file.name, self.flags)
             result = self.run_from_directory(verilator_cmd)
-            log(logging.debug, result.stdout.decode())
-            log(logging.debug, result.stderr.decode())
+            log(logging.info, result.stdout.decode())
+            log(logging.info, result.stderr.decode())
             if result.returncode:
                 raise Exception(f"Running verilator cmd {verilator_cmd} failed:"
                                 f" {result.stderr.decode()}")
