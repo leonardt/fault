@@ -503,7 +503,8 @@ for ({loop_expr}) {{
             self.circuit_name)
         result = self.run_from_directory(verilator_make_cmd)
         log(logging.debug, result.stdout.decode())
-        assert not result.returncode, "Running verilator make_cmd_failed"
+        assert not result.returncode, "Running verilator make_cmd_failed" \
+            + result.stderr.decode()
         result = self.run_from_directory(
             f"/bin/bash -c \"set -e -o pipefail; ./obj_dir/V{self.circuit_name}"
             f" | tee ./obj_dir/{self.circuit_name}.log\"")
