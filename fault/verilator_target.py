@@ -21,6 +21,15 @@ import os
 import fault.expression as expression
 
 
+def log(logger, message):
+    """
+    Helper function to ignore empty log messages
+    """
+    if message:
+        for line in message.splitlines():
+            logger(message)
+
+
 # max_bits = 64 if platform.architecture()[0] == "64bit" else 32
 max_bits = 32
 
@@ -110,10 +119,11 @@ class VerilatorTarget(VerilogTarget):
                 self.include_verilog_libraries, self.include_directories,
                 driver_file.name, self.flags)
             result = self.run_from_directory(verilator_cmd)
-            logging.debug(result.stdout.decode())
-            logging.debug(result.stderr.decode())
+            log(logging.info, result.stdout.decode())
+            log(logging.info, result.stderr.decode())
             if result.returncode:
-                raise Exception(f"Running verilator cmd {verilator_cmd} failed")
+                raise Exception(f"Running verilator cmd {verilator_cmd} failed:"
+                                f" {result.stderr.decode()}")
         self.debug_includes = set()
         verilator_version = subprocess.check_output("verilator --version",
                                                     shell=True)
@@ -493,13 +503,16 @@ for ({loop_expr}) {{
         verilator_make_cmd = verilator_utils.verilator_make_cmd(
             self.circuit_name)
         result = self.run_from_directory(verilator_make_cmd)
-        logging.debug(result.stdout.decode())
-        assert not result.returncode, "Running verilator make_cmd_failed"
+        log(logging.debug, result.stdout.decode())
+        assert not result.returncode, "Running verilator make_cmd_failed" \
+            + result.stderr.decode()
         result = self.run_from_directory(
             f"/bin/bash -c \"set -e -o pipefail; ./obj_dir/V{self.circuit_name}"
             f" | tee ./obj_dir/{self.circuit_name}.log\"")
-        logging.info(result.stdout.decode())
-        assert not result.returncode, "Running verilator binary failed"
+        log(logging.info, result.stdout.decode())
+        log(logging.info, result.stderr.decode())
+        assert not result.returncode, "Running verilator binary failed: " + \
+            result.stderr.decode()
 
     def add_assumptions(self, circuit, actions, i):
         main_body = ""
