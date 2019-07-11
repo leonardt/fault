@@ -2,23 +2,24 @@ import common
 import tempfile
 from fault import SymbolicTester
 from hwtypes import BitVector
+from pysmt.shortcuts import Solver
+from pysmt.exceptions import NoSolverAvailableError
+import pytest
 
 
 def pytest_generate_tests(metafunc):
     if 'target' in metafunc.fixturenames:
-        metafunc.parametrize("target", ["verilator", "cosa"])
+        metafunc.parametrize("target,solver", [
+            ("verilator", None), ("cosa", "msat"), ("cosa", "z3")])
 
 
-def test_tester_magma_internal_signals_verilator(target):
+def test_tester_magma_internal_signals_verilator(target, solver):
     if target == "cosa":
-        from pysmt.shortcuts import Solver
-        from pysmt.exceptions import NoSolverAvailableError
-        import pytest
         try:
-            with Solver(name="msat"):
+            with Solver(name=solver):
                 pass
         except NoSolverAvailableError:
-            pytest.skip("msat not available")
+            pytest.skip(f"{solver} not available")
     circ = common.SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
@@ -51,4 +52,6 @@ def test_tester_magma_internal_signals_verilator(target):
         elif target == "cosa":
             kwargs["magma_opts"] = {"passes": ["rungenerators", "flatten",
                                                "cullgraph"]}
+            kwargs["solver"] = solver
+        _dir = "build"
         tester.compile_and_run(target, directory=_dir, **kwargs)

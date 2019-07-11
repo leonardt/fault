@@ -9,13 +9,16 @@ import astor
 
 class BVReplacer(ast.NodeTransformer):
     def visit_Call(self, node):
-        if isinstance(node.func, ast.Name) and node.func.id == "BitVector":
+        if isinstance(node.func, ast.Subscript) and \
+                isinstance(node.func.value, ast.Name) and \
+                node.func.value.id == "BitVector":
+            assert isinstance(node.func.slice, ast.Index) and \
+                isinstance(node.func.slice.value, ast.Num), \
+                "Non constant BVs not implemented"
             assert isinstance(node.args[0], ast.Num), \
                 "Non constant BVs not implemented"
-            assert isinstance(node.args[1], ast.Num), \
-                "Non constant BVs not implemented"
-            return ast.Name(str(node.args[0].n) + "_" + str(node.args[1].n),
-                            ast.Load())
+            name = str(node.args[0].n) + "_" + str(node.func.slice.value.n)
+            return ast.Name(name, ast.Load())
         return node
 
 
@@ -148,7 +151,7 @@ class CoSATarget(VerilogTarget):
 
         src = f"""\
 [GENERAL]
-model_file: {model_files}
+model_files: {model_files}
 add_clock: True
 
 [DEFAULT]
@@ -164,7 +167,7 @@ strategy: ALL
             src += f"""\
 [Problem {i}]
 assumptions: {assumptions}
-formula: pokes_done -> ({formula})
+properties: pokes_done -> ({formula})
 verification: safety
 prove: True
 expected: True
@@ -180,4 +183,4 @@ expected: True
         with open(ets_file, "w") as f:
             f.write(ets)
         assert not os.system(
-            f"CoSA --problem {problem_file} --solver {self.solver}")
+            f"CoSA --problem {problem_file} --solver-name {self.solver}")
