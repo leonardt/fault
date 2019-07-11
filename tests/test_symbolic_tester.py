@@ -53,5 +53,4 @@ def test_tester_magma_internal_signals_verilator(target, solver):
             kwargs["magma_opts"] = {"passes": ["rungenerators", "flatten",
                                                "cullgraph"]}
             kwargs["solver"] = solver
-        _dir = "build"
         tester.compile_and_run(target, directory=_dir, **kwargs)
