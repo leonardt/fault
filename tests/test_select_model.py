@@ -68,8 +68,9 @@ def test_top():
             def definition(io):
                 # Instance declaration of adder, definition will be selected
                 # later
-                adder0 = DeclareAdder(4)(name="adder0")
-                adder1 = DeclareAdder(4)(name="adder1")
+                Adder4 = DeclareAdder(4)
+                adder0 = Adder4(name="adder0")
+                adder1 = Adder4(name="adder1")
                 # Random logic with the two adders
                 O, COUT = adder0(io)
                 O, COUT = adder1(O, O, COUT)
