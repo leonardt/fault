@@ -137,3 +137,6 @@ class InstanceWrapper(Wrapper):
                                 f" {value}")
         except AttributeError:
             object.__setattr__(self, attr, value)
+
+    def set_definition(self, defn):
+        self.instance.__class__ = defn
