@@ -1,6 +1,6 @@
 from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
 from magma.simulator.python_simulator import PythonSimulator
-from hwtypes import BitVector, SIntVector, UIntVector
+from hwtypes import BitVector, SIntVector, UIntVector, Bit
 from inspect import signature
 from itertools import product
 import pytest
@@ -73,7 +73,7 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
     for i, (name, port) in enumerate(circuit.IO.items()):
         if port.isinput():
             if isinstance(port, BitKind):
-                args.append([BitVector(0), BitVector(1)])
+                args.append([Bit(0), Bit(1)])
             elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
                 num_bits = port.N
                 if isinstance(port, SIntKind):
@@ -120,7 +120,7 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
     for i, (name, port) in enumerate(circuit.IO.items()):
         if port.isinput():
             if isinstance(port, BitKind):
-                args.append([BitVector(0), BitVector(1)])
+                args.append([Bit(0), Bit(1)])
             elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
                 num_bits = port.N
                 if isinstance(port, SIntKind):
@@ -149,9 +149,9 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         j = 0
         for i, (name, port) in enumerate(circuit.IO.items()):
             if port.isinput():
-                val = test[j].as_bool_list()
-                if len(val) == 1:
-                    val = val[0]
+                val = test[j]
+                if isinstance(val, BitVector):
+                    val = test[j].as_bool_list()
                 simulator.set_value(getattr(circuit, name), val)
                 j += 1
 
@@ -162,7 +162,7 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
                 val = simulator.get_value(getattr(circuit, name))
                 if isinstance(port, ArrayKind) and \
                         not isinstance(port, (BitsKind, SIntKind, UIntKind)):
-                    val = BitVector(val)
+                    val = BitVector[len(port)](val)
                 testv[1].append(val)
 
         tests.append(testv)

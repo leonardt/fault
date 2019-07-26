@@ -1,7 +1,7 @@
 from itertools import product
 import pytest
 import tempfile
-from hwtypes import BitVector
+from hwtypes import BitVector, Bit
 import magma as m
 import mantle
 from common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit
@@ -45,16 +45,16 @@ def test_combinational_circuit():
     # order of the cartesian product.
     for i, inputs in enumerate(product((0, 1), (0, 1), (0, 1))):
         vec = test_vectors[i].test_vector
-        expected = [BitVector(x) for x in inputs]
+        expected = [Bit(x) for x in inputs]
         assert vec[:3] == expected
         if i == 0:
             assert vec[3] == AnyValue
             continue
         prev_inputs = test_vectors[i - 1].test_vector[:3]
-        expected = BitVector[1](f(*prev_inputs))
+        expected = Bit(f(*prev_inputs))
         assert vec[3] == expected
     # Checking the pattern above for the last vector.
     vec = test_vectors[-1].test_vector
     prev_inputs = test_vectors[-2].test_vector[:3]
-    expected = BitVector[1](f(*prev_inputs))
+    expected = Bit(f(*prev_inputs))
     assert vec[3] == expected
