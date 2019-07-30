@@ -35,7 +35,7 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=False, magma_output="coreir-verilog",
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
-                 dump_vcd=True, no_warning=False):
+                 dump_vcd=True, no_warning=False, sim_env=None):
         """
         circuit: a magma circuit
 
@@ -58,6 +58,10 @@ class SystemVerilogTarget(VerilogTarget):
 
         clock_step_delay: Set the number of steps to delay for each step of the
                           clock
+
+        sim_env: Environment variable definitions to use when running the
+                 simulator.  If not provided, the value from os.environ will
+                 be used.
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
@@ -73,6 +77,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.dump_vcd = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
+        self.sim_env = sim_env if sim_env is not None else os.environ
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -404,21 +409,21 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
 
         logging.debug(f"Running command: {cmd}")
         result = subprocess.run(cmd, cwd=self.directory, shell=True,
-                                capture_output=True)
-        logging.info(result.stdout.decode())
+                                capture_output=True, env=self.sim_env)
+        self.display_subprocess_output(result)
         assert not result.returncode, "Error running system verilog simulator"
         if self.simulator == "vcs":
             result = subprocess.run("./simv", cwd=self.directory, shell=True,
-                                    capture_output=True)
+                                    capture_output=True, env=self.sim_env)
         elif self.simulator == "iverilog":
             result = subprocess.run(f"vvp -N {self.circuit_name}_tb",
                                     cwd=self.directory, shell=True,
-                                    capture_output=True)
+                                    capture_output=True, env=self.sim_env)
         if self.simulator in {"vcs", "iverilog"}:
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
             # of stdout to see if "Error" is present
-            logging.info(result.stdout.decode())
+            self.display_subprocess_output(result)
             assert not result.returncode, \
                 f"Running {self.simulator} binary failed"
             if self.simulator == "vcs":
@@ -427,3 +432,19 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
                 error_str = "ERROR"
             assert error_str not in str(result.stdout), \
                 f"\"{error_str}\" found in stdout of {self.simulator} run"
+
+    @staticmethod
+    def display_subprocess_output(result):
+        # display both standard output and standard error as INFO, since
+        # since some useful debugging info is included in standard error
+        
+        to_display = {
+            'STDOUT': result.stdout.decode(),
+            'STDERR': result.stderr.decode()
+        }
+
+        for name, val in to_display.items():
+            if val != '':
+                logging.info(f'*** {name} ***')
+                logging.info(val)
+
