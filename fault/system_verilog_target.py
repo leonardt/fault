@@ -437,7 +437,7 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
     def display_subprocess_output(result):
         # display both standard output and standard error as INFO, since
         # since some useful debugging info is included in standard error
-        
+
         to_display = {
             'STDOUT': result.stdout.decode(),
             'STDERR': result.stderr.decode()
@@ -447,4 +447,3 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             if val != '':
                 logging.info(f'*** {name} ***')
                 logging.info(val)
-

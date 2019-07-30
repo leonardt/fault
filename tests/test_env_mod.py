@@ -7,6 +7,7 @@ import shutil
 import logging
 import mantle
 
+
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         targets = []
@@ -16,8 +17,9 @@ def pytest_generate_tests(metafunc):
             targets.append(("system-verilog", "ncsim"))
         metafunc.parametrize("target,simulator", targets)
 
+
 def test_env_mod(target, simulator):
-    #logging.getLogger().setLevel(logging.DEBUG)
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     myinv = m.DefineCircuit('myinv', 'a', m.In(m.Bit), 'y', m.Out(m.Bit))
     m.wire(~myinv.a, myinv.y)
@@ -44,4 +46,3 @@ def test_env_mod(target, simulator):
             directory=tmp_dir,
             sim_env=sim_env
         )
-
