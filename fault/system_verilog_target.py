@@ -375,50 +375,37 @@ end;
             if old_times[0] <= new_times[0] or new_times[1] <= old_times[1]:
                 new_times = (old_times[0] + 1, old_times[1] + 1)
                 os.utime(tb_file, times=new_times)
-        verilog_libraries = " ".join(str(x) for x in
-                                     self.include_verilog_libraries)
-        cmd_file = Path(f"{self.circuit_name}_cmd.tcl")
-        if self.simulator == "ncsim":
-            if self.dump_vcd:
-                vcd_command = """
-database -open -vcd vcddb -into verilog.vcd -default -timescale ps
-probe -create -all -vcd -depth all"""
-            else:
-                vcd_command = ""
-            ncsim_cmd_string = f"""\
-{vcd_command}
-run {self.num_cycles}ns
-quit"""
-            if self.no_warning:
-                warning = "-neverwarn"
-            else:
-                warning = ""
-            with open(self.directory / cmd_file, "w") as f:
-                f.write(ncsim_cmd_string)
-            cmd = f"""\
-irun -top {self.circuit_name}_tb -timescale {self.timescale} -access +rwc -notimingchecks {warning} -input {cmd_file} {test_bench_file} {self.verilog_file} {verilog_libraries}
-"""  # nopep8
-        elif self.simulator == "vcs":
-            cmd = f"""\
-vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-needed  {test_bench_file} {self.verilog_file} {verilog_libraries}
-"""  # nopep8
-        elif self.simulator == "iverilog":
-            cmd = f"iverilog -o {self.circuit_name}_tb {test_bench_file} {self.verilog_file}"  # noqa
+
+        # assemble list of sources files
+        vlog_srcs = []
+        vlog_srcs += [test_bench_file]
+        if not self.skip_compile:
+            vlog_srcs += [self.verilog_file]
+
+        # generate simulator command
+        if self.simulator == 'ncsim':
+            cmd_file = self.write_ncsim_tcl()
+            cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+        elif self.simulator == 'vcs':
+            cmd = self.vcs_cmd(sources=vlog_srcs)
+        elif self.simulator == 'iverilog':
+            cmd = self.iverilog_cmd(sources=vlog_srcs)
         else:
             raise NotImplementedError(self.simulator)
 
-        logging.debug(f"Running command: {cmd}")
-        result = subprocess.run(cmd, cwd=self.directory, shell=True,
+        logging.debug(f'Running command: {cmd}')
+        result = subprocess.run(cmd, cwd=self.directory,
                                 capture_output=True, env=self.sim_env)
         self.display_subprocess_output(result)
         assert not result.returncode, "Error running system verilog simulator"
+
         if self.simulator == "vcs":
-            result = subprocess.run("./simv", cwd=self.directory, shell=True,
+            result = subprocess.run(['./simv'], cwd=self.directory,
                                     capture_output=True, env=self.sim_env)
         elif self.simulator == "iverilog":
-            result = subprocess.run(f"vvp -N {self.circuit_name}_tb",
-                                    cwd=self.directory, shell=True,
-                                    capture_output=True, env=self.sim_env)
+            result = subprocess.run(['vvp', '-N', f'{self.circuit_name}_tb'],
+                                    cwd=self.directory, capture_output=True,
+                                    env=self.sim_env)
         if self.simulator in {"vcs", "iverilog"}:
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
@@ -447,3 +434,83 @@ vcs -sverilog -full64 +v2k -timescale={self.timescale} -LDFLAGS -Wl,--no-as-need
             if val != '':
                 logging.info(f'*** {name} ***')
                 logging.info(val)
+
+    def write_ncsim_tcl(self):
+        # construct the TCL commands to run the simulation
+        tcl_cmds = []
+        if self.dump_vcd:
+            tcl_cmds += [f'database -open -vcd vcddb -into verilog.vcd -default -timescale ps']  # noqa
+            tcl_cmds += [f'probe -create -all -vcd -depth all']
+        tcl_cmds += [f'run {self.num_cycles}ns']
+        tcl_cmds += [f'quit']
+
+        # write the command file
+        cmd_file = Path(f'{self.circuit_name}_cmd.tcl')
+        with open(self.directory / cmd_file, 'w') as f:
+            f.write('\n'.join(tcl_cmds))
+
+        # return the path to the command file
+        return cmd_file
+
+    def ncsim_cmd(self, sources, cmd_file):
+        cmd = []
+
+        # construct the command
+        cmd += ['irun']
+        cmd += ['-top', f'{self.circuit_name}_tb']
+        cmd += ['-timescale', f'{self.timescale}']
+        cmd += ['-access', '+rwc']
+        cmd += ['-notimingchecks']
+        if self.no_warning:
+            cmd += ['-neverwarn']
+        cmd += ['-input', f'{cmd_file}']
+        cmd += [f'{src}' for src in sources]
+        for lib in self.include_verilog_libraries:
+            cmd += ['-v', f'{lib}']
+
+        return cmd
+
+    def vcs_cmd(self, sources):
+        cmd = []
+
+        cmd += ['vcs']
+        cmd += ['-sverilog']
+        cmd += ['-full64']
+        cmd += ['+v2k']
+        cmd += [f'-timescale={self.timescale}']
+        cmd += ['-LDFLAGS']
+        cmd += ['-Wl,--no-as-needed']
+        cmd += [f'{src}' for src in sources]
+        for lib in self.include_verilog_libraries:
+            cmd += ['-v', f'{lib}']
+
+        return cmd
+
+    def iverilog_cmd(self, sources):
+        cmd = []
+
+        cmd += ['iverilog']
+        cmd += ['-o', f'{self.circuit_name}_tb']
+        cmd += [f'{src}' for src in sources]
+
+        # iverilog does not have a way to specify individual library files;
+        # only library directories are allowed and the user must specify
+        # which file extensions should be used.  hence, we need to gather
+        # up all of the unique library folders and file extensions from
+        # the provided library files
+
+        dirs = set()
+        exts = set()
+        for lib in self.include_verilog_libraries:
+            lib_str = str(lib)  # convert to string -- might be a Path
+            dirs.add(os.path.dirname(lib_str))
+            exts.add(os.path.splitext(lib_str)[1])
+
+        # now add the options to specify all library directories and
+        # file extensions
+        for dir_ in dirs:
+            cmd += ['-y', f'{dir_}']
+        for ext in exts:
+            cmd += ['-Y', f'{ext}']
+
+        return cmd
