@@ -48,5 +48,6 @@ def test_ext_vlog(target, simulator):
             directory=tmp_dir,
             include_verilog_libraries=[myinv_fname],
             sim_env=sim_env,
-            skip_compile=True
+            skip_compile=True,
+            ext_model_file=True
         )

@@ -35,7 +35,8 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=False, magma_output="coreir-verilog",
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
-                 dump_vcd=True, no_warning=False, sim_env=None):
+                 dump_vcd=True, no_warning=False, sim_env=None,
+                 ext_model_file=False):
         """
         circuit: a magma circuit
 
@@ -62,6 +63,11 @@ class SystemVerilogTarget(VerilogTarget):
         sim_env: Environment variable definitions to use when running the
                  simulator.  If not provided, the value from os.environ will
                  be used.
+
+        ext_model_file: If True, don't include the assumed model name in the
+                        list of Verilog sources.  The assumption is that the
+                        user has already taken care of this via
+                        include_verilog_libraries.
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
@@ -78,6 +84,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.no_warning = no_warning
         self.declarations = []
         self.sim_env = sim_env if sim_env is not None else os.environ
+        self.ext_model_file = ext_model_file
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -379,7 +386,7 @@ end;
         # assemble list of sources files
         vlog_srcs = []
         vlog_srcs += [test_bench_file]
-        if not self.skip_compile:
+        if not self.ext_model_file:
             vlog_srcs += [self.verilog_file]
 
         # generate simulator command
