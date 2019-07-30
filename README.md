@@ -18,6 +18,7 @@ Check out the [fault tutorial](https://github.com/leonardt/fault/tree/master/tut
 
 * [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
 * [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)
+* [Integrating External Verilog](https://github.com/leonardt/fault/blob/master/doc/verilog_integration.ipynb)
 
 ## Example
 Here is a simple ALU defined in magma.
