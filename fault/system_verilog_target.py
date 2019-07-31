@@ -524,25 +524,7 @@ end;
         cmd += ['iverilog']
         cmd += ['-o', f'{self.circuit_name}_tb']
         cmd += [f'{src}' for src in sources]
-
-        # iverilog does not have a way to specify individual library files;
-        # only library directories are allowed and the user must specify
-        # which file extensions should be used.  hence, we need to gather
-        # up all of the unique library folders and file extensions from
-        # the provided library files
-
-        dirs = set()
-        exts = set()
         for lib in self.ext_libs:
-            lib_str = str(lib)  # convert to string -- might be a Path
-            dirs.add(os.path.dirname(lib_str))
-            exts.add(os.path.splitext(lib_str)[1])
-
-        # now add the options to specify all library directories and
-        # file extensions
-        for dir_ in dirs:
-            cmd += ['-y', f'{dir_}']
-        for ext in exts:
-            cmd += ['-Y', f'{ext}']
+            cmd += ['-v', f'{lib}']
 
         return cmd
