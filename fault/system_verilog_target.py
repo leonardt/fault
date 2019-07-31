@@ -400,19 +400,20 @@ end;
         else:
             raise NotImplementedError(self.simulator)
 
+        cmd = ' '.join(cmd)
         logging.debug(f'Running command: {cmd}')
-        result = subprocess.run(cmd, cwd=self.directory,
+        result = subprocess.run(cmd, cwd=self.directory, shell=True,
                                 capture_output=True, env=self.sim_env)
         self.display_subprocess_output(result)
         assert not result.returncode, "Error running system verilog simulator"
 
         if self.simulator == "vcs":
-            result = subprocess.run(['./simv'], cwd=self.directory,
+            result = subprocess.run('./simv', cwd=self.directory, shell=True,
                                     capture_output=True, env=self.sim_env)
         elif self.simulator == "iverilog":
-            result = subprocess.run(['vvp', '-N', f'{self.circuit_name}_tb'],
-                                    cwd=self.directory, capture_output=True,
-                                    env=self.sim_env)
+            result = subprocess.run(f'vvp -N {self.circuit_name}_tb',
+                                    shell=True, cwd=self.directory,
+                                    capture_output=True, env=self.sim_env)
         if self.simulator in {"vcs", "iverilog"}:
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
