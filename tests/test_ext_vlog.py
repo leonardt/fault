@@ -21,7 +21,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_ext_vlog(target, simulator):
-    logging.getLogger().setLevel(logging.DEBUG)
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     myinv_fname = pathlib.Path('tests/verilog/myinv.v').resolve()
     myinv = m.DeclareCircuit('myinv', 'in_', m.In(m.Bit), 'out', m.Out(m.Bit))
@@ -46,7 +46,7 @@ def test_ext_vlog(target, simulator):
             target=target,
             simulator=simulator,
             directory=tmp_dir,
-            include_verilog_libraries=[myinv_fname],
+            ext_libs=[myinv_fname],
             sim_env=sim_env,
             skip_compile=True,
             ext_model_file=True

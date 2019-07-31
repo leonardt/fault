@@ -36,7 +36,7 @@ class SystemVerilogTarget(VerilogTarget):
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
                  dump_vcd=True, no_warning=False, sim_env=None,
-                 ext_model_file=False):
+                 ext_model_file=False, ext_libs=None):
         """
         circuit: a magma circuit
 
@@ -68,6 +68,10 @@ class SystemVerilogTarget(VerilogTarget):
                         list of Verilog sources.  The assumption is that the
                         user has already taken care of this via
                         include_verilog_libraries.
+
+        ext_libs: List of external files that should be treated as "libraries",
+        meaning that the simulator will look in them for module definitions but
+        not try to compile them otherwise.
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
@@ -85,6 +89,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.declarations = []
         self.sim_env = sim_env if sim_env is not None else os.environ
         self.ext_model_file = ext_model_file
+        self.ext_libs = ext_libs if ext_libs is not None else []
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -388,6 +393,7 @@ end;
         vlog_srcs += [test_bench_file]
         if not self.ext_model_file:
             vlog_srcs += [self.verilog_file]
+        vlog_srcs += self.include_verilog_libraries
 
         # generate simulator command
         if self.simulator == 'ncsim':
@@ -473,7 +479,7 @@ end;
             cmd += ['-neverwarn']
         cmd += ['-input', f'{cmd_file}']
         cmd += [f'{src}' for src in sources]
-        for lib in self.include_verilog_libraries:
+        for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
 
         return cmd
@@ -489,7 +495,7 @@ end;
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
         cmd += [f'{src}' for src in sources]
-        for lib in self.include_verilog_libraries:
+        for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
 
         return cmd
@@ -509,7 +515,7 @@ end;
 
         dirs = set()
         exts = set()
-        for lib in self.include_verilog_libraries:
+        for lib in self.ext_libs:
             lib_str = str(lib)  # convert to string -- might be a Path
             dirs.add(os.path.dirname(lib_str))
             exts.add(os.path.splitext(lib_str)[1])
