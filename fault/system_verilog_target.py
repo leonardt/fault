@@ -37,7 +37,7 @@ class SystemVerilogTarget(VerilogTarget):
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
                  dump_vcd=True, no_warning=False, sim_env=None,
-                 ext_model_file=False, ext_libs=None):
+                 ext_model_file=False, ext_libs=None, defines=None):
         """
         circuit: a magma circuit
 
@@ -71,8 +71,12 @@ class SystemVerilogTarget(VerilogTarget):
                         include_verilog_libraries.
 
         ext_libs: List of external files that should be treated as "libraries",
-        meaning that the simulator will look in them for module definitions but
-        not try to compile them otherwise.
+                  meaning that the simulator will look in them for module
+                  definitions but not try to compile them otherwise.
+
+        defines: Dictionary mapping Verilog DEFINE variable names to their
+                 values.  If any value is None, that define simply defines
+                 the variable without giving it a specific value.
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
@@ -91,6 +95,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.sim_env = sim_env if sim_env is not None else os.environ
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
+        self.defines = defines if defines is not None else {}
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -390,45 +395,42 @@ end;
                 os.utime(tb_file, times=new_times)
 
         # assemble list of sources files
+
         vlog_srcs = []
         vlog_srcs += [test_bench_file]
         if not self.ext_model_file:
             vlog_srcs += [self.verilog_file]
         vlog_srcs += self.include_verilog_libraries
 
-        # generate simulator command
+        # generate simulator commands
+
         if self.simulator == 'ncsim':
-            cmd_file = self.write_ncsim_tcl()
-            cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
+                                     cmd_file=self.write_ncsim_tcl())
+            bin_cmd = None
+            err_str = None
         elif self.simulator == 'vcs':
-            cmd = self.vcs_cmd(sources=vlog_srcs)
+            sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            bin_cmd = [bin_file]
+            err_str = 'Error'
         elif self.simulator == 'iverilog':
-            cmd = self.iverilog_cmd(sources=vlog_srcs)
+            sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
+            bin_cmd = ['vvp', '-N', bin_file]
+            err_str = 'ERROR'
         else:
             raise NotImplementedError(self.simulator)
 
-        logging.debug(f'Running command: {cmd}')
-        result = self.subprocess_run(cmd)
-        assert not result.returncode, "Error running system verilog simulator"
+        # compile the simulation
 
-        if self.simulator == "vcs":
-            cmd = ['./simv']
-            result = self.subprocess_run(cmd)
-        elif self.simulator == "iverilog":
-            cmd = ['vvp', '-N', f'{self.circuit_name}_tb']
-            result = self.subprocess_run(cmd)
-        if self.simulator in {"vcs", "iverilog"}:
-            # VCS and iverilog do not set the return code when a
-            # simulation exits with an error, so we check the result
-            # of stdout to see if "Error" is present
-            assert not result.returncode, \
-                f"Running {self.simulator} binary failed"
-            if self.simulator == "vcs":
-                error_str = "Error"
-            elif self.simulator == "iverilog":
-                error_str = "ERROR"
-            assert error_str not in str(result.stdout), \
-                f"\"{error_str}\" found in stdout of {self.simulator} run"
+        sim_res = self.subprocess_run(sim_cmd)
+        assert not sim_res.returncode, 'Error running system verilog simulator'
+
+        # run the simulation binary (if applicable)
+
+        if bin_cmd is not None:
+            bin_res = self.subprocess_run(bin_cmd)
+            assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
+            assert err_str not in str(bin_res.stdout), f'"{error_str}" found in stdout of {self.simulator} run'  # noqa
 
     @staticmethod
     def shlex_join(args):
@@ -459,6 +461,8 @@ end;
         # into a single string before passing to subprocess.run
 
         cmd = self.shlex_join(args)
+
+        logging.debug(f'Running command: {cmd}')
         result = subprocess.run(cmd, shell=True, cwd=self.directory,
                                 capture_output=True, env=self.sim_env)
 
@@ -487,44 +491,97 @@ end;
     def ncsim_cmd(self, sources, cmd_file):
         cmd = []
 
-        # construct the command
+        # binary name
         cmd += ['irun']
+
+        # top module
         cmd += ['-top', f'{self.circuit_name}_tb']
+
+        # timescale
         cmd += ['-timescale', f'{self.timescale}']
+
+        # TCL commands
+        cmd += ['-input', f'{cmd_file}']
+
+        # source files
+        cmd += [f'{src}' for src in sources]
+
+        # library files
+        for lib in self.ext_libs:
+            cmd += ['-v', f'{lib}']
+
+        # define variables
+        for key, val in self.defines.items():
+            def_ = f'+define+{key}'
+            if val is not None:
+                def_ += f'={val}'
+            cmd += [def_]
+
+        # misc flags
         cmd += ['-access', '+rwc']
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
-        cmd += ['-input', f'{cmd_file}']
-        cmd += [f'{src}' for src in sources]
-        for lib in self.ext_libs:
-            cmd += ['-v', f'{lib}']
 
+        # return arg list
         return cmd
 
     def vcs_cmd(self, sources):
         cmd = []
 
+        # binary name
         cmd += ['vcs']
-        cmd += ['-sverilog']
-        cmd += ['-full64']
-        cmd += ['+v2k']
+
+        # timescale
         cmd += [f'-timescale={self.timescale}']
-        cmd += ['-LDFLAGS']
-        cmd += ['-Wl,--no-as-needed']
+
+        # source files
         cmd += [f'{src}' for src in sources]
+
+        # library files
         for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
 
-        return cmd
+        # define variables
+        for key, val in self.defines.items():
+            def_ = f'+define+{key}'
+            if val is not None:
+                def_ += f'={val}'
+            cmd += [def_]
+
+        # misc flags
+        cmd += ['-sverilog']
+        cmd += ['-full64']
+        cmd += ['+v2k']
+        cmd += ['-LDFLAGS']
+        cmd += ['-Wl,--no-as-needed']
+
+        # return arg list and binary file location
+        return cmd, './simv'
 
     def iverilog_cmd(self, sources):
         cmd = []
 
+        # binary name
         cmd += ['iverilog']
-        cmd += ['-o', f'{self.circuit_name}_tb']
+
+        # output file
+        bin_file = f'{self.circuit_name}_tb'
+        cmd += ['-o', bin_file]
+
+        # source files
         cmd += [f'{src}' for src in sources]
+
+        # library files
         for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
 
-        return cmd
+        # define variables
+        for key, val in self.defines.items():
+            def_ = f'-D{key}'
+            if val is not None:
+                def_ += f'={val}'
+            cmd += [def_]
+
+        # return arg list and binary file location
+        return cmd, bin_file
