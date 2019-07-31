@@ -11,6 +11,7 @@ from fault.wrapper import PortWrapper
 import fault
 import fault.expression as expression
 import os
+import shlex
 
 
 src_tpl = """\
@@ -406,25 +407,20 @@ end;
         else:
             raise NotImplementedError(self.simulator)
 
-        cmd = ' '.join(cmd)
         logging.debug(f'Running command: {cmd}')
-        result = subprocess.run(cmd, cwd=self.directory, shell=True,
-                                capture_output=True, env=self.sim_env)
-        self.display_subprocess_output(result)
+        result = self.subprocess_run(cmd)
         assert not result.returncode, "Error running system verilog simulator"
 
         if self.simulator == "vcs":
-            result = subprocess.run('./simv', cwd=self.directory, shell=True,
-                                    capture_output=True, env=self.sim_env)
+            cmd = ['./simv']
+            result = self.subprocess_run(cmd)
         elif self.simulator == "iverilog":
-            result = subprocess.run(f'vvp -N {self.circuit_name}_tb',
-                                    shell=True, cwd=self.directory,
-                                    capture_output=True, env=self.sim_env)
+            cmd = ['vvp', '-N', f'{self.circuit_name}_tb']
+            result = self.subprocess_run(cmd)
         if self.simulator in {"vcs", "iverilog"}:
             # VCS and iverilog do not set the return code when a
             # simulation exits with an error, so we check the result
             # of stdout to see if "Error" is present
-            self.display_subprocess_output(result)
             assert not result.returncode, \
                 f"Running {self.simulator} binary failed"
             if self.simulator == "vcs":
@@ -433,6 +429,13 @@ end;
                 error_str = "ERROR"
             assert error_str not in str(result.stdout), \
                 f"\"{error_str}\" found in stdout of {self.simulator} run"
+
+    @staticmethod
+    def shlex_join(args):
+        # take a list of arguments, escape them as necessary to pass to
+        # the shell, and then concatenate with spaces
+
+        return ' '.join(shlex.quote(arg) for arg in args)
 
     @staticmethod
     def display_subprocess_output(result):
@@ -448,6 +451,21 @@ end;
             if val != '':
                 logging.info(f'*** {name} ***')
                 logging.info(val)
+
+    def subprocess_run(self, args, display=True):
+        # Runs a subprocess in the user-specified directory with
+        # the user-specified environment.  shell=True is used for
+        # now which is why the list of arguments must be combined
+        # into a single string before passing to subprocess.run
+
+        cmd = self.shlex_join(args)
+        result = subprocess.run(cmd, shell=True, cwd=self.directory,
+                                capture_output=True, env=self.sim_env)
+
+        if display:
+            self.display_subprocess_output(result)
+
+        return result
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the simulation
