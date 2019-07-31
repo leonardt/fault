@@ -430,7 +430,7 @@ end;
         if bin_cmd is not None:
             bin_res = self.subprocess_run(bin_cmd)
             assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
-            assert err_str not in str(bin_res.stdout), f'"{error_str}" found in stdout of {self.simulator} run'  # noqa
+            assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
 
     @staticmethod
     def shlex_join(args):
