@@ -2,8 +2,11 @@ import magma as m
 import mantle
 import fault
 from hwtypes import BitVector
+import pytest
+import shutil
 
 
+@pytest.mark.skipif(not shutil.which("irun"), reason="irun not available")
 def test_simple_alu_pd():
     type_map = {"CLK": m.In(m.Clock)}
     circ = m.DefineFromVerilogFile("tests/verilog/simple_alu_pd.sv",
