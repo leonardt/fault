@@ -37,7 +37,7 @@ class SystemVerilogTarget(VerilogTarget):
                  magma_opts={}, include_verilog_libraries=[], simulator=None,
                  timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
                  dump_vcd=True, no_warning=False, sim_env=None,
-                 ext_model_file=False, ext_libs=None, defines=None):
+                 ext_model_file=False, ext_libs=None, defines=None, flags=None):
         """
         circuit: a magma circuit
 
@@ -77,6 +77,9 @@ class SystemVerilogTarget(VerilogTarget):
         defines: Dictionary mapping Verilog DEFINE variable names to their
                  values.  If any value is None, that define simply defines
                  the variable without giving it a specific value.
+
+        flags: List of additional arguments that should be passed to the
+               simulator.
         """
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
@@ -96,6 +99,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
+        self.flags = flags if flags is not None else []
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -426,7 +430,7 @@ end;
 
         # compile the simulation
 
-        sim_res = self.subprocess_run(sim_cmd)
+        sim_res = self.subprocess_run(sim_cmd + self.flags)
         assert not sim_res.returncode, 'Error running system verilog simulator'
 
         # run the simulation binary (if applicable)
@@ -492,6 +496,15 @@ end;
         # return the path to the command file
         return cmd_file
 
+    def def_args(self, prefix):
+        retval = []
+        for key, val in self.defines.items():
+            def_arg = f'{prefix}{key}'
+            if val is not None:
+                def_arg += f'={val}'
+            retval += [def_arg]
+        return retval
+
     def ncsim_cmd(self, sources, cmd_file):
         cmd = []
 
@@ -515,11 +528,7 @@ end;
             cmd += ['-v', f'{lib}']
 
         # define variables
-        for key, val in self.defines.items():
-            def_ = f'+define+{key}'
-            if val is not None:
-                def_ += f'={val}'
-            cmd += [def_]
+        cmd += self.def_args(prefix='+define+')
 
         # misc flags
         cmd += ['-access', '+rwc']
@@ -547,11 +556,7 @@ end;
             cmd += ['-v', f'{lib}']
 
         # define variables
-        for key, val in self.defines.items():
-            def_ = f'+define+{key}'
-            if val is not None:
-                def_ += f'={val}'
-            cmd += [def_]
+        cmd += self.def_args(prefix='+define+')
 
         # misc flags
         cmd += ['-sverilog']
@@ -581,11 +586,7 @@ end;
             cmd += ['-v', f'{lib}']
 
         # define variables
-        for key, val in self.defines.items():
-            def_ = f'-D{key}'
-            if val is not None:
-                def_ += f'={val}'
-            cmd += [def_]
+        cmd += self.def_args(prefix='-D')
 
         # return arg list and binary file location
         return cmd, bin_file
