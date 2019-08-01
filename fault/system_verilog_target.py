@@ -154,6 +154,10 @@ class SystemVerilogTarget(VerilogTarget):
             right = self.compile_expression(value.right)
             op = value.op_str
             return f"{left} {op} {right}"
+        elif isinstance(value, expression.UnaryOp):
+            operand = self.compile_expression(value.operand)
+            op = value.op_str
+            return f"{op} {operand}"
         elif isinstance(value, PortWrapper):
             return f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.Peek):
