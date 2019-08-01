@@ -21,10 +21,7 @@ def pytest_generate_tests(metafunc):
 
 
 def debug_print(tester, dut):
-    to_display = {
-            'dut.n_done': dut.n_done,
-            'dut.count': dut.count
-    }
+    to_display = {'dut.n_done': dut.n_done, 'dut.count': dut.count}
 
     args = []
     fmt = []
@@ -39,7 +36,7 @@ def test_def_vlog(target, simulator, n_cyc=3, n_bits=8):
     logging.getLogger().setLevel(logging.DEBUG)
 
     dut_fname = pathlib.Path('tests/verilog/clkdelay.sv').resolve()
-    dut = m.DeclareCircuit('clkdelay', 
+    dut = m.DeclareCircuit('clkdelay',
                            'clk', m.In(m.Clock),
                            'rst', m.In(m.Bit),
                            'count', m.Out(m.Bits[n_bits]),
@@ -67,7 +64,7 @@ def test_def_vlog(target, simulator, n_cyc=3, n_bits=8):
     debug_print(tester, dut)
 
     # check final state
-    tester.expect(dut.count, n_cyc-1)
+    tester.expect(dut.count, n_cyc - 1)
     tester.expect(dut.n_done, 0)
 
     # make some modifications to the environment
