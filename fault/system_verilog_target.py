@@ -458,8 +458,8 @@ end;
         # now which is why the list of arguments must be combined
         # into a single string before passing to subprocess.run
 
-        cmd = self.shlex_join(args)
-        result = subprocess.run(cmd, shell=True, cwd=self.directory,
+        # cmd = self.shlex_join(args)
+        result = subprocess.run(args, cwd=self.directory,
                                 capture_output=True, env=self.sim_env)
 
         if display:
