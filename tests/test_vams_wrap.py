@@ -1,19 +1,19 @@
-from fault.verilogams import (VerilogAMSWrapper,
-                              AnalogVAMSPort,
-                              DigitalVAMSPort)
+import magma as m
+from fault.verilogams import VerilogAMSWrapper, AnalogIn, AnalogOut
 
 
 def test_vams_wrap():
-    ports = [AnalogVAMSPort('a', 'input'),
-             AnalogVAMSPort('b', 'output'),
-             DigitalVAMSPort('c', 'input'),
-             DigitalVAMSPort('d', 'output', width=2)]
-    wrapper = VerilogAMSWrapper(mod_name='myblk', ports=ports)
+    myblk = m.DeclareCircuit('myblk',
+                             'a', AnalogIn,
+                             'b', AnalogOut,
+                             'c', m.In(m.Bit),
+                             'd', m.Out(m.Bits[2]))
+    wrapper = VerilogAMSWrapper(myblk)
 
     assert wrapper.generate_code() == '''\
 `include "disciplines.vams"
 
-module myblk_wrapper (
+module myblk_wrap (
     input a,
     output b,
     input c,
@@ -22,7 +22,7 @@ module myblk_wrapper (
 
     electrical a;
     electrical b;
-    wire c;
+    wire [0:0] c;
     wire [1:0] d;
 
     myblk myblk_inst (
