@@ -1,5 +1,5 @@
 import magma as m
-from fault.verilogams import VerilogAMSWrapper, AnalogIn, AnalogOut
+from fault.verilogams import vams_wrap, AnalogIn, AnalogOut
 
 
 def test_vams_wrap():
@@ -8,17 +8,16 @@ def test_vams_wrap():
                              'b', AnalogOut,
                              'c', m.In(m.Bit),
                              'd', m.Out(m.Bits[2]))
-    wrapper = VerilogAMSWrapper(myblk)
+    wrap_circ = vams_wrap(myblk)
 
     # check magma representation of wrapped circuit
-    wrap_circ = wrapper.make_wrap_circ()
     assert wrap_circ.IO.ports['a'] is AnalogIn
     assert wrap_circ.IO.ports['b'] is AnalogOut
     assert wrap_circ.IO.ports['c'] is m.In(m.Bit)
     assert wrap_circ.IO.ports['d'] is m.Out(m.Bits[2])
 
     # check Verilog-AMS code itself
-    assert wrapper.generate_code() == '''\
+    assert wrap_circ.vams_code == '''\
 `include "disciplines.vams"
 
 module myblk_wrap (
