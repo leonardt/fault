@@ -10,6 +10,14 @@ def test_vams_wrap():
                              'd', m.Out(m.Bits[2]))
     wrapper = VerilogAMSWrapper(myblk)
 
+    # check magma representation of wrapped circuit
+    wrap_circ = wrapper.make_wrap_circ()
+    assert wrap_circ.IO.ports['a'] is AnalogIn
+    assert wrap_circ.IO.ports['b'] is AnalogOut
+    assert wrap_circ.IO.ports['c'] is m.In(m.Bit)
+    assert wrap_circ.IO.ports['d'] is m.Out(m.Bits[2])
+
+    # check Verilog-AMS code itself
     assert wrapper.generate_code() == '''\
 `include "disciplines.vams"
 
