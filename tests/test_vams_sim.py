@@ -1,0 +1,54 @@
+import os
+import random
+import logging
+import pathlib
+import magma as m
+import fault
+
+
+def test_vams_sim(n_trials=100, vsup=1.5):
+    logging.getLogger().setLevel(logging.DEBUG)
+
+    myinv_fname = pathlib.Path('tests/spice/myinv.sp').resolve()
+
+    myinv = m.DeclareCircuit('myinv',
+                             'in_', fault.AnalogIn,
+                             'out', fault.AnalogOut,
+                             'vdd', fault.AnalogIn,
+                             'vss', fault.AnalogIn)
+
+    dut = fault.VAMSWrap(myinv)
+
+    tester = fault.Tester(dut)
+
+    tester.poke(dut.vdd, 1)
+    tester.poke(dut.vss, 0)
+
+    for _ in range(n_trials):
+        # generate random bit
+        if random.random() > 0.5:
+            in_ = 1
+        else:
+            in_ = 0
+
+        # send stimulus and check output
+        tester.poke(dut.in_, in_)
+        tester.eval()
+        tester.expect(dut.out, not in_)
+
+    # make some modifications to the environment
+    sim_env = fault.util.remove_conda(os.environ)
+    sim_env['DISPLAY'] = sim_env.get('DISPLAY', '')
+
+    # write the Verilog-AMS wrapper
+    vamsf = os.path.realpath(os.path.expanduser('myinv_wrap.vams'))
+    open(vamsf, 'w').write(dut.vams_code)
+
+    # run the simulation
+    tester.compile_and_run(target='verilog-ams',
+                           model_paths=[myinv_fname],
+                           ext_libs=[vamsf],
+                           sim_env=sim_env,
+                           skip_compile=True,
+                           ext_model_file=True,
+                           vsup=vsup)
