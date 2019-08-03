@@ -1,5 +1,5 @@
 import magma as m
-from fault.verilogams import vams_wrap, AnalogIn, AnalogOut
+from fault.verilogams import VAMSWrap, AnalogIn, AnalogOut
 
 
 def test_vams_wrap():
@@ -8,7 +8,7 @@ def test_vams_wrap():
                              'b', AnalogOut,
                              'c', m.In(m.Bit),
                              'd', m.Out(m.Bits[2]))
-    wrap_circ = vams_wrap(myblk)
+    wrap_circ = VAMSWrap(myblk)
 
     # check magma representation of wrapped circuit
     assert wrap_circ.IO.ports['a'] is AnalogIn
