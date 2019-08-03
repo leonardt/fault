@@ -74,7 +74,7 @@ module {wrap_name} ({port_io}
 endmodule'''
 
 
-def vams_wrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
+def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     # Set defaults
     wrap_name = (wrap_name if wrap_name is not None
                  else f'{circ.name}_wrap')
