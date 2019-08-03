@@ -7,6 +7,7 @@ from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
+from fault.verilogams_target import VerilogAMSTarget
 from fault.actions import Poke, Expect, Step, Print, Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
@@ -71,7 +72,7 @@ class Tester:
         corresponding target object.
 
         Supported values of target: "verilator", "coreir", "python",
-            "system-verilog"
+            "system-verilog", "verilog-ams"
         """
         if target == "verilator":
             return VerilatorTarget(self._circuit, **kwargs)
@@ -83,6 +84,8 @@ class Tester:
                                         backend='python', **kwargs)
         elif target == "system-verilog":
             return SystemVerilogTarget(self._circuit, **kwargs)
+        elif target == "verilog-ams":
+            return VerilogAMSTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
