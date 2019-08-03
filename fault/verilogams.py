@@ -1,26 +1,12 @@
 import magma as m
-from magma.bit import BitKind, BitType
+from magma.bit import MakeBit
 from magma.port import INPUT, OUTPUT
 
-# Very preliminary implementation of analog types
-# This should probably be moved to magma at some point
+# Hacky definition of analog types.  A more fully-fledged
+# version should probably be moved to magma at some point
 
-
-class AnalogKind(BitKind):
-    pass
-
-
-class AnalogType(BitType):
-    pass
-
-
-def MakeAnalog(**kwargs):
-    return AnalogKind('Analog', (AnalogType,), kwargs)
-
-
-Analog = MakeAnalog()
-AnalogIn = MakeAnalog(direction=INPUT)
-AnalogOut = MakeAnalog(direction=OUTPUT)
+AnalogIn = MakeBit(direction=INPUT)
+AnalogOut = MakeBit(direction=OUTPUT)
 
 
 def vams_io_entry(name, type_):
@@ -43,7 +29,7 @@ def vams_io_entry(name, type_):
 def vams_type_entry(name, type_):
     # return the type declaration string for the given port
 
-    if isinstance(type_, AnalogKind):
+    if type_ is AnalogIn or type_ is AnalogOut:
         return f'electrical {name};'
     else:
         return f'wire [{type_.size()-1}:0] {name};'
