@@ -1,5 +1,6 @@
 import os
 import random
+import tempfile
 import logging
 import pathlib
 import magma as m
@@ -40,15 +41,18 @@ def test_vams_sim(n_trials=100, vsup=1.5):
     sim_env = fault.util.remove_conda(os.environ)
     sim_env['DISPLAY'] = sim_env.get('DISPLAY', '')
 
-    # write the Verilog-AMS wrapper
-    vamsf = os.path.realpath(os.path.expanduser('myinv_wrap.vams'))
-    open(vamsf, 'w').write(dut.vams_code)
+    with tempfile.TemporaryDirectory(dir='.') as tmp_dir:
+        # Write the Verilog-AMS model
+        vamsf = os.path.join(tmp_dir, 'myinv_wrap.vams')
+        vamsf = os.path.realpath(os.path.expanduser(vamsf))
+        open(vamsf, 'w').write(dut.vams_code)
 
-    # run the simulation
-    tester.compile_and_run(target='verilog-ams',
-                           model_paths=[myinv_fname],
-                           ext_libs=[vamsf],
-                           sim_env=sim_env,
-                           skip_compile=True,
-                           ext_model_file=True,
-                           vsup=vsup)
+        # Run the simulation
+        tester.compile_and_run(target='verilog-ams',
+                               directory=tmp_dir,
+                               model_paths=[myinv_fname],
+                               ext_libs=[vamsf],
+                               sim_env=sim_env,
+                               skip_compile=True,
+                               ext_model_file=True,
+                               vsup=vsup)
