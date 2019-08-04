@@ -17,7 +17,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
-    logging.getLogger().setLevel(logging.DEBUG)
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     myinv_fname = pathlib.Path('tests/spice/myinv.sp').resolve()
 
