@@ -1,4 +1,5 @@
 import os
+import shutil
 import random
 import tempfile
 import logging
@@ -7,7 +8,15 @@ import magma as m
 import fault
 
 
-def test_vams_sim(n_trials=100, vsup=1.5):
+def pytest_generate_tests(metafunc):
+    if 'target' in metafunc.fixturenames:
+        targets = []
+        if shutil.which('ncsim'):
+            targets.append(('verilog-ams', 'ncsim'))
+        metafunc.parametrize('target,simulator', targets)
+
+
+def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
     logging.getLogger().setLevel(logging.DEBUG)
 
     myinv_fname = pathlib.Path('tests/spice/myinv.sp').resolve()
@@ -48,7 +57,8 @@ def test_vams_sim(n_trials=100, vsup=1.5):
         open(vamsf, 'w').write(dut.vams_code)
 
         # Run the simulation
-        tester.compile_and_run(target='verilog-ams',
+        tester.compile_and_run(target=target,
+                               simulator=simulator,
                                directory=tmp_dir,
                                model_paths=[myinv_fname],
                                ext_libs=[vamsf],
