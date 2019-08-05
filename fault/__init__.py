@@ -3,7 +3,8 @@ from .power_tester import PowerTester
 from .value import Value, AnyValue, UnknownValue
 import fault.random
 from .symbolic_tester import SymbolicTester
-from .verilogams import VAMSWrap, AnalogIn, AnalogOut
+from .extra_types import ElectIn, ElectOut, RealIn, RealOut
+from .verilogams import VAMSWrap
 
 
 class WrappedVerilogInternalPort:

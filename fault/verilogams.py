@@ -1,12 +1,5 @@
 import magma as m
-from magma.bit import MakeBit
-from magma.port import INPUT, OUTPUT
-
-# Hacky definition of analog types.  A more fully-fledged
-# version should probably be moved to magma at some point
-
-AnalogIn = MakeBit(direction=INPUT)
-AnalogOut = MakeBit(direction=OUTPUT)
+from fault.extra_types import ElectIn, ElectOut, RealIn, RealOut
 
 
 def vams_io_entry(name, type_):
@@ -29,8 +22,10 @@ def vams_io_entry(name, type_):
 def vams_type_entry(name, type_):
     # return the type declaration string for the given port
 
-    if type_ is AnalogIn or type_ is AnalogOut:
+    if type_ is ElectIn or type_ is ElectOut:
         return f'electrical {name};'
+    elif type_ is RealIn or type_ is RealOut:
+        return f'real {name};'
     else:
         return f'wire [{type_.size()-1}:0] {name};'
 
