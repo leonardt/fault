@@ -22,10 +22,10 @@ def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
     myinv_fname = pathlib.Path('tests/spice/myinv.sp').resolve()
 
     myinv = m.DeclareCircuit('myinv',
-                             'in_', fault.AnalogIn,
-                             'out', fault.AnalogOut,
-                             'vdd', fault.AnalogIn,
-                             'vss', fault.AnalogIn)
+                             'in_', m.In(m.Bit),
+                             'out', m.Out(m.Bit),
+                             'vdd', m.In(m.Bit),
+                             'vss', m.In(m.Bit))
 
     dut = fault.VAMSWrap(myinv)
 
