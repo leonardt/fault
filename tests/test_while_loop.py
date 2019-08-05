@@ -78,7 +78,6 @@ def test_def_vlog(target, simulator, n_cyc=3, n_bits=8):
             directory=tmp_dir,
             ext_libs=[dut_fname],
             sim_env=sim_env,
-            skip_compile=True,
-            ext_model_file=True,
-            defines={'N_CYC': n_cyc, 'N_BITS': n_bits}
+            defines={'N_CYC': n_cyc, 'N_BITS': n_bits},
+            ext_model_file=True
         )
