@@ -19,9 +19,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('target,simulator', targets)
 
 
-def test_ext_vlog(target, simulator, debug=False):
-    if debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+def test_ext_vlog(target, simulator):
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     mytb_fname = pathlib.Path('tests/verilog/mytb.sv').resolve()
     tester = fault.Tester(m.DeclareCircuit('mytb'))
@@ -40,8 +39,3 @@ def test_ext_vlog(target, simulator, debug=False):
             sim_env=sim_env,
             ext_test_bench=True
         )
-
-
-if __name__ == '__main__':
-    for simulator in ['vcs', 'ncsim', 'iverilog']:
-        test_ext_vlog('system-verilog', simulator, debug=True)

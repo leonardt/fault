@@ -20,9 +20,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('target,simulator', targets)
 
 
-def test_def_vlog(target, simulator, n_bits=8, b_val=42, debug=False):
-    if debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+def test_def_vlog(target, simulator, n_bits=8, b_val=42):
+    # logging.getLogger().setLevel(logging.DEBUG)
 
     defadd_fname = pathlib.Path('tests/verilog/defadd.sv').resolve()
     defadd = m.DeclareCircuit('defadd', 'a_val', m.In(m.Bits[n_bits]),
@@ -52,8 +51,3 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=42, debug=False):
             defines={'N_BITS': n_bits, 'B_VAL': b_val},
             ext_model_file=True
         )
-
-
-if __name__ == '__main__':
-    for simulator in ['vcs', 'ncsim', 'iverilog']:
-        test_def_vlog('system-verilog', simulator, debug=True)
