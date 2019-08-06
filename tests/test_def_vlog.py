@@ -3,7 +3,6 @@ import fault
 import magma as m
 import os
 import shutil
-import logging
 import mantle
 from pathlib import Path
 

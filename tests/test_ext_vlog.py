@@ -4,7 +4,6 @@ import fault
 import magma as m
 import os
 import shutil
-import logging
 import mantle
 
 
@@ -21,8 +20,6 @@ def pytest_generate_tests(metafunc):
 
 
 def test_ext_vlog(target, simulator):
-    # logging.getLogger().setLevel(logging.DEBUG)
-
     myinv_fname = pathlib.Path('tests/verilog/myinv.v').resolve()
     myinv = m.DeclareCircuit('myinv', 'in_', m.In(m.Bit), 'out', m.Out(m.Bit))
 
