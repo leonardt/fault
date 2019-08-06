@@ -201,6 +201,8 @@ class SystemVerilogTarget(VerilogTarget):
             value = f"{port_len}'d{value}"
         elif value is fault.UnknownValue:
             value = "'X"
+        elif value is fault.HiZ:
+            value = "'Z"
         elif isinstance(value, actions.Peek):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
@@ -319,8 +321,15 @@ end
             debug_name = action.port.name
         value = self.process_value(action.port, action.value)
 
+        # Determine what type of comparison should be performed.  strict=True
+        # is recommended in most cases to avoid X's from slipping through
+        if action.strict:
+            neq_str = '!=='
+        else:
+            neq_str = '!='
+
         return f"""
-if ({name} != {value}) begin
+if ({name} {neq_str} {value}) begin
     $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
 end;
 """.splitlines()  # noqa

@@ -1,7 +1,7 @@
 import fault
 import magma
 from hwtypes import BitVector, Bit
-from fault.value import AnyValue, UnknownValue
+from fault.value import AnyValue, UnknownValue, HiZ
 from fault.array import Array
 from fault.select_path import SelectPath
 from hwtypes.adt import Enum
@@ -28,7 +28,7 @@ def make_bit(value):
         return value
     if value == 0 or value == 1:
         return BitVector[1](value)
-    if value is AnyValue or value is UnknownValue:
+    if value is AnyValue or value is UnknownValue or value is HiZ:
         return value
     raise NotImplementedError(value)
 
@@ -54,7 +54,7 @@ def make_bit_vector(N, value):
         return BitVector[N](value)
     if isinstance(value, int):
         return BitVector[N](value)
-    if value is AnyValue or value is UnknownValue:
+    if value is AnyValue or value is UnknownValue or value is HiZ:
         return value
     if isinstance(value, Enum):
         return BitVector[N](value.value)
