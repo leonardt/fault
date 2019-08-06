@@ -6,7 +6,8 @@ from .system_verilog_target import SystemVerilogTarget
 class VerilogAMSTarget(SystemVerilogTarget):
     def __init__(self, circuit, simulator='ncsim', directory='build/',
                  model_paths=None, stop_time=1, vsup=1.0, rout=1, flags=None,
-                 include_verilog_libraries=None, **kwargs):
+                 include_verilog_libraries=None, use_spice=None, 
+                 use_input_wires=True, **kwargs):
         """
         simulator: Name of the simulator to be used for simulation.
         model_paths: paths to SPICE/Spectre files used in the simulation
@@ -20,12 +21,20 @@ class VerilogAMSTarget(SystemVerilogTarget):
         SystemVerilogTarget.
         include_verilog_libraries: Additional source files to be compiled
         when building this simulation.
+        use_spice: List of names of modules that should use a spice model
+        rather than a verilog model.  Not always required, but sometimes
+        needed when instantiating a spice module directly in SystemVerilog
+        code.
+        use_input_wires: If True, drive DUT inputs through wires that are 
+        in turn assigned to a reg.  This helps with proper discipline
+        resolution for Verilog-AMS simulation.
         """
 
         # save settings
         self.stop_time = stop_time
         self.vsup = vsup
         self.rout = rout
+        self.use_spice = use_spice if use_spice is not None else []
 
         # save file names that will be written
         self.amscf = 'amscf.scs'
@@ -48,7 +57,8 @@ class VerilogAMSTarget(SystemVerilogTarget):
         # call the superconstructor
         super().__init__(circuit=circuit, simulator=simulator, flags=flags,
                          include_verilog_libraries=include_verilog_libraries,
-                         directory=directory, **kwargs)
+                         directory=directory, use_input_wires=True,
+                         **kwargs)
 
     def run(self, *args, **kwargs):
         # write the AMS control file
@@ -57,11 +67,19 @@ class VerilogAMSTarget(SystemVerilogTarget):
         # then call the super constructor
         super().run(*args, **kwargs)
 
-    def gen_amscf(self):
+    def gen_amscf(self, tab='    ', nl='\n'):
+        # specify which modules instantiated in SystemVerilog code
+        # should use SPICE models
+        config_lines = ''
+        for model in self.use_spice:
+            config_lines += f'{tab}config cell={model} use=spice{nl}'
+
+        # return text content of the AMS control file
         return f'''
 tranSweep tran stop={self.stop_time}s
 amsd {{
     ie vsup={self.vsup} rout={self.rout}
+{config_lines}
 }}'''
 
     def write_amscf(self):

@@ -38,7 +38,8 @@ class SystemVerilogTarget(VerilogTarget):
                  num_cycles=10000, dump_vcd=True, no_warning=False,
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
-                 ext_test_bench=False, top_module=None, ext_srcs=None):
+                 ext_test_bench=False, top_module=None, ext_srcs=None,
+                 use_input_wires=False):
         """
         circuit: a magma circuit
 
@@ -100,6 +101,9 @@ class SystemVerilogTarget(VerilogTarget):
         ext_srcs: Shorter alias for "include_verilog_libraries" argument.
                   It is illegal to specify both "include_verilog_libraries"
                   and "ext_srcs".
+
+        use_input_wires: If True, drive DUT inputs through wires that are in 
+                         turn assigned to a reg.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -152,6 +156,10 @@ class SystemVerilogTarget(VerilogTarget):
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
         self.top_module = top_module
+        self.use_input_wires = use_input_wires
+
+    def add_decl(self, *decls):
+        self.declarations.extend(decls)
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -390,6 +398,7 @@ end;
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
+            connect_to = f"{name}"
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
@@ -402,11 +411,33 @@ end;
             elif type_.isoutput():
                 t = "wire"
             elif type_.isinput():
-                t = "reg"
+                if self.use_input_wires:
+                    # declare a reg and assign it to a wire
+                    # that wire will then be connected to the
+                    # DUT pin
+                    connect_to = f'{name}_wire'
+                    decls = [f'reg {width_str}{name};',
+                             f'wire {width_str}{connect_to};',
+                             f'assign {connect_to}={name};']
+                    decls = [self.make_line(decl, tabs=1) for decl in decls]
+                    self.add_decl(*decls)
+
+                    # set the signal type to None to avoid re-declaring
+                    # connect_to
+                    t = None   
+                else:
+                    t = "reg"
             else:
                 raise NotImplementedError()
-            self.declarations.append(f"    {t} {width_str}{name};\n")
-            return [f".{name}({name})"]
+
+            # declare the signal that will be connected to the pin, if needed
+            if t is not None:
+                decl = self.make_line(f'{t} {width_str}{connect_to};', tabs=1)
+                self.add_decl(decl)
+
+            # return the wiring statement describing how the testbench signal
+            # is connected to the DUT
+            return [f".{name}({connect_to})"]
 
     def generate_code(self, actions, power_args):
         initial_body = ""
@@ -499,6 +530,10 @@ end;
 
         # return the path to the testbench location
         return tb_file
+
+    @staticmethod
+    def make_line(text, tabs=0, tab='    ', nl='\n'):
+        return f'{tabs*tab}{text}{nl}'
 
     @staticmethod
     def display_subprocess_output(result):
