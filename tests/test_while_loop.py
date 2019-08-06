@@ -4,7 +4,6 @@ import fault
 import magma as m
 import os
 import shutil
-import logging
 import mantle
 
 
@@ -32,9 +31,7 @@ def debug_print(tester, dut):
     tester.print(', '.join(fmt) + '\n', *args)
 
 
-def test_def_vlog(target, simulator, n_cyc=3, n_bits=8):
-    logging.getLogger().setLevel(logging.DEBUG)
-
+def test_while_loop(target, simulator, n_cyc=3, n_bits=8):
     dut_fname = pathlib.Path('tests/verilog/clkdelay.sv').resolve()
     dut = m.DeclareCircuit('clkdelay',
                            'clk', m.In(m.Clock),
@@ -78,7 +75,6 @@ def test_def_vlog(target, simulator, n_cyc=3, n_bits=8):
             directory=tmp_dir,
             ext_libs=[dut_fname],
             sim_env=sim_env,
-            skip_compile=True,
-            ext_model_file=True,
-            defines={'N_CYC': n_cyc, 'N_BITS': n_bits}
+            defines={'N_CYC': n_cyc, 'N_BITS': n_bits},
+            ext_model_file=True
         )

@@ -4,7 +4,6 @@ import fault
 import magma as m
 import os
 import shutil
-import logging
 import mantle
 
 
@@ -19,8 +18,6 @@ def pytest_generate_tests(metafunc):
 
 
 def test_env_mod(target, simulator):
-    # logging.getLogger().setLevel(logging.DEBUG)
-
     myinv = m.DefineCircuit('myinv', 'a', m.In(m.Bit), 'y', m.Out(m.Bit))
     m.wire(~myinv.a, myinv.y)
     m.EndDefine()

@@ -32,11 +32,13 @@ endmodule
 
 class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
-                 skip_compile=False, magma_output="coreir-verilog",
-                 magma_opts={}, include_verilog_libraries=[], simulator=None,
-                 timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
-                 dump_vcd=True, no_warning=False, sim_env=None,
-                 ext_model_file=False, ext_libs=None, defines=None, flags=None):
+                 skip_compile=None, magma_output="coreir-verilog",
+                 magma_opts=None, include_verilog_libraries=None,
+                 simulator=None, timescale="1ns/1ns", clock_step_delay=5,
+                 num_cycles=10000, dump_vcd=True, no_warning=False,
+                 sim_env=None, ext_model_file=None, ext_libs=None,
+                 defines=None, flags=None, inc_dirs=None,
+                 ext_test_bench=False, top_module=None, ext_srcs=None):
         """
         circuit: a magma circuit
 
@@ -79,14 +81,62 @@ class SystemVerilogTarget(VerilogTarget):
 
         flags: List of additional arguments that should be passed to the
                simulator.
+
+        inc_dirs: List of "include directories" to search for the `include
+                  statement.
+
+        ext_test_bench: If True, do not compile testbench actions into a
+                        SystemVerilog testbench and instead simply run a
+                        simulation of an existing (presumably manually
+                        created) testbench.  Can be used to get started
+                        integrating legacy testbenches into the fault
+                        framework.
+
+        top_module: Name of the top module in the design.  If the value is
+                    None and ext_test_bench is False, then top_module will
+                    automatically be filled with the name of the module
+                    containing the generated testbench code.
+
+        ext_srcs: Shorter alias for "include_verilog_libraries" argument.
+                  It is illegal to specify both "include_verilog_libraries"
+                  and "ext_srcs".
         """
+        # set default for list of external sources
+        if include_verilog_libraries is None:
+            if ext_srcs is None:
+                include_verilog_libraries = []
+            else:
+                include_verilog_libraries = ext_srcs
+        else:
+            if ext_srcs is None:
+                pass
+            else:
+                raise ValueError('Cannot specify both "include_verilog_libraries" and "ext_srcs".')  # noqa
+
+        # set default for there being an external model file
+        if ext_model_file is None:
+            ext_model_file = ext_test_bench
+
+        # set default for whether magma compilation should happen
+        if skip_compile is None:
+            skip_compile = ext_model_file
+
+        # set default for magma compilation options
+        magma_opts = magma_opts if magma_opts is not None else {}
+
+        # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output, magma_opts)
+                         include_verilog_libraries, magma_output,
+                         magma_opts)
+
+        # sanity check
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
         if simulator not in {"vcs", "ncsim", "iverilog"}:
             raise ValueError(f"Unsupported simulator {simulator}")
+
+        # save settings
         self.simulator = simulator
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
@@ -99,6 +149,9 @@ class SystemVerilogTarget(VerilogTarget):
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
         self.flags = flags if flags is not None else []
+        self.inc_dirs = inc_dirs if inc_dirs is not None else []
+        self.ext_test_bench = ext_test_bench
+        self.top_module = top_module
 
     def make_name(self, port):
         if isinstance(port, SelectPath):
@@ -376,12 +429,55 @@ end;
 
         return src
 
-    def run(self, actions, power_args={}):
-        test_bench_file = Path(f"{self.circuit_name}_tb.sv")
+    def run(self, actions, power_args=None):
+        # set defaults
+        power_args = power_args if power_args is not None else {}
 
-        # Write the verilator driver to file.
+        # assemble list of sources files
+        vlog_srcs = []
+        if not self.ext_test_bench:
+            tb_file = self.write_test_bench(actions=actions,
+                                            power_args=power_args)
+            vlog_srcs += [tb_file]
+        if not self.ext_model_file:
+            vlog_srcs += [self.verilog_file]
+        vlog_srcs += self.include_verilog_libraries
+
+        # generate simulator commands
+        if self.simulator == 'ncsim':
+            sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
+                                     cmd_file=self.write_ncsim_tcl())
+            bin_cmd = None
+            err_str = None
+        elif self.simulator == 'vcs':
+            sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            bin_cmd = [bin_file]
+            err_str = 'Error'
+        elif self.simulator == 'iverilog':
+            sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
+            bin_cmd = ['vvp', '-N', bin_file]
+            err_str = 'ERROR'
+        else:
+            raise NotImplementedError(self.simulator)
+
+        # compile the simulation
+        sim_res = self.subprocess_run(sim_cmd + self.flags)
+        assert not sim_res.returncode, 'Error running system verilog simulator'
+
+        # run the simulation binary (if applicable)
+        if bin_cmd is not None:
+            bin_res = self.subprocess_run(bin_cmd)
+            assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
+            assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
+
+    def write_test_bench(self, actions, power_args):
+        # determine the path of the testbench file
+        tb_file = self.directory / Path(f'{self.circuit_name}_tb.sv')
+        tb_file = tb_file.absolute()
+
+        # generate source code of test bench
         src = self.generate_code(actions, power_args)
-        tb_file = self.directory / test_bench_file
+
         # If there's an old test bench file, ncsim might not recompile based on
         # the timestamp (1s granularity), see
         # https://github.com/StanfordAHA/lassen/issues/111
@@ -401,43 +497,8 @@ end;
                 new_times = (old_times[0] + 1, old_times[1] + 1)
                 os.utime(tb_file, times=new_times)
 
-        # assemble list of sources files
-
-        vlog_srcs = []
-        vlog_srcs += [test_bench_file]
-        if not self.ext_model_file:
-            vlog_srcs += [self.verilog_file]
-        vlog_srcs += self.include_verilog_libraries
-
-        # generate simulator commands
-
-        if self.simulator == 'ncsim':
-            sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
-                                     cmd_file=self.write_ncsim_tcl())
-            bin_cmd = None
-            err_str = None
-        elif self.simulator == 'vcs':
-            sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
-            bin_cmd = [bin_file]
-            err_str = 'Error'
-        elif self.simulator == 'iverilog':
-            sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
-            bin_cmd = ['vvp', '-N', bin_file]
-            err_str = 'ERROR'
-        else:
-            raise NotImplementedError(self.simulator)
-
-        # compile the simulation
-
-        sim_res = self.subprocess_run(sim_cmd + self.flags)
-        assert not sim_res.returncode, 'Error running system verilog simulator'
-
-        # run the simulation binary (if applicable)
-
-        if bin_cmd is not None:
-            bin_res = self.subprocess_run(bin_cmd)
-            assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
-            assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
+        # return the path to the testbench location
+        return tb_file
 
     @staticmethod
     def display_subprocess_output(result):
@@ -499,8 +560,15 @@ end;
         # binary name
         cmd += ['irun']
 
-        # top module
-        cmd += ['-top', f'{self.circuit_name}_tb']
+        # determine the name of the top module
+        if self.top_module is None and not self.ext_test_bench:
+            top = f'{self.circuit_name}_tb'
+        else:
+            top = self.top_module
+
+        # send name of top module to the simulator
+        if top is not None:
+            cmd += ['-top', f'{top}']
 
         # timescale
         cmd += ['-timescale', f'{self.timescale}']
@@ -514,6 +582,10 @@ end;
         # library files
         for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
+
+        # include directory search path
+        for dir_ in self.inc_dirs:
+            cmd += ['-incdir', f'{dir_}']
 
         # define variables
         cmd += self.def_args(prefix='+define+')
@@ -543,6 +615,10 @@ end;
         for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
 
+        # include directory search path
+        for dir_ in self.inc_dirs:
+            cmd += [f'+incdir+{dir_}']
+
         # define variables
         cmd += self.def_args(prefix='+define+')
 
@@ -552,6 +628,8 @@ end;
         cmd += ['+v2k']
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
+        if self.dump_vcd:
+            cmd += ['+vcs+vcdpluson', '-debug_pp']
 
         # return arg list and binary file location
         return cmd, './simv'
@@ -572,6 +650,10 @@ end;
         # library files
         for lib in self.ext_libs:
             cmd += ['-v', f'{lib}']
+
+        # include directory search path
+        for dir_ in self.inc_dirs:
+            cmd += [f'-I{dir_}']
 
         # define variables
         cmd += self.def_args(prefix='-D')
