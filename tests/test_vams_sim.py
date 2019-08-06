@@ -2,7 +2,6 @@ import os
 import shutil
 import random
 import tempfile
-import logging
 import pathlib
 import magma as m
 import fault
@@ -17,17 +16,13 @@ def pytest_generate_tests(metafunc):
 
 
 def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
-    # logging.getLogger().setLevel(logging.DEBUG)
-
     myinv_fname = pathlib.Path('tests/spice/myinv.sp').resolve()
 
-    myinv = m.DeclareCircuit('myinv',
-                             'in_', m.In(m.Bit),
-                             'out', m.Out(m.Bit),
-                             'vdd', m.In(m.Bit),
-                             'vss', m.In(m.Bit))
-
-    dut = fault.VAMSWrap(myinv)
+    dut = m.DeclareCircuit('myinv',
+                           'in_', m.In(m.Bit),
+                           'out', m.Out(m.Bit),
+                           'vdd', m.In(m.Bit),
+                           'vss', m.In(m.Bit))
 
     tester = fault.Tester(dut)
 
@@ -51,18 +46,12 @@ def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
     sim_env['DISPLAY'] = sim_env.get('DISPLAY', '')
 
     with tempfile.TemporaryDirectory(dir='.') as tmp_dir:
-        # Write the Verilog-AMS model
-        vamsf = os.path.join(tmp_dir, 'myinv_wrap.vams')
-        vamsf = os.path.realpath(os.path.expanduser(vamsf))
-        open(vamsf, 'w').write(dut.vams_code)
-
         # Run the simulation
         tester.compile_and_run(target=target,
                                simulator=simulator,
                                directory=tmp_dir,
                                model_paths=[myinv_fname],
-                               ext_libs=[vamsf],
+                               use_spice=['myinv'],
+                               vsup=vsup,
                                sim_env=sim_env,
-                               skip_compile=True,
-                               ext_model_file=True,
-                               vsup=vsup)
+                               ext_model_file=True)
