@@ -77,8 +77,9 @@ def is_output(port):
 
 
 class Expect(PortAction):
-    def __init__(self, port, value):
+    def __init__(self, port, value, strict=False):
         super().__init__(port, value)
+        self.strict = strict
 
 
 class Assume(PortAction):

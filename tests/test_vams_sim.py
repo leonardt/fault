@@ -31,15 +31,12 @@ def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
 
     for _ in range(n_trials):
         # generate random bit
-        if random.random() > 0.5:
-            in_ = 1
-        else:
-            in_ = 0
+        in_ = random.random() > 0.5
 
         # send stimulus and check output
         tester.poke(dut.in_, in_)
         tester.eval()
-        tester.expect(dut.out, not in_)
+        tester.expect(dut.out, not in_, strict=True)
 
     # make some modifications to the environment
     sim_env = fault.util.remove_conda(os.environ)
