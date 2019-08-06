@@ -61,7 +61,7 @@ def test_tester_basic(target, simulator):
     check(tester.actions[4], Print("%08x", circ.O))
     tester.eval()
     check(tester.actions[5], Eval())
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -79,7 +79,7 @@ def test_tester_basic_fail(target, simulator):
     tester.poke(circ.I, 1)
     tester.eval()
     tester.expect(circ.O, 0)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -93,7 +93,7 @@ def test_tester_clock(target, simulator):
     tester.expect(circ.O0, tester.peek(circ.O1))
     check(tester.actions[0], Poke(circ.I, 0))
     check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -111,7 +111,7 @@ def test_tester_peek(target, simulator):
     check(tester.actions[2], Poke(circ.CLK, 0))
     tester.step()
     check(tester.actions[3], Step(circ.CLK, 1))
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -127,7 +127,7 @@ def test_tester_peek_input(target, simulator):
     check(tester.actions[0], Poke(circ.I, 1))
     check(tester.actions[1], Eval())
     check(tester.actions[2], Expect(circ.O, Peek(circ.I)))
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -148,7 +148,7 @@ def test_tester_nested_arrays_by_element(target, simulator):
         expected.append(Expect(circ.O[i], val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -168,7 +168,7 @@ def test_tester_nested_arrays_bulk(target, simulator):
     expected.append(Expect(circ.O, fault.array.Array(val, 3)))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -207,7 +207,7 @@ def test_retarget_tester(target, simulator):
     ]
     for i, exp in enumerate(copy_expected):
         check(copy.actions[i], exp)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             copy.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -315,7 +315,7 @@ def test_tester_verilog_wrapped(target, simulator):
             fault.WrappedVerilogInternalPort(
                 "SimpleALU_inst0.config_reg.Q", m.Bits[2]),
             signal)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -336,7 +336,7 @@ def test_tester_loop(target, simulator):
                                  Eval(),
                                  Expect(circ.O, loop.index)]):
         check(actual, expected)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -358,7 +358,7 @@ def test_tester_file_io(target, simulator):
     loop.file_write(file_out, circ.O)
     tester.file_close(file_in)
     tester.file_close(file_out)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if os.path.exists(_dir + "/" + out_file):
             os.remove(_dir + "/" + out_file)
         with open(_dir + "/test_file_in.raw", "wb") as file:
@@ -392,7 +392,7 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
     loop.file_write(file_out, circ.O)
     tester.file_close(file_in)
     tester.file_close(file_out)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if os.path.exists(_dir + "/" + out_file):
             os.remove(_dir + "/" + out_file)
         with open(_dir + "/test_file_in.raw", "wb") as file:
@@ -430,7 +430,7 @@ def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
     loop.file_write(file_out, circ.O)
     tester.file_close(file_in)
     tester.file_close(file_out)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if os.path.exists(_dir + "/" + out_file):
             os.remove(_dir + "/" + out_file)
         with open(_dir + "/test_file_in.raw", "wb") as file:
@@ -462,7 +462,7 @@ def test_tester_while(target, simulator):
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -479,7 +479,7 @@ def test_tester_while2(target, simulator):
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -496,7 +496,7 @@ def test_tester_while3(target, simulator):
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -516,7 +516,7 @@ def test_tester_if(target, simulator):
     if_tester._else().poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -541,7 +541,7 @@ def test_tester_file_scanf(target, simulator):
     loop.eval()
     loop.expect(circ.O, config_data)
     tester.file_close(file_in)
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         with open(_dir + "/test_file_in.txt", "w") as file:
             file.write(hex(int(BitVector.random(32)))[2:])
         if target == "verilator":
@@ -564,7 +564,7 @@ def test_sint_circuit(target, simulator):
         tester.circuit.I = int(inputs[i])
         tester.eval()
         tester.circuit.O.expect(int(inputs[i]))
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator

@@ -26,7 +26,7 @@ def pytest_generate_tests(metafunc):
 
 
 def run(circ, actions, Target, simulator, flags=[]):
-    with tempfile.TemporaryDirectory() as tempdir:
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
         if Target == fault.verilator_target.VerilatorTarget:
             target = Target(
                 circ, directory=f"{tempdir}/",

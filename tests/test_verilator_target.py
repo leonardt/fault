@@ -19,7 +19,7 @@ def test_verilator_peeks():
         Expect(circ.O, Peek(circ.O))
     ]
     flags = ["-Wno-lint"]
-    with tempfile.TemporaryDirectory() as tempdir:
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
         m.compile(f"{tempdir}/{circ.name}", circ, output="coreir-verilog")
         target = fault.verilator_target.VerilatorTarget(
             circ, directory=f"{tempdir}/",
@@ -31,7 +31,7 @@ def test_verilator_skip_build():
     circ = common.TestBasicCircuit
     flags = ["-Wno-lint"]
     tester = Tester(circ)
-    with tempfile.TemporaryDirectory() as tempdir:
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
         tester.compile_and_run(target="verilator",
                                directory=tempdir,
                                flags=flags)
@@ -63,7 +63,7 @@ def test_verilator_trace():
     ]
     flags = ["-Wno-lint", "--trace"]
 
-    with tempfile.TemporaryDirectory() as tempdir:
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
         assert not os.path.isfile(f"{tempdir}/logs/BasicClkCircuit.vcd"), \
             "Expected logs to be empty"
         m.compile(f"{tempdir}/{circ.name}", circ,
