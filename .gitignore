@@ -4,3 +4,4 @@ build
 dist
 fault.egg-info
 pytest.ini
+vnc_logs
