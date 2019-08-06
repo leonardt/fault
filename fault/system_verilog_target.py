@@ -632,7 +632,7 @@ end;
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
         if self.dump_vcd:
-            cmd += ['-debug_access+all']
+            cmd += ['+vcs+vcdpluson', '-debug_pp']
 
         # return arg list and binary file location
         return cmd, './simv'
