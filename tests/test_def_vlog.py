@@ -21,7 +21,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_def_vlog(target, simulator, n_bits=8, b_val=42):
-    # logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     defadd_fname = pathlib.Path('tests/verilog/defadd.sv').resolve()
     defadd = m.DeclareCircuit('defadd', 'a_val', m.In(m.Bits[n_bits]),

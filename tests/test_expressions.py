@@ -11,10 +11,11 @@ import fault
 import magma as m
 import mantle
 import hwtypes
+import subprocess
 
 
 def run_test(tester, target, simulator):
-    with tempfile.TemporaryDirectory() as _dir:
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {
             "target": target,
             "directory": _dir,

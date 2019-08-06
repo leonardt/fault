@@ -456,10 +456,9 @@ end;
 
     def subprocess_run(self, args, display=True):
         # Runs a subprocess in the user-specified directory with
-        # the user-specified environment.  shell=True is used for
-        # now which is why the list of arguments must be combined
-        # into a single string before passing to subprocess.run
+        # the user-specified environment.
 
+        logging.info(f"Running command: {' '.join(args)}")
         result = subprocess.run(args, cwd=self.directory,
                                 capture_output=True, env=self.sim_env)
 

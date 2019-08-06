@@ -77,9 +77,9 @@ def test_simple_alu_assume_guarantee(target):
     if target == "verilator":
         # NOTE: Currently the cosa backend does not support the expect action
         tester.circuit.config_reg.Q.expect(0)
-    tester.circuit.a.assume(lambda a: a < BitVector(32768, 16))
-    tester.circuit.b.assume(lambda b: b < BitVector(32768, 16))
-    # tester.circuit.b.assume(lambda b: b >= BitVector(32768, 16))
+    tester.circuit.a.assume(lambda a: a < BitVector[16](32768))
+    tester.circuit.b.assume(lambda b: b < BitVector[16](32768))
+    # tester.circuit.b.assume(lambda b: b >= BitVector[16](32768))
 
     tester.circuit.c.guarantee(lambda a, b, c: (c >= a) and (c >= b))
     kwargs = {}
