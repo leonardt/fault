@@ -40,7 +40,7 @@ def test_real_val(target, simulator):
         tester.compile_and_run(
             target=target,
             simulator=simulator,
-            #directory=tmp_dir,
+            directory=tmp_dir,
             ext_libs=[realadd_fname],
             defines={f'__{simulator.upper()}__': None},
             sim_env=sim_env,
