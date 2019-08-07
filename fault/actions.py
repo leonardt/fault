@@ -67,6 +67,15 @@ class Print(Action):
         return cls(self.format_str, *new_ports)
 
 
+def is_inout(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return port.type_.isinout()
+    else:
+        return port.isinout()
+
+
 def is_output(port):
     if isinstance(port, SelectPath):
         port = port[-1]
