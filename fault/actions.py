@@ -86,9 +86,22 @@ def is_output(port):
 
 
 class Expect(PortAction):
-    def __init__(self, port, value, strict=False):
+    def __init__(self, port, value, strict=False, abs_tol=0, rel_tol=0):
+        # call super constructor
         super().__init__(port, value)
+
+        # sanity check
+        assert abs_tol >= 0, 'abs_tol must be non-negative'
+        assert rel_tol >= 0, 'rel_tol must be non-negative'
+
+        # save settings
         self.strict = strict
+        self.abs_tol = abs_tol
+        self.rel_tol = rel_tol
+
+    @property
+    def is_exact(self):
+        return self.abs_tol==0 and self.rel_tol==0
 
 
 class Assume(PortAction):

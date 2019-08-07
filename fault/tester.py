@@ -116,14 +116,14 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def expect(self, port, value, strict=False):
+    def expect(self, port, value, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
         if not isinstance(value, (actions.Peek, PortWrapper,
                                   LoopIndex, expression.Expression)):
             value = make_value(port, value)
-        self.actions.append(actions.Expect(port, value, strict=strict))
+        self.actions.append(actions.Expect(port, value, **kwargs))
 
     def eval(self):
         """

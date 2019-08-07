@@ -10,6 +10,7 @@ import subprocess
 from fault.wrapper import PortWrapper
 import fault
 import fault.expression as expression
+from fault.real_type import RealKind
 import os
 
 
@@ -334,19 +335,36 @@ end
         # determine the value to be checked
         value = self.process_value(action.port, action.value)
 
-        # determine what type of comparison should be performed.  strict=True
-        # is recommended in most cases to avoid X's from slipping through
-        if action.strict:
-            neq_str = '!=='
+        # determine the condition and error body
+        err_body = f'"Failed on action={i} checking port {debug_name}.'
+        if action.is_exact:
+            # set condition
+            if action.strict:
+                cond = f'{name} !== {value}'
+            else:
+                cond = f'{name} != {value}'
+            # set error body
+            err_body += f' Expected %x, got %x" , {value}, {name}'
         else:
-            neq_str = '!='
+            # set condition, noting that we have to be careful about
+            # relative tolerance when then nominal value is negative
+            nom_val = f'({value})'
+            abs_val = f'(({nom_val} >= 0) ? {nom_val} : -{nom_val})'
+            rel_tol = f'({action.rel_tol})'
+            abs_tol = f'({action.abs_tol})'
+            lo_bnd = f'({nom_val} - {rel_tol}*{abs_val} - {abs_tol})'
+            hi_bnd = f'({nom_val} + {rel_tol}*{abs_val} + {abs_tol})'
+            cond = f'!(({lo_bnd} <= {name}) && ({name} <= {hi_bnd}))'
+
+            # set error body
+            err_body += f' Expected %0f to %0f, got %0f", {lo_bnd}, {hi_bnd}, {name}'
 
         # return a snippet of verilog implementing the assertion
-        return f"""
-if ({name} {neq_str} {value}) begin
-    $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
-end;
-""".splitlines()  # noqa
+        retval = []
+        retval += [f'if ({cond}) begin']
+        retval += [self.make_line(f'$error({err_body});', tabs=1)]
+        retval += ['end']
+        return retval
 
     def make_eval(self, i, action):
         # Eval implicit in SV simulations
@@ -425,7 +443,9 @@ end;
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
                 width_str = f"[{len(type_) - 1}:0] "
-            if name in power_args.get("supply0s", []):
+            if isinstance(type_, RealKind):
+                t = "real"
+            elif name in power_args.get("supply0s", []):
                 t = "supply0"
             elif name in power_args.get("supply1s", []):
                 t = "supply1"
@@ -718,6 +738,9 @@ end;
 
         # define variables
         cmd += self.def_args(prefix='-D')
+
+        # misc flags
+        cmd += ['-g2012']
 
         # return arg list and binary file location
         return cmd, bin_file

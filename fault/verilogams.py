@@ -1,5 +1,5 @@
 import magma as m
-from fault.extra_types import ElectIn, ElectOut, RealIn, RealOut
+from fault import ElectIn, ElectOut, RealIn, RealOut
 
 
 def vams_io_entry(name, type_):
