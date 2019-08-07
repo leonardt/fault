@@ -7,6 +7,7 @@ import magma as m
 import fault
 from fault import HiZ
 
+
 def pytest_generate_tests(metafunc):
     if 'target' in metafunc.fixturenames:
         targets = []
