@@ -310,24 +310,38 @@ end
         return code.splitlines()
 
     def make_expect(self, i, action):
+        # don't do anything if any value is OK
         if value_utils.is_any(action.value):
             return []
+
+        # determine the exact name of the signal
         name = self.make_name(action.port)
+
+        # TODO: add something like "make_read_name" and "make_write_name"
+        # so that reading inout signals has more uniform behavior across
+        # expect, peek, etc.
+        if actions.is_inout(action.port):
+            name = self.input_wire(name)
+
+        # determine the name of the signal for debugging purposes
         if isinstance(action.port, SelectPath):
             debug_name = action.port[-1].name
         elif isinstance(action.port, fault.WrappedVerilogInternalPort):
             debug_name = name
         else:
             debug_name = action.port.name
+
+        # determine the value to be checked
         value = self.process_value(action.port, action.value)
 
-        # Determine what type of comparison should be performed.  strict=True
+        # determine what type of comparison should be performed.  strict=True
         # is recommended in most cases to avoid X's from slipping through
         if action.strict:
             neq_str = '!=='
         else:
             neq_str = '!='
 
+        # return a snippet of verilog implementing the assertion
         return f"""
 if ({name} {neq_str} {value}) begin
     $error(\"Failed on action={i} checking port {debug_name}. Expected %x, got %x\" , {value}, {name});
@@ -419,23 +433,22 @@ end;
                 t = "tri"
             elif type_.isoutput():
                 t = "wire"
-            elif type_.isinput():
-                if self.use_input_wires:
-                    # declare a reg and assign it to a wire
-                    # that wire will then be connected to the
-                    # DUT pin
-                    connect_to = f'{name}_wire'
-                    decls = [f'reg {width_str}{name};',
-                             f'wire {width_str}{connect_to};',
-                             f'assign {connect_to}={name};']
-                    decls = [self.make_line(decl, tabs=1) for decl in decls]
-                    self.add_decl(*decls)
+            elif type_.isinout() or (type_.isinput() and self.use_input_wires): 
+                # declare a reg and assign it to a wire
+                # that wire will then be connected to the
+                # DUT pin
+                connect_to = self.input_wire(name)
+                decls = [f'reg {width_str}{name};',
+                         f'wire {width_str}{connect_to};',
+                         f'assign {connect_to}={name};']
+                decls = [self.make_line(decl, tabs=1) for decl in decls]
+                self.add_decl(*decls)
 
-                    # set the signal type to None to avoid re-declaring
-                    # connect_to
-                    t = None   
-                else:
-                    t = "reg"
+                # set the signal type to None to avoid re-declaring
+                # connect_to
+                t = None
+            elif type_.isinput():
+                t = "reg"
             else:
                 raise NotImplementedError()
 
@@ -539,6 +552,10 @@ end;
 
         # return the path to the testbench location
         return tb_file
+
+    @staticmethod
+    def input_wire(name):
+        return f'__{name}_wire'
 
     @staticmethod
     def make_line(text, tabs=0, tab='    ', nl='\n'):
