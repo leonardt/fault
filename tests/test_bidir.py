@@ -7,6 +7,7 @@ import shutil
 import mantle
 from fault import HiZ
 
+
 def pytest_generate_tests(metafunc):
     if 'target' in metafunc.fixturenames:
         targets = []
@@ -23,8 +24,8 @@ def test_bidir(target, simulator):
     # declare an external circuit that shorts together its two outputs
     bidir_fname = pathlib.Path('tests/verilog/bidir.v').resolve()
     bidir = m.DeclareCircuit('bidir',
-                              'a', m.InOut(m.Bit),
-                              'b', m.InOut(m.Bit))
+                             'a', m.InOut(m.Bit),
+                             'b', m.InOut(m.Bit))
 
     # instantiate the tester
     tester = fault.Tester(bidir)

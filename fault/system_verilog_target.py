@@ -102,7 +102,7 @@ class SystemVerilogTarget(VerilogTarget):
                   It is illegal to specify both "include_verilog_libraries"
                   and "ext_srcs".
 
-        use_input_wires: If True, drive DUT inputs through wires that are in 
+        use_input_wires: If True, drive DUT inputs through wires that are in
                          turn assigned to a reg.
         """
         # set default for list of external sources
@@ -433,7 +433,7 @@ end;
                 t = "tri"
             elif type_.isoutput():
                 t = "wire"
-            elif type_.isinout() or (type_.isinput() and self.use_input_wires): 
+            elif type_.isinout() or (type_.isinput() and self.use_input_wires):
                 # declare a reg and assign it to a wire
                 # that wire will then be connected to the
                 # DUT pin

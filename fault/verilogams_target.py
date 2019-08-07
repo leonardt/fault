@@ -6,7 +6,7 @@ from .system_verilog_target import SystemVerilogTarget
 class VerilogAMSTarget(SystemVerilogTarget):
     def __init__(self, circuit, simulator='ncsim', directory='build/',
                  model_paths=None, stop_time=1, vsup=1.0, rout=1, flags=None,
-                 include_verilog_libraries=None, use_spice=None, 
+                 include_verilog_libraries=None, use_spice=None,
                  use_input_wires=True, **kwargs):
         """
         simulator: Name of the simulator to be used for simulation.
@@ -25,7 +25,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
         rather than a verilog model.  Not always required, but sometimes
         needed when instantiating a spice module directly in SystemVerilog
         code.
-        use_input_wires: If True, drive DUT inputs through wires that are 
+        use_input_wires: If True, drive DUT inputs through wires that are
         in turn assigned to a reg.  This helps with proper discipline
         resolution for Verilog-AMS simulation.
         """

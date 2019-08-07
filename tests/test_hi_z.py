@@ -7,6 +7,7 @@ import shutil
 import mantle
 from fault import HiZ
 
+
 def pytest_generate_tests(metafunc):
     if 'target' in metafunc.fixturenames:
         targets = []
@@ -40,9 +41,9 @@ def test_hi_z(target, simulator):
     # walk through all of the cases that produce a 0 or 1 output
     run_case(1, 1, 1)
     run_case(0, 0, 0)
-    run_case(1, HiZ, 1) 
-    run_case(0, HiZ, 0) 
-    run_case(HiZ, 1, 1) 
+    run_case(1, HiZ, 1)
+    run_case(0, HiZ, 0)
+    run_case(HiZ, 1, 1)
     run_case(HiZ, 0, 0)
 
     # make some modifications to the environment
