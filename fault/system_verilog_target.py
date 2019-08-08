@@ -337,31 +337,31 @@ end
 
         # determine the condition and error body
         err_body = f'"Failed on action={i} checking port {debug_name}.'
-        if action.is_exact:
-            # set condition
-            if action.strict:
-                cond = f'{name} !== {value}'
+        if action.above is not None:
+            if action.below is not None:
+                # must be in range
+                cond = f'({action.above} <= {name}) && ({name} <= {action.below})'  # noqa
+                err_body += f' Expected %0f to %0f, got %0f", {action.above}, {action.below}, {name}'  # noqa
             else:
-                cond = f'{name} != {value}'
-            # set error body
-            err_body += f' Expected %x, got %x" , {value}, {name}'
+                # must be above
+                cond = f'{action.above} <= {name}'
+                err_body += f' Expected above %0f, got %0f", {action.above}, {name}'  # noqa
         else:
-            # set condition, noting that we have to be careful about
-            # relative tolerance when then nominal value is negative
-            nom_val = f'({value})'
-            abs_val = f'(({nom_val} >= 0) ? {nom_val} : -{nom_val})'
-            rel_tol = f'({action.rel_tol})'
-            abs_tol = f'({action.abs_tol})'
-            lo_bnd = f'({nom_val} - {rel_tol}*{abs_val} - {abs_tol})'
-            hi_bnd = f'({nom_val} + {rel_tol}*{abs_val} + {abs_tol})'
-            cond = f'!(({lo_bnd} <= {name}) && ({name} <= {hi_bnd}))'
-
-            # set error body
-            err_body += f' Expected %0f to %0f, got %0f", {lo_bnd}, {hi_bnd}, {name}'  # noqa
+            if action.below is not None:
+                # must be below
+                cond = f'{name} <= {action.below}'
+                err_body += f' Expected below %0f, got %0f", {action.below}, {name}'  # noqa
+            else:
+                # equality comparison
+                if action.strict:
+                    cond = f'{name} === {value}'
+                else:
+                    cond = f'{name} == {value}'
+                err_body += f' Expected %x, got %x" , {value}, {name}'
 
         # return a snippet of verilog implementing the assertion
         retval = []
-        retval += [f'if ({cond}) begin']
+        retval += [f'if (!({cond})) begin']
         retval += [self.make_line(f'$error({err_body});', tabs=1)]
         retval += ['end']
         return retval

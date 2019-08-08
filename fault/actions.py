@@ -86,22 +86,31 @@ def is_output(port):
 
 
 class Expect(PortAction):
-    def __init__(self, port, value, strict=False, abs_tol=0, rel_tol=0):
+    def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
+                 above=None, below=None):
         # call super constructor
         super().__init__(port, value)
 
-        # sanity check
-        assert abs_tol >= 0, 'abs_tol must be non-negative'
-        assert rel_tol >= 0, 'rel_tol must be non-negative'
+        # compute bounds if applicable
+        if abs_tol is not None or rel_tol is not None:
+            # sanity check
+            if above is not None or below is not None:
+                raise Exception('Cannot provide both abs_tol/rel_tol and above/below.')  # noqa
+
+            # default settings
+            rel_tol = rel_tol if rel_tol is not None else 0
+            abs_tol = abs_tol if abs_tol is not None else 0
+
+            # sanity check
+            assert rel_tol >= 0 and abs_tol >= 0, 'rel_tol and abs_tol must be non-negative.'  # noqa
+
+            above = value - rel_tol*value - abs_tol
+            below = value + rel_tol*value + abs_tol
 
         # save settings
         self.strict = strict
-        self.abs_tol = abs_tol
-        self.rel_tol = rel_tol
-
-    @property
-    def is_exact(self):
-        return self.abs_tol == 0 and self.rel_tol == 0
+        self.above = above
+        self.below = below
 
 
 class Assume(PortAction):
