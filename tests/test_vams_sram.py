@@ -17,8 +17,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
-    mysram_fname = pathlib.Path('tests/spice/mysram.sp').resolve()
-
+    # declare the circuit
     dut = m.DeclareCircuit('mysram',
                            'wl', m.In(m.Bit),
                            'lbl', m.InOut(m.Bit),
@@ -26,32 +25,8 @@ def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
                            'vdd', m.In(m.Bit),
                            'vss', m.In(m.Bit))
 
-    tester = fault.Tester(dut)
-
-    # initialize pin values
-    tester.poke(dut.wl, 0)
-    tester.poke(dut.lbl, 0)
-    tester.poke(dut.lblb, 0)
-    tester.poke(dut.vdd, 1)
-    tester.poke(dut.vss, 0)
-
-    for _ in range(n_trials):
-        # generate random input
-        d = random.random() > 0.5
-
-        # write value
-        tester.poke(dut.lbl, d)
-        tester.poke(dut.lblb, not d)
-        tester.poke(dut.wl, 1)
-        tester.poke(dut.wl, 0)
-
-        # read value
-        tester.poke(dut.lbl, HiZ)
-        tester.poke(dut.lblb, HiZ)
-        tester.poke(dut.wl, 1)
-        tester.expect(dut.lbl, d, strict=True)
-        tester.expect(dut.lblb, not d, strict=True)
-        tester.poke(dut.wl, 0)
+    # instantiate the tester
+    tester = fault.SRAMTester(dut)
 
     # make some modifications to the environment
     sim_env = fault.util.remove_conda(os.environ)
@@ -59,6 +34,7 @@ def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
 
     # Run the simulation
     with tempfile.TemporaryDirectory(dir='.') as tmp_dir:
+        mysram_fname = pathlib.Path('tests/spice/mysram.sp').resolve()
         tester.compile_and_run(target=target,
                                simulator=simulator,
                                directory=tmp_dir,
