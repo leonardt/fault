@@ -6,6 +6,7 @@ from .value import Value, AnyValue, UnknownValue, HiZ
 import fault.random
 from .symbolic_tester import SymbolicTester
 from .verilogams import VAMSWrap
+from .tester_samples import *
 
 
 class WrappedVerilogInternalPort:
