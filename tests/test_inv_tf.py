@@ -15,8 +15,9 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('target,simulator', targets)
 
 
-def test_inv_tf(target, simulator, n_steps=25, vsup=1.5):
-    # declare circuit and wrap (required if there are in/
+def test_inv_tf(target, simulator, n_steps=25, vsup=1.5,
+                vil_rel=0.4, vih_rel=0.6):
+    # declare circuit and wrap 
     myinv = m.DeclareCircuit('myinv',
                              'in_', fault.RealIn,
                              'out', fault.RealOut,
@@ -26,12 +27,16 @@ def test_inv_tf(target, simulator, n_steps=25, vsup=1.5):
 
     tester = fault.Tester(dut)
 
+    # define the test
     tester.poke(dut.vdd, vsup)
     tester.poke(dut.vss, 0)
-
     for k in range(n_steps):
-        tester.poke(dut.in_, k * vsup / (n_steps - 1))
-        tester.print("in_=%0f, out=%0f\n", dut.in_, dut.out)
+        in_ = k * vsup / (n_steps - 1)
+        tester.poke(dut.in_, in_)
+        if in_ <= vil_rel*vsup:
+            tester.expect(dut.out, vsup, abs_tol=0.1)
+        elif in_ >= vih_rel*vsup:
+            tester.expect(dut.out, 0, abs_tol=0.1)
 
     # make some modifications to the environment
     sim_env = fault.util.remove_conda(os.environ)
