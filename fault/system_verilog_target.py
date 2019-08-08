@@ -357,7 +357,7 @@ end
             cond = f'!(({lo_bnd} <= {name}) && ({name} <= {hi_bnd}))'
 
             # set error body
-            err_body += f' Expected %0f to %0f, got %0f", {lo_bnd}, {hi_bnd}, {name}'
+            err_body += f' Expected %0f to %0f, got %0f", {lo_bnd}, {hi_bnd}, {name}'  # noqa
 
         # return a snippet of verilog implementing the assertion
         retval = []

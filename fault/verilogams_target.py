@@ -7,7 +7,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
     def __init__(self, circuit, simulator='ncsim', directory='build/',
                  model_paths=None, stop_time=1, vsup=1.0, rout=1, flags=None,
                  include_verilog_libraries=None, use_spice=None,
-                 use_input_wires=True, **kwargs):
+                 use_input_wires=True, ext_model_file=True, **kwargs):
         """
         simulator: Name of the simulator to be used for simulation.
         model_paths: paths to SPICE/Spectre files used in the simulation
@@ -28,6 +28,9 @@ class VerilogAMSTarget(SystemVerilogTarget):
         use_input_wires: If True, drive DUT inputs through wires that are
         in turn assigned to a reg.  This helps with proper discipline
         resolution for Verilog-AMS simulation.
+        ext_model_file: If True, don't include the assumed model name in the
+        list of Verilog sources.  The assumption is that the user has already
+        taken care of this via include_verilog_libraries.
         """
 
         # save settings
@@ -38,6 +41,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
 
         # save file names that will be written
         self.amscf = 'amscf.scs'
+        self.wrap_file = f'{circuit.name}_wrap.vams'
 
         # update simulator argument
         assert simulator == 'ncsim', 'Only the ncsim simulator is allowed at this time.'  # noqa
@@ -53,16 +57,22 @@ class VerilogAMSTarget(SystemVerilogTarget):
                                      if include_verilog_libraries is not None
                                      else [])
         include_verilog_libraries += [self.amscf]
+        if hasattr(circuit, 'vams_code'):
+            include_verilog_libraries += [self.wrap_file]
 
         # call the superconstructor
         super().__init__(circuit=circuit, simulator=simulator, flags=flags,
                          include_verilog_libraries=include_verilog_libraries,
-                         directory=directory, use_input_wires=True,
-                         **kwargs)
+                         directory=directory, use_input_wires=use_input_wires,
+                         ext_model_file=ext_model_file, **kwargs)
 
     def run(self, *args, **kwargs):
         # write the AMS control file
         self.write_amscf()
+
+        # write the VAMS wrapper (if needed)
+        if hasattr(self.circuit, 'vams_code'):
+            self.write_wrap_file()
 
         # then call the super constructor
         super().run(*args, **kwargs)
@@ -85,3 +95,7 @@ amsd {{
     def write_amscf(self):
         with open(self.directory / Path(self.amscf), 'w') as f:
             f.write(self.gen_amscf())
+
+    def write_wrap_file(self):
+        with open(self.directory / Path(self.wrap_file), 'w') as f:
+            f.write(self.circuit.vams_code)

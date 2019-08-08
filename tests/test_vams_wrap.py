@@ -1,18 +1,18 @@
 import magma as m
-from fault.verilogams import VAMSWrap, ElectIn, ElectOut
+from fault.verilogams import VAMSWrap, RealIn, RealOut
 
 
 def test_vams_wrap():
     myblk = m.DeclareCircuit('myblk',
-                             'a', ElectIn,
-                             'b', ElectOut,
+                             'a', RealIn,
+                             'b', RealOut,
                              'c', m.In(m.Bit),
                              'd', m.Out(m.Bits[2]))
     wrap_circ = VAMSWrap(myblk)
 
     # check magma representation of wrapped circuit
-    assert wrap_circ.IO.ports['a'] is ElectIn
-    assert wrap_circ.IO.ports['b'] is ElectOut
+    assert wrap_circ.IO.ports['a'] is RealIn
+    assert wrap_circ.IO.ports['b'] is RealOut
     assert wrap_circ.IO.ports['c'] is m.In(m.Bit)
     assert wrap_circ.IO.ports['d'] is m.Out(m.Bits[2])
 
@@ -27,8 +27,8 @@ module myblk_wrap (
     output d
 );
 
-    electrical a;
-    electrical b;
+    wreal a;
+    wreal b;
     wire [0:0] c;
     wire [1:0] d;
 

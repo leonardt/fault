@@ -25,7 +25,7 @@ def vams_type_entry(name, type_):
     if type_ is ElectIn or type_ is ElectOut:
         return f'electrical {name};'
     elif type_ is RealIn or type_ is RealOut:
-        return f'real {name};'
+        return f'wreal {name};'
     else:
         return f'wire [{type_.size()-1}:0] {name};'
 

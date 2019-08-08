@@ -56,7 +56,6 @@ def test_bidir(target, simulator):
             simulator=simulator,
             directory=tmp_dir,
             ext_libs=[bidir_fname],
-            use_input_wires=True,
             sim_env=sim_env,
             ext_model_file=True
         )
