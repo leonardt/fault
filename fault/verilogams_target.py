@@ -41,7 +41,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
 
         # save file names that will be written
         self.amscf = 'amscf.scs'
-        self.wrap_file = f'{circuit.name}_wrap.vams'
+        self.vamsf = f'{circuit.name}.vams'
 
         # update simulator argument
         assert simulator == 'ncsim', 'Only the ncsim simulator is allowed at this time.'  # noqa
@@ -58,7 +58,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
                                      else [])
         include_verilog_libraries += [self.amscf]
         if hasattr(circuit, 'vams_code'):
-            include_verilog_libraries += [self.wrap_file]
+            include_verilog_libraries += [self.vamsf]
 
         # call the superconstructor
         super().__init__(circuit=circuit, simulator=simulator, flags=flags,
@@ -72,7 +72,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
 
         # write the VAMS wrapper (if needed)
         if hasattr(self.circuit, 'vams_code'):
-            self.write_wrap_file()
+            self.write_vamsf()
 
         # then call the super constructor
         super().run(*args, **kwargs)
@@ -96,6 +96,6 @@ amsd {{
         with open(self.directory / Path(self.amscf), 'w') as f:
             f.write(self.gen_amscf())
 
-    def write_wrap_file(self):
-        with open(self.directory / Path(self.wrap_file), 'w') as f:
+    def write_vamsf(self):
+        with open(self.directory / Path(self.vamsf), 'w') as f:
             f.write(self.circuit.vams_code)
