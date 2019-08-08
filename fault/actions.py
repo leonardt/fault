@@ -101,7 +101,7 @@ class Expect(PortAction):
 
     @property
     def is_exact(self):
-        return self.abs_tol==0 and self.rel_tol==0
+        return self.abs_tol == 0 and self.rel_tol == 0
 
 
 class Assume(PortAction):
