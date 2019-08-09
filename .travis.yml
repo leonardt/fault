@@ -27,12 +27,7 @@ install:
 - source activate test-env
 - conda install pip
 # End install conda
-- export CXX="g++-7"  # For coreir/verilogAST
-- git clone https://github.com/leonardt/verilogAST-cpp
-- cd verilogAST-cpp
-- mkdir build && cd build && cmake .. && cmake --build . && sudo make install && cd ..
-- export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-- cd ..  # verilogAST-cpp
+- export CXX="g++-7"  # For coreir
 - curl -s -L https://github.com/rdaly525/coreir/releases/latest | grep "href.*coreir.tar.gz" | cut -d \" -f 2 | xargs -I {} wget https://github.com"{}"
 - mkdir coreir_release;
 - tar -xf coreir.tar.gz -C coreir_release --strip-components 1;
