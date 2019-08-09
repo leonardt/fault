@@ -23,7 +23,13 @@ matrix:
 
 install:
 # install conda for py 3.7
-- wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+- |
+  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh
+  else
+    # install conda for py 3.7
+    wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  fi
 - chmod +x miniconda.sh
 - ./miniconda.sh -b -p $TRAVIS_BUILD_DIR/miniconda
 - export PATH=$TRAVIS_BUILD_DIR/miniconda/bin:$PATH
