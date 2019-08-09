@@ -58,10 +58,7 @@ install:
 - pip install mantle  # for tests.common
 - pip install -e .
 # Begin setup CoSA dependencies
-- |
-  if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-    pysmt-install --msat --confirm-agreement
-  fi
+- pysmt-install --msat --confirm-agreement
 - pysmt-install --z3 --confirm-agreement
 - export PYTHONPATH="/home/travis/.smt_solvers/python-bindings-3.7:${PYTHONPATH}"
 - export LD_LIBRARY_PATH="/home/travis/.smt_solvers/python-bindings-3.7:${LD_LIBRARY_PATH}"
