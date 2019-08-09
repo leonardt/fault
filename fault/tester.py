@@ -17,6 +17,7 @@ import os
 import inspect
 from fault.config import get_test_dir
 from typing import List
+import tempfile
 
 
 class Tester:
@@ -202,14 +203,28 @@ class Tester:
             raise Exception(f"Could not find target={target}, did you compile"
                             " it first?")
 
-    def compile_and_run(self, target="verilator", **kwargs):
+    def _compile_and_run(self, target="verilator", **kwargs):
         """
-        Compile and run the current action sequence using `target`
+        Compile and run the current action sequence using `target`, assuming
+        that the build directory already exists (this allow for some
+        in using temporary vs. persistent directories)
         """
-        if "directory" in kwargs:
-            kwargs["directory"] = self._make_directory(kwargs["directory"])
         self._compile(target, **kwargs)
         self.run(target)
+
+    def compile_and_run(self, target="verilator", tmp_dir=False, **kwargs):
+        """
+        Compile and run the current action sequence using `target`, making
+        a build directory if needed.  This is the function that should be
+        called directly by the user.
+        """
+        if tmp_dir:
+            with tempfile.TemporaryDirectory(dir='.') as directory:
+                kwargs['directory'] = directory
+                self._compile_and_run(target=target, **kwargs)
+        else:
+            kwargs['directory'] = self._make_directory(kwargs['directory'])
+            self._compile_and_run(target=target, **kwargs)
 
     def retarget(self, new_circuit, clock=None):
         """

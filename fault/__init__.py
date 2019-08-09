@@ -3,6 +3,7 @@ from .power_tester import PowerTester
 from .value import Value, AnyValue, UnknownValue
 import fault.random
 from .symbolic_tester import SymbolicTester
+from .pytest_utils import pytest_sim_params
 
 
 class WrappedVerilogInternalPort:
