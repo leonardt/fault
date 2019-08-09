@@ -1,6 +1,7 @@
 import fault
 import random
 
+
 class SRAMTester(fault.Tester):
     def __init__(self, circuit, *args, n_trials=100, prob1=0.5,
                  supply1='vdd', supply0='vss', **kwargs):
