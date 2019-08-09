@@ -10,7 +10,8 @@ import pytest
 def pytest_generate_tests(metafunc):
     if 'target' in metafunc.fixturenames:
         metafunc.parametrize("target,solver", [
-            ("verilator", None), ("cosa", "msat"), ("cosa", "z3")])
+            # ("verilator", None), ("cosa", "msat"), ("cosa", "z3")])
+            ("verilator", None), ("cosa", "msat")])
 
 
 def test_tester_magma_internal_signals_verilator(target, solver):
