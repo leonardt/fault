@@ -42,8 +42,6 @@ install:
     # avoid strange libjpeg error (see https://github.com/sgrif/pq-sys/issues/1
     # for some more info)
     export DYLD_LIBRARY_PATH=/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/:/usr/local/lib:$DYLD_LIBRARY_PATH
-  else
-    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
   fi
 - pip install pytest-cov pytest-codestyle
 - pip install mantle  # for tests.common
