@@ -184,4 +184,4 @@ assign COUT = adder1_COUT;
 assign O = adder1_O;
 endmodule
 
-"""
+"""  # noqa
