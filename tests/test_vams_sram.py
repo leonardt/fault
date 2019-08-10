@@ -9,12 +9,14 @@ def pytest_generate_tests(metafunc):
 
 def test_vams_sim(target, simulator, vsup=1.5):
     # declare the circuit
-    dut = m.DeclareCircuit('mysram',
-                           'wl', m.In(m.Bit),
-                           'lbl', m.InOut(m.Bit),
-                           'lblb', m.InOut(m.Bit),
-                           'vdd', m.In(m.Bit),
-                           'vss', m.In(m.Bit))
+    dut = m.DeclareCircuit(
+        'mysram',
+        'wl', m.In(m.Bit),
+        'lbl', m.InOut(m.Bit),
+        'lblb', m.InOut(m.Bit),
+        'vdd', m.In(m.Bit),
+        'vss', m.In(m.Bit)
+    )
 
     # instantiate the tester
     tester = fault.SRAMTester(dut)

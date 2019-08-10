@@ -10,9 +10,11 @@ def pytest_generate_tests(metafunc):
 
 def test_bidir(target, simulator):
     # declare an external circuit that shorts together its two outputs
-    bidir = m.DeclareCircuit('bidir',
-                             'a', m.InOut(m.Bit),
-                             'b', m.InOut(m.Bit))
+    bidir = m.DeclareCircuit(
+        'bidir',
+        'a', m.InOut(m.Bit),
+        'b', m.InOut(m.Bit)
+    )
 
     # instantiate the tester
     tester = fault.Tester(bidir)

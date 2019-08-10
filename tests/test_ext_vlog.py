@@ -8,13 +8,17 @@ def pytest_generate_tests(metafunc):
 
 
 def test_ext_vlog(target, simulator):
-    myinv = m.DeclareCircuit('myinv', 'in_', m.In(m.Bit), 'out', m.Out(m.Bit))
+    # declare circuit
+    myinv = m.DeclareCircuit(
+        'myinv',
+        'in_', m.In(m.Bit),
+        'out', m.Out(m.Bit)
+    )
 
+    # define test
     tester = fault.Tester(myinv)
-
     tester.poke(myinv.in_, 1)
     tester.expect(myinv.out, 0)
-
     tester.poke(myinv.in_, 0)
     tester.expect(myinv.out, 1)
 
