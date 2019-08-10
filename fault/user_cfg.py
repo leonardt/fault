@@ -19,7 +19,7 @@ class FaultConfig:
             logging.warn('Please run "pip install pyyaml" to fix this.')
             return
 
-        locs = [Path.home() / '.faultrc', Path('.') / 'fault.yaml']
+        locs = [Path.home() / '.faultrc', Path('.') / 'fault.yml']
         for loc in locs:
             if loc.exists():
                 with open(loc, 'r') as f:
