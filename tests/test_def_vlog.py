@@ -29,7 +29,7 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=42):
         target=target,
         simulator=simulator,
         ext_libs=[Path('tests/verilog/defadd.sv').resolve()],
-        ext_model_file=True,
         defines={'N_BITS': n_bits, 'B_VAL': b_val},
+        ext_model_file=True,
         tmp_dir=True
     )

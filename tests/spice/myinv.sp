@@ -1,4 +1,4 @@
-* Inverter example modified from:
+* NMOS/PMOS models from
 * https://people.rit.edu/lffeee/SPICE_Examples.pdf
 
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
