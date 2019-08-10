@@ -13,18 +13,7 @@ import pytest
 
 
 def pytest_generate_tests(metafunc):
-    if "target" in metafunc.fixturenames:
-        targets = [("verilator", None)]
-        if shutil.which("irun"):
-            targets.append(
-                ("system-verilog", "ncsim"))
-        if shutil.which("vcs"):
-            targets.append(
-                ("system-verilog", "vcs"))
-        if shutil.which("iverilog"):
-            targets.append(
-                ("system-verilog", "iverilog"))
-        metafunc.parametrize("target,simulator", targets)
+    fault.pytest_sim_params(metafunc, 'verilator', 'system-verilog')
 
 
 def check(got, expected):
@@ -369,10 +358,6 @@ def test_tester_file_io(target, simulator):
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
         with open(_dir + "/test_file_out.raw", "rb") as file:
             expected = bytes([i for i in range(8)])
-            if simulator == "iverilog":
-                # iverilog doesn't support writing a NULL byte out using %c, so
-                # this first value is skipped
-                expected = expected[1:]
             assert file.read(8) == expected
 
 
@@ -405,14 +390,7 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
         with open(_dir + "/test_file_out.raw", "rb") as file:
             expected = bytes([i for i in range(8 * 32)])
             for i in range(8):
-                if simulator == "iverilog":
-                    # iverilog doesn't support writing a NULL byte out using
-                    # %c, so this first values are skipped
-                    if i == 0:
-                        continue
-                    assert file.read(1) == bytes([i])
-                else:
-                    assert file.read(4) == bytes([0, 0, 0, i])
+                assert file.read(4) == bytes([0, 0, 0, i])
 
 
 def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
@@ -443,14 +421,7 @@ def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
         with open(_dir + "/test_file_out.raw", "rb") as file:
             expected = bytes([i for i in range(8 * 32)])
             for i in range(8):
-                if simulator == "iverilog":
-                    # iverilog doesn't support writing a NULL byte out using
-                    # %c, so this first values are skipped
-                    if i == 0:
-                        continue
-                    assert file.read(1) == bytes([i])
-                else:
-                    assert file.read(4) == bytes([i, 0, 0, 0])
+                assert file.read(4) == bytes([i, 0, 0, 0])
 
 
 def test_tester_while(target, simulator):
