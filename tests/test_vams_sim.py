@@ -2,6 +2,7 @@ import magma as m
 import fault
 from pathlib import Path
 
+
 def pytest_generate_tests(metafunc):
     fault.pytest_sim_params(metafunc, 'verilog-ams')
 
