@@ -26,7 +26,6 @@ def test_vams_sim(target, simulator, n_trials=100, vsup=1.5):
         in_ = fault.random_bit()
         # send stimulus and check output
         tester.poke(dut.in_, in_)
-        tester.eval()
         tester.expect(dut.out, not in_, strict=True)
 
     # Run the simulation

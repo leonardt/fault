@@ -1,7 +1,6 @@
 import fault
 import magma as m
 from pathlib import Path
-from fault import HiZ
 
 
 def pytest_generate_tests(metafunc):
@@ -29,10 +28,10 @@ def test_bidir(target, simulator):
     # walk through all of the cases that produce a 0 or 1 output
     run_case(1, 1, 1, 1)
     run_case(0, 0, 0, 0)
-    run_case(1, HiZ, 1, 1)
-    run_case(0, HiZ, 0, 0)
-    run_case(HiZ, 1, 1, 1)
-    run_case(HiZ, 0, 0, 0)
+    run_case(1, fault.HiZ, 1, 1)
+    run_case(0, fault.HiZ, 0, 0)
+    run_case(fault.HiZ, 1, 1, 1)
+    run_case(fault.HiZ, 0, 0, 0)
 
     # run the test
     tester.compile_and_run(

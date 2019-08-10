@@ -9,10 +9,12 @@ def pytest_generate_tests(metafunc):
 
 def test_hi_z(target, simulator):
     # declare an external circuit that shorts together its two outputs
-    hizmod = m.DeclareCircuit('hizmod',
-                              'a', m.In(m.Bit),
-                              'b', m.In(m.Bit),
-                              'c', m.Out(m.Bit))
+    hizmod = m.DeclareCircuit(
+        'hizmod',
+        'a', m.In(m.Bit),
+        'b', m.In(m.Bit),
+        'c', m.Out(m.Bit)
+    )
 
     # instantiate the tester
     tester = fault.Tester(hizmod)
@@ -21,7 +23,6 @@ def test_hi_z(target, simulator):
     def run_case(a, b, c):
         tester.poke(hizmod.a, a)
         tester.poke(hizmod.b, b)
-        tester.eval()
         tester.expect(hizmod.c, c, strict=True)
 
     # walk through all of the cases that produce a 0 or 1 output
