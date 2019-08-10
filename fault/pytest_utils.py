@@ -4,7 +4,8 @@ import shutil
 def pytest_sim_params(metafunc, *args):
     # simulators supported by each kind of target
     sims_by_arg = {'system-verilog': ['vcs', 'ncsim', 'iverilog'],
-                   'verilog-ams': ['ncsim']}
+                   'verilog-ams': ['ncsim'],
+                   'verilator': [None]}
 
     # only parameterize if we can actually specify the target type
     # and simulator to use for this particular test

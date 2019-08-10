@@ -566,17 +566,17 @@ end;
 
         # output file
         bin_file = f'{self.circuit_name}_tb'
-        cmd += ['-o', bin_file]
-
-        # source files
-        cmd += [f'{src}' for src in sources]
+        cmd += [f'-o{bin_file}']
 
         # library files
         for lib in self.ext_libs:
-            cmd += ['-v', f'{lib}']
+            cmd += [f'-l{lib}']
 
         # define variables
         cmd += self.def_args(prefix='-D')
+
+        # source files
+        cmd += [f'{src}' for src in sources]
 
         # return arg list and binary file location
         return cmd, bin_file
