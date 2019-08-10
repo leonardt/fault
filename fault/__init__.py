@@ -7,6 +7,7 @@ import fault.random
 from .symbolic_tester import SymbolicTester
 from .verilogams import VAMSWrap
 from .tester_samples import *
+from .pytest_utils import pytest_sim_params
 
 
 class WrappedVerilogInternalPort:
