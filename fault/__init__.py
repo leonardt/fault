@@ -6,9 +6,9 @@ from .value import Value, AnyValue, UnknownValue, HiZ
 import fault.random
 from .symbolic_tester import SymbolicTester
 from .verilogams import VAMSWrap
-from .tester_samples import *
+from .tester_samples import SRAMTester
 from .pytest_utils import pytest_sim_params
-
+from .random import random_bit
 
 class WrappedVerilogInternalPort:
     def __init__(self, path: str, type_):
