@@ -25,7 +25,8 @@ setup(
         "cosa",
         "z3-solver",
         "hwtypes==1.*",
-        "magma-lang"
+        "magma-lang",
+        "pyyaml"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',

@@ -8,6 +8,7 @@ import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 import subprocess
 from fault.wrapper import PortWrapper
+from fault.user_cfg import FaultConfig
 import fault
 import fault.expression as expression
 from fault.real_type import RealKind
@@ -149,7 +150,8 @@ class SystemVerilogTarget(VerilogTarget):
         self.dump_vcd = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
-        self.sim_env = sim_env if sim_env is not None else os.environ
+        self.sim_env = (sim_env if sim_env is not None
+                        else FaultConfig().get_sim_env())
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
@@ -723,14 +725,11 @@ end
 
         # output file
         bin_file = f'{self.circuit_name}_tb'
-        cmd += ['-o', bin_file]
-
-        # source files
-        cmd += [f'{src}' for src in sources]
+        cmd += [f'-o{bin_file}']
 
         # library files
         for lib in self.ext_libs:
-            cmd += ['-v', f'{lib}']
+            cmd += [f'-l{lib}']
 
         # include directory search path
         for dir_ in self.inc_dirs:
@@ -741,6 +740,9 @@ end
 
         # misc flags
         cmd += ['-g2012']
+
+        # source files
+        cmd += [f'{src}' for src in sources]
 
         # return arg list and binary file location
         return cmd, bin_file
