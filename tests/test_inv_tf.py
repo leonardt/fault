@@ -11,7 +11,6 @@ def test_inv_tf(
     target, simulator, n_steps=100, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     vol_rel=0.1, voh_rel=0.9
 ):
-
     # declare circuit and wrap
     myinv = m.DeclareCircuit(
         'myinv',

@@ -29,15 +29,13 @@ def test_mixed_sim(target, simulator, n_trials=100, vsup=1.5):
         tester.poke(dut.in_, in_)
         tester.expect(dut.out, not in_, strict=True)
 
-    # generic arguments
+    # define run options
     kwargs = dict(
         target=target,
         simulator=simulator,
         ext_model_file=True,
         tmp_dir=True
     )
-
-    # target-specific options
     if target == 'verilog-ams':
         kwargs['model_paths'] = [Path('tests/spice/myinv.sp').resolve()]
         kwargs['use_spice'] = ['myinv']

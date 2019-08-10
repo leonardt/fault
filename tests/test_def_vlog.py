@@ -8,8 +8,12 @@ def pytest_generate_tests(metafunc):
 
 
 def test_def_vlog(target, simulator, n_bits=8, b_val=42):
-    defadd = m.DeclareCircuit('defadd', 'a_val', m.In(m.Bits[n_bits]),
-                              'c_val', m.Out(m.Bits[n_bits]))
+    # declare circuit
+    defadd = m.DeclareCircuit(
+        'defadd',
+        'a_val', m.In(m.Bits[n_bits]),
+        'c_val', m.Out(m.Bits[n_bits])
+    )
 
     # instantiate tester
     tester = fault.Tester(defadd)
@@ -20,6 +24,7 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=42):
     tester.poke(defadd.a_val, 34)
     tester.expect(defadd.c_val, 76)
 
+    # run simulation
     tester.compile_and_run(
         target=target,
         simulator=simulator,
