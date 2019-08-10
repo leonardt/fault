@@ -14,7 +14,7 @@ def pytest_sim_params(metafunc, *args):
         targets = []
         for arg in args:
             for simulator in sims_by_arg[arg]:
-                if shutil.which(simulator):
+                if simulator is None or shutil.which(simulator):
                     targets.append((arg, simulator))
 
         metafunc.parametrize("target,simulator", targets)
