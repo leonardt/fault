@@ -3,7 +3,8 @@ from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from hwtypes import BitVector, AbstractBitVectorMeta
+from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
+                     AbstractBitVector)
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 import subprocess
@@ -13,6 +14,7 @@ import fault
 import fault.expression as expression
 from fault.real_type import RealKind
 import os
+from numbers import Number
 
 
 src_tpl = """\
@@ -247,10 +249,16 @@ class SystemVerilogTarget(VerilogTarget):
         return [f"{name} = {value};", f"#{self.clock_step_delay};"]
 
     def make_print(self, i, action):
-        ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
-        if ports:
-            ports = ", " + ports
-        return [f'$write("{action.format_str}"{ports});']
+        # build up argument list for the $write command
+        args = []
+        args.append(f'"{action.format_str}"')
+        for port in action.ports:
+            if isinstance(port, (Number, AbstractBit, AbstractBitVector)):
+                args.append(f'{port}')
+            else:
+                args.append(f'{self.make_name(port)}')
+        args = ', '.join(args)
+        return [f'$write({args});']
 
     def make_loop(self, i, action):
         self.declarations.append(f"integer {action.loop_var};")
