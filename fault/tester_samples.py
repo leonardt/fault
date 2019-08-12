@@ -50,19 +50,23 @@ class UnaryOpTester(GenericCellTester):
         # call super constructor
         super().__init__(circuit, *args, **kwargs)
 
+    def model(self, in_):
+        raise NotImplementedError
 
-class InvTester(UnaryOpTester):
     def define_trial(self):
         d = fault.random_bit()
         self.poke(self.in_, d)
-        self.expect(self.out, not d, strict=True)
+        self.expect(self.out, self.model(d), strict=True)
+
+
+class InvTester(UnaryOpTester):
+    def model(self, in_):
+        return not in_
 
 
 class BufTester(UnaryOpTester):
-    def define_trial(self):
-        d = fault.random_bit()
-        self.poke(self.in_, d)
-        self.expect(self.out, d, strict=True)
+    def model(self, in_):
+        return in_
 
 
 class SRAMTester(GenericCellTester):
