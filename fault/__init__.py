@@ -8,7 +8,8 @@ from .symbolic_tester import SymbolicTester
 from .verilogams import VAMSWrap
 from .tester_samples import SRAMTester, InvTester, BufTester
 from .pytest_utils import pytest_sim_params
-from .random import random_bit
+from .random import random_bit, random_bv
+from .util import clog2
 
 
 class WrappedVerilogInternalPort:

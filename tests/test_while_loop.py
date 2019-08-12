@@ -23,19 +23,16 @@ def test_while_loop(target, simulator, n_cyc=3, n_bits=8):
     dut = m.DeclareCircuit(
         'clkdelay',
         'clk', m.In(m.Clock),
-        'rst', m.In(m.Bit),
+        'rst', m.In(m.Reset),
         'count', m.Out(m.Bits[n_bits]),
         'n_done', m.Out(m.Bit)
     )
 
     # instantiate the tester
-    tester = fault.Tester(dut, dut.clk)
+    tester = fault.Tester(dut, clock=dut.clk, reset=dut.rst)
 
     # reset
-    tester.poke(dut.rst, 1)
-    tester.poke(dut.clk, 0)
-    tester.step()
-    tester.step()
+    tester.sync_reset()
 
     # check initial state
     tester.expect(dut.n_done, 1)

@@ -53,16 +53,21 @@ class Tester:
 
     __test__ = False  # Tell pytest to skip this class for discovery
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
+                 reset: m.ResetType = None):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
+        `reset`: optional, a port from `circuit` corresponding to the reset
         """
         self._circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
+        if reset is not None and not isinstance(reset, m.ResetType):
+            raise TypeError(f"Expected reset port: {reset, type(reset)}")
+        self.reset = reset
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
@@ -367,6 +372,17 @@ class Tester:
         # first set the signal low, then bring it high again
         self.poke(signal, 0)
         self.poke(signal, 1)
+
+    def sync_reset(self, active_high=True, cycles=1):
+        # assert reset and set clock to zero
+        self.poke(self.reset, 1 if active_high else 0)
+        self.poke(self.clock, 0)
+
+        # wait the desired number of clock cycles
+        self.step(2 * cycles)
+
+        # de-assert reset
+        self.poke(self.reset, 0 if active_high else 1)
 
 
 class LoopIndex:
