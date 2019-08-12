@@ -5,10 +5,16 @@ module mysram(
 );
 
     // internal capacitive nodes
-    trireg lbl_x, lblb_x;
+    reg lbl_x, lblb_x;
+    bufif1 (weak1, weak0) ba (lbl, lbl_x, wl);
+    bufif1 (weak1, weak0) bb (lblb, lblb_x, wl);
 
-    // access switches
-    tranif1 sa (lbl, lbl_x, wl);
-    tranif1 sb (lblb, lblb_x, wl);
+    // writing internal nodes
+    always @(wl or lbl or lblb) begin
+        if (wl == 1'b1) begin
+            lbl_x = lbl;
+            lblb_x = lblb;
+        end
+    end
 
 endmodule
