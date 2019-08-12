@@ -16,11 +16,7 @@ def test_ext_vlog(target, simulator):
     )
 
     # define the test
-    tester = fault.Tester(mybuf)
-    tester.poke(mybuf.in_, 1)
-    tester.expect(mybuf.out, 1)
-    tester.poke(mybuf.in_, 0)
-    tester.expect(mybuf.out, 0)
+    tester = fault.BufTester(mybuf)
 
     # run the test
     tester.compile_and_run(

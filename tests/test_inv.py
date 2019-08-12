@@ -7,7 +7,7 @@ def pytest_generate_tests(metafunc):
     fault.pytest_sim_params(metafunc, 'system-verilog', 'verilog-ams')
 
 
-def test_mixed_sim(target, simulator, n_trials=100, vsup=1.5):
+def test_inv(target, simulator, vsup=1.5):
     # declare the circuit
     ports = []
     ports += ['in_', m.In(m.Bit)]
@@ -18,16 +18,7 @@ def test_mixed_sim(target, simulator, n_trials=100, vsup=1.5):
     dut = m.DeclareCircuit('myinv', *ports)
 
     # define the test content
-    tester = fault.Tester(dut)
-    if target == 'verilog-ams':
-        tester.poke(dut.vdd, 1)
-        tester.poke(dut.vss, 0)
-    for _ in range(n_trials):
-        # generate random bit
-        in_ = fault.random_bit()
-        # send stimulus and check output
-        tester.poke(dut.in_, in_)
-        tester.expect(dut.out, not in_, strict=True)
+    tester = fault.InvTester(dut)
 
     # define run options
     kwargs = dict(

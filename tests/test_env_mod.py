@@ -12,11 +12,6 @@ def test_env_mod(target, simulator):
     m.wire(~myinv.a, myinv.y)
     m.EndDefine()
 
-    tester = fault.Tester(myinv)
-
-    tester.poke(myinv.a, 1)
-    tester.expect(myinv.y, 0)
-    tester.poke(myinv.a, 0)
-    tester.expect(myinv.y, 1)
+    tester = fault.InvTester(myinv, in_='a', out='y')
 
     tester.compile_and_run(target=target, simulator=simulator, tmp_dir=True)
