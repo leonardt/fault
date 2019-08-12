@@ -19,23 +19,21 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('target,simulator', targets)
 
 
-def test_ext_vlog(target, simulator):
-    myinv_fname = pathlib.Path('tests/verilog/myinv.v').resolve()
-    myinv = m.DeclareCircuit('myinv', 'in_', m.In(m.Bit), 'out', m.Out(m.Bit))
+def test_real_val(target, simulator):
+    realadd_fname = pathlib.Path('tests/verilog/realadd.sv').resolve()
+    realadd = m.DeclareCircuit('realadd',
+                               'a_val', fault.RealIn,
+                               'b_val', fault.RealIn,
+                               'c_val', fault.RealOut)
 
-    tester = fault.Tester(myinv)
+    tester = fault.Tester(realadd)
 
-    tester.poke(myinv.in_, 1)
-    tester.eval()
-    tester.expect(myinv.out, 0)
-
-    tester.poke(myinv.in_, 0)
-    tester.eval()
-    tester.expect(myinv.out, 1)
+    tester.poke(realadd.a_val, 1.125)
+    tester.poke(realadd.b_val, 2.5)
+    tester.expect(realadd.c_val, 3.625, abs_tol=1e-4)
 
     # make some modifications to the environment
     sim_env = fault.util.remove_conda(os.environ)
-    sim_env['DISPLAY'] = sim_env.get('DISPLAY', '')
 
     # run the test
     with tempfile.TemporaryDirectory(dir='.') as tmp_dir:
@@ -43,7 +41,8 @@ def test_ext_vlog(target, simulator):
             target=target,
             simulator=simulator,
             directory=tmp_dir,
-            ext_libs=[myinv_fname],
+            ext_libs=[realadd_fname],
+            defines={f'__{simulator.upper()}__': None},
             sim_env=sim_env,
             ext_model_file=True
         )

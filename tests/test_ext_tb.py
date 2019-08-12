@@ -4,7 +4,6 @@ import fault
 import magma as m
 import os
 import shutil
-import mantle
 
 
 def pytest_generate_tests(metafunc):
@@ -20,18 +19,8 @@ def pytest_generate_tests(metafunc):
 
 
 def test_ext_vlog(target, simulator):
-    myinv_fname = pathlib.Path('tests/verilog/myinv.v').resolve()
-    myinv = m.DeclareCircuit('myinv', 'in_', m.In(m.Bit), 'out', m.Out(m.Bit))
-
-    tester = fault.Tester(myinv)
-
-    tester.poke(myinv.in_, 1)
-    tester.eval()
-    tester.expect(myinv.out, 0)
-
-    tester.poke(myinv.in_, 0)
-    tester.eval()
-    tester.expect(myinv.out, 1)
+    mytb_fname = pathlib.Path('tests/verilog/mytb.sv').resolve()
+    tester = fault.Tester(m.DeclareCircuit('mytb'))
 
     # make some modifications to the environment
     sim_env = fault.util.remove_conda(os.environ)
@@ -43,7 +32,7 @@ def test_ext_vlog(target, simulator):
             target=target,
             simulator=simulator,
             directory=tmp_dir,
-            ext_libs=[myinv_fname],
+            ext_srcs=[mytb_fname],
             sim_env=sim_env,
-            ext_model_file=True
+            ext_test_bench=True
         )

@@ -1,7 +1,8 @@
 import fault
 import magma
 from hwtypes import BitVector, Bit
-from fault.value import AnyValue, UnknownValue
+from fault.value import AnyValue, UnknownValue, HiZ
+from fault.real_type import RealType, RealKind
 from fault.array import Array
 from fault.select_path import SelectPath
 from hwtypes.adt import Enum
@@ -13,6 +14,8 @@ def make_value(port, value):
         switch = switch[-1]
     if isinstance(switch, fault.WrappedVerilogInternalPort):
         switch = switch.type_
+    if isinstance(switch, (RealType, RealKind)):
+        return make_real(value)
     if isinstance(switch, (magma._BitType, magma._BitKind)):
         return make_bit(value)
     if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):
@@ -22,13 +25,17 @@ def make_value(port, value):
     raise NotImplementedError(switch, value)
 
 
+def make_real(value):
+    return value
+
+
 def make_bit(value):
     # TODO(rsetaluri): Use bit_vector.Bit when implemented.
     if isinstance(value, BitVector) and len(value) == 1:
         return value
     if value == 0 or value == 1:
         return BitVector[1](value)
-    if value is AnyValue or value is UnknownValue:
+    if value is AnyValue or value is UnknownValue or value is HiZ:
         return value
     raise NotImplementedError(value)
 
@@ -54,7 +61,7 @@ def make_bit_vector(N, value):
         return BitVector[N](value)
     if isinstance(value, int):
         return BitVector[N](value)
-    if value is AnyValue or value is UnknownValue:
+    if value is AnyValue or value is UnknownValue or value is HiZ:
         return value
     if isinstance(value, Enum):
         return BitVector[N](value.value)

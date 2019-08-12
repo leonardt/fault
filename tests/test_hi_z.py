@@ -5,6 +5,7 @@ import magma as m
 import os
 import shutil
 import mantle
+from fault import HiZ
 
 
 def pytest_generate_tests(metafunc):
@@ -19,19 +20,31 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('target,simulator', targets)
 
 
-def test_ext_vlog(target, simulator):
-    myinv_fname = pathlib.Path('tests/verilog/myinv.v').resolve()
-    myinv = m.DeclareCircuit('myinv', 'in_', m.In(m.Bit), 'out', m.Out(m.Bit))
+def test_hi_z(target, simulator):
+    # declare an external circuit that shorts together its two outputs
+    hizmod_fname = pathlib.Path('tests/verilog/hizmod.v').resolve()
+    hizmod = m.DeclareCircuit('hizmod',
+                              'a', m.In(m.Bit),
+                              'b', m.In(m.Bit),
+                              'c', m.Out(m.Bit))
 
-    tester = fault.Tester(myinv)
+    # instantiate the tester
+    tester = fault.Tester(hizmod)
 
-    tester.poke(myinv.in_, 1)
-    tester.eval()
-    tester.expect(myinv.out, 0)
+    # define common pattern for running all cases
+    def run_case(a, b, c):
+        tester.poke(hizmod.a, a)
+        tester.poke(hizmod.b, b)
+        tester.eval()
+        tester.expect(hizmod.c, c, strict=True)
 
-    tester.poke(myinv.in_, 0)
-    tester.eval()
-    tester.expect(myinv.out, 1)
+    # walk through all of the cases that produce a 0 or 1 output
+    run_case(1, 1, 1)
+    run_case(0, 0, 0)
+    run_case(1, HiZ, 1)
+    run_case(0, HiZ, 0)
+    run_case(HiZ, 1, 1)
+    run_case(HiZ, 0, 0)
 
     # make some modifications to the environment
     sim_env = fault.util.remove_conda(os.environ)
@@ -43,7 +56,7 @@ def test_ext_vlog(target, simulator):
             target=target,
             simulator=simulator,
             directory=tmp_dir,
-            ext_libs=[myinv_fname],
+            ext_libs=[hizmod_fname],
             sim_env=sim_env,
             ext_model_file=True
         )

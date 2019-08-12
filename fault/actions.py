@@ -67,6 +67,15 @@ class Print(Action):
         return cls(self.format_str, *new_ports)
 
 
+def is_inout(port):
+    if isinstance(port, SelectPath):
+        port = port[-1]
+    if isinstance(port, fault.WrappedVerilogInternalPort):
+        return port.type_.isinout()
+    else:
+        return port.isinout()
+
+
 def is_output(port):
     if isinstance(port, SelectPath):
         port = port[-1]
@@ -77,8 +86,31 @@ def is_output(port):
 
 
 class Expect(PortAction):
-    def __init__(self, port, value):
+    def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
+                 above=None, below=None):
+        # call super constructor
         super().__init__(port, value)
+
+        # compute bounds if applicable
+        if abs_tol is not None or rel_tol is not None:
+            # sanity check
+            if above is not None or below is not None:
+                raise Exception('Cannot provide both abs_tol/rel_tol and above/below.')  # noqa
+
+            # default settings
+            rel_tol = rel_tol if rel_tol is not None else 0
+            abs_tol = abs_tol if abs_tol is not None else 0
+
+            # sanity check
+            assert rel_tol >= 0 and abs_tol >= 0, 'rel_tol and abs_tol must be non-negative.'  # noqa
+
+            above = value - rel_tol * value - abs_tol
+            below = value + rel_tol * value + abs_tol
+
+        # save settings
+        self.strict = strict
+        self.above = above
+        self.below = below
 
 
 class Assume(PortAction):
