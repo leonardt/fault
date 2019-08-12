@@ -6,11 +6,12 @@ module mysram(
 
     // internal capacitive nodes
     reg lbl_x, lblb_x;
-    assign (weak1, weak0) lbl = wl ? lbl_x : 1'bz;
-    assign (weak1, weak0) lblb = wl ? lblb_x : 1'bz;
+    bufif1 (weak1, weak0) ba (lbl, lbl_x, wl);
+    bufif1 (weak1, weak0) bb (lblb, lblb_x, wl);
 
     // writing internal nodes
     always @(wl or lbl or lblb) begin
+        #0;
         if (wl == 1'b1) begin
             lbl_x = lbl;
             lblb_x = lblb;
