@@ -19,7 +19,9 @@ src_tpl = """\
 module {circuit_name}_tb;
 {declarations}
 
-    {circuit_name} dut (
+    {circuit_name} #(
+        {param_list}
+    ) dut (
         {port_list}
     );
 
@@ -41,7 +43,7 @@ class SystemVerilogTarget(VerilogTarget):
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
-                 use_input_wires=False):
+                 use_input_wires=False, parameters=None):
         """
         circuit: a magma circuit
 
@@ -106,6 +108,8 @@ class SystemVerilogTarget(VerilogTarget):
 
         use_input_wires: If True, drive DUT inputs through wires that are in
                          turn assigned to a reg.
+
+        parameters: Dictionary of parameters to be defined for the DUT.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -160,6 +164,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.ext_test_bench = ext_test_bench
         self.top_module = top_module
         self.use_input_wires = use_input_wires
+        self.parameters = parameters if parameters is not None else {}
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -483,7 +488,7 @@ end
             # is connected to the DUT
             return [f".{name}({connect_to})"]
 
-    def generate_code(self, actions, power_args):
+    def generate_code(self, actions, power_args, tab='    '):
         initial_body = ""
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
@@ -495,11 +500,15 @@ end
             for line in code:
                 initial_body += f"        {line}\n"
 
+        param_list = [f'.{name}({value})'
+                      for name, value in self.parameters.items()]
+
         src = src_tpl.format(
             declarations="\n".join(self.declarations),
             initial_body=initial_body,
-            port_list=",\n        ".join(port_list),
-            circuit_name=self.circuit_name,
+            port_list=f',\n{2*tab}'.join(port_list),
+            param_list=f',\n{2*tab}'.join(param_list),
+            circuit_name=self.circuit_name
         )
 
         return src
