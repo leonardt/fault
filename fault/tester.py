@@ -8,6 +8,7 @@ from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.verilogams_target import VerilogAMSTarget
+from fault.spice_target import SpiceTarget
 from fault.actions import Poke, Expect, Step, Print, Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
@@ -92,6 +93,8 @@ class Tester:
             return SystemVerilogTarget(self._circuit, **kwargs)
         elif target == "verilog-ams":
             return VerilogAMSTarget(self._circuit, **kwargs)
+        elif target == "spice":
+            return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
@@ -136,6 +139,12 @@ class Tester:
         Evaluate the DUT given the current input port values
         """
         self.actions.append(actions.Eval())
+
+    def delay(self, time):
+        """
+        Wait the specified amount of time before proceeding
+        """
+        self.actions.append(actions.Delay(time=time))
 
     def step(self, steps=1):
         """
@@ -200,16 +209,19 @@ class Tester:
         Run the current action sequence using the specified `target`.  The user
         should call `compile` with `target` before calling `run`.
         """
+        # Try to get the target
         try:
-            logging.info("Running tester...")
-            if target == "verilator":
-                self.targets[target].run(self.actions, self.verilator_includes)
-            else:
-                self.targets[target].run(self.actions)
-            logging.info("Success!")
-        except KeyError:
-            raise Exception(f"Could not find target={target}, did you compile"
-                            " it first?")
+            target_obj = self.targets[target]
+        except:
+            raise Exception(f"Could not find target={target}, did you compile it first?")  # noqa
+
+        # Run the target, possibly passing in some custom arguments
+        logging.info("Running tester...")
+        if target == "verilator":
+            target_obj.run(self.actions, self.verilator_includes)
+        else:
+            target_obj.run(self.actions)
+        logging.info("Success!")
 
     def _compile_and_run(self, target="verilator", **kwargs):
         """

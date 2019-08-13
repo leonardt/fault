@@ -154,6 +154,18 @@ class Eval(Action):
         return Eval()
 
 
+class Delay(Action):
+    def __init__(self, time):
+        super().__init__()
+        self.time = time
+
+    def __str__(self):
+        return f'Delay({self.time})'
+
+    def retarget(self, new_circuit, clock):
+        return Delay(time=self.time)
+
+
 class Step(Action):
     def __init__(self, clock, steps):
         super().__init__()

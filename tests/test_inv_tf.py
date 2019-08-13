@@ -4,14 +4,14 @@ from pathlib import Path
 
 
 def pytest_generate_tests(metafunc):
-    fault.pytest_sim_params(metafunc, 'verilog-ams')
+    fault.pytest_sim_params(metafunc, 'verilog-ams', 'spice')
 
 
 def test_inv_tf(
     target, simulator, n_steps=100, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     vol_rel=0.1, voh_rel=0.9
 ):
-    # declare circuit and wrap
+    # declare circuit
     myinv = m.DeclareCircuit(
         'myinv',
         'in_', fault.RealIn,
@@ -19,7 +19,12 @@ def test_inv_tf(
         'vdd', fault.RealIn,
         'vss', fault.RealIn
     )
-    dut = fault.VAMSWrap(myinv)
+
+    # wrap if needed
+    if target == 'verilog-ams':
+        dut = fault.VAMSWrap(myinv)
+    else:
+        dut = myinv
 
     # define the test
     tester = fault.Tester(dut)
@@ -33,13 +38,15 @@ def test_inv_tf(
         elif in_ >= vih_rel * vsup:
             tester.expect(dut.out, 0, below=vol_rel * vsup)
 
-    # run the simulation
-    myinv_fname = Path('tests/spice/myinv.sp').resolve()
-    tester.compile_and_run(
+    # set options
+    kwargs = dict(
         target=target,
         simulator=simulator,
-        model_paths=[myinv_fname],
-        use_spice=['myinv'],
-        vsup=vsup,
-        tmp_dir=True
+        model_paths=[Path('tests/spice/myinv.sp').resolve()],
+        vsup=vsup
     )
+    if target == 'verilog-ams':
+        kwargs['use_spice'] = ['myinv']
+
+    # run the simulation
+    tester.compile_and_run(**kwargs)

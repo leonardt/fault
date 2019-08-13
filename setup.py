@@ -26,7 +26,9 @@ setup(
         "z3-solver",
         "hwtypes==1.*",
         "magma-lang",
-        "pyyaml"
+        "pyyaml",
+        "scipy",
+        "numpy"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',
