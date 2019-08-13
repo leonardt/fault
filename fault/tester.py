@@ -212,7 +212,7 @@ class Tester:
         # Try to get the target
         try:
             target_obj = self.targets[target]
-        except:
+        except KeyError:
             raise Exception(f"Could not find target={target}, did you compile it first?")  # noqa
 
         # Run the target, possibly passing in some custom arguments
