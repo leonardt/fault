@@ -13,6 +13,8 @@ src_tpl = """\
 
 {includes}
 
+.model inout_sw_mod sw vt=0.5 vh=0.2 ron={rout}
+
 Xdut {dut_io} {dut_name}
 {stimuli}
 
@@ -32,8 +34,8 @@ exit
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
-                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=1/3,
-                 vih_rel=2/3, flags=None):
+                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
+                 vih_rel=0.6, flags=None):
         """
         circuit: a magma circuit
 
@@ -122,11 +124,11 @@ class SpiceTarget(Target):
         # process results
         self.check_results(results=results, checks=checks)
 
-    def stim_to_pwl(self, stim, stop_time):
+    def stim_to_pwl(self, stim, stop_time, init_val=0):
         # add initial value if necessary
         if stim[0][0] != 0:
             stim = stim.copy()
-            stim.insert(0, (0, 0))
+            stim.insert(0, (0, init_val))
 
         # then create piecewise-constant waveform
         retval = [stim[0]]
@@ -154,14 +156,22 @@ class SpiceTarget(Target):
             if isinstance(action, fault.actions.Poke):
                 # add port to stimulus dictionary if needed
                 if action.port.name not in stim_dict:
-                    stim_dict[action.port.name] = []
+                    stim_dict[action.port.name] = ([], [])
                 # determine the stimulus value, performing a digital
-                # to analog conversion if needed
-                value = action.value
-                if isinstance(action.port, m.BitType):
-                    value = self.vsup if value else 0
+                # to analog conversion if needed and controlling
+                # the output switch as needed
+                if action.value is fault.HiZ:
+                    stim_v = 0
+                    stim_s = 0
+                elif isinstance(action.port, m.BitType):
+                    stim_v = self.vsup if action.value else 0
+                    stim_s = 1
+                else:
+                    stim_v = action.value
+                    stim_s = 1
                 # add the value to the list of actions
-                stim_dict[action.port.name].append((t, value))
+                stim_dict[action.port.name][0].append((t, stim_v))
+                stim_dict[action.port.name][1].append((t, stim_s))
                 # increment time
                 t += self.clock_step_delay * 1e-9
             elif isinstance(action, fault.actions.Expect):
@@ -172,11 +182,16 @@ class SpiceTarget(Target):
                 raise NotImplementedError(action)
 
         # refactor stimulus voltages to PWL
-        pwls = {name: self.stim_to_pwl(stim=stim, stop_time=t)
+        pwls = {name: (self.stim_to_pwl(stim=stim[0], stop_time=t),
+                       self.stim_to_pwl(stim=stim[1], stop_time=t, init_val=1))
                 for name, stim in stim_dict.items()}
 
         # return PWL waveforms, checks to be performed, and stop time
         return pwls, checks, t
+
+    @staticmethod
+    def pwl_str(pwl):
+        return ' '.join(f'{t} {v}' for t, v in pwl)
 
     def write_test_bench(self, pwls, stop_time, tb_file=None, nl='\n'):
         # determine files
@@ -189,10 +204,23 @@ class SpiceTarget(Target):
 
         # write stimuli lines
         stimuli = []
-        for k, (name, pwl) in enumerate(pwls.items()):
-            pwl_str = ' '.join(f'{t} {v}' for t, v in pwl)
-            dc_val = pwl[0][1]
-            stimuli.append(f'V{k} {name} 0 DC {dc_val} PWL({pwl_str})')
+        for k, (name, (pwl_v, pwl_s)) in enumerate(pwls.items()):
+            # instantiate switch between voltage source and DUT
+            vnet = f'__{name}_v'
+            snet = f'__{name}_s'
+            stimuli += [f'S{k} {vnet} {name} {snet} 0 inout_sw_mod ON']
+
+            # instantiate voltage source connected through switch
+            dc_v_val = pwl_v[0][1]
+            pwl_v_str = self.pwl_str(pwl_v)
+            stimuli.append(f'Vv{k} {vnet} 0 DC {dc_v_val} PWL({pwl_v_str})')
+
+            # instantiate voltage source controlling switch
+            dc_s_val = pwl_s[0][1]
+            pwl_s_str = self.pwl_str(pwl_s)
+            stimuli.append(f'Vs{k} {snet} 0 DC {dc_s_val} PWL({pwl_s_str})')
+
+        # add newlines between individual entries
         stimuli = nl.join(stimuli)
 
         # determine the step time
@@ -204,6 +232,7 @@ class SpiceTarget(Target):
             dut_io=dut_io,
             dut_name=dut_name,
             stimuli=stimuli,
+            rout=self.rout,
             t_step=f'{t_step}',
             stop_time=f'{stop_time}'
         )
@@ -225,9 +254,9 @@ class SpiceTarget(Target):
         # if necessary
         value = results[name](time)
         if isinstance(action.port, m.BitType):
-            if value <= self.vil_rel*self.vsup:
+            if value <= self.vil_rel * self.vsup:
                 value = 0
-            elif value >= self.vih_rel*self.vsup:
+            elif value >= self.vih_rel * self.vsup:
                 value = 1
             else:
                 raise Exception(f'Invalid logic level: {value}.')

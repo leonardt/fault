@@ -7,31 +7,24 @@ def pytest_generate_tests(metafunc):
     fault.pytest_sim_params(metafunc, 'system-verilog', 'verilog-ams', 'spice')
 
 
-def test_inv_logic(target, simulator):
+def test_inv(target, simulator):
     name = 'myinv'
     ports = ['in_', m.BitIn, 'out', m.BitOut]
     run_generic(name=name, ports=ports, tester_cls=fault.InvTester,
                 target=target, simulator=simulator)
 
 
-def test_buf_logic(target, simulator):
-    name = 'mybuf'
-    ports = ['in_', m.BitIn, 'out', m.BitOut]
-    run_generic(name=name, ports=ports, tester_cls=fault.BufTester,
-                target=target, simulator=simulator)
-
-
-def test_nand_logic(target, simulator):
+def test_nand(target, simulator):
     name = 'mynand'
     ports = ['a', m.BitIn, 'b', m.BitIn, 'out', m.BitOut]
     run_generic(name=name, ports=ports, tester_cls=fault.NandTester,
                 target=target, simulator=simulator)
 
 
-def test_nor_logic(target, simulator):
-    name = 'mynor'
-    ports = ['a', m.BitIn, 'b', m.BitIn, 'out', m.BitOut]
-    run_generic(name=name, ports=ports, tester_cls=fault.NorTester,
+def test_sram(target, simulator):
+    name = 'mysram'
+    ports = ['wl', m.BitIn, 'lbl', m.BitInOut, 'lblb', m.BitInOut]
+    run_generic(name=name, ports=ports, tester_cls=fault.SRAMTester,
                 target=target, simulator=simulator)
 
 
