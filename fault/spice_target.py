@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import subprocess
 import fault.actions
-from fault import value_utils
+import magma as m
 from fault.user_cfg import FaultConfig
 from fault.target import Target
 
@@ -32,7 +32,8 @@ exit
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
-                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, flags=None):
+                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=1/3,
+                 vih_rel=2/3, flags=None):
         """
         circuit: a magma circuit
 
@@ -60,6 +61,10 @@ class SpiceTarget(Target):
 
         t_tr: transition time for poke statements
 
+        vil_rel: Input "0" level, as a fraction of the supply.
+
+        vih_rel: Input "1" level, as a fraction of the supply.
+
         flags: List of additional arguments that should be passed to the
                simulator.
         """
@@ -84,6 +89,8 @@ class SpiceTarget(Target):
         self.t_step = t_step
         self.clock_step_delay = clock_step_delay
         self.t_tr = t_tr
+        self.vil_rel = vil_rel
+        self.vih_rel = vih_rel
         self.flags = flags if flags is not None else []
 
     def run(self, actions):
@@ -145,9 +152,17 @@ class SpiceTarget(Target):
         # loop over actions handling pokes, expects, and delays
         for action in actions:
             if isinstance(action, fault.actions.Poke):
+                # add port to stimulus dictionary if needed
                 if action.port.name not in stim_dict:
                     stim_dict[action.port.name] = []
-                stim_dict[action.port.name].append((t, action.value))
+                # determine the stimulus value, performing a digital
+                # to analog conversion if needed
+                value = action.value
+                if isinstance(action.port, m.BitType):
+                    value = self.vsup if value else 0
+                # add the value to the list of actions
+                stim_dict[action.port.name].append((t, value))
+                # increment time
                 t += self.clock_step_delay * 1e-9
             elif isinstance(action, fault.actions.Expect):
                 checks.append((t, action))
@@ -160,7 +175,7 @@ class SpiceTarget(Target):
         pwls = {name: self.stim_to_pwl(stim=stim, stop_time=t)
                 for name, stim in stim_dict.items()}
 
-        # return PWL waveforms for
+        # return PWL waveforms, checks to be performed, and stop time
         return pwls, checks, t
 
     def write_test_bench(self, pwls, stop_time, tb_file=None, nl='\n'):
@@ -205,7 +220,17 @@ class SpiceTarget(Target):
     def impl_expect(self, results, time, action):
         # get value
         name = f'{action.port.name}'.split('.')[-1]
+
+        # get value, performing analog to digital conversion
+        # if necessary
         value = results[name](time)
+        if isinstance(action.port, m.BitType):
+            if value <= self.vil_rel*self.vsup:
+                value = 0
+            elif value >= self.vih_rel*self.vsup:
+                value = 1
+            else:
+                raise Exception(f'Invalid logic level: {value}.')
 
         # implement the requested check
         if action.above is not None:
@@ -232,6 +257,7 @@ class SpiceTarget(Target):
         # build up the command
         cmd = []
         cmd += ['ngspice']
+        cmd += ['-b']
         cmd += [f'{tb_file}']
         cmd += ['-r', f'{raw_file}']
 

@@ -9,20 +9,20 @@ def pytest_generate_tests(metafunc):
 
 def test_ext_vlog(target, simulator):
     # declare circuit
-    mybuf = m.DeclareCircuit(
-        'mybuf',
+    mybuf_inc_test = m.DeclareCircuit(
+        'mybuf_inc_test',
         'in_', m.In(m.Bit),
         'out', m.Out(m.Bit)
     )
 
     # define the test
-    tester = fault.BufTester(mybuf)
+    tester = fault.BufTester(mybuf_inc_test)
 
     # run the test
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/mybuf.v').resolve()],
+        ext_libs=[Path('tests/verilog/mybuf_inc_test.v').resolve()],
         inc_dirs=[Path('tests/verilog').resolve()],
         ext_model_file=True,
         tmp_dir=True

@@ -41,22 +41,38 @@ class GenericCellTester(fault.Tester):
             self.define_trial()
 
 
-class UnaryOpTester(GenericCellTester):
-    def __init__(self, circuit, *args, in_='in_', out='out', **kwargs):
-        # build the pinmap
-        self.in_ = in_
+class SingleOutputTester(GenericCellTester):
+    def __init__(self, circuit, *args, inputs=None, out='out', **kwargs):
+        # save settings
+        self.inputs = inputs if inputs is not None else []
         self.out = out
 
         # call super constructor
         super().__init__(circuit, *args, **kwargs)
 
-    def model(self, in_):
+    def model(self, *args):
         raise NotImplementedError
 
     def define_trial(self):
-        d = fault.random_bit()
-        self.poke(self.in_, d)
-        self.expect(self.out, self.model(d), strict=True)
+        # poke random data
+        data = []
+        for input_ in self.inputs:
+            data += [fault.random_bit()]
+            self.poke(input_, data[-1])
+        # expect a value based on the model
+        self.expect(self.out, self.model(*data), strict=True)
+
+
+class UnaryOpTester(SingleOutputTester):
+    def __init__(self, *args, in_='in_', out='out', **kwargs):
+        inputs = [in_]
+        super().__init__(*args, inputs=inputs, out=out, **kwargs)
+
+
+class BinaryOpTester(SingleOutputTester):
+    def __init__(self, *args, a='a', b='b', out='out', **kwargs):
+        inputs = [a, b]
+        super().__init__(*args, inputs=inputs, out=out, **kwargs)
 
 
 class InvTester(UnaryOpTester):
@@ -67,6 +83,16 @@ class InvTester(UnaryOpTester):
 class BufTester(UnaryOpTester):
     def model(self, in_):
         return in_
+
+
+class NandTester(BinaryOpTester):
+    def model(self, a, b):
+        return not (a and b)
+
+
+class NorTester(BinaryOpTester):
+    def model(self, a, b):
+        return not (a or b)
 
 
 class SRAMTester(GenericCellTester):

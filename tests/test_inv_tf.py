@@ -43,7 +43,8 @@ def test_inv_tf(
         target=target,
         simulator=simulator,
         model_paths=[Path('tests/spice/myinv.sp').resolve()],
-        vsup=vsup
+        vsup=vsup,
+        tmp_dir=True
     )
     if target == 'verilog-ams':
         kwargs['use_spice'] = ['myinv']
