@@ -31,7 +31,7 @@ def check_spice_result(meas, expct):
 
 def test_spice_target_ngspice_parse():
     obj = SpiceTarget(None)
-    results = obj.get_ngspice_results(Path('tests/data/ngspice.raw').resolve())
+    results = obj.get_nutascii_results(Path('tests/data/ngspice.raw').resolve())
 
     check_spice_result(results['in_'], [(0, 2), (1, 2), (2.5, 3.5), (4, 5),
                                         (5.5, 6.5), (7, 8), (8, 8)])
