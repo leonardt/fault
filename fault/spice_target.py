@@ -347,25 +347,32 @@ exit
         values = []
         with open(raw_file, 'r') as f:
             for line in f:
-                if line.strip() == '':
+                # split line into tokens
+                tokens = line.strip().split()
+                if len(tokens) == 0:
                     continue
-                elif line.strip().lower().startswith('variable'):
-                    section = 'variables'
-                    continue
-                elif line.strip().lower().startswith('value'):
-                    section = 'values'
-                    continue
-                elif section == 'variables':
-                    tokens = line.strip().split()
+
+                # change section mode if needed
+                if tokens[0] == 'Values:':
+                    section = 'Values'
+                    tokens = tokens[1:]
+                elif tokens[0] == 'Variables:':
+                    section = 'Variables'
+                    tokens = tokens[1:]
+
+                # parse data in a section-dependent manner
+                if section == 'Variables' and len(tokens) >= 2:
+                    # sanity check
+                    assert int(tokens[0]) == len(variables), 'Out of sync while parsing variables.'
+                    # add variable
                     variables.append(tokens[1])
-                elif section == 'values':
-                    tokens = line.strip().split()
+                elif section == 'Values':
                     # start a new list if needed
                     for token in tokens:
                         # special handling for first entry
                         if not values or len(values[-1]) == len(variables):
                             # sanity check
-                            assert int(token) == len(values), 'Out of sync while parsing file.'
+                            assert int(token) == len(values), 'Out of sync while parsing values.'
                             # clear the value_start flag and start a new
                             # list of values
                             values.append([])
