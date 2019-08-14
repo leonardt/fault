@@ -42,7 +42,7 @@ class SpiceTarget(Target):
         directory: directory to use for generating collateral, buildling, and
                    running simulator
 
-        simulator: "ngspice"
+        simulator: "ngspice" or "spectre"
 
         stop_time: simulation time passed to the analog solver.  must be
                    longer than the mixed-signal simulation duration, or
@@ -74,7 +74,7 @@ class SpiceTarget(Target):
         super().__init__(circuit)
 
         # sanity check
-        if simulator not in {'ngspice'}:
+        if simulator not in {'ngspice', 'spectre'}:
             raise ValueError(f'Unsupported simulator {simulator}')
 
         # make directory if needed
