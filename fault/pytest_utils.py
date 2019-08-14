@@ -6,7 +6,7 @@ def pytest_sim_params(metafunc, *args):
     sims_by_arg = {'system-verilog': ['vcs', 'ncsim', 'iverilog'],
                    'verilog-ams': ['ncsim'],
                    'verilator': [None],
-                   'spice': ['ngspice']}
+                   'spice': ['ngspice', 'spectre']}
 
     # only parameterize if we can actually specify the target type
     # and simulator to use for this particular test
