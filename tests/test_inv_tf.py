@@ -1,10 +1,11 @@
 import magma as m
 import fault
 from pathlib import Path
+from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    fault.pytest_sim_params(metafunc, 'verilog-ams', 'spice')
+    pytest_sim_params(metafunc, 'verilog-ams', 'spice')
 
 
 def test_inv_tf(

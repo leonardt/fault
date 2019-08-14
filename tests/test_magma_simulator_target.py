@@ -1,8 +1,9 @@
 from hwtypes import BitVector
-import common
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv
+from .common import (TestBasicCircuit, TestNestedArraysCircuit,
+                     TestBasicClkCircuit, TestPeekCircuit)
 
 
 # NOTE(rsetaluri): The python simulator backend is not tested since it is not
@@ -22,7 +23,7 @@ def test_magma_simulator_target_basic(backend):
     """
     Test basic python simulator workflow with a simple circuit.
     """
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     actions = [
         Poke(circ.I, BitVector[1](0)),
         Expect(circ.O, BitVector[1](0)),
@@ -39,7 +40,7 @@ def test_magma_simulator_target_basic(backend):
 
 
 def test_magma_simulator_target_nested_arrays_by_element(backend):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     expected = [random_bv(4) for i in range(3)]
     actions = []
     for i, val in enumerate(expected):
@@ -51,7 +52,7 @@ def test_magma_simulator_target_nested_arrays_by_element(backend):
 
 
 def test_magma_simulator_target_nested_arrays_bulk(backend):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     expected = [random_bv(4) for i in range(3)]
     actions = []
     actions.append(Poke(circ.I, expected))
@@ -61,7 +62,7 @@ def test_magma_simulator_target_nested_arrays_bulk(backend):
 
 
 def test_magma_simulator_target_clock(backend, capfd):
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, BitVector[1](0)),
         Print("%d", circ.I),
@@ -83,7 +84,7 @@ def test_magma_simulator_target_clock(backend, capfd):
 
 
 def test_magma_simulator_target_peek(backend):
-    circ = common.TestPeekCircuit
+    circ = TestPeekCircuit
     actions = []
     for i in range(3):
         x = random_bv(3)

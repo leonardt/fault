@@ -3,17 +3,20 @@ import random
 from hwtypes import BitVector
 import hwtypes
 import fault
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import fault.actions as actions
-import common
 import tempfile
 import os
-import shutil
 import pytest
+from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
+                     TestBasicClkCircuit, TestNestedArraysCircuit,
+                     TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
+                     TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
+                     TestSIntCircuit)
 
 
 def pytest_generate_tests(metafunc):
-    fault.pytest_sim_params(metafunc, 'verilator', 'system-verilog')
+    pytest_sim_params(metafunc, 'verilator', 'system-verilog')
 
 
 def check(got, expected):
@@ -34,7 +37,7 @@ def check(got, expected):
 
 
 def test_tester_basic(target, simulator):
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     check(tester.actions[0], Poke(circ.I, 0))
@@ -62,7 +65,7 @@ def test_tester_basic(target, simulator):
 
 @pytest.mark.xfail(strict=True)
 def test_tester_basic_fail(target, simulator):
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
@@ -76,7 +79,7 @@ def test_tester_basic_fail(target, simulator):
 
 
 def test_tester_clock(target, simulator):
-    circ = common.TestPeekCircuit
+    circ = TestPeekCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, 0)
     tester.expect(circ.O0, tester.peek(circ.O1))
@@ -90,7 +93,7 @@ def test_tester_clock(target, simulator):
 
 
 def test_tester_peek(target, simulator):
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
@@ -108,7 +111,7 @@ def test_tester_peek(target, simulator):
 
 
 def test_tester_peek_input(target, simulator):
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, 1)
     tester.eval()
@@ -124,7 +127,7 @@ def test_tester_peek_input(target, simulator):
 
 
 def test_tester_nested_arrays_by_element(target, simulator):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     tester = fault.Tester(circ)
     expected = []
     for i in range(3):
@@ -145,7 +148,7 @@ def test_tester_nested_arrays_by_element(target, simulator):
 
 
 def test_tester_nested_arrays_bulk(target, simulator):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     tester = fault.Tester(circ)
     expected = []
     val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
@@ -165,7 +168,7 @@ def test_tester_nested_arrays_bulk(target, simulator):
 
 
 def test_retarget_tester(target, simulator):
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     expected = [
         Poke(circ.I, 0),
         Eval(),
@@ -184,7 +187,7 @@ def test_retarget_tester(target, simulator):
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
 
-    circ_copy = common.TestBasicClkCircuitCopy
+    circ_copy = TestBasicClkCircuitCopy
     copy = tester.retarget(circ_copy, circ_copy.CLK)
     copy_expected = [
         Poke(circ_copy.I, 0),
@@ -205,7 +208,7 @@ def test_retarget_tester(target, simulator):
 
 def test_run_error():
     try:
-        circ = common.TestBasicCircuit
+        circ = TestBasicCircuit
         fault.Tester(circ).run("bad_target")
         assert False, "Should raise an exception"
     except Exception as e:
@@ -213,7 +216,7 @@ def test_run_error():
 
 
 def test_print_tester(capsys):
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
     tester.eval()
@@ -235,7 +238,7 @@ Actions:
 
 
 def test_print_arrays(capsys):
-    circ = common.TestDoubleNestedArraysCircuit
+    circ = TestDoubleNestedArraysCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, [[0, 1, 2], [3, 4, 5]])
     tester.eval()
@@ -312,7 +315,7 @@ def test_tester_verilog_wrapped(target, simulator):
 
 
 def test_tester_loop(target, simulator):
-    circ = common.TestArrayCircuit
+    circ = TestArrayCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     loop = tester.loop(7)
@@ -333,7 +336,7 @@ def test_tester_loop(target, simulator):
 
 
 def test_tester_file_io(target, simulator):
-    circ = common.TestByteCircuit
+    circ = TestByteCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     file_in = tester.file_open("test_file_in.raw", "r")
@@ -362,7 +365,7 @@ def test_tester_file_io(target, simulator):
 
 
 def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
-    circ = common.TestUInt32Circuit
+    circ = TestUInt32Circuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4,
@@ -394,7 +397,7 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
 
 
 def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
-    circ = common.TestUInt32Circuit
+    circ = TestUInt32Circuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4)
@@ -425,7 +428,7 @@ def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
 
 
 def test_tester_while(target, simulator):
-    circ = common.TestArrayCircuit
+    circ = TestArrayCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 0)
@@ -441,7 +444,7 @@ def test_tester_while(target, simulator):
 
 
 def test_tester_while2(target, simulator):
-    circ = common.TestArrayCircuit
+    circ = TestArrayCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
@@ -458,7 +461,7 @@ def test_tester_while2(target, simulator):
 
 
 def test_tester_while3(target, simulator):
-    circ = common.TestArrayCircuit
+    circ = TestArrayCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
@@ -475,7 +478,7 @@ def test_tester_while3(target, simulator):
 
 
 def test_tester_if(target, simulator):
-    circ = common.TestArrayCircuit
+    circ = TestArrayCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 0)
@@ -497,7 +500,7 @@ def test_tester_if(target, simulator):
 def test_tester_file_scanf(target, simulator):
     if simulator == "iverilog":
         pytest.skip("iverilog does not support scanf")
-    circ = common.TestUInt32Circuit
+    circ = TestUInt32Circuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     file_in = tester.file_open("test_file_in.txt", "r")
@@ -522,7 +525,7 @@ def test_tester_file_scanf(target, simulator):
 
 
 def test_sint_circuit(target, simulator):
-    circ = common.TestSIntCircuit
+    circ = TestSIntCircuit
     tester = fault.Tester(circ)
 
     inputs = [hwtypes.SIntVector.random(4) for _ in range(10)]

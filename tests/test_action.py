@@ -1,13 +1,12 @@
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
 from fault import Tester
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek, FileOpen, \
     FileRead, FileWrite, FileClose, Loop
 from fault.file import File
-import common
+from .common import TestBasicClkCircuit
 
 
 def test_action_strs():
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     assert str(Poke(circ.I, 1)) == 'Poke(BasicClkCircuit.I, 1)'
     assert str(Expect(circ.O, 1)) == 'Expect(BasicClkCircuit.O, 1)'
     assert str(Eval()) == 'Eval()'

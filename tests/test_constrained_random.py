@@ -1,4 +1,3 @@
-import pytest
 import random
 from fault.random import ConstrainedRandomGenerator
 

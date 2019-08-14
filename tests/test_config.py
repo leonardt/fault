@@ -1,7 +1,7 @@
 import fault
-import common
 import os
 import fault.config
+from .common import TestTupleCircuit
 
 
 def test_config_test_dir():
@@ -11,7 +11,7 @@ def test_config_test_dir():
     if os.path.isfile(harness_file):
         os.remove(harness_file)
     fault.config.set_test_dir('callee_file_dir')
-    circ = common.TestTupleCircuit
+    circ = TestTupleCircuit
     tester = fault.Tester(circ)
     tester.circuit.I.a = 5
     tester.circuit.I.b = 11

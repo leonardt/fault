@@ -1,10 +1,10 @@
-import common
 import tempfile
 from fault import SymbolicTester
 from hwtypes import BitVector
 from pysmt.shortcuts import Solver
 from pysmt.exceptions import NoSolverAvailableError
 import pytest
+from .common import SimpleALU
 
 
 def pytest_generate_tests(metafunc):
@@ -21,7 +21,7 @@ def test_tester_magma_internal_signals_verilator(target, solver):
                 pass
         except NoSolverAvailableError:
             pytest.skip(f"{solver} not available")
-    circ = common.SimpleALU
+    circ = SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
     tester.circuit.config_en = 1

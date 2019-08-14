@@ -363,7 +363,7 @@ exit
                 # parse data in a section-dependent manner
                 if section == 'Variables' and len(tokens) >= 2:
                     # sanity check
-                    assert int(tokens[0]) == len(variables), 'Out of sync while parsing variables.'
+                    assert int(tokens[0]) == len(variables), 'Out of sync while parsing variables.'  # noqa
                     # add variable
                     variables.append(tokens[1])
                 elif section == 'Values':
@@ -372,7 +372,7 @@ exit
                         # special handling for first entry
                         if not values or len(values[-1]) == len(variables):
                             # sanity check
-                            assert int(token) == len(values), 'Out of sync while parsing values.'
+                            assert int(token) == len(values), 'Out of sync while parsing values.'  # noqa
                             # clear the value_start flag and start a new
                             # list of values
                             values.append([])
@@ -381,7 +381,7 @@ exit
                             values[-1].append(float(token))
         # sanity check
         if len(values) > 0:
-            assert len(values[-1]) == len(variables), 'Missing values at end of file.'
+            assert len(values[-1]) == len(variables), 'Missing values at end of file.'  # noqa
 
         # get vector of time values
         time_vec = np.array([value[variables.index('time')]

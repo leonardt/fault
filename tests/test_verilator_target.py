@@ -2,18 +2,14 @@ import tempfile
 import magma as m
 import fault
 from hwtypes import BitVector
-import common
-import random
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.tester import Tester
-from fault.random import random_bv
-import copy
 import os.path
-import pytest
+from .common import TestBasicCircuit, TestBasicClkCircuit
 
 
 def test_verilator_peeks():
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     actions = [
         Poke(circ.I, 1),
         Expect(circ.O, Peek(circ.O))
@@ -28,7 +24,7 @@ def test_verilator_peeks():
 
 
 def test_verilator_skip_build():
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     flags = ["-Wno-lint"]
     tester = Tester(circ)
     with tempfile.TemporaryDirectory(dir=".") as tempdir:
@@ -49,7 +45,7 @@ def test_verilator_skip_build():
 
 
 def test_verilator_trace():
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
         Print("%x", circ.I),

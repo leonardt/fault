@@ -1,10 +1,11 @@
 import fault
 import magma as m
 from pathlib import Path
+from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    fault.pytest_sim_params(metafunc, 'system-verilog')
+    pytest_sim_params(metafunc, 'system-verilog')
 
 
 def test_def_vlog(target, simulator, n_bits=8, b_val=42):

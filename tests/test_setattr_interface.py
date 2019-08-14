@@ -1,10 +1,12 @@
-import common
 import tempfile
 import fault
 from fault import Tester
 import shutil
 import random
 import pytest
+from .common import (SimpleALU, TestNestedArraysCircuit,
+                     TestDoubleNestedArraysCircuit, TestTupleCircuit,
+                     AndCircuit)
 
 
 def pytest_generate_tests(metafunc):
@@ -33,7 +35,7 @@ def run_test(target, simulator, tester):
 
 
 def test_tester_magma_internal_signals(target, simulator):
-    circ = common.SimpleALU
+    circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
@@ -48,7 +50,7 @@ def test_tester_magma_internal_signals(target, simulator):
 
 
 def test_tester_poke_internal_register(target, simulator):
-    circ = common.SimpleALU
+    circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
@@ -62,7 +64,7 @@ def test_tester_poke_internal_register(target, simulator):
 
 
 def test_setattr_nested_arrays_by_element(target, simulator):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     tester = Tester(circ)
     expected = []
     for i in range(3):
@@ -74,7 +76,7 @@ def test_setattr_nested_arrays_by_element(target, simulator):
 
 
 def test_setattr_nested_arrays_bulk(target, simulator):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     tester = Tester(circ)
     expected = []
     val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
@@ -85,7 +87,7 @@ def test_setattr_nested_arrays_bulk(target, simulator):
 
 
 def test_setattr_double_nested_arrays_by_element(target, simulator):
-    circ = common.TestDoubleNestedArraysCircuit
+    circ = TestDoubleNestedArraysCircuit
     tester = Tester(circ)
     expected = []
     for j in range(2):
@@ -98,7 +100,7 @@ def test_setattr_double_nested_arrays_by_element(target, simulator):
 
 
 def test_setattr_double_nested_arrays_bulk(target, simulator):
-    circ = common.TestDoubleNestedArraysCircuit
+    circ = TestDoubleNestedArraysCircuit
     tester = Tester(circ)
     expected = []
     val = [random.randint(0, (1 << 4) - 1) for _ in range(3) for _ in range(2)]
@@ -109,7 +111,7 @@ def test_setattr_double_nested_arrays_bulk(target, simulator):
 
 
 def test_setattr_tuple(target, simulator):
-    circ = common.TestTupleCircuit
+    circ = TestTupleCircuit
     tester = Tester(circ)
     tester.circuit.I.a = 5
     tester.circuit.I.b = 11
@@ -122,7 +124,7 @@ def test_setattr_tuple(target, simulator):
 def test_setattr_x(target, simulator):
     if target == "verilator":
         pytest.skip("X not support with Verilator")
-    circ = common.AndCircuit
+    circ = AndCircuit
     tester = Tester(circ)
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1

@@ -1,14 +1,15 @@
 import random
 from hwtypes import BitVector
 import fault
-import common
 from fault.actions import Poke, Expect, Eval, Step, Print
 from fault.array import Array
 from fault.vector_builder import VectorBuilder
+from .common import (TestBasicCircuit, TestBasicClkCircuit,
+                     TestNestedArraysCircuit)
 
 
 def test_tester_basic():
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     builder = VectorBuilder(circ)
     builder.process(Poke(circ.I, BitVector[1](0)))
     builder.process(Expect(circ.O, BitVector[1](0)))
@@ -19,7 +20,7 @@ def test_tester_basic():
 
 
 def test_tester_clock():
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     builder = VectorBuilder(circ)
     builder.process(Poke(circ.I, BitVector[1](0)))
     builder.process(Print("%x", circ.O))
@@ -39,7 +40,7 @@ def test_tester_clock():
 
 
 def test_tester_nested_arrays():
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     builder = VectorBuilder(circ)
     expected = []
     for i in range(3):
