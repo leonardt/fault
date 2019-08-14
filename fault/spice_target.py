@@ -38,7 +38,7 @@ class SpiceTarget(Target):
         directory: directory to use for generating collateral, buildling, and
                    running simulator
 
-        simulator: "ngspice" or "spectre"
+        simulator: "ngspice" or "spectre" or "hspice"
 
         stop_time: simulation time passed to the analog solver.  must be
                    longer than the mixed-signal simulation duration, or
@@ -72,7 +72,7 @@ class SpiceTarget(Target):
         super().__init__(circuit)
 
         # sanity check
-        if simulator not in {'ngspice', 'spectre'}:
+        if simulator not in {'ngspice', 'spectre', 'hspice'}:
             raise ValueError(f'Unsupported simulator {simulator}')
 
         # make directory if needed
@@ -103,23 +103,24 @@ class SpiceTarget(Target):
 
         # generate simulator commands
         if self.simulator == 'ngspice':
-            sim_cmd, raw_file = self.ngspice_cmd(tb_file)
-            err_str = None
+            sim_cmds, raw_file = self.ngspice_cmds(tb_file)
         elif self.simulator == 'spectre':
-            sim_cmd, raw_file = self.spectre_cmd(tb_file)
-            err_str = None
+            sim_cmds, raw_file = self.spectre_cmds(tb_file)
+        elif self.simulator == 'hspice':
+            sim_cmds, raw_file = self.hspice_cmds(tb_file)
         else:
             raise NotImplementedError(self.simulator)
 
-        # run the simulation
-        sim_res = self.subprocess_run(sim_cmd + self.flags)
-        assert not sim_res.returncode, f'Error running simulator: {self.simulator}'  # noqa
-        if err_str is not None:
-            assert err_str not in str(sim_res.stdout), f'"{err_str}" found in stdout of {self.simulator}'  # noqa
+        # run the simulation commands
+        for sim_cmd in sim_cmds:
+            res = self.subprocess_run(sim_cmd)
+            assert not res.returncode, f'Error running simulator: {self.simulator}'  # noqa
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
             results = self.get_nutascii_results(raw_file)
+        elif self.simulator in {'hspice'}:
+            results = self.get_psf_results(raw_file)
         else:
             raise NotImplementedError(self.simulator)
 
@@ -228,13 +229,23 @@ class SpiceTarget(Target):
         # determine the step time
         t_step = self.t_step if self.t_step is not None else stop_time / 1000
 
-        # simulator-specific statments
+        # generate switch model
         if self.simulator == 'ngspice':
             sw_subckt = f'''\
 .model __inout_sw_mod sw vt=0.5 vh=0.2 ron={self.rout} roff={self.rz}
 .subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
     Sm sw_p sw_n ctl_p ctl_n __inout_sw_mod ON
 .ends'''
+        elif self.simulator in {'spectre', 'hspice'}:
+            sw_subckt = f'''\
+.subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
+    Gs sw_p sw_n VCR PWL(1) ctl_p ctl_n 0v,{self.rz} 1v,{self.rout}
+.ends'''
+        else:
+            raise Exception(f'Unknown simulator: {self.simulator}')
+
+        # generate control statement
+        if self.simulator == 'ngspice':
             control_stmnt = '''\
 .control
 run
@@ -242,11 +253,9 @@ set filetype=ascii
 write
 exit
 .endc'''
+        elif self.simulator == 'hspice':
+            control_stmnt = '.options post'
         elif self.simulator == 'spectre':
-            sw_subckt = f'''\
-.subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
-    Gs sw_p sw_n VCR PWL(1) ctl_p ctl_n 0v,{self.rz} 1v,{self.rout}
-.ends'''
             control_stmnt = ''
         else:
             raise Exception(f'Unknown simulator: {self.simulator}')
@@ -304,37 +313,53 @@ exit
         for check in checks:
             self.impl_expect(results=results, time=check[0], action=check[1])
 
-    def ngspice_cmd(self, tb_file, raw_file=None):
-        # set defaults
-        raw_file = (raw_file if raw_file is not None
-                    else Path(self.directory) / 'out.raw')
-        raw_file = Path(raw_file).absolute()
-
+    def ngspice_cmds(self, tb_file):
         # build up the command
         cmd = []
         cmd += ['ngspice']
         cmd += ['-b']
         cmd += [f'{tb_file}']
+        raw_file = (Path(self.directory) / 'out.raw').absolute()
         cmd += ['-r', f'{raw_file}']
+        cmd += self.flags
 
         # return command and corresponding raw file
-        return cmd, raw_file
+        return [cmd], raw_file
 
-    def spectre_cmd(self, tb_file, raw_file=None):
-        # set defaults
-        raw_file = (raw_file if raw_file is not None
-                    else Path(self.directory) / 'out.raw')
-        raw_file = Path(raw_file).absolute()
-
+    def spectre_cmds(self, tb_file):
         # build up the command
         cmd = []
         cmd += ['spectre']
         cmd += [f'{tb_file}']
         cmd += ['-format', 'nutascii']
+        raw_file = (Path(self.directory) / 'out.raw').absolute()
         cmd += ['-raw', f'{raw_file}']
+        cmd += self.flags
 
         # return command and corresponding raw file
-        return cmd, raw_file
+        return [cmd], raw_file
+
+    def hspice_cmds(self, tb_file):
+        # build up the simulation command
+        sim_cmd = []
+        sim_cmd += ['hspice']
+        sim_cmd += ['-i', f'{tb_file}']
+        out_file = (Path(self.directory) / 'out.raw').absolute()
+        sim_cmd += ['-o', f'{out_file}']
+        sim_cmd += self.flags
+
+        # build up the conversion command
+        conv_cmd = []
+        conv_cmd += ['converter']
+        conv_cmd += ['-t', 'PSF']
+        tr0_file = out_file.with_suffix(out_file.suffix + '.tr0')
+        conv_cmd += ['-i', f'{tr0_file}']
+        psf_file = (Path(self.directory) / 'out.psf').absolute()
+        conv_cmd += ['-o', f'{psf_file.with_suffix("")}']
+        conv_cmd += ['-a']
+
+        # return command and corresponding raw file
+        return [sim_cmd, conv_cmd], psf_file
 
     def get_nutascii_results(self, raw_file):
         # import dependencies (hidden here to avoid making numpy/scipy
@@ -443,7 +468,9 @@ exit
                         variables.append(tokens[0])
                 elif section == 'VALUE':
                     for token in tokens:
-                        if token == 'TIME':
+                        if token == 'END':
+                            break
+                        elif token == 'TIME':
                             read_mode = 'TIME'
                         elif token == 'group':
                             read_mode = 'group'
