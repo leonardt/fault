@@ -319,11 +319,20 @@ class SpiceTarget(Target):
                 elif section == 'values':
                     tokens = line.strip().split()
                     # start a new list if needed
-                    if len(tokens) == 2:
-                        values.append([])
-                        tokens = tokens[1:]
-                    # add the current data point
-                    values[-1].append(float(tokens[0]))
+                    for token in tokens:
+                        # special handling for first entry
+                        if not values or len(values[-1]) == len(variables):
+                            # sanity check
+                            assert int(token) == len(values), 'Out of sync while parsing file.'
+                            # clear the value_start flag and start a new
+                            # list of values
+                            values.append([])
+                            continue
+                        else:
+                            values[-1].append(float(token))
+        # sanity check
+        if len(values) > 0:
+            assert len(values[-1]) == len(variables), 'Missing values at end of file.'
 
         # get vector of time values
         time_vec = np.array([value[variables.index('time')]
