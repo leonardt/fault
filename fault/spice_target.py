@@ -13,19 +13,14 @@ src_tpl = """\
 
 {includes}
 
-.model inout_sw_mod sw vt=0.5 vh=0.2 ron={rout}
+{sw_subckt}
 
 Xdut {dut_io} {dut_name}
 {stimuli}
 
 .tran {t_step} {stop_time}
 
-.control
-run
-set filetype=ascii
-write
-exit
-.endc
+{control_stmnt}
 
 .end
 """
@@ -35,14 +30,14 @@ class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
-                 vih_rel=0.6, flags=None):
+                 vih_rel=0.6, rz=1e9, flags=None):
         """
         circuit: a magma circuit
 
         directory: directory to use for generating collateral, buildling, and
                    running simulator
 
-        simulator: "ngspice"
+        simulator: "ngspice" or "spectre"
 
         stop_time: simulation time passed to the analog solver.  must be
                    longer than the mixed-signal simulation duration, or
@@ -67,6 +62,8 @@ class SpiceTarget(Target):
 
         vih_rel: Input "1" level, as a fraction of the supply.
 
+        rz: resistance of voltage stimulus when set to fault.HiZ
+
         flags: List of additional arguments that should be passed to the
                simulator.
         """
@@ -74,7 +71,7 @@ class SpiceTarget(Target):
         super().__init__(circuit)
 
         # sanity check
-        if simulator not in {'ngspice'}:
+        if simulator not in {'ngspice', 'spectre'}:
             raise ValueError(f'Unsupported simulator {simulator}')
 
         # make directory if needed
@@ -93,6 +90,7 @@ class SpiceTarget(Target):
         self.t_tr = t_tr
         self.vil_rel = vil_rel
         self.vih_rel = vih_rel
+        self.rz = rz
         self.flags = flags if flags is not None else []
 
     def run(self, actions):
@@ -106,6 +104,9 @@ class SpiceTarget(Target):
         if self.simulator == 'ngspice':
             sim_cmd, raw_file = self.ngspice_cmd(tb_file)
             err_str = None
+        elif self.simulator == 'spectre':
+            sim_cmd, raw_file = self.spectre_cmd(tb_file)
+            err_str = None
         else:
             raise NotImplementedError(self.simulator)
 
@@ -116,8 +117,8 @@ class SpiceTarget(Target):
             assert err_str not in str(sim_res.stdout), f'"{err_str}" found in stdout of {self.simulator}'  # noqa
 
         # process the results
-        if self.simulator == 'ngspice':
-            results = self.get_ngspice_results(raw_file)
+        if self.simulator in {'ngspice', 'spectre'}:
+            results = self.get_nutascii_results(raw_file)
         else:
             raise NotImplementedError(self.simulator)
 
@@ -194,7 +195,7 @@ class SpiceTarget(Target):
         return ' '.join(f'{t} {v}' for t, v in pwl)
 
     def write_test_bench(self, pwls, stop_time, tb_file=None, nl='\n'):
-        # determine files
+        # determine include files
         includes = nl.join(f'.include {file_}' for file_ in self.model_paths)
 
         # determine DUT I/O
@@ -208,7 +209,7 @@ class SpiceTarget(Target):
             # instantiate switch between voltage source and DUT
             vnet = f'__{name}_v'
             snet = f'__{name}_s'
-            stimuli += [f'S{k} {vnet} {name} {snet} 0 inout_sw_mod ON']
+            stimuli += [f'Xs{k} {vnet} {name} {snet} 0 inout_sw_mod']
 
             # instantiate voltage source connected through switch
             dc_v_val = pwl_v[0][1]
@@ -226,15 +227,40 @@ class SpiceTarget(Target):
         # determine the step time
         t_step = self.t_step if self.t_step is not None else stop_time / 1000
 
+        # simulator-specific statments
+        if self.simulator == 'ngspice':
+            sw_subckt = f'''\
+.model __inout_sw_mod sw vt=0.5 vh=0.2 ron={self.rout} roff={self.rz}
+.subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
+    Sm sw_p sw_n ctl_p ctl_n __inout_sw_mod ON
+.ends'''
+            control_stmnt = '''\
+.control
+run
+set filetype=ascii
+write
+exit
+.endc'''
+        elif self.simulator == 'spectre':
+            sw_subckt = f'''\
+.subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
+    Gs sw_p sw_n VCR PWL(1) ctl_p ctl_n 0v,{self.rz} 1v,{self.rout}
+.ends'''
+            control_stmnt = ''
+        else:
+            raise Exception(f'Unknown simulator: {self.simulator}')
+
         # render SPICE file
         code = src_tpl.format(
             includes=includes,
+            sw_subckt=sw_subckt,
             dut_io=dut_io,
             dut_name=dut_name,
             stimuli=stimuli,
             rout=self.rout,
             t_step=f'{t_step}',
-            stop_time=f'{stop_time}'
+            stop_time=f'{stop_time}',
+            control_stmnt=f'{control_stmnt}'
         )
 
         # write spice file
@@ -293,7 +319,23 @@ class SpiceTarget(Target):
         # return command and corresponding raw file
         return cmd, raw_file
 
-    def get_ngspice_results(self, raw_file):
+    def spectre_cmd(self, tb_file, raw_file=None):
+        # set defaults
+        raw_file = (raw_file if raw_file is not None
+                    else Path(self.directory) / 'out.raw')
+        raw_file = Path(raw_file).absolute()
+
+        # build up the command
+        cmd = []
+        cmd += ['spectre']
+        cmd += [f'{tb_file}']
+        cmd += ['-format', 'nutascii']
+        cmd += ['-raw', f'{raw_file}']
+
+        # return command and corresponding raw file
+        return cmd, raw_file
+
+    def get_nutascii_results(self, raw_file):
         # import dependencies (hidden here to avoid making numpy/scipy
         # a required dependency)
         import numpy as np
@@ -319,11 +361,20 @@ class SpiceTarget(Target):
                 elif section == 'values':
                     tokens = line.strip().split()
                     # start a new list if needed
-                    if len(tokens) == 2:
-                        values.append([])
-                        tokens = tokens[1:]
-                    # add the current data point
-                    values[-1].append(float(tokens[0]))
+                    for token in tokens:
+                        # special handling for first entry
+                        if not values or len(values[-1]) == len(variables):
+                            # sanity check
+                            assert int(token) == len(values), 'Out of sync while parsing file.'
+                            # clear the value_start flag and start a new
+                            # list of values
+                            values.append([])
+                            continue
+                        else:
+                            values[-1].append(float(token))
+        # sanity check
+        if len(values) > 0:
+            assert len(values[-1]) == len(variables), 'Missing values at end of file.'
 
         # get vector of time values
         time_vec = np.array([value[variables.index('time')]
