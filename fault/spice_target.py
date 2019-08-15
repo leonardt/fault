@@ -8,6 +8,7 @@ from fault.spice import SpiceNetlist
 from fault.nutascii_parse import nutascii_parse
 from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
+from fault.pwl import pwc_to_pwl
 
 
 class SpiceTarget(Target):
@@ -110,39 +111,18 @@ class SpiceTarget(Target):
         # process results
         self.check_results(results=results, checks=checks)
 
-    def stim_to_pwl(self, stim, stop_time, init_val=0):
-        # add initial value if necessary
-        if stim[0][0] != 0:
-            stim = stim.copy()
-            stim.insert(0, (0, init_val))
-
-        # then create piecewise-constant waveform
-        retval = [stim[0]]
-        for k in range(1, len(stim)):
-            t_prev, v_prev = stim[k - 1]
-            t_curr, v_curr = stim[k]
-
-            retval += [(t_curr, v_prev)]
-            retval += [(t_curr + self.t_tr, v_curr)]
-
-        # add final value
-        retval += [(stop_time, stim[-1][1])]
-
-        # return new waveform
-        return retval
-
     def compile_actions(self, actions):
         # initialize
         t = 0
-        stim_dict = {}
+        pwc_dict = {}
         checks = []
 
         # loop over actions handling pokes, expects, and delays
         for action in actions:
             if isinstance(action, fault.actions.Poke):
                 # add port to stimulus dictionary if needed
-                if action.port.name not in stim_dict:
-                    stim_dict[action.port.name] = ([], [])
+                if action.port.name not in pwc_dict:
+                    pwc_dict[action.port.name] = ([], [])
                 # determine the stimulus value, performing a digital
                 # to analog conversion if needed and controlling
                 # the output switch as needed
@@ -156,8 +136,8 @@ class SpiceTarget(Target):
                     stim_v = action.value
                     stim_s = 1
                 # add the value to the list of actions
-                stim_dict[action.port.name][0].append((t, stim_v))
-                stim_dict[action.port.name][1].append((t, stim_s))
+                pwc_dict[action.port.name][0].append((t, stim_v))
+                pwc_dict[action.port.name][1].append((t, stim_s))
                 # increment time
                 t += self.clock_step_delay * 1e-9
             elif isinstance(action, fault.actions.Expect):
@@ -168,9 +148,12 @@ class SpiceTarget(Target):
                 raise NotImplementedError(action)
 
         # refactor stimulus voltages to PWL
-        pwls = {name: (self.stim_to_pwl(stim=stim[0], stop_time=t),
-                       self.stim_to_pwl(stim=stim[1], stop_time=t, init_val=1))
-                for name, stim in stim_dict.items()}
+        pwls = {}
+        for name, pwc in pwc_dict.items():
+            pwls[name] = (
+                pwc_to_pwl(pwc=pwc[0], t_stop=t, t_tr=self.t_tr),
+                pwc_to_pwl(pwc=pwc[1], t_stop=t, t_tr=self.t_tr, init=1)
+            )
 
         # return PWL waveforms, checks to be performed, and stop time
         return pwls, checks, t

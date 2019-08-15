@@ -1,4 +1,4 @@
-from fault.spice_target import SpiceTarget
+from fault.pwl import pwc_to_pwl
 from math import isclose
 
 
@@ -9,10 +9,8 @@ def check_pwl_result(meas, expct):
 
 
 def test_spice_target_pwl(t_tr=0.2e-9, t_stop=20e-9):
-    obj = SpiceTarget(None, clock_step_delay=5, t_tr=t_tr)
-
     def run_test(stim, expct):
-        meas = obj.stim_to_pwl(stim, t_stop)
+        meas = pwc_to_pwl(stim, t_stop, t_tr=t_tr)
         check_pwl_result(meas=meas, expct=expct)
 
     run_test([(1e-9, 1.2), (10e-9, 3.4), (15e-9, 5.6)],
