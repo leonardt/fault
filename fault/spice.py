@@ -1,26 +1,7 @@
-from itertools import count
+from fault.codegen import CodeGenerator
 
-class SpiceNetlist:
-    def __init__(self, tab='    ', nl='\n'):
-        # save settings
-        self.tab = tab
-        self.nl = nl
 
-        # initialize
-        self.reset()
-
-    def reset(self):
-        self.text = ''
-        self.tab_count = 0
-        self.inst_count = count()
-
-    def indent(self):
-        self.tab_count += 1
-
-    def dedent(self):
-        self.tab_count -= 1
-        assert self.tab_count >= 0, 'Cannot have a negative number of tabs.'
-
+class SpiceNetlist(CodeGenerator):
     def comment(self, text):
         self.println(f'* {text}')
 
@@ -117,21 +98,15 @@ class SpiceNetlist:
         self.println(f'.subckt {name} {port_str}')
         self.indent()
 
+    def start_control(self):
+        self.println('.control')
+
+    def end_control(self):
+        self.println('.endc')
+
     def end_subckt(self):
         self.dedent()
         self.println('.ends')
 
     def end_file(self):
         self.println('.end')
-
-    def print(self, *args):
-        for arg in args:
-            self.text += arg
-
-    def println(self, *args):
-        for arg in args:
-            self.text += f'{self.tab_count*self.tab}{arg}{self.nl}'
-
-    def write_to_file(self, fname):
-        with open(fname, 'w') as f:
-            f.write(self.text)

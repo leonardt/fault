@@ -1,13 +1,13 @@
 import os
-import logging
 from pathlib import Path
-import subprocess
 import fault.actions
 import magma as m
-import re
 from fault.user_cfg import FaultConfig
 from fault.target import Target
 from fault.spice import SpiceNetlist
+from fault.nutascii_parse import nutascii_parse
+from fault.psf_parse import psf_parse
+from fault.subprocess_run import subprocess_run
 
 
 class SpiceTarget(Target):
@@ -96,14 +96,14 @@ class SpiceTarget(Target):
 
         # run the simulation commands
         for sim_cmd in sim_cmds:
-            res = self.subprocess_run(sim_cmd)
+            res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
             assert not res.returncode, f'Error running simulator: {self.simulator}'  # noqa
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
-            results = self.get_nutascii_results(raw_file)
+            results = nutascii_parse(raw_file)
         elif self.simulator in {'hspice'}:
-            results = self.get_psf_results(raw_file)
+            results = psf_parse(raw_file)
         else:
             raise NotImplementedError(self.simulator)
 
@@ -197,11 +197,11 @@ class SpiceTarget(Target):
         inout_sw_mod = 'inout_sw_mod'
         netlist.start_subckt(inout_sw_mod, 'sw_p', 'sw_n', 'ctl_p', 'ctl_n')
         if self.simulator == 'ngspice':
-            sw_mod_name = '__inout_sw_mod'
-            netlist.model(mod_name=sw_mod_name, mod_type='sw', vt=0.5, vh=0.2,
+            sw_model = '__inout_sw_mod'
+            netlist.model(mod_name=sw_model, mod_type='sw', vt=0.5, vh=0.2,
                           ron=self.rout, roff=self.rz)
             netlist.switch('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
-                           mod_name=sw_mod_name, default='ON')
+                           mod_name=sw_model, default='ON')
         elif self.simulator in {'spectre', 'hspice'}:
             netlist.vcr('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
                         pwl=[(0, self.rz), (1, self.rout)])
@@ -224,8 +224,12 @@ class SpiceTarget(Target):
 
         # generate control statement
         if self.simulator == 'ngspice':
-            netlist.println('.control', 'run', 'set filetype=ascii', 'write',
-                            'exit', '.endc')
+            netlist.start_control()
+            netlist.println('run')
+            netlist.println('set filetype=ascii')
+            netlist.println('write')
+            netlist.println('exit')
+            netlist.end_control()
         elif self.simulator == 'hspice':
             netlist.options('post')
 
@@ -319,180 +323,3 @@ class SpiceTarget(Target):
 
         # return command and corresponding raw file
         return [sim_cmd, conv_cmd], psf_file
-
-    def get_nutascii_results(self, raw_file):
-        # import dependencies (hidden here to avoid making numpy/scipy
-        # a required dependency)
-        import numpy as np
-        from scipy.interpolate import interp1d
-
-        # parse the file
-        section = None
-        variables = []
-        values = []
-        with open(raw_file, 'r') as f:
-            for line in f:
-                # split line into tokens
-                tokens = line.strip().split()
-                if len(tokens) == 0:
-                    continue
-
-                # change section mode if needed
-                if tokens[0] == 'Values:':
-                    section = 'Values'
-                    tokens = tokens[1:]
-                elif tokens[0] == 'Variables:':
-                    section = 'Variables'
-                    tokens = tokens[1:]
-
-                # parse data in a section-dependent manner
-                if section == 'Variables' and len(tokens) >= 2:
-                    # sanity check
-                    assert int(tokens[0]) == len(variables), 'Out of sync while parsing variables.'  # noqa
-                    # add variable
-                    variables.append(tokens[1])
-                elif section == 'Values':
-                    # start a new list if needed
-                    for token in tokens:
-                        # special handling for first entry
-                        if not values or len(values[-1]) == len(variables):
-                            # sanity check
-                            assert int(token) == len(values), 'Out of sync while parsing values.'  # noqa
-                            # clear the value_start flag and start a new
-                            # list of values
-                            values.append([])
-                            continue
-                        else:
-                            values[-1].append(float(token))
-        # sanity check
-        if len(values) > 0:
-            assert len(values[-1]) == len(variables), 'Missing values at end of file.'  # noqa
-
-        # get vector of time values
-        time_vec = np.array([value[variables.index('time')]
-                             for value in values])
-
-        # return a dictionary of time-to-value interpolators
-        results = {}
-        for k, variable in enumerate(variables):
-            # skip time variable -- no need to interpolate time to itself
-            if variable == 'time':
-                continue
-
-            # create vector values for this variable
-            value_vec = np.array([value[k] for value in values])
-
-            # create interpolator
-            result = interp1d(time_vec, value_vec, bounds_error=False,
-                              fill_value=(value_vec[0], value_vec[-1]))
-
-            # add interpolator to dictionary
-            results[variable] = result
-
-        # return results
-        return results
-
-    def get_psf_results(self, raw_file):
-        # import dependencies (hidden here to avoid making numpy/scipy
-        # a required dependency)
-        import numpy as np
-        from scipy.interpolate import interp1d
-
-        # parse the file
-        section = None
-        read_mode = None
-        variables = []
-        values = []
-        with open(raw_file, 'r') as f:
-            for line in f:
-                # split line into tokens and strip quotes
-                tokens = line.strip().split()
-                tokens = [token.strip('"') for token in tokens]
-                if len(tokens) == 0:
-                    continue
-
-                # change section mode if needed
-                if tokens[0] == 'TRACE':
-                    section = 'TRACE'
-                    continue
-                elif tokens[0] == 'VALUE':
-                    section = 'VALUE'
-                    continue
-
-                # parse data in a section-dependent manner
-                if section == 'TRACE':
-                    if tokens[0] == 'group':
-                        continue
-                    else:
-                        variables.append(tokens[0])
-                elif section == 'VALUE':
-                    for token in tokens:
-                        if token == 'END':
-                            break
-                        elif token == 'TIME':
-                            read_mode = 'TIME'
-                        elif token == 'group':
-                            read_mode = 'group'
-                        elif read_mode == 'TIME':
-                            values.append((float(token), []))
-                            read_mode = None
-                        elif read_mode == 'group':
-                            values[-1][1].append(float(token))
-                        else:
-                            raise Exception('Unknown token parsing state.')
-
-        # get vector of time values
-        time_vec = np.array([value[0] for value in values])
-
-        # re-name voltage variables for consistency
-        renamed = []
-        for variable in variables:
-            m = re.match(r'[vV]\((\w+)\)', variable)
-            if m:
-                renamed.append(m.groups(0)[0])
-            else:
-                renamed.append(variable)
-
-        # return a dictionary of time-to-value interpolators
-        results = {}
-        for k, variable in enumerate(renamed):
-            # create vector values for this variable
-            value_vec = np.array([value[1][k] for value in values])
-
-            # create interpolator
-            result = interp1d(time_vec, value_vec, bounds_error=False,
-                              fill_value=(value_vec[0], value_vec[-1]))
-
-            # add interpolator to dictionary
-            results[variable] = result
-
-        # return results
-        return results
-
-    @staticmethod
-    def display_subprocess_output(result):
-        # display both standard output and standard error as INFO, since
-        # since some useful debugging info is included in standard error
-
-        to_display = {
-            'STDOUT': result.stdout.decode(),
-            'STDERR': result.stderr.decode()
-        }
-
-        for name, val in to_display.items():
-            if val != '':
-                logging.info(f'*** {name} ***')
-                logging.info(val)
-
-    def subprocess_run(self, args, display=True):
-        # Runs a subprocess in the user-specified directory with
-        # the user-specified environment.
-
-        logging.info(f"Running command: {' '.join(args)}")
-        result = subprocess.run(args, cwd=self.directory,
-                                capture_output=True, env=self.sim_env)
-
-        if display:
-            self.display_subprocess_output(result)
-
-        return result

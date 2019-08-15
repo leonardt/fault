@@ -52,4 +52,5 @@ module myblk_wrap (
         .f(f)
     );
 
-endmodule'''
+endmodule
+'''

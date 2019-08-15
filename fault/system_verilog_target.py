@@ -1,4 +1,3 @@
-import logging
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
@@ -7,9 +6,9 @@ from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
                      AbstractBitVector)
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
-import subprocess
 from fault.wrapper import PortWrapper
 from fault.user_cfg import FaultConfig
+from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
 from fault.real_type import RealKind
@@ -552,13 +551,17 @@ end
         else:
             raise NotImplementedError(self.simulator)
 
+        # add any extra flags
+        sim_cmd += self.flags
+
         # compile the simulation
-        sim_res = self.subprocess_run(sim_cmd + self.flags)
+        sim_res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
         assert not sim_res.returncode, 'Error running system verilog simulator'
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
-            bin_res = self.subprocess_run(bin_cmd)
+            bin_res = subprocess_run(bin_cmd, cwd=self.directory,
+                                     env=self.sim_env)
             assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
             assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
 
@@ -599,34 +602,6 @@ end
     @staticmethod
     def make_line(text, tabs=0, tab='    ', nl='\n'):
         return f'{tabs*tab}{text}{nl}'
-
-    @staticmethod
-    def display_subprocess_output(result):
-        # display both standard output and standard error as INFO, since
-        # since some useful debugging info is included in standard error
-
-        to_display = {
-            'STDOUT': result.stdout.decode(),
-            'STDERR': result.stderr.decode()
-        }
-
-        for name, val in to_display.items():
-            if val != '':
-                logging.info(f'*** {name} ***')
-                logging.info(val)
-
-    def subprocess_run(self, args, display=True):
-        # Runs a subprocess in the user-specified directory with
-        # the user-specified environment.
-
-        logging.info(f"Running command: {' '.join(args)}")
-        result = subprocess.run(args, cwd=self.directory,
-                                capture_output=True, env=self.sim_env)
-
-        if display:
-            self.display_subprocess_output(result)
-
-        return result
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the simulation

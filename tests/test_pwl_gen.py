@@ -1,6 +1,5 @@
 from fault.spice_target import SpiceTarget
 from math import isclose
-from pathlib import Path
 
 
 def check_pwl_result(meas, expct):
@@ -21,28 +20,3 @@ def test_spice_target_pwl(t_tr=0.2e-9, t_stop=20e-9):
 
     run_test([(0, 1.2), (10e-9, 3.4), (15e-9, 5.6)],
              [(0, 1.2), (10e-9, 1.2), (10.2e-9, 3.4), (15e-9, 3.4), (15.2e-9, 5.6), (20e-9, 5.6)])  # noqa
-
-
-def check_spice_result(meas, expct):
-    for t, v in expct:
-        mint = meas(t)
-        assert isclose(mint, v), f'Value mismatch at time {t}: {mint} vs {v}'
-
-
-def test_spice_target_nutascii_parse():
-    obj = SpiceTarget(None)
-    results = obj.get_nutascii_results(Path('tests/data/ngspice.raw').resolve())
-
-    check_spice_result(results['in_'], [(0, 2), (1, 2), (2.5, 3.5), (4, 5),
-                                        (5.5, 6.5), (7, 8), (8, 8)])
-    check_spice_result(results['out'], [(1, 3), (4, 6), (7, 9)])
-
-
-def test_spice_target_psf_parse():
-    obj = SpiceTarget(None)
-    results = obj.get_psf_results(Path('tests/data/hspice.psf').resolve())
-
-    check_spice_result(results['in_'], [(0, 2), (1, 2), (2.5, 3.5), (4, 5),
-                                        (5.5, 6.5), (7, 8), (8, 8)])
-    check_spice_result(results['out'], [(1, 3), (4, 6), (7, 9)])
-
