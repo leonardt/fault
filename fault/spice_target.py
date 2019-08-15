@@ -7,24 +7,7 @@ import magma as m
 import re
 from fault.user_cfg import FaultConfig
 from fault.target import Target
-
-
-src_tpl = """\
-* Automatically generated testbench
-
-{includes}
-
-{sw_subckt}
-
-Xdut {dut_io} {dut_name}
-{stimuli}
-
-.tran {t_step} {stop_time}
-
-{control_stmnt}
-
-.end
-"""
+from fault.spice import SpiceNetlist
 
 
 class SpiceTarget(Target):
@@ -196,90 +179,66 @@ class SpiceTarget(Target):
     def pwl_str(pwl):
         return ' '.join(f'{t} {v}' for t, v in pwl)
 
-    def write_test_bench(self, pwls, stop_time, tb_file=None, nl='\n'):
-        # determine include files
-        includes = nl.join(f'.include {file_}' for file_ in self.model_paths)
+    def write_test_bench(self, pwls, stop_time, tb_file=None):
+        # create a new netlist
+        netlist = SpiceNetlist()
+        netlist.comment('Automatically generated file.')
 
-        # determine DUT I/O
+        # add include files
+        for file_ in self.model_paths:
+            netlist.include(file_)
+
+        # instantiate the DUT
+        dut_name = f'{self.circuit.name}'
         dut_io = [f'{port}' for port in self.circuit.IO.ports]
-        dut_io = ' '.join(dut_io)
-        dut_name = self.circuit.name
+        netlist.instantiate(dut_name, *dut_io)
+
+        # define the switch model
+        inout_sw_mod = 'inout_sw_mod'
+        netlist.start_subckt(inout_sw_mod, 'sw_p', 'sw_n', 'ctl_p', 'ctl_n')
+        if self.simulator == 'ngspice':
+            sw_mod_name = '__inout_sw_mod'
+            netlist.model(mod_name=sw_mod_name, mod_type='sw', vt=0.5, vh=0.2,
+                          ron=self.rout, roff=self.rz)
+            netlist.switch('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
+                           mod_name=sw_mod_name, default='ON')
+        elif self.simulator in {'spectre', 'hspice'}:
+            netlist.vcr('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
+                        pwl=[(0, self.rz), (1, self.rout)])
+        netlist.end_subckt()
 
         # write stimuli lines
-        stimuli = []
-        for k, (name, (pwl_v, pwl_s)) in enumerate(pwls.items()):
+        for name, (pwl_v, pwl_s) in pwls.items():
             # instantiate switch between voltage source and DUT
             vnet = f'__{name}_v'
             snet = f'__{name}_s'
-            stimuli += [f'Xs{k} {vnet} {name} {snet} 0 inout_sw_mod']
+            netlist.instantiate('inout_sw_mod', vnet, name, snet, '0')
 
             # instantiate voltage source connected through switch
-            dc_v_val = pwl_v[0][1]
-            pwl_v_str = self.pwl_str(pwl_v)
-            stimuli.append(f'Vv{k} {vnet} 0 DC {dc_v_val} PWL({pwl_v_str})')
+            netlist.voltage(vnet, '0', pwl=pwl_v)
+            netlist.voltage(snet, '0', pwl=pwl_s)
 
-            # instantiate voltage source controlling switch
-            dc_s_val = pwl_s[0][1]
-            pwl_s_str = self.pwl_str(pwl_s)
-            stimuli.append(f'Vs{k} {snet} 0 DC {dc_s_val} PWL({pwl_s_str})')
-
-        # add newlines between individual entries
-        stimuli = nl.join(stimuli)
-
-        # determine the step time
+        # specify the transient analysis
         t_step = self.t_step if self.t_step is not None else stop_time / 1000
-
-        # generate switch model
-        if self.simulator == 'ngspice':
-            sw_subckt = f'''\
-.model __inout_sw_mod sw vt=0.5 vh=0.2 ron={self.rout} roff={self.rz}
-.subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
-    Sm sw_p sw_n ctl_p ctl_n __inout_sw_mod ON
-.ends'''
-        elif self.simulator in {'spectre', 'hspice'}:
-            sw_subckt = f'''\
-.subckt inout_sw_mod sw_p sw_n ctl_p ctl_n
-    Gs sw_p sw_n VCR PWL(1) ctl_p ctl_n 0v,{self.rz} 1v,{self.rout}
-.ends'''
-        else:
-            raise Exception(f'Unknown simulator: {self.simulator}')
+        netlist.tran(t_step=t_step, t_stop=stop_time)
 
         # generate control statement
         if self.simulator == 'ngspice':
-            control_stmnt = '''\
-.control
-run
-set filetype=ascii
-write
-exit
-.endc'''
+            netlist.println('.control', 'run', 'set filetype=ascii', 'write',
+                            'exit', '.endc')
         elif self.simulator == 'hspice':
-            control_stmnt = '.options post'
-        elif self.simulator == 'spectre':
-            control_stmnt = ''
-        else:
-            raise Exception(f'Unknown simulator: {self.simulator}')
+            netlist.options('post')
 
-        # render SPICE file
-        code = src_tpl.format(
-            includes=includes,
-            sw_subckt=sw_subckt,
-            dut_io=dut_io,
-            dut_name=dut_name,
-            stimuli=stimuli,
-            rout=self.rout,
-            t_step=f'{t_step}',
-            stop_time=f'{stop_time}',
-            control_stmnt=f'{control_stmnt}'
-        )
+        # end the netlist
+        netlist.end_file()
 
         # write spice file
         tb_file = (tb_file if tb_file is not None
                    else Path(self.directory) / f'{self.circuit.name}_tb.sp')
         tb_file = tb_file.absolute()
-        with open(tb_file, 'w') as f:
-            f.write(code)
+        netlist.write_to_file(tb_file)
 
+        # return name of the file written
         return tb_file
 
     def impl_expect(self, results, time, action):
