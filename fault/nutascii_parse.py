@@ -1,9 +1,8 @@
-def nutascii_parse(file_):
-    # import dependencies (hidden here to avoid making numpy/scipy
-    # a required dependency)
-    import numpy as np
-    from scipy.interpolate import interp1d
+import numpy as np
+from scipy.interpolate import interp1d
 
+
+def nutascii_parse(file_):
     # parse the file
     section = None
     variables = []

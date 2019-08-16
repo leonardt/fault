@@ -1,12 +1,9 @@
 import re
+import numpy as np
+from scipy.interpolate import interp1d
 
 
 def psf_parse(file_):
-    # import dependencies (hidden here to avoid making numpy/scipy
-    # a required dependency)
-    import numpy as np
-    from scipy.interpolate import interp1d
-
     # parse the file
     section = None
     read_mode = None
