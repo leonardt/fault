@@ -56,7 +56,7 @@ def psf_parse(file_):
     # re-name voltage variables for consistency
     renamed = []
     for variable in variables:
-        m = re.match(r'[vV]\((\w+)\)', variable)
+        m = re.match(r'[vV]\((.+)\)', variable)
         if m:
             renamed.append(m.groups(0)[0])
         else:

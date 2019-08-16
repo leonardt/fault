@@ -4,8 +4,8 @@ Line 2
 TRACE
 
 "group" A B C
- "v(in_)" "node"
-        "out<0>" "node"
+ "in_" "node"
+        "v(out<0>)" "node"
 
 VALUE
 
