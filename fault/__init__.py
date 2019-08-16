@@ -1,5 +1,5 @@
-from .real_type import RealIn, RealOut
-from .elect_type import ElectIn, ElectOut
+from .real_type import RealIn, RealOut, RealKind, RealType
+from .elect_type import ElectIn, ElectOut, ElectKind, ElectType
 from .tester import Tester
 from .power_tester import PowerTester
 from .value import Value, AnyValue, UnknownValue, HiZ

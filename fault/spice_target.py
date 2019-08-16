@@ -14,7 +14,8 @@ class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
-                 vih_rel=0.6, rz=1e9, flags=None):
+                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<',
+                 bus_order='descend', flags=None):
         """
         circuit: a magma circuit
 
@@ -48,6 +49,17 @@ class SpiceTarget(Target):
 
         rz: resistance of voltage stimulus when set to fault.HiZ
 
+        conn_order: If 'alpha', connect pins in alphabetical order.  If
+                    'parse', parse through model_paths looking for the
+                    subcircuit definition to determine the pin order.
+
+        bus_delim: '<', '[', or '_' indicating bus styles "a<3>", "b[2]",
+                   c_1.
+
+        bus_order: 'descend' or 'ascend', indicating whether buses are
+                   order from largest to smallest or smallest to largest,
+                   respectively.
+
         flags: List of additional arguments that should be passed to the
                simulator.
         """
@@ -74,6 +86,9 @@ class SpiceTarget(Target):
         self.vil_rel = vil_rel
         self.vih_rel = vih_rel
         self.rz = rz
+        self.conn_order = conn_order
+        self.bus_delim = bus_delim
+        self.bus_order = bus_order
         self.flags = flags if flags is not None else []
 
     def run(self, actions):
@@ -160,6 +175,48 @@ class SpiceTarget(Target):
     def pwl_str(pwl):
         return ' '.join(f'{t} {v}' for t, v in pwl)
 
+    def get_ordered_ports(self):
+        if self.conn_order == 'alpha':
+            return self.get_alpha_ordered_ports()
+        elif self.conn_order == 'parse':
+            raise Exception('Spice parsing is not implemented yet.')
+        else:
+            raise Exception(f'Unknown conn_order: {self.conn_order}.')
+
+    def bit_from_bus(self, port, k):
+        if self.bus_delim == '<':
+            return f'{port}<{k}>'
+        elif self.bus_delim == '[':
+            return f'{port}[{k}]'
+        elif self.bus_delim == '_':
+            return f'{port}_{k}'
+        else:
+            raise Exception(f'Unknown bus delimeter: {self.bus_delim}')
+
+    def get_alpha_ordered_ports(self):
+        # get ports sorted in alphabetical order
+        port_names = self.circuit.interface.ports.keys()
+        port_names = sorted(port_names, key=lambda p: f'{p}')
+
+        # expand out buses
+        retval = []
+        for port_name in port_names:
+            port = self.circuit.interface.ports[port_name]
+            if isinstance(port, (m.BitType, fault.RealType, fault.ElectType)):
+                retval += [f'{port}']
+            else:
+                if self.bus_order == 'ascend':
+                    bit_idx = range(len(port))
+                elif self.bus_order == 'descend':
+                    bit_idx = reversed(range(len(port)))
+                else:
+                    raise Exception(f'Unsupported bus order: {self.bus_order}')
+                for k in bit_idx:
+                    retval += [self.bit_from_bus(port, k)]
+
+        # return ordered list of ports
+        return retval
+
     def write_test_bench(self, pwls, stop_time, tb_file=None):
         # create a new netlist
         netlist = SpiceNetlist()
@@ -171,8 +228,7 @@ class SpiceTarget(Target):
 
         # instantiate the DUT
         dut_name = f'{self.circuit.name}'
-        dut_io = [f'{port}' for port in self.circuit.IO.ports]
-        netlist.instantiate(dut_name, *dut_io)
+        netlist.instantiate(dut_name, *self.get_ordered_ports())
 
         # define the switch model
         inout_sw_mod = 'inout_sw_mod'
