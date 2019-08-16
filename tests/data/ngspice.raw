@@ -2,7 +2,7 @@ Line 1
 Line 2
 Variables: 0   time    time
     1   in_ voltage
-    2   out voltage
+    2   out<0> voltage
 Values:
 0  1 2
    3

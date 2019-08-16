@@ -1,13 +1,16 @@
 import os
 from pathlib import Path
-import fault.actions
+from copy import copy
 import magma as m
+import fault
+import hwtypes
 from fault.target import Target
 from fault.spice import SpiceNetlist
 from fault.nutascii_parse import nutascii_parse
 from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
+from fault.actions import Poke, Expect, Delay
 
 
 class SpiceTarget(Target):
@@ -124,18 +127,60 @@ class SpiceTarget(Target):
         # process results
         self.check_results(results=results, checks=checks)
 
+    def expand_bus(self, action):
+        # define bit-access function for the action's value
+        # this is needed at the moment because fault.HiZ cannot
+        # be used in a BitVector -- but it is still a common
+        # use case to set a whole bus to HiZ
+        def get_value_at_bit(k):
+            if action.value is fault.HiZ:
+                return fault.HiZ
+            else:
+                # this should work both for BitVectors and integers
+                value = hwtypes.BitVector[len(action.port)](action.value)
+                return value[k]
+
+        # return a list of single-bit pokes
+        retval = []
+
+        # for each bit...
+        for k in range(len(action.port)):
+            # create a new action corresponding to that single bit
+            # copy is used to preserve any other properties of
+            # the action that are not bit-index specific (e.g.,
+            # "strict" for expect).  Still, it's a bit hacky and
+            # there is likely a better way...
+            bit_action = copy(action)
+            bit_action.port = m.BitType(name=self.bit_from_bus(action.port, k))
+            bit_action.value = get_value_at_bit(k)
+            retval.append(bit_action)
+
+        # return the new list of expanded-out actions
+        return retval
+
     def compile_actions(self, actions):
         # initialize
         t = 0
         pwc_dict = {}
         checks = []
 
+        # expand buses as needed
+        _actions = []
+        for action in actions:
+            if isinstance(action, (Poke, Expect)) \
+               and isinstance(action.port, m.BitsType):
+                _actions += self.expand_bus(action)
+            else:
+                _actions.append(action)
+        actions = _actions
+
         # loop over actions handling pokes, expects, and delays
         for action in actions:
-            if isinstance(action, fault.actions.Poke):
+            if isinstance(action, Poke):
                 # add port to stimulus dictionary if needed
-                if action.port.name not in pwc_dict:
-                    pwc_dict[action.port.name] = ([], [])
+                action_port_name = f'{action.port.name}'
+                if action_port_name not in pwc_dict:
+                    pwc_dict[action_port_name] = ([], [])
                 # determine the stimulus value, performing a digital
                 # to analog conversion if needed and controlling
                 # the output switch as needed
@@ -149,13 +194,13 @@ class SpiceTarget(Target):
                     stim_v = action.value
                     stim_s = 1
                 # add the value to the list of actions
-                pwc_dict[action.port.name][0].append((t, stim_v))
-                pwc_dict[action.port.name][1].append((t, stim_s))
+                pwc_dict[action_port_name][0].append((t, stim_v))
+                pwc_dict[action_port_name][1].append((t, stim_s))
                 # increment time
                 t += self.clock_step_delay * 1e-9
-            elif isinstance(action, fault.actions.Expect):
+            elif isinstance(action, Expect):
                 checks.append((t, action))
-            elif isinstance(action, fault.actions.Delay):
+            elif isinstance(action, Delay):
                 t += action.time
             else:
                 raise NotImplementedError(action)

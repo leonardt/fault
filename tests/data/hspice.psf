@@ -5,7 +5,7 @@ TRACE
 
 "group" A B C
  "v(in_)" "node"
-        "out" "node"
+        "out<0>" "node"
 
 VALUE
 
