@@ -4,7 +4,7 @@
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
 .model EEPMOS PMOS (VTO=-0.4 KP=122E-6 GAMMA=0.2 PHI=.88)
 
-.subckt mysram wl lbl lblb vdd vss
+.subckt mysram lbl lblb vdd vss wl
 
 * inverter with lblb output
 MP0 lblb_x lbl_x vdd vdd EEPMOS w=0.7u l=0.1u
