@@ -1,5 +1,6 @@
 import logging
 import subprocess
+from fault.user_cfg import FaultConfig
 
 
 def display_subprocess_output(result):
@@ -17,13 +18,18 @@ def display_subprocess_output(result):
             logging.info(val)
 
 
-def subprocess_run(args, cwd, env, display=True):
+def subprocess_run(args, cwd, env=None, display=True):
     # Runs a subprocess in the user-specified directory with
     # the user-specified environment.
 
+    # set defaults
+    env = env if env is not None else FaultConfig().get_sim_env()
+
+    # run the command
     logging.info(f"Running command: {' '.join(args)}")
     result = subprocess.run(args, cwd=cwd, env=env, capture_output=True)
 
+    # display results if desired
     if display:
         display_subprocess_output(result)
 

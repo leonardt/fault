@@ -7,7 +7,6 @@ from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
-from fault.user_cfg import FaultConfig
 from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
@@ -155,8 +154,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.dump_vcd = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
-        self.sim_env = (sim_env if sim_env is not None
-                        else FaultConfig().get_sim_env())
+        self.sim_env = sim_env
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}

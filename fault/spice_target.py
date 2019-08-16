@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 import fault.actions
 import magma as m
-from fault.user_cfg import FaultConfig
 from fault.target import Target
 from fault.spice import SpiceNetlist
 from fault.nutascii_parse import nutascii_parse
@@ -68,8 +67,7 @@ class SpiceTarget(Target):
         self.vsup = vsup
         self.rout = rout
         self.model_paths = model_paths if model_paths is not None else []
-        self.sim_env = (sim_env if sim_env is not None
-                        else FaultConfig().get_sim_env())
+        self.sim_env = sim_env
         self.t_step = t_step
         self.clock_step_delay = clock_step_delay
         self.t_tr = t_tr
