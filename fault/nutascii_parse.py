@@ -1,5 +1,8 @@
-import numpy as np
-from scipy.interpolate import interp1d
+try:
+    import numpy as np
+    from scipy.interpolate import interp1d
+except ModuleNotFoundError:
+    print('Failed to load libraries for nutascii_parse.')
 
 
 def nutascii_parse(file_):
