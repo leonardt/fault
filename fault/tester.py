@@ -68,7 +68,7 @@ class Tester:
         self.clock = clock
         if reset is not None and not isinstance(reset, m.ResetType):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
-        self.reset = reset
+        self.reset_port = reset
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
@@ -387,14 +387,14 @@ class Tester:
 
     def sync_reset(self, active_high=True, cycles=1):
         # assert reset and set clock to zero
-        self.poke(self.reset, 1 if active_high else 0)
+        self.poke(self.reset_port, 1 if active_high else 0)
         self.poke(self.clock, 0)
 
         # wait the desired number of clock cycles
         self.step(2 * cycles)
 
         # de-assert reset
-        self.poke(self.reset, 0 if active_high else 1)
+        self.poke(self.reset_port, 0 if active_high else 1)
 
 
 class LoopIndex:
