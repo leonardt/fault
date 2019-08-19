@@ -108,7 +108,7 @@ class SRAMTester(GenericCellTester):
 
     def define_init(self):
         self.poke(self.wl, 0)
-        self.poke(self.lblb, 0)
+        self.poke(self.lbl, 0)
         self.poke(self.lblb, 0)
         super().define_init()
 

@@ -13,11 +13,18 @@ from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay
 
 
+# define a custom error for A2D conversion to make it easier
+# to catch this specific issue (for example, in adapting
+# tests based on the previous test result)
+class A2DError(Exception):
+    pass
+
+
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
-                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<',
+                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
                  bus_order='descend', flags=None):
         """
         circuit: a magma circuit
@@ -56,7 +63,7 @@ class SpiceTarget(Target):
                     'parse', parse through model_paths looking for the
                     subcircuit definition to determine the pin order.
 
-        bus_delim: '<', '[', or '_' indicating bus styles "a<3>", "b[2]",
+        bus_delim: '<>', '[]', or '_' indicating bus styles "a<3>", "b[2]",
                    c_1.
 
         bus_order: 'descend' or 'ascend', indicating whether buses are
@@ -232,9 +239,9 @@ class SpiceTarget(Target):
             raise Exception(f'Unknown conn_order: {self.conn_order}.')
 
     def bit_from_bus(self, port, k):
-        if self.bus_delim == '<':
+        if self.bus_delim == '<>':
             return f'{port}<{k}>'
-        elif self.bus_delim == '[':
+        elif self.bus_delim == '[]':
             return f'{port}[{k}]'
         elif self.bus_delim == '_':
             return f'{port}_{k}'
@@ -282,11 +289,9 @@ class SpiceTarget(Target):
         inout_sw_mod = 'inout_sw_mod'
         netlist.start_subckt(inout_sw_mod, 'sw_p', 'sw_n', 'ctl_p', 'ctl_n')
         if self.simulator == 'ngspice':
-            sw_model = '__inout_sw_mod'
-            netlist.model(mod_name=sw_model, mod_type='sw', vt=0.5, vh=0.2,
-                          ron=self.rout, roff=self.rz)
-            netlist.switch('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
-                           mod_name=sw_model, default='ON')
+            a = (1 / self.rout) - (1 / self.rz)
+            b = (1 / self.rz)
+            netlist.println(f"Gs sw_p sw_n cur='V(sw_p, sw_n)*({a}*V(ctl_p, ctl_n)+{b})'")  # noqa
         elif self.simulator in {'spectre', 'hspice'}:
             netlist.vcr('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
                         pwl=[(0, self.rz), (1, self.rout)])
@@ -343,7 +348,7 @@ class SpiceTarget(Target):
             elif value >= self.vih_rel * self.vsup:
                 value = 1
             else:
-                raise Exception(f'Invalid logic level: {value}.')
+                raise A2DError(f'Invalid logic level: {value}.')
 
         # implement the requested check
         if action.above is not None:

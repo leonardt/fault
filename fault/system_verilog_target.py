@@ -103,8 +103,9 @@ class SystemVerilogTarget(VerilogTarget):
                     containing the generated testbench code.
 
         ext_srcs: Shorter alias for "include_verilog_libraries" argument.
-                  It is illegal to specify both "include_verilog_libraries"
-                  and "ext_srcs".
+                  If both "include_verilog_libraries" and ext_srcs are
+                  specified, then the sources from include_verilog_libraries
+                  will be processed first.
 
         use_input_wires: If True, drive DUT inputs through wires that are in
                          turn assigned to a reg.
@@ -113,15 +114,10 @@ class SystemVerilogTarget(VerilogTarget):
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
-            if ext_srcs is None:
-                include_verilog_libraries = []
-            else:
-                include_verilog_libraries = ext_srcs
-        else:
-            if ext_srcs is None:
-                pass
-            else:
-                raise ValueError('Cannot specify both "include_verilog_libraries" and "ext_srcs".')  # noqa
+            include_verilog_libraries = []
+        if ext_srcs is None:
+            ext_srcs = []
+        include_verilog_libraries = include_verilog_libraries + ext_srcs
 
         # set default for there being an external model file
         if ext_model_file is None:
@@ -248,7 +244,7 @@ class SystemVerilogTarget(VerilogTarget):
         retval += [f'{name} = {value};']
         if action.delay is None:
             retval += [f'#{self.clock_step_delay};']
-        else :
+        else:
             retval += [f'#({action.delay}*1s);']
         return retval
 
