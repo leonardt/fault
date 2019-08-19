@@ -243,7 +243,17 @@ class SystemVerilogTarget(VerilogTarget):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
         value = self.process_value(action.port, action.value)
-        return [f"{name} = {value};", f"#{self.clock_step_delay};"]
+        # Build up the poke action, including delay
+        retval = []
+        retval += [f'{name} = {value};']
+        if action.delay is None:
+            retval += [f'#{self.clock_step_delay};']
+        else :
+            retval += [f'#({action.delay}*1s);']
+        return retval
+
+    def make_delay(self, i, action):
+        return [f'#({action.time}*1s);']
 
     def make_print(self, i, action):
         # build up argument list for the $write command

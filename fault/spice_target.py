@@ -196,8 +196,11 @@ class SpiceTarget(Target):
                 # add the value to the list of actions
                 pwc_dict[action_port_name][0].append((t, stim_v))
                 pwc_dict[action_port_name][1].append((t, stim_s))
-                # increment time
-                t += self.clock_step_delay * 1e-9
+                # increment time if desired
+                if action.delay is None:
+                    t += self.clock_step_delay * 1e-9
+                else:
+                    t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
             elif isinstance(action, Delay):

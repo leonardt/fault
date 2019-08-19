@@ -116,6 +116,8 @@ class VerilogTarget(Target):
             return self.make_var(i, action)
         if isinstance(action, actions.FileScanFormat):
             return self.make_file_scan_format(i, action)
+        if isinstance(action, actions.Delay):
+            return self.make_delay(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -164,4 +166,16 @@ class VerilogTarget(Target):
 
     @abstractmethod
     def make_var(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_delay(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_while(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_if(self, i, action):
         pass

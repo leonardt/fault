@@ -2,19 +2,17 @@ import logging
 import magma as m
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
-from fault.logging import warning
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.verilogams_target import VerilogAMSTarget
 from fault.spice_target import SpiceTarget
-from fault.actions import Poke, Expect, Step, Print, Loop, While, If
+from fault.actions import Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
-from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
+from fault.wrapper import CircuitWrapper, PortWrapper
 from fault.file import File
 import fault.expression as expression
-import copy
 import os
 import inspect
 from fault.config import get_test_dir
@@ -97,7 +95,7 @@ class Tester:
             return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
-    def poke(self, port, value):
+    def poke(self, port, value, delay=None):
         """
         Set `port` to be `value`
         """
@@ -108,7 +106,7 @@ class Tester:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
                 value = make_value(port, value)
-            self.actions.append(actions.Poke(port, value))
+            self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
         """
