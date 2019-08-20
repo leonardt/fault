@@ -543,15 +543,15 @@ end
             sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
                                      cmd_file=self.write_ncsim_tcl())
             bin_cmd = None
-            err_str = None
+            sim_err_str = None
         elif self.simulator == 'vcs':
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
             bin_cmd = [bin_file]
-            err_str = 'Error'
+            sim_err_str = 'Error'
         elif self.simulator == 'iverilog':
             sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
             bin_cmd = ['vvp', '-N', bin_file]
-            err_str = 'ERROR'
+            sim_err_str = 'ERROR'
         else:
             raise NotImplementedError(self.simulator)
 
@@ -559,15 +559,12 @@ end
         sim_cmd += self.flags
 
         # compile the simulation
-        sim_res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
-        assert not sim_res.returncode, 'Error running system verilog simulator'
+        subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
-            bin_res = subprocess_run(bin_cmd, cwd=self.directory,
-                                     env=self.sim_env)
-            assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
-            assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
+            subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
+                           err_str=sim_err_str)
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file

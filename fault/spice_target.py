@@ -120,8 +120,7 @@ class SpiceTarget(Target):
 
         # run the simulation commands
         for sim_cmd in sim_cmds:
-            res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
-            assert not res.returncode, f'Error running simulator: {self.simulator}'  # noqa
+            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
