@@ -83,6 +83,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
         config_lines = ''
         for model in self.use_spice:
             config_lines += f'{tab}config cell={model} use=spice{nl}'
+            config_lines += f'{tab}portmap subckt={model} autobus=yes busdelim="<>"{nl}'  # noqa
 
         # return text content of the AMS control file
         return f'''

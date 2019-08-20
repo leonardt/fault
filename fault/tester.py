@@ -8,6 +8,7 @@ from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.verilogams_target import VerilogAMSTarget
+from fault.spice_target import SpiceTarget
 from fault.actions import Poke, Expect, Step, Print, Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
@@ -18,6 +19,7 @@ import os
 import inspect
 from fault.config import get_test_dir
 from typing import List
+import tempfile
 
 
 class Tester:
@@ -52,16 +54,21 @@ class Tester:
 
     __test__ = False  # Tell pytest to skip this class for discovery
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
+                 reset: m.ResetType = None):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
+        `reset`: optional, a port from `circuit` corresponding to the reset
         """
         self._circuit = circuit
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
+        if reset is not None and not isinstance(reset, m.ResetType):
+            raise TypeError(f"Expected reset port: {reset, type(reset)}")
+        self.reset_port = reset
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
@@ -86,6 +93,8 @@ class Tester:
             return SystemVerilogTarget(self._circuit, **kwargs)
         elif target == "verilog-ams":
             return VerilogAMSTarget(self._circuit, **kwargs)
+        elif target == "spice":
+            return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def poke(self, port, value):
@@ -130,6 +139,12 @@ class Tester:
         Evaluate the DUT given the current input port values
         """
         self.actions.append(actions.Eval())
+
+    def delay(self, time):
+        """
+        Wait the specified amount of time before proceeding
+        """
+        self.actions.append(actions.Delay(time=time))
 
     def step(self, steps=1):
         """
@@ -194,25 +209,43 @@ class Tester:
         Run the current action sequence using the specified `target`.  The user
         should call `compile` with `target` before calling `run`.
         """
+        # Try to get the target
         try:
-            logging.info("Running tester...")
-            if target == "verilator":
-                self.targets[target].run(self.actions, self.verilator_includes)
-            else:
-                self.targets[target].run(self.actions)
-            logging.info("Success!")
+            target_obj = self.targets[target]
         except KeyError:
-            raise Exception(f"Could not find target={target}, did you compile"
-                            " it first?")
+            raise Exception(f"Could not find target={target}, did you compile it first?")  # noqa
 
-    def compile_and_run(self, target="verilator", **kwargs):
+        # Run the target, possibly passing in some custom arguments
+        logging.info("Running tester...")
+        if target == "verilator":
+            target_obj.run(self.actions, self.verilator_includes)
+        else:
+            target_obj.run(self.actions)
+        logging.info("Success!")
+
+    def _compile_and_run(self, target="verilator", **kwargs):
         """
-        Compile and run the current action sequence using `target`
+        Compile and run the current action sequence using `target`, assuming
+        that the build directory already exists (this allow for some
+        in using temporary vs. persistent directories)
         """
-        if "directory" in kwargs:
-            kwargs["directory"] = self._make_directory(kwargs["directory"])
         self._compile(target, **kwargs)
         self.run(target)
+
+    def compile_and_run(self, target="verilator", tmp_dir=False, **kwargs):
+        """
+        Compile and run the current action sequence using `target`, making
+        a build directory if needed.  This is the function that should be
+        called directly by the user.
+        """
+        if tmp_dir:
+            with tempfile.TemporaryDirectory(dir='.') as directory:
+                kwargs['directory'] = directory
+                self._compile_and_run(target=target, **kwargs)
+        else:
+            if 'directory' in kwargs:
+                kwargs['directory'] = self._make_directory(kwargs['directory'])
+            self._compile_and_run(target=target, **kwargs)
 
     def retarget(self, new_circuit, clock=None):
         """
@@ -351,6 +384,17 @@ class Tester:
         # first set the signal low, then bring it high again
         self.poke(signal, 0)
         self.poke(signal, 1)
+
+    def sync_reset(self, active_high=True, cycles=1):
+        # assert reset and set clock to zero
+        self.poke(self.reset_port, 1 if active_high else 0)
+        self.poke(self.clock, 0)
+
+        # wait the desired number of clock cycles
+        self.step(2 * cycles)
+
+        # de-assert reset
+        self.poke(self.reset_port, 0 if active_high else 1)
 
 
 class LoopIndex:

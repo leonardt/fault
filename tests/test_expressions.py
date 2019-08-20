@@ -5,13 +5,11 @@ import shutil
 import tempfile
 import operator
 import pytest
-import itertools
 
 import fault
 import magma as m
 import mantle
 import hwtypes
-import subprocess
 
 
 def run_test(tester, target, simulator):

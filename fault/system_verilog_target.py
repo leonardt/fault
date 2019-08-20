@@ -1,24 +1,27 @@
-import logging
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from hwtypes import BitVector, AbstractBitVectorMeta
+from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
+                     AbstractBitVector)
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
-import subprocess
 from fault.wrapper import PortWrapper
+from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
 from fault.real_type import RealKind
 import os
+from numbers import Number
 
 
 src_tpl = """\
 module {circuit_name}_tb;
 {declarations}
 
-    {circuit_name} dut (
+    {circuit_name} #(
+        {param_list}
+    ) dut (
         {port_list}
     );
 
@@ -40,7 +43,7 @@ class SystemVerilogTarget(VerilogTarget):
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
-                 use_input_wires=False):
+                 use_input_wires=False, parameters=None):
         """
         circuit: a magma circuit
 
@@ -105,6 +108,8 @@ class SystemVerilogTarget(VerilogTarget):
 
         use_input_wires: If True, drive DUT inputs through wires that are in
                          turn assigned to a reg.
+
+        parameters: Dictionary of parameters to be defined for the DUT.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -149,7 +154,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.dump_vcd = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
-        self.sim_env = sim_env if sim_env is not None else os.environ
+        self.sim_env = sim_env
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
@@ -158,6 +163,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.ext_test_bench = ext_test_bench
         self.top_module = top_module
         self.use_input_wires = use_input_wires
+        self.parameters = parameters if parameters is not None else {}
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -240,10 +246,16 @@ class SystemVerilogTarget(VerilogTarget):
         return [f"{name} = {value};", f"#{self.clock_step_delay};"]
 
     def make_print(self, i, action):
-        ports = ", ".join(f"{self.make_name(port)}" for port in action.ports)
-        if ports:
-            ports = ", " + ports
-        return [f'$write("{action.format_str}"{ports});']
+        # build up argument list for the $write command
+        args = []
+        args.append(f'"{action.format_str}"')
+        for port in action.ports:
+            if isinstance(port, (Number, AbstractBit, AbstractBitVector)):
+                args.append(f'{port}')
+            else:
+                args.append(f'{self.make_name(port)}')
+        args = ', '.join(args)
+        return [f'$write({args});']
 
     def make_loop(self, i, action):
         self.declarations.append(f"integer {action.loop_var};")
@@ -481,7 +493,7 @@ end
             # is connected to the DUT
             return [f".{name}({connect_to})"]
 
-    def generate_code(self, actions, power_args):
+    def generate_code(self, actions, power_args, tab='    '):
         initial_body = ""
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
@@ -493,11 +505,15 @@ end
             for line in code:
                 initial_body += f"        {line}\n"
 
+        param_list = [f'.{name}({value})'
+                      for name, value in self.parameters.items()]
+
         src = src_tpl.format(
             declarations="\n".join(self.declarations),
             initial_body=initial_body,
-            port_list=",\n        ".join(port_list),
-            circuit_name=self.circuit_name,
+            port_list=f',\n{2*tab}'.join(port_list),
+            param_list=f',\n{2*tab}'.join(param_list),
+            circuit_name=self.circuit_name
         )
 
         return src
@@ -533,13 +549,17 @@ end
         else:
             raise NotImplementedError(self.simulator)
 
+        # add any extra flags
+        sim_cmd += self.flags
+
         # compile the simulation
-        sim_res = self.subprocess_run(sim_cmd + self.flags)
+        sim_res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
         assert not sim_res.returncode, 'Error running system verilog simulator'
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
-            bin_res = self.subprocess_run(bin_cmd)
+            bin_res = subprocess_run(bin_cmd, cwd=self.directory,
+                                     env=self.sim_env)
             assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
             assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
 
@@ -580,34 +600,6 @@ end
     @staticmethod
     def make_line(text, tabs=0, tab='    ', nl='\n'):
         return f'{tabs*tab}{text}{nl}'
-
-    @staticmethod
-    def display_subprocess_output(result):
-        # display both standard output and standard error as INFO, since
-        # since some useful debugging info is included in standard error
-
-        to_display = {
-            'STDOUT': result.stdout.decode(),
-            'STDERR': result.stderr.decode()
-        }
-
-        for name, val in to_display.items():
-            if val != '':
-                logging.info(f'*** {name} ***')
-                logging.info(val)
-
-    def subprocess_run(self, args, display=True):
-        # Runs a subprocess in the user-specified directory with
-        # the user-specified environment.
-
-        logging.info(f"Running command: {' '.join(args)}")
-        result = subprocess.run(args, cwd=self.directory,
-                                capture_output=True, env=self.sim_env)
-
-        if display:
-            self.display_subprocess_output(result)
-
-        return result
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the simulation
@@ -723,14 +715,11 @@ end
 
         # output file
         bin_file = f'{self.circuit_name}_tb'
-        cmd += ['-o', bin_file]
-
-        # source files
-        cmd += [f'{src}' for src in sources]
+        cmd += [f'-o{bin_file}']
 
         # library files
         for lib in self.ext_libs:
-            cmd += ['-v', f'{lib}']
+            cmd += [f'-l{lib}']
 
         # include directory search path
         for dir_ in self.inc_dirs:
@@ -741,6 +730,9 @@ end
 
         # misc flags
         cmd += ['-g2012']
+
+        # source files
+        cmd += [f'{src}' for src in sources]
 
         # return arg list and binary file location
         return cmd, bin_file

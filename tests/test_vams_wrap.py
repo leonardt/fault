@@ -1,13 +1,18 @@
 import magma as m
-from fault.verilogams import VAMSWrap, RealIn, RealOut
+from fault.verilogams import VAMSWrap, RealIn, RealOut, ElectIn, ElectOut
 
 
 def test_vams_wrap():
-    myblk = m.DeclareCircuit('myblk',
-                             'a', RealIn,
-                             'b', RealOut,
-                             'c', m.In(m.Bit),
-                             'd', m.Out(m.Bits[2]))
+    # declare the circuit
+    myblk = m.DeclareCircuit(
+        'myblk',
+        'a', RealIn,
+        'b', RealOut,
+        'c', m.In(m.Bit),
+        'd', m.Out(m.Bits[2]),
+        'e', ElectIn,
+        'f', ElectOut
+    )
     wrap_circ = VAMSWrap(myblk)
 
     # check magma representation of wrapped circuit
@@ -15,6 +20,8 @@ def test_vams_wrap():
     assert wrap_circ.IO.ports['b'] is RealOut
     assert wrap_circ.IO.ports['c'] is m.In(m.Bit)
     assert wrap_circ.IO.ports['d'] is m.Out(m.Bits[2])
+    assert wrap_circ.IO.ports['e'] is ElectIn
+    assert wrap_circ.IO.ports['f'] is ElectOut
 
     # check Verilog-AMS code itself
     assert wrap_circ.vams_code == '''\
@@ -24,19 +31,26 @@ module myblk_wrap (
     input a,
     output b,
     input c,
-    output d
+    output d,
+    input e,
+    output f
 );
 
     wreal a;
     wreal b;
     wire [0:0] c;
     wire [1:0] d;
+    electrical e;
+    electrical f;
 
     myblk myblk_inst (
         .a(a),
         .b(b),
         .c(c),
-        .d(d)
+        .d(d),
+        .e(e),
+        .f(f)
     );
 
-endmodule'''
+endmodule
+'''

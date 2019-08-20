@@ -3,14 +3,15 @@ import tempfile
 import magma as m
 import fault
 from hwtypes import BitVector
-import common
 import random
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek, Loop
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.random import random_bv
-import copy
-import os.path
 import pytest
 import shutil
+from .common import (TestBasicCircuit, TestPeekCircuit,
+                     TestDoubleNestedArraysCircuit, TestBasicClkCircuit,
+                     TestNestedArraysCircuit, TestTupleCircuit,
+                     define_simple_circuit)
 
 
 def pytest_generate_tests(metafunc):
@@ -45,13 +46,13 @@ def test_target_basic(target, simulator):
     """
     Test basic workflow with a simple circuit.
     """
-    circ = common.TestBasicCircuit
+    circ = TestBasicCircuit
     actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 0))
     run(circ, actions, target, simulator)
 
 
 def test_target_peek(target, simulator):
-    circ = common.TestPeekCircuit
+    circ = TestPeekCircuit
     actions = []
     for i in range(3):
         x = random_bv(3)
@@ -62,7 +63,7 @@ def test_target_peek(target, simulator):
 
 
 def test_target_nested_arrays_by_element(target, simulator):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
     actions = []
     for i, val in enumerate(expected):
@@ -74,7 +75,7 @@ def test_target_nested_arrays_by_element(target, simulator):
 
 
 def test_target_nested_arrays_bulk(target, simulator):
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
     actions = []
     actions.append(Poke(circ.I, expected))
@@ -84,7 +85,7 @@ def test_target_nested_arrays_bulk(target, simulator):
 
 
 def test_target_double_nested_arrays_bulk(target, simulator):
-    circ = common.TestDoubleNestedArraysCircuit
+    circ = TestDoubleNestedArraysCircuit
     expected = [[random.randint(0, (1 << 4) - 1) for i in range(3)]
                 for _ in range(2)]
     actions = []
@@ -96,7 +97,7 @@ def test_target_double_nested_arrays_bulk(target, simulator):
 
 def test_target_clock(caplog, target, simulator):
     caplog.set_level(logging.INFO)
-    circ = common.TestBasicClkCircuit
+    circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
         Print("%x\n", circ.I),
@@ -131,7 +132,7 @@ def test_target_clock(caplog, target, simulator):
 
 def test_print_nested_arrays(caplog, target, simulator):
     caplog.set_level(logging.INFO)
-    circ = common.TestNestedArraysCircuit
+    circ = TestNestedArraysCircuit
     actions = [
         Poke(circ.I, [BitVector[4](i) for i in range(3)]),
     ] + [Print("%x\n", i) for i in circ.I] + [
@@ -167,7 +168,7 @@ def test_print_nested_arrays(caplog, target, simulator):
 
 def test_print_double_nested_arrays(caplog, target, simulator):
     caplog.set_level(logging.INFO)
-    circ = common.TestDoubleNestedArraysCircuit
+    circ = TestDoubleNestedArraysCircuit
     actions = [
         Poke(circ.I, [[BitVector[4](i + j * 3) for i in range(3)]
                       for j in range(2)]),
@@ -214,7 +215,7 @@ def test_print_double_nested_arrays(caplog, target, simulator):
 
 
 def test_target_tuple(target, simulator):
-    circ = common.TestTupleCircuit
+    circ = TestTupleCircuit
     actions = [
         Poke(circ.I.a, 5),
         Poke(circ.I.b, 11),
@@ -231,7 +232,7 @@ def test_target_tuple(target, simulator):
 @pytest.mark.parametrize("width", [1, 4, 5, 7, 8, 11, 13, 16, 19, 22, 24, 27,
                                    31, 32])
 def test_target_sint_sign_extend(width, target, simulator):
-    circ = common.define_simple_circuit(
+    circ = define_simple_circuit(
         m.SInt[width], f"test_target_sint_sign_extend_{width}")
     actions = [
         Poke(circ.I, -2),

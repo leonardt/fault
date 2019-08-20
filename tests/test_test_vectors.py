@@ -1,15 +1,12 @@
 from itertools import product
 import pytest
-import tempfile
-from hwtypes import BitVector, Bit
+from hwtypes import Bit
 import magma as m
 import mantle
-from common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit
-from fault.test_vectors import \
-    generate_function_test_vectors, \
-    generate_simulator_test_vectors
+from fault.test_vectors import (generate_function_test_vectors,
+                                generate_simulator_test_vectors)
 from fault.value import AnyValue
-from fault.verilator_target import VerilatorTarget
+from .common import TestBasicCircuit, TestArrayCircuit, TestSIntCircuit
 
 
 @pytest.mark.parametrize("Circuit", [TestBasicCircuit, TestArrayCircuit,

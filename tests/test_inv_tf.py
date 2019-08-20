@@ -1,34 +1,34 @@
-import os
-import shutil
-import random
-import tempfile
 import magma as m
 import fault
 from pathlib import Path
+from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    if 'target' in metafunc.fixturenames:
-        targets = []
-        if shutil.which('ncsim'):
-            targets.append(('verilog-ams', 'ncsim'))
-        metafunc.parametrize('target,simulator', targets)
+    pytest_sim_params(metafunc, 'verilog-ams', 'spice')
 
 
-def test_inv_tf(target, simulator, n_steps=100, vsup=1.5,
-                vil_rel=0.4, vih_rel=0.6, vol_rel=0.1,
-                voh_rel=0.9):
-    # declare circuit and wrap
-    myinv = m.DeclareCircuit('myinv',
-                             'in_', fault.RealIn,
-                             'out', fault.RealOut,
-                             'vdd', fault.RealIn,
-                             'vss', fault.RealIn)
-    dut = fault.VAMSWrap(myinv)
+def test_inv_tf(
+    target, simulator, n_steps=100, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
+    vol_rel=0.1, voh_rel=0.9
+):
+    # declare circuit
+    myinv = m.DeclareCircuit(
+        'myinv',
+        'in_', fault.RealIn,
+        'out', fault.RealOut,
+        'vdd', fault.RealIn,
+        'vss', fault.RealIn
+    )
 
-    tester = fault.Tester(dut)
+    # wrap if needed
+    if target == 'verilog-ams':
+        dut = fault.VAMSWrap(myinv)
+    else:
+        dut = myinv
 
     # define the test
+    tester = fault.Tester(dut)
     tester.poke(dut.vdd, vsup)
     tester.poke(dut.vss, 0)
     for k in range(n_steps):
@@ -39,19 +39,16 @@ def test_inv_tf(target, simulator, n_steps=100, vsup=1.5,
         elif in_ >= vih_rel * vsup:
             tester.expect(dut.out, 0, below=vol_rel * vsup)
 
-    # make some modifications to the environment
-    sim_env = fault.util.remove_conda(os.environ)
-    sim_env['DISPLAY'] = sim_env.get('DISPLAY', '')
-
-    # resolve location of inverter spice file
-    myinv_fname = Path('tests/spice/myinv.sp').resolve()
+    # set options
+    kwargs = dict(
+        target=target,
+        simulator=simulator,
+        model_paths=[Path('tests/spice/myinv.sp').resolve()],
+        vsup=vsup,
+        tmp_dir=True
+    )
+    if target == 'verilog-ams':
+        kwargs['use_spice'] = ['myinv']
 
     # run the simulation
-    with tempfile.TemporaryDirectory(dir='.') as tmp_dir:
-        tester.compile_and_run(target=target,
-                               simulator=simulator,
-                               directory=tmp_dir,
-                               model_paths=[myinv_fname],
-                               use_spice=['myinv'],
-                               vsup=vsup,
-                               sim_env=sim_env)
+    tester.compile_and_run(**kwargs)

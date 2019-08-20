@@ -1,58 +1,37 @@
 import magma as m
+from fault.codegen import CodeGenerator
 from fault import ElectIn, ElectOut, RealIn, RealOut
 
 
-def vams_io_entry(name, type_):
-    # returns the port list declaration for the given port
+class VerilogAMSCode(CodeGenerator):
+    def include(self, file):
+        self.println(f'`include "{file}"')
 
-    retval = ''
+    def start_module(self, name, *ports):
+        self.println(f'module {name} (')
+        self.println_comma_sep(*[
+            f'{io_dir} {io_name}' for io_dir, io_name in ports
+        ])
+        self.println(');')
+        self.indent()
 
-    if type_.isinput():
-        retval += 'input'
-    elif type_.isoutput():
-        retval += 'output'
-    else:
-        raise Exception(f'Only inputs and outputs are supported.')
+    def decl_port_type(self, type_, name):
+        self.println(f'{type_} {name};')
 
-    retval += f' {name}'
+    def instantiate(self, mod_name, *wiring, inst_name=None):
+        # set defaults
+        if inst_name is None:
+            inst_name = f'tmp{next(self.inst_count)}'
 
-    return retval
+        self.println(f'{mod_name} {inst_name} (')
+        self.println_comma_sep(*[
+            f'.{a}({b})' for a, b in wiring
+        ])
+        self.println(');')
 
-
-def vams_type_entry(name, type_):
-    # return the type declaration string for the given port
-
-    if type_ is ElectIn or type_ is ElectOut:
-        return f'electrical {name};'
-    elif type_ is RealIn or type_ is RealOut:
-        return f'wreal {name};'
-    else:
-        return f'wire [{type_.size()-1}:0] {name};'
-
-
-def wrap_circ(circ, wrap_name):
-    # Returns a magma circuit representing the wrapped circuit.
-
-    args = []
-    for name, type_ in circ.IO.ports.items():
-        args += [name, type_]
-
-    return m.DeclareCircuit(f'{wrap_name}', *args)
-
-
-# Template used for generating the VerilogAMS implementation
-src_tpl = '''\
-`include "disciplines.vams"
-
-module {wrap_name} ({port_io}
-);
-
-{port_types}
-
-    {circ_name} {inst_name} ({inst_wiring}
-    );
-
-endmodule'''
+    def end_module(self):
+        self.dedent()
+        self.println('endmodule')
 
 
 def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
@@ -62,36 +41,57 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     inst_name = (inst_name if inst_name is not None
                  else f'{circ.name}_inst')
 
-    # Generate port list declarations
-    port_io = [nl + tab + vams_io_entry(name=name, type_=type_)
-               for name, type_ in circ.IO.ports.items()]
-    port_io = ','.join(port_io)
+    # instantiate code generator
+    gen = VerilogAMSCode(tab=tab, nl=nl)
 
-    # Generate type declarations
-    port_types = [tab + vams_type_entry(name=name, type_=type_)
-                  for name, type_ in circ.IO.ports.items()]
-    port_types = '\n'.join(port_types)
+    # include files
+    gen.include('disciplines.vams')
+    gen.emptyln()
+
+    # module definition
+    ports = []
+    for name, type_ in circ.IO.ports.items():
+        if type_.isinput():
+            ports += [('input', f'{name}')]
+        elif type_.isoutput():
+            ports += [('output', f'{name}')]
+        elif type_.isinout():
+            ports += [('inout', f'{name}')]
+        else:
+            raise Exception(f'Unsupported port type: {type_}')
+    gen.start_module(wrap_name, *ports)
+    gen.emptyln()
+
+    # declare port types
+    for name, type_ in circ.IO.ports.items():
+        if type_ is ElectIn or type_ is ElectOut:
+            vams_type = 'electrical'
+        elif type_ is RealIn or type_ is RealOut:
+            vams_type = 'wreal'
+        else:
+            vams_type = f'wire [{type_.size() - 1}:0]'
+        gen.decl_port_type(vams_type, f'{name}')
+    gen.emptyln()
 
     # Generate wiring withing the module instantiation
-    inst_wiring = [f'{nl}{2*tab}.{name}({name})'
-                   for name in circ.IO.ports.keys()]
-    inst_wiring = ','.join(inst_wiring)
+    wiring = []
+    for name in circ.IO.ports.keys():
+        wiring += [(f'{name}', f'{name}')]
+    gen.instantiate(f'{circ.name}', *wiring, inst_name=inst_name)
+    gen.emptyln()
 
-    # Render the text template
-    vams_code = src_tpl.format(
-        wrap_name=wrap_name,
-        port_io=port_io,
-        port_types=port_types,
-        circ_name=circ.name,
-        inst_name=inst_name,
-        inst_wiring=inst_wiring
-    )
+    # end the module
+    gen.end_module()
 
     # Create magma circuit for wrapper
-    retval = wrap_circ(circ=circ, wrap_name=wrap_name)
+    magma_args = []
+    for name, type_ in circ.IO.ports.items():
+        magma_args += [name, type_]
+    retval = m.DeclareCircuit(f'{wrap_name}', *magma_args)
 
     # Poke the VerilogAMS code into the magma circuit
-    retval.vams_code = vams_code
+    # (a bit hacky, probably should use a subclass instead)
+    retval.vams_code = gen.text
 
     # Return the magma circuit
     return retval

@@ -1,5 +1,7 @@
 __pycache__
+.pytest_cache
 .cache
+.idea
 build
 dist
 fault.egg-info
