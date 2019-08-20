@@ -1,7 +1,8 @@
 import fault
+from abc import ABCMeta, abstractmethod
 
 
-class GenericCellTester(fault.Tester):
+class GenericCellTester(fault.Tester, metaclass=ABCMeta):
     def __init__(self, circuit, *args, n_trials=100, supply0='vss',
                  supply1='vdd', **kwargs):
         # call super constructor
@@ -32,6 +33,7 @@ class GenericCellTester(fault.Tester):
         self.poke_optional(self.supply1, 1)
         self.poke_optional(self.supply0, 0)
 
+    @abstractmethod
     def define_trial(self):
         pass
 
@@ -50,8 +52,9 @@ class SingleOutputTester(GenericCellTester):
         # call super constructor
         super().__init__(circuit, *args, **kwargs)
 
+    @abstractmethod
     def model(self, *args):
-        raise NotImplementedError
+        pass
 
     def define_trial(self):
         # poke random data

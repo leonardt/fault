@@ -8,12 +8,12 @@ dut = m.DeclareCircuit('myinv', 'in_', m.BitIn, 'out', m.BitOut,
 
 # define the test
 t = fault.Tester(dut)
-t.poke(dut.vss, 0)
-t.poke(dut.vdd, 1)
-t.poke(dut.in_, 0)
-t.expect(dut.out, 1)
-t.poke(dut.in_, 1)
-t.expect(dut.out, 0)
+t.poke(dut.vss, False)
+t.poke(dut.vdd, True)
+t.poke(dut.in_, False)
+t.expect(dut.out, True)
+t.poke(dut.in_, True)
+t.expect(dut.out, False)
 
 # run the test
 t.compile_and_run(target='spice', simulator='ngspice', vsup=1.5,
