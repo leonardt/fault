@@ -443,6 +443,10 @@ for ({loop_expr}) {{
         return [f"fscanf({action.file.name_without_ext}_file, "
                 f"\"{action._format}\", {var_args});"]
 
+    def make_delay(self, i, action):
+        # TODO: figure out how delay should be interpreted for VerilatorTarget
+        raise NotImplementedError
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
