@@ -22,6 +22,7 @@ def display_line(line, disp_type):
 def process_output(fd, err_str, disp_type, name):
     # generic line-processing function to display lines
     # as they are produced as output in and check for errors.
+    retval = []
     any_line = False
     for line in fd:
         # Display opening text if needed
@@ -35,9 +36,13 @@ def process_output(fd, err_str, disp_type, name):
         # check for error
         if err_str is not None:
             assert err_str not in line, f'Found error in {name}: {line}'  # noqa
+        # add line to the queue of outputs
+        retval.append(line)
     # Display closing text if needed
     if any_line:
         display_line(f'*** End {name} ***', disp_type=disp_type)
+    # Return the full output contents for further processing
+    return retval
 
 
 def subprocess_run(args, cwd, env=None, disp_type='info', err_str=None,
@@ -58,15 +63,15 @@ def subprocess_run(args, cwd, env=None, disp_type='info', err_str=None,
         # process STDOUT, then STDERR
         # threads could be used here but pytest does not detect exceptions
         # in child threads, so for now the outputs are processed sequentially
-        process_output(fd=p.stdout, err_str=err_str, disp_type=disp_type,
-                       name='STDOUT')
-        process_output(fd=p.stdout, err_str=err_str, disp_type=disp_type,
-                       name='STDERR')
+        stdout = process_output(fd=p.stdout, err_str=err_str,
+                                disp_type=disp_type, name='STDOUT')
+        stderr = process_output(fd=p.stdout, err_str=err_str,
+                                disp_type=disp_type, name='STDERR')
 
         # get return code and check result if desired
         retcode = p.wait()
         if chk_ret_code:
             assert not retcode, f'Got non-zero return code: {retcode}'
 
-        # return the return code
-        return retcode
+        # return the return code, standard output, and standard error
+        return retcode, stdout, stderr
