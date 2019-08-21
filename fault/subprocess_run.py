@@ -1,6 +1,6 @@
 import logging
 import shlex
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CompletedProcess
 from fault.user_cfg import FaultConfig
 
 
@@ -42,7 +42,7 @@ def process_output(fd, err_str, disp_type, name):
     if any_line:
         display_line(f'*** End {name} ***', disp_type=disp_type)
     # Return the full output contents for further processing
-    return retval
+    return '\n'.join(retval)
 
 
 def subprocess_run(args, cwd, env=None, disp_type='info', err_str=None,
@@ -69,9 +69,10 @@ def subprocess_run(args, cwd, env=None, disp_type='info', err_str=None,
                                 disp_type=disp_type, name='STDERR')
 
         # get return code and check result if desired
-        retcode = p.wait()
+        returncode = p.wait()
         if chk_ret_code:
-            assert not retcode, f'Got non-zero return code: {retcode}'
+            assert not returncode, f'Got non-zero return code: {returncode}'
 
-        # return the return code, standard output, and standard error
-        return retcode, stdout, stderr
+        # return a completed process object containing the results
+        return CompletedProcess(args=args, returncode=returncode,
+                                stdout=stdout, stderr=stderr)

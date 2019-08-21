@@ -113,10 +113,9 @@ def test_target_clock(caplog, target, simulator):
     messages = [record.message for record in caplog.records]
 
     if target == fault.verilator_target.VerilatorTarget:
-        lines = messages[-1].splitlines()
-        assert lines[-3] == "0"
-        assert lines[-2] == "0"
-        assert lines[-1] == "1"
+        assert messages[-4] == "0"
+        assert messages[-3] == "0"
+        assert messages[-2] == "1"
     else:
         if simulator == "ncsim":
             assert messages[-7] == "0"
@@ -146,8 +145,7 @@ def test_print_nested_arrays(caplog, target, simulator):
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
     messages = [record.message for record in caplog.records]
     if target == fault.verilator_target.VerilatorTarget:
-        lines = messages[-1].splitlines()
-        actual = "\n".join(lines[-9:])
+        actual = "\n".join(messages[-10:-1])
     else:
         if simulator == "ncsim":
             actual = "\n".join(messages[-13:-4])
@@ -185,8 +183,7 @@ def test_print_double_nested_arrays(caplog, target, simulator):
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
     messages = [record.message for record in caplog.records]
     if target == fault.verilator_target.VerilatorTarget:
-        lines = messages[-1].splitlines()
-        actual = "\n".join(lines[-18:])
+        actual = "\n".join(messages[-19:-1])
     else:
         if simulator == "ncsim":
             actual = "\n".join(messages[-22:-4])
