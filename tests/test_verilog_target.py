@@ -110,22 +110,23 @@ def test_target_clock(caplog, target, simulator):
         Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out = caplog.record_tuples[-1][2]
+    records = caplog.records
 
-    lines = out.splitlines()
     if target == fault.verilator_target.VerilatorTarget:
-        assert lines[-3] == "0", out
-        assert lines[-2] == "0", out
-        assert lines[-1] == "1", out
+        lines = records[-1].message.splitlines()
+        assert lines[-3] == "0"
+        assert lines[-2] == "0"
+        assert lines[-1] == "1"
     else:
+        lines = [record.message for record in records]
         if simulator == "ncsim":
-            assert lines[-6] == "0", out
-            assert lines[-5] == "0", out
-            assert lines[-4] == "1", out
+            assert lines[-7] == "0"
+            assert lines[-6] == "0"
+            assert lines[-5] == "1"
         elif simulator == "vcs":
-            assert lines[4] == "0", out
-            assert lines[5] == "0", out
-            assert lines[6] == "1", out
+            assert lines[-10] == "0"
+            assert lines[-9] == "0"
+            assert lines[-8] == "1"
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
 
