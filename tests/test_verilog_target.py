@@ -110,23 +110,22 @@ def test_target_clock(caplog, target, simulator):
         Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    records = caplog.records
+    messages = [record.message for record in caplog.records]
 
     if target == fault.verilator_target.VerilatorTarget:
-        lines = records[-1].message.splitlines()
+        lines = messages[-1].splitlines()
         assert lines[-3] == "0"
         assert lines[-2] == "0"
         assert lines[-1] == "1"
     else:
-        lines = [record.message for record in records]
         if simulator == "ncsim":
-            assert lines[-7] == "0"
-            assert lines[-6] == "0"
-            assert lines[-5] == "1"
+            assert messages[-7] == "0"
+            assert messages[-6] == "0"
+            assert messages[-5] == "1"
         elif simulator == "vcs":
-            assert lines[-10] == "0"
-            assert lines[-9] == "0"
-            assert lines[-8] == "1"
+            assert messages[-10] == "0"
+            assert messages[-9] == "0"
+            assert messages[-8] == "1"
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
 
@@ -145,14 +144,15 @@ def test_print_nested_arrays(caplog, target, simulator):
     ] + [Print("%x\n", i) for i in circ.O]
 
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out = caplog.record_tuples[-1][2]
+    messages = [record.message for record in caplog.records]
     if target == fault.verilator_target.VerilatorTarget:
-        actual = "\n".join(out.splitlines()[-9:])
+        lines = messages[-1].splitlines()
+        actual = "\n".join(lines[-9:])
     else:
         if simulator == "ncsim":
-            actual = "\n".join(out.splitlines()[-9 - 3: -3])
+            actual = "\n".join(messages[-13:-4])
         elif simulator == "vcs":
-            actual = "\n".join(out.splitlines()[4:13])
+            actual = "\n".join(messages[-16:-7])
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
@@ -164,7 +164,7 @@ def test_print_nested_arrays(caplog, target, simulator):
 2
 4
 3
-2""", out
+2"""
 
 
 def test_print_double_nested_arrays(caplog, target, simulator):
@@ -183,14 +183,15 @@ def test_print_double_nested_arrays(caplog, target, simulator):
         Eval(),
     ] + [Print("%x\n", j) for i in circ.O for j in i]
     run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    out = caplog.record_tuples[-1][2]
+    messages = [record.message for record in caplog.records]
     if target == fault.verilator_target.VerilatorTarget:
-        actual = "\n".join(out.splitlines()[-18:])
+        lines = messages[-1].splitlines()
+        actual = "\n".join(lines[-18:])
     else:
         if simulator == "ncsim":
-            actual = "\n".join(out.splitlines()[-18 - 3: -3])
+            actual = "\n".join(messages[-22:-4])
         elif simulator == "vcs":
-            actual = "\n".join(out.splitlines()[4:22])
+            actual = "\n".join(messages[-25:-7])
         else:
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
     assert actual == """\
