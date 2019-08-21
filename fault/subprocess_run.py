@@ -4,9 +4,18 @@ from subprocess import Popen, PIPE, CompletedProcess
 from fault.user_cfg import FaultConfig
 
 
+# Terminal formatting codes
+MAGENTA = '\x1b[35m'
+CYAN = '\x1b[36m'
+BRIGHT = '\x1b[1m'
+RESET_ALL = '\x1b[0m'
+
+
 def display_line(line, disp_type):
     # generic function to display a line using various
     # methods.
+
+    # then display the line using the desired method
     if disp_type is None:
         pass
     elif disp_type == 'print':
@@ -28,7 +37,8 @@ def process_output(fd, err_str, disp_type, name):
         # Display opening text if needed
         if not any_line:
             any_line = True
-            display_line(f'*** Start {name} ***', disp_type=disp_type)
+            display_line(MAGENTA + BRIGHT + f'<{name}>' + RESET_ALL,
+                         disp_type=disp_type)
         # strip whitespace at end (including newline)
         line = line.rstrip()
         # display if desired
@@ -40,7 +50,8 @@ def process_output(fd, err_str, disp_type, name):
         retval.append(line)
     # Display closing text if needed
     if any_line:
-        display_line(f'*** End {name} ***', disp_type=disp_type)
+        display_line(MAGENTA + BRIGHT + f'</{name}>' + RESET_ALL,
+                     disp_type=disp_type)
     # Return the full output contents for further processing
     return '\n'.join(retval)
 
@@ -56,7 +67,8 @@ def subprocess_run(args, cwd, env=None, disp_type='info', err_str=None,
     # print out the command in a format that can be copy-pasted
     # directly into a terminal (i.e., with proper quoting of arguments)
     cmd_str = ' '.join(shlex.quote(arg) for arg in args)
-    logging.info(f"Running command: {cmd_str}")
+    display_line(CYAN + BRIGHT + 'Running command: ' + RESET_ALL + cmd_str,
+                 disp_type=disp_type)
 
     with Popen(args, cwd=cwd, env=env, stdout=PIPE, stderr=PIPE, bufsize=1,
                universal_newlines=True) as p:
