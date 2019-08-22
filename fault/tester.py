@@ -53,13 +53,20 @@ class Tester:
     __test__ = False  # Tell pytest to skip this class for discovery
 
     def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
-                 reset: m.ResetType = None):
+                 reset: m.ResetType = None, poke_delay_default=None,
+                 expect_strict_default=False):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
         `reset`: optional, a port from `circuit` corresponding to the reset
+        `poke_delay_default`: default time delay after each poke.  if left
+        at None, the target-specific default will be used.
+        `expect_strict_default`: if True, use strict equality check if
+        not specified by the user.
         """
         self._circuit = circuit
+        self.poke_delay_default = poke_delay_default
+        self.expect_strict_default = expect_strict_default
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
@@ -99,6 +106,11 @@ class Tester:
         """
         Set `port` to be `value`
         """
+        # set defaults
+        if delay is None:
+            delay = self.poke_delay_default
+
+        # implement poke
         if isinstance(port, m.TupleType):
             for p, v in zip(port, value):
                 self.poke(p, v)
@@ -123,10 +135,15 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def expect(self, port, value, **kwargs):
+    def expect(self, port, value, strict=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+
+        # implement expect
         if not isinstance(value, (actions.Peek, PortWrapper,
                                   LoopIndex, expression.Expression)):
             value = make_value(port, value)

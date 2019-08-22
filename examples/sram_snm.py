@@ -6,7 +6,7 @@ from pathlib import Path
 THIS_DIR = Path(__file__).resolve().parent
 
 
-def run(target='spice', simulator='ngspice', vsup=1.5, noise=0.0, td=5e-9):
+def run(target='spice', simulator='ngspice', vsup=1.5, noise=0.0, td=5):
     # declare circuit
     sram = m.DeclareCircuit(
         'sram_snm',
@@ -25,40 +25,43 @@ def run(target='spice', simulator='ngspice', vsup=1.5, noise=0.0, td=5e-9):
         dut = sram
 
     # instantiate the tester
-    tester = fault.Tester(dut)
+    tester = fault.Tester(dut, expect_strict_default=True,
+                          poke_delay_default=td)
 
     # initialize
-    tester.poke(dut.lbl, 0, delay=td)
-    tester.poke(dut.lblb, 0, delay=td)
-    tester.poke(dut.noise, 0, delay=td)
-    tester.poke(dut.vdd, 1, delay=td)
-    tester.poke(dut.vss, 0, delay=td)
-    tester.poke(dut.wl, 0, delay=td)
+    tester.poke(dut.lbl, 0)
+    tester.poke(dut.lblb, 0)
+    tester.poke(dut.noise, 0)
+    tester.poke(dut.vdd, 1)
+    tester.poke(dut.vss, 0)
+    tester.poke(dut.wl, 0)
 
     # write a "0"
-    tester.poke(dut.lbl, 0, delay=td)
-    tester.poke(dut.lblb, 1, delay=td)
-    tester.poke(dut.wl, 1, delay=td)
-    tester.poke(dut.wl, 0, delay=td)
+    tester.poke(dut.lbl, 0)
+    tester.poke(dut.lblb, 1)
+    tester.poke(dut.wl, 1)
+    tester.poke(dut.wl, 0)
 
     # apply noise
-    tester.poke(dut.noise, noise, delay=td)
-    tester.poke(dut.noise, 0, delay=td)
+    tester.poke(dut.noise, noise)
+    tester.poke(dut.noise, 0)
 
     # precharge
-    tester.poke(dut.lbl, 1, delay=td)
-    tester.poke(dut.lblb, 1, delay=td)
+    tester.poke(dut.lbl, 1)
+    tester.poke(dut.lblb, 1)
+    tester.delay(td)
 
     # set to Hi-Z
-    tester.poke(dut.lbl, fault.HiZ, delay=td)
-    tester.poke(dut.lblb, fault.HiZ, delay=td)
+    tester.poke(dut.lbl, fault.HiZ)
+    tester.poke(dut.lblb, fault.HiZ)
+    tester.delay(td)
 
     # access bit
-    tester.poke(dut.wl, 1, delay=td)
+    tester.poke(dut.wl, 1)
 
     # read back data, expecting "0"
-    tester.expect(dut.lbl, 0, strict=True)
-    tester.expect(dut.lblb, 1, strict=True)
+    tester.expect(dut.lbl, 0)
+    tester.expect(dut.lblb, 1)
 
     # set options
     kwargs = dict(
