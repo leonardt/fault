@@ -52,10 +52,11 @@ def run(noise=0.0):
     tester.expect(dut.lblb, True)
 
     # specify initial conditions
-    ic = {'X0.lbl_x': noise,
-          'X0.lblb_x': VDD - noise,
-          'lbl': VDD,
-          'lblb': VDD}
+
+    ic = {tester.internal('lbl_x'): noise,
+          tester.internal('lblb_x'): VDD - noise,
+          dut.lbl: VDD,
+          dut.lblb: VDD}
 
     # run the test
     tester.compile_and_run(
@@ -63,7 +64,7 @@ def run(noise=0.0):
         vsup=VDD,
         target='spice',
         simulator=SIMULATOR,
-        model_paths=[CIRCUIT_PATH],
+        model_paths=[CIRCUIT_PATH]
     )
 
 

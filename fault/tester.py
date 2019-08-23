@@ -12,6 +12,7 @@ from fault.actions import Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper
 from fault.file import File
+from fault.select_path import SelectPath
 import fault.expression as expression
 import os
 import inspect
@@ -410,6 +411,10 @@ class Tester:
 
         # de-assert reset
         self.poke(self.reset_port, 0 if active_high else 1)
+
+    def internal(self, *args):
+        # return a SelectPath containing the desired path
+        return SelectPath([self.circuit] + list(args))
 
 
 class LoopIndex:

@@ -11,6 +11,7 @@ from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
+from fault.select_path import SelectPath
 
 
 # define a custom error for A2D conversion to make it easier
@@ -337,7 +338,13 @@ class SpiceTarget(Target):
         netlist.probe(*comp.saves)
 
         # specify initial conditions if needed
-        netlist.ic(self.ic)
+        ic = {}
+        for key, val in self.ic.items():
+            if isinstance(key, SelectPath):
+                ic[f'X0.{key.spice_path}'] = val
+            else:
+                ic[f'{key}'] = val
+        netlist.ic(ic)
 
         # specify the transient analysis
         t_step = (self.t_step if self.t_step is not None
