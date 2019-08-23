@@ -135,7 +135,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
         # in child threads, so for now the outputs are processed sequentially
         stdout = process_output(fd=p.stdout, err_str=err_str,
                                 disp_type=disp_type, name='STDOUT')
-        stderr = process_output(fd=p.stdout, err_str=err_str,
+        stderr = process_output(fd=p.stderr, err_str=err_str,
                                 disp_type=disp_type, name='STDERR')
 
         # get return code and check result if desired
