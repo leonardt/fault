@@ -60,7 +60,8 @@ def process_output(fd, err_str, disp_type, name):
 
 
 def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
-                   chk_ret_code=True, shell=False, plain_logging=True):
+                   chk_ret_code=True, shell=False, plain_logging=True,
+                   use_fault_cfg=True):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
     # come in, looks for errors in STDOUT and STDERR (raising an exception if
     # one is found), and can check the return code from the subprocess
@@ -96,9 +97,12 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
     #                all logging.  This is recommended since it makes
     #                it easier to read the many lines of output produced
     #                by typical suprocess calls.
+    # use_fault_cfg: If True (default) and env is None, then use FaultConfig
+    #                to fill in default environment variables.
 
     # set defaults
-    env = env if env is not None else FaultConfig().get_sim_env()
+    if env is None and use_fault_cfg:
+        env = FaultConfig().get_sim_env()
 
     # temporarily use plain formatting for all logging handlers.  this
     # makes the output cleaner and more readable -- otherwise the
@@ -143,8 +147,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
         retval = CompletedProcess(args=args, returncode=returncode,
                                   stdout=stdout, stderr=stderr)
 
-    # go back to using the original formatters for each
-    # logging handler
+    # go back to using the original formatters for each logging handler
     if plain_logging:
         for handler, fmt in zip(handlers, orig_fmts):
             handler.setFormatter(fmt)
