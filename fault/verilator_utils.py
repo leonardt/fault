@@ -1,24 +1,13 @@
-import shutil
-import shlex
-import subprocess
-
-
-def bash_wrap(args):
-    retval = []
-    retval += ['bash']
-    retval += ['-c']
-    retval += [' '.join(shlex.quote(arg) for arg in args)]
-    return retval
+from .subprocess_run import subprocess_run
 
 
 def verilator_version():
     # assemble the command
-    cmd = [shutil.which('verilator'), '--version']
-    cmd = bash_wrap(cmd)
+    cmd = ['verilator', '--version']
 
     # run the command and parse out the version number
-    version = subprocess.check_output(cmd)
-    version = float(version.split()[1])
+    result = subprocess_run(cmd, shell=True)
+    version = float(result.stdout.split()[1])
 
     # return version number
     return version
@@ -38,7 +27,7 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
 
     # build up the command
     retval = []
-    retval += [shutil.which('verilator')]
+    retval += ['verilator']
     retval += ['-Wall']
     retval += ['-Wno-INCABSPATH']
     retval += ['-Wno-DECLFILENAME']
@@ -57,7 +46,7 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
         retval += ['--top-module', f'{top}']
 
     # return the command
-    return bash_wrap(retval)
+    return retval
 
 
 def verilator_make_cmd(top):

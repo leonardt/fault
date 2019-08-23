@@ -18,7 +18,7 @@ VDD = 1.5
 
 # define the amount to time to wait before checking
 # the bit value
-TD = 10e-9
+TD = 100e-9
 
 # define the number of iterations to run
 N_ITER = 15
@@ -39,21 +39,19 @@ def run(noise=0.0):
     tester = fault.Tester(dut, expect_strict_default=True,
                           poke_delay_default=0)
 
-    # initialize with pre-charged bitlines
+    # initialize
     tester.poke(dut.lbl, fault.HiZ)
     tester.poke(dut.lblb, fault.HiZ)
     tester.poke(dut.vdd, True)
     tester.poke(dut.vss, False)
     tester.poke(dut.wl, True)
-
-    # delay
     tester.delay(TD)
 
     # read back data, expecting "0"
     tester.expect(dut.lbl, False)
     tester.expect(dut.lblb, True)
 
-    # determine initial conditions
+    # specify initial conditions
     ic = {'X0.lbl_x': noise,
           'X0.lblb_x': VDD - noise,
           'lbl': VDD,

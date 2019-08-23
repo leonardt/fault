@@ -114,7 +114,8 @@ class VerilatorTarget(VerilogTarget):
                 driver_filename=driver_file.name,
                 verilator_flags=flags
             )
-            self.run_from_directory(comp_cmd)
+            # shell=True since 'verilator' is actually a shell script
+            subprocess_run(comp_cmd, cwd=self.directory, shell=True)
         self.debug_includes = set()
         self.verilator_version = verilator_version()
 
@@ -476,9 +477,6 @@ for ({loop_expr}) {{
 
         return src
 
-    def run_from_directory(self, cmd):
-        return subprocess_run(cmd, cwd=self.directory)
-
     def run(self, actions, verilator_includes=None, num_tests=0,
             _circuit=None):
         # Set defaults
@@ -492,12 +490,14 @@ for ({loop_expr}) {{
         with open(driver_file, "w") as f:
             f.write(src)
 
-        # Run the Makefile produced by verilator
-        self.run_from_directory(verilator_make_cmd(self.circuit_name))
+        # Run makefile created by verilator
+        make_cmd = verilator_make_cmd(self.circuit_name)
+        subprocess_run(make_cmd, cwd=self.directory)
 
         # Run the executable created by verilator and write the standard
         # output to a logfile for later review or processing
-        result = self.run_from_directory([f'./obj_dir/V{self.circuit_name}'])
+        exe_cmd = [f'./obj_dir/V{self.circuit_name}']
+        result = subprocess_run(exe_cmd, cwd=self.directory)
         log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
         with open(log, 'w') as f:
             f.write(result.stdout)
