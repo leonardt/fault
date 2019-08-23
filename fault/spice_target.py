@@ -10,7 +10,7 @@ from fault.nutascii_parse import nutascii_parse
 from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay
+from fault.actions import Poke, Expect, Delay, Print
 
 
 # define a custom error for A2D conversion to make it easier
@@ -25,7 +25,7 @@ class SpiceTarget(Target):
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
-                 bus_order='descend', flags=None):
+                 bus_order='descend', flags=None, ic=None):
         """
         circuit: a magma circuit
 
@@ -100,10 +100,11 @@ class SpiceTarget(Target):
         self.bus_delim = bus_delim
         self.bus_order = bus_order
         self.flags = flags if flags is not None else []
+        self.ic = ic if ic is not None else {}
 
     def run(self, actions):
         # compile the actions
-        pwls, checks, stop_time = self.compile_actions(actions)
+        pwls, checks, prints, stop_time = self.compile_actions(actions)
 
         # write the testbench
         tb_file = self.write_test_bench(pwls=pwls, stop_time=stop_time)
@@ -130,7 +131,10 @@ class SpiceTarget(Target):
         else:
             raise NotImplementedError(self.simulator)
 
-        # process results
+        # print results
+        self.print_results(results=results, prints=prints)
+
+        # check results
         self.check_results(results=results, checks=checks)
 
     def expand_bus(self, action):
@@ -169,6 +173,7 @@ class SpiceTarget(Target):
         t = 0
         pwc_dict = {}
         checks = []
+        prints = []
 
         # expand buses as needed
         _actions = []
@@ -209,6 +214,8 @@ class SpiceTarget(Target):
                     t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
+            elif isinstance(action, Print):
+                prints.append((t, action))
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -223,7 +230,7 @@ class SpiceTarget(Target):
             )
 
         # return PWL waveforms, checks to be performed, and stop time
-        return pwls, checks, t
+        return pwls, checks, prints, t
 
     @staticmethod
     def pwl_str(pwl):
@@ -307,9 +314,13 @@ class SpiceTarget(Target):
             netlist.voltage(vnet, '0', pwl=pwl_v)
             netlist.voltage(snet, '0', pwl=pwl_s)
 
+        # specify initial conditions if needed
+        netlist.ic(self.ic)
+
         # specify the transient analysis
         t_step = self.t_step if self.t_step is not None else stop_time / 1000
-        netlist.tran(t_step=t_step, t_stop=stop_time)
+        uic = self.ic != {}
+        netlist.tran(t_step=t_step, t_stop=stop_time, uic=uic)
 
         # generate control statement
         if self.simulator == 'ngspice':
@@ -364,6 +375,16 @@ class SpiceTarget(Target):
     def check_results(self, results, checks):
         for check in checks:
             self.impl_expect(results=results, time=check[0], action=check[1])
+
+    def impl_print(self, results, time, action):
+        # get port values
+        port_values = [results[f'{port.name}'](time) for port in action.ports]
+        # print formatted output
+        print(action.format_str.format(*port_values))
+
+    def print_results(self, results, prints):
+        for print_ in prints:
+            self.impl_print(results=results, time=print_[0], action=print_[1])
 
     def ngspice_cmds(self, tb_file):
         # build up the command

@@ -3,89 +3,79 @@ import fault
 from pathlib import Path
 
 
+# define circuit name
+CIRCUIT_NAME = 'sram_snm'
+
+# define path to circuit
 THIS_DIR = Path(__file__).resolve().parent
+CIRCUIT_PATH = THIS_DIR / f'{CIRCUIT_NAME}.sp'
+
+# define simulator name (ngspice, spectre, or hspice)
+SIMULATOR = 'ngspice'
+
+# define the supply voltage
+VDD = 1.5
+
+# define the amount to time to wait before checking
+# the bit value
+TD = 10e-9
+
+# define the number of iterations to run
+N_ITER = 15
 
 
-def run(target='spice', simulator='ngspice', vsup=1.5, noise=0.0, td=5):
+def run(noise=0.0):
     # declare circuit
-    sram = m.DeclareCircuit(
-        'sram_snm',
+    dut = m.DeclareCircuit(
+        CIRCUIT_NAME,
         'lbl', m.BitInOut,
         'lblb', m.BitInOut,
-        'noise', fault.RealIn,
         'vdd', m.BitIn,
         'vss', m.BitIn,
         'wl', m.BitIn
     )
 
-    # wrap if needed
-    if target == 'verilog-ams':
-        dut = fault.VAMSWrap(sram)
-    else:
-        dut = sram
-
     # instantiate the tester
     tester = fault.Tester(dut, expect_strict_default=True,
-                          poke_delay_default=td)
+                          poke_delay_default=0)
 
-    # initialize
-    tester.poke(dut.lbl, 0)
-    tester.poke(dut.lblb, 0)
-    tester.poke(dut.noise, 0)
-    tester.poke(dut.vdd, 1)
-    tester.poke(dut.vss, 0)
-    tester.poke(dut.wl, 0)
-
-    # write a "0"
-    tester.poke(dut.lbl, 0)
-    tester.poke(dut.lblb, 1)
-    tester.poke(dut.wl, 1)
-    tester.poke(dut.wl, 0)
-
-    # apply noise
-    tester.poke(dut.noise, noise)
-    tester.poke(dut.noise, 0)
-
-    # precharge
-    tester.poke(dut.lbl, 1)
-    tester.poke(dut.lblb, 1)
-    tester.delay(td)
-
-    # set to Hi-Z
+    # initialize with pre-charged bitlines
     tester.poke(dut.lbl, fault.HiZ)
     tester.poke(dut.lblb, fault.HiZ)
-    tester.delay(td)
+    tester.poke(dut.vdd, True)
+    tester.poke(dut.vss, False)
+    tester.poke(dut.wl, True)
 
-    # access bit
-    tester.poke(dut.wl, 1)
+    # delay
+    tester.delay(TD)
 
     # read back data, expecting "0"
-    tester.expect(dut.lbl, 0)
-    tester.expect(dut.lblb, 1)
+    tester.expect(dut.lbl, False)
+    tester.expect(dut.lblb, True)
+
+    # determine initial conditions
+    ic = {'X0.lbl_x': noise,
+          'X0.lblb_x': VDD - noise,
+          'lbl': VDD,
+          'lblb': VDD}
 
     # set options
-    kwargs = dict(
-        target=target,
-        simulator=simulator,
-        model_paths=[THIS_DIR / 'sram_snm.sp'],
-        vsup=vsup,
-        t_tr=td / 10,
-        tmp_dir=True
+    tester.compile_and_run(
+        ic=ic,
+        vsup=VDD,
+        target='spice',
+        simulator=SIMULATOR,
+        model_paths=[CIRCUIT_PATH],
     )
-    if target == 'verilog-ams':
-        kwargs['use_spice'] = ['sram_snm']
-
-    # run the simulation
-    tester.compile_and_run(**kwargs)
 
 
-def main(vsup=1.5):
-    dn, up = 0, vsup
-    for k in range(15):
+def main():
+    dn, up = 0, VDD
+    for k in range(N_ITER):
         noise = 0.5 * (up + dn)
         print(f'Iteration {k}: noise={noise}')
         try:
-            run(vsup=vsup, noise=noise)
+            run(noise=noise)
         except (fault.A2DError, AssertionError):
             up = noise
         else:
