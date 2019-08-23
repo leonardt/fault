@@ -39,7 +39,7 @@ class SelectPath:
         elif isinstance(self.path[-1], str):
             path += [self.path[-1]]
         else:
-            path += verilog_name(self.path[-1].name)
+            path += [verilog_name(self.path[-1].name)]
 
         # Return the path string constructed with the provided separator.
         return separator.join(path)
