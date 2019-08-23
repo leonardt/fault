@@ -92,6 +92,7 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     # Poke the VerilogAMS code into the magma circuit
     # (a bit hacky, probably should use a subclass instead)
     retval.vams_code = gen.text
+    retval.vams_inst_name = inst_name
 
     # Return the magma circuit
     return retval

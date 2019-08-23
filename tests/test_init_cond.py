@@ -5,7 +5,7 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'spice')
+    pytest_sim_params(metafunc, 'verilog-ams', 'spice')
 
 
 def test_init_cond(target, simulator, va=1.234, vb=2.345, vc=3.456,
@@ -26,16 +26,16 @@ def test_init_cond(target, simulator, va=1.234, vb=2.345, vc=3.456,
 
     # define the test
     tester = fault.Tester(dut)
-    tester.expect(dut.vb, vb, abs_tol=abs_tol)
-    tester.delay(1e-12)
+    tester.delay(10e-9)
     tester.expect(dut.va, va, abs_tol=abs_tol)
+    tester.expect(dut.vb, vb, abs_tol=abs_tol)
     tester.expect(dut.vc, vc, abs_tol=abs_tol)
 
     # set options
     ic = {
-        tester.internal('va_x'): va,
-        dut.vb: vb,
-        tester.internal('Xh', 'Xd', 'vc_x'): vc
+        dut.va: va,
+        tester.internal('vb_x'): vb,
+        tester.internal('Xe', 'vc_x'): vc
     }
     kwargs = dict(
         target=target,

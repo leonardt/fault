@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from .select_path import SelectPath
 from .system_verilog_target import SystemVerilogTarget
 
 
@@ -7,7 +8,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
     def __init__(self, circuit, simulator='ncsim', directory='build/',
                  model_paths=None, stop_time=1, vsup=1.0, rout=1, flags=None,
                  ext_srcs=None, use_spice=None, use_input_wires=True,
-                 ext_model_file=True, bus_delim='<>', **kwargs):
+                 ext_model_file=True, bus_delim='<>', ic=None, **kwargs):
         """
         simulator: Name of the simulator to be used for simulation.
         model_paths: paths to SPICE/Spectre files used in the simulation
@@ -33,6 +34,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
         taken care of this via ext_srcs.
         bus_delim: '<>', '[]', or '_' indicating bus styles "a<3>", "b[2]",
         c_1.
+        ic: Dictionary mapping nets or SelectPaths to initialization values.
         """
 
         # save settings
@@ -41,6 +43,7 @@ class VerilogAMSTarget(SystemVerilogTarget):
         self.rout = rout
         self.use_spice = use_spice if use_spice is not None else []
         self.bus_delim = bus_delim
+        self.ic = ic if ic is not None else {}
 
         # save file names that will be written
         self.amscf = 'amscf.scs'
@@ -86,13 +89,35 @@ class VerilogAMSTarget(SystemVerilogTarget):
             amsd_lines += f'{tab}config cell={model} use=spice{nl}'
             amsd_lines += f'{tab}portmap subckt={model} autobus=yes busdelim="{self.bus_delim}"{nl}'  # noqa
 
-        # return text content of the AMS control file
-        return f'''
-tranSweep tran stop={self.stop_time}s
+        # build up the output lines
+        lines = []
+        lines += [f'tranSweep tran stop={self.stop_time}s']
+        if self.ic:
+            # generate path to instantiated spice circuit
+            path_to_spice = []
+            path_to_spice += [f'{self.circuit.name}_tb']
+            path_to_spice += ['dut']
+            path_to_spice += [self.circuit.vams_inst_name]
+            path_to_spice = '.'.join(path_to_spice)
+
+            # generate all key assignments
+            ic_line = []
+            ic_line += ['ic']
+            for key, val in self.ic.items():
+                if isinstance(key, SelectPath):
+                    name = f'{path_to_spice}.{key.spice_path}'
+                else:
+                    name = f'{path_to_spice}.{key}'
+                ic_line += [f'{name}={val}']
+            lines += [' '.join(ic_line)]
+        lines += [f'''\
 amsd {{
     ie vsup={self.vsup} rout={self.rout}
 {amsd_lines}
-}}'''
+}}''']
+
+        # return amscf text
+        return nl.join(lines)
 
     def write_amscf(self):
         with open(self.directory / Path(self.amscf), 'w') as f:
