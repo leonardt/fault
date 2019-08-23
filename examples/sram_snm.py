@@ -59,7 +59,7 @@ def run(noise=0.0):
           'lbl': VDD,
           'lblb': VDD}
 
-    # set options
+    # run the test
     tester.compile_and_run(
         ic=ic,
         vsup=VDD,

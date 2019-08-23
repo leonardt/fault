@@ -20,6 +20,15 @@ class A2DError(Exception):
     pass
 
 
+class CompiledSpiceActions:
+    def __init__(self, pwls, checks, prints, stop_time, saves):
+        self.pwls = pwls
+        self.checks = checks
+        self.prints = prints
+        self.stop_time = stop_time
+        self.saves = saves
+
+
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
@@ -104,10 +113,10 @@ class SpiceTarget(Target):
 
     def run(self, actions):
         # compile the actions
-        pwls, checks, prints, stop_time = self.compile_actions(actions)
+        comp = self.compile_actions(actions)
 
         # write the testbench
-        tb_file = self.write_test_bench(pwls=pwls, stop_time=stop_time)
+        tb_file = self.write_test_bench(comp)
 
         # generate simulator commands
         if self.simulator == 'ngspice':
@@ -132,10 +141,10 @@ class SpiceTarget(Target):
             raise NotImplementedError(self.simulator)
 
         # print results
-        self.print_results(results=results, prints=prints)
+        self.print_results(results=results, prints=comp.prints)
 
         # check results
-        self.check_results(results=results, checks=checks)
+        self.check_results(results=results, checks=comp.checks)
 
     def expand_bus(self, action):
         # define bit-access function for the action's value
@@ -174,6 +183,7 @@ class SpiceTarget(Target):
         pwc_dict = {}
         checks = []
         prints = []
+        saves = set()
 
         # expand buses as needed
         _actions = []
@@ -214,8 +224,11 @@ class SpiceTarget(Target):
                     t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
+                saves.add(f'{action.port.name}')
             elif isinstance(action, Print):
                 prints.append((t, action))
+                for port in action.ports:
+                    saves.add(f'{port.name}')
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -230,7 +243,13 @@ class SpiceTarget(Target):
             )
 
         # return PWL waveforms, checks to be performed, and stop time
-        return pwls, checks, prints, t
+        return CompiledSpiceActions(
+            pwls=pwls,
+            checks=checks,
+            prints=prints,
+            stop_time=t,
+            saves=saves
+        )
 
     @staticmethod
     def pwl_str(pwl):
@@ -278,7 +297,7 @@ class SpiceTarget(Target):
         # return ordered list of ports
         return retval
 
-    def write_test_bench(self, pwls, stop_time, tb_file=None):
+    def write_test_bench(self, comp, tb_file=None):
         # create a new netlist
         netlist = SpiceNetlist()
         netlist.comment('Automatically generated file.')
@@ -304,7 +323,7 @@ class SpiceTarget(Target):
         netlist.end_subckt()
 
         # write stimuli lines
-        for name, (pwl_v, pwl_s) in pwls.items():
+        for name, (pwl_v, pwl_s) in comp.pwls.items():
             # instantiate switch between voltage source and DUT
             vnet = f'__{name}_v'
             snet = f'__{name}_s'
@@ -314,13 +333,17 @@ class SpiceTarget(Target):
             netlist.voltage(vnet, '0', pwl=pwl_v)
             netlist.voltage(snet, '0', pwl=pwl_s)
 
+        # save signals that need to be saved
+        netlist.probe(*comp.saves)
+
         # specify initial conditions if needed
         netlist.ic(self.ic)
 
         # specify the transient analysis
-        t_step = self.t_step if self.t_step is not None else stop_time / 1000
+        t_step = (self.t_step if self.t_step is not None
+                  else comp.stop_time / 1000)
         uic = self.ic != {}
-        netlist.tran(t_step=t_step, t_stop=stop_time, uic=uic)
+        netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
 
         # generate control statement
         if self.simulator == 'ngspice':

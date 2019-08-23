@@ -12,6 +12,13 @@ class SpiceNetlist(CodeGenerator):
             line += [f'v({key})={val}']
         self.println(' '.join(line))
 
+    def probe(self, *probes):
+        line = []
+        line += ['.probe']
+        for p in probes:
+            line += [f'{p}']
+        self.println(' '.join(line))
+
     def include(self, file_):
         self.println(f'.include {file_}')
 
