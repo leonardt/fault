@@ -3,20 +3,25 @@ from fault.codegen import CodeGenerator
 from fault import ElectIn, ElectOut, RealIn, RealOut
 
 
+class VAMSPort():
+    def __init__(self, dir_, type_, name):
+        self.dir_ = dir_
+        self.type_ = type_
+        self.name = name
+
+    def __str__(self):
+        return f'{self.dir_} {self.type_} {self.name}'
+
+
 class VerilogAMSCode(CodeGenerator):
     def include(self, file):
         self.println(f'`include "{file}"')
 
     def start_module(self, name, *ports):
         self.println(f'module {name} (')
-        self.println_comma_sep(*[
-            f'{io_dir} {io_name}' for io_dir, io_name in ports
-        ])
+        self.println_comma_sep(*[f'{port}' for port in ports])
         self.println(');')
         self.indent()
-
-    def decl_port_type(self, type_, name):
-        self.println(f'{type_} {name};')
 
     def instantiate(self, mod_name, *wiring, inst_name=None):
         # set defaults
@@ -51,26 +56,29 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     # module definition
     ports = []
     for name, type_ in circ.IO.ports.items():
+        # determine port direction
         if type_.isinput():
-            ports += [('input', f'{name}')]
+            vams_dir = 'input'
         elif type_.isoutput():
-            ports += [('output', f'{name}')]
+            vams_dir = 'output'
         elif type_.isinout():
-            ports += [('inout', f'{name}')]
+            vams_dir = 'input'
         else:
             raise Exception(f'Unsupported port type: {type_}')
-    gen.start_module(wrap_name, *ports)
-    gen.emptyln()
 
-    # declare port types
-    for name, type_ in circ.IO.ports.items():
+        # determine port type
         if type_ is ElectIn or type_ is ElectOut:
             vams_type = 'electrical'
         elif type_ is RealIn or type_ is RealOut:
             vams_type = 'wreal'
+        elif type_.size() == 1:
+            vams_type = 'wire'
         else:
             vams_type = f'wire [{type_.size() - 1}:0]'
-        gen.decl_port_type(vams_type, f'{name}')
+
+        # add port to list of ports
+        ports += [VAMSPort(dir_=vams_dir, type_=vams_type, name=f'{name}')]
+    gen.start_module(wrap_name, *ports)
     gen.emptyln()
 
     # Generate wiring withing the module instantiation

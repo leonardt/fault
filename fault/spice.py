@@ -70,6 +70,20 @@ class SpiceNetlist(CodeGenerator):
         # print the line
         self.println(' '.join(line))
 
+    def capacitor(self, p, n, value, inst_name=None):
+        # set defaults
+        if inst_name is None:
+            inst_name = f'{next(self.inst_count)}'
+
+        # build up the line
+        line = []
+        line += [f'C{inst_name}']
+        line += [f'{p}', f'{n}']
+        line += [f'{value}']
+
+        # print the line
+        self.println(' '.join(line))
+
     def switch(self, sw_p, sw_n, ctl_p, ctl_n, mod_name, inst_name=None,
                default=None):
         # set defaults

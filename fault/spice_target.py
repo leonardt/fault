@@ -35,7 +35,7 @@ class SpiceTarget(Target):
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
-                 bus_order='descend', flags=None, ic=None):
+                 bus_order='descend', flags=None, ic=None, cap_loads=None):
         """
         circuit: a magma circuit
 
@@ -82,6 +82,9 @@ class SpiceTarget(Target):
 
         flags: List of additional arguments that should be passed to the
                simulator.
+
+        cap_loads: Dictionary mapping device ports to capacitive loads
+                   that should be added to those ports.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -111,6 +114,7 @@ class SpiceTarget(Target):
         self.bus_order = bus_order
         self.flags = flags if flags is not None else []
         self.ic = ic if ic is not None else {}
+        self.cap_loads = cap_loads if cap_loads is not None else {}
 
     def run(self, actions):
         # compile the actions
@@ -310,6 +314,10 @@ class SpiceTarget(Target):
         # instantiate the DUT
         dut_name = f'{self.circuit.name}'
         netlist.instantiate(dut_name, *self.get_ordered_ports())
+
+        # add a capacitance to some ports if specified
+        for port, val in self.cap_loads.items():
+            netlist.capacitor(f'{port.name}', '0', val)
 
         # define the switch model
         inout_sw_mod = 'inout_sw_mod'
