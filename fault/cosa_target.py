@@ -90,6 +90,15 @@ class CoSATarget(VerilogTarget):
     def make_var(self, i, action):
         raise NotImplementedError()
 
+    def make_delay(self, i, action):
+        raise NotImplementedError()
+
+    def make_if(self, i, action):
+        raise NotImplementedError()
+
+    def make_while(self, i, action):
+        raise NotImplementedError()
+
     def make_step(self, i, action):
         self.step_offset += action.steps
         if self.step_offset % 2 == 0:

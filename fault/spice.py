@@ -5,6 +5,20 @@ class SpiceNetlist(CodeGenerator):
     def comment(self, text):
         self.println(f'* {text}')
 
+    def ic(self, cond):
+        line = []
+        line += ['.ic']
+        for key, val in cond.items():
+            line += [f'v({key})={val}']
+        self.println(' '.join(line))
+
+    def probe(self, *probes):
+        line = []
+        line += ['.probe']
+        for p in probes:
+            line += [f'{p}']
+        self.println(' '.join(line))
+
     def include(self, file_):
         self.println(f'.include {file_}')
 
@@ -90,8 +104,14 @@ class SpiceNetlist(CodeGenerator):
         # print the line
         self.println(' '.join(line))
 
-    def tran(self, t_step, t_stop):
-        self.println(f'.tran {t_step} {t_stop}')
+    def tran(self, t_step, t_stop, uic=False):
+        line = []
+        line += ['.tran']
+        line += [f'{t_step}']
+        line += [f'{t_stop}']
+        if uic:
+            line += ['uic']
+        self.println(' '.join(line))
 
     def start_subckt(self, name, *ports):
         port_str = ' '.join(ports)

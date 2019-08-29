@@ -10,15 +10,32 @@ from fault.nutascii_parse import nutascii_parse
 from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay
+from fault.actions import Poke, Expect, Delay, Print
+from fault.select_path import SelectPath
+
+
+# define a custom error for A2D conversion to make it easier
+# to catch this specific issue (for example, in adapting
+# tests based on the previous test result)
+class A2DError(Exception):
+    pass
+
+
+class CompiledSpiceActions:
+    def __init__(self, pwls, checks, prints, stop_time, saves):
+        self.pwls = pwls
+        self.checks = checks
+        self.prints = prints
+        self.stop_time = stop_time
+        self.saves = saves
 
 
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
-                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<',
-                 bus_order='descend', flags=None):
+                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
+                 bus_order='descend', flags=None, ic=None):
         """
         circuit: a magma circuit
 
@@ -56,7 +73,7 @@ class SpiceTarget(Target):
                     'parse', parse through model_paths looking for the
                     subcircuit definition to determine the pin order.
 
-        bus_delim: '<', '[', or '_' indicating bus styles "a<3>", "b[2]",
+        bus_delim: '<>', '[]', or '_' indicating bus styles "a<3>", "b[2]",
                    c_1.
 
         bus_order: 'descend' or 'ascend', indicating whether buses are
@@ -93,13 +110,14 @@ class SpiceTarget(Target):
         self.bus_delim = bus_delim
         self.bus_order = bus_order
         self.flags = flags if flags is not None else []
+        self.ic = ic if ic is not None else {}
 
     def run(self, actions):
         # compile the actions
-        pwls, checks, stop_time = self.compile_actions(actions)
+        comp = self.compile_actions(actions)
 
         # write the testbench
-        tb_file = self.write_test_bench(pwls=pwls, stop_time=stop_time)
+        tb_file = self.write_test_bench(comp)
 
         # generate simulator commands
         if self.simulator == 'ngspice':
@@ -113,8 +131,7 @@ class SpiceTarget(Target):
 
         # run the simulation commands
         for sim_cmd in sim_cmds:
-            res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
-            assert not res.returncode, f'Error running simulator: {self.simulator}'  # noqa
+            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
@@ -124,8 +141,11 @@ class SpiceTarget(Target):
         else:
             raise NotImplementedError(self.simulator)
 
-        # process results
-        self.check_results(results=results, checks=checks)
+        # print results
+        self.print_results(results=results, prints=comp.prints)
+
+        # check results
+        self.check_results(results=results, checks=comp.checks)
 
     def expand_bus(self, action):
         # define bit-access function for the action's value
@@ -163,6 +183,8 @@ class SpiceTarget(Target):
         t = 0
         pwc_dict = {}
         checks = []
+        prints = []
+        saves = set()
 
         # expand buses as needed
         _actions = []
@@ -196,10 +218,18 @@ class SpiceTarget(Target):
                 # add the value to the list of actions
                 pwc_dict[action_port_name][0].append((t, stim_v))
                 pwc_dict[action_port_name][1].append((t, stim_s))
-                # increment time
-                t += self.clock_step_delay * 1e-9
+                # increment time if desired
+                if action.delay is None:
+                    t += self.clock_step_delay * 1e-9
+                else:
+                    t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
+                saves.add(f'{action.port.name}')
+            elif isinstance(action, Print):
+                prints.append((t, action))
+                for port in action.ports:
+                    saves.add(f'{port.name}')
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -214,7 +244,13 @@ class SpiceTarget(Target):
             )
 
         # return PWL waveforms, checks to be performed, and stop time
-        return pwls, checks, t
+        return CompiledSpiceActions(
+            pwls=pwls,
+            checks=checks,
+            prints=prints,
+            stop_time=t,
+            saves=saves
+        )
 
     @staticmethod
     def pwl_str(pwl):
@@ -229,9 +265,9 @@ class SpiceTarget(Target):
             raise Exception(f'Unknown conn_order: {self.conn_order}.')
 
     def bit_from_bus(self, port, k):
-        if self.bus_delim == '<':
+        if self.bus_delim == '<>':
             return f'{port}<{k}>'
-        elif self.bus_delim == '[':
+        elif self.bus_delim == '[]':
             return f'{port}[{k}]'
         elif self.bus_delim == '_':
             return f'{port}_{k}'
@@ -262,7 +298,7 @@ class SpiceTarget(Target):
         # return ordered list of ports
         return retval
 
-    def write_test_bench(self, pwls, stop_time, tb_file=None):
+    def write_test_bench(self, comp, tb_file=None):
         # create a new netlist
         netlist = SpiceNetlist()
         netlist.comment('Automatically generated file.')
@@ -279,18 +315,16 @@ class SpiceTarget(Target):
         inout_sw_mod = 'inout_sw_mod'
         netlist.start_subckt(inout_sw_mod, 'sw_p', 'sw_n', 'ctl_p', 'ctl_n')
         if self.simulator == 'ngspice':
-            sw_model = '__inout_sw_mod'
-            netlist.model(mod_name=sw_model, mod_type='sw', vt=0.5, vh=0.2,
-                          ron=self.rout, roff=self.rz)
-            netlist.switch('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
-                           mod_name=sw_model, default='ON')
+            a = (1 / self.rout) - (1 / self.rz)
+            b = (1 / self.rz)
+            netlist.println(f"Gs sw_p sw_n cur='V(sw_p, sw_n)*({a}*V(ctl_p, ctl_n)+{b})'")  # noqa
         elif self.simulator in {'spectre', 'hspice'}:
             netlist.vcr('sw_p', 'sw_n', 'ctl_p', 'ctl_n',
                         pwl=[(0, self.rz), (1, self.rout)])
         netlist.end_subckt()
 
         # write stimuli lines
-        for name, (pwl_v, pwl_s) in pwls.items():
+        for name, (pwl_v, pwl_s) in comp.pwls.items():
             # instantiate switch between voltage source and DUT
             vnet = f'__{name}_v'
             snet = f'__{name}_s'
@@ -300,9 +334,23 @@ class SpiceTarget(Target):
             netlist.voltage(vnet, '0', pwl=pwl_v)
             netlist.voltage(snet, '0', pwl=pwl_s)
 
+        # save signals that need to be saved
+        netlist.probe(*comp.saves)
+
+        # specify initial conditions if needed
+        ic = {}
+        for key, val in self.ic.items():
+            if isinstance(key, SelectPath):
+                ic[f'X0.{key.spice_path}'] = val
+            else:
+                ic[f'{key}'] = val
+        netlist.ic(ic)
+
         # specify the transient analysis
-        t_step = self.t_step if self.t_step is not None else stop_time / 1000
-        netlist.tran(t_step=t_step, t_stop=stop_time)
+        t_step = (self.t_step if self.t_step is not None
+                  else comp.stop_time / 1000)
+        uic = self.ic != {}
+        netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
 
         # generate control statement
         if self.simulator == 'ngspice':
@@ -340,7 +388,7 @@ class SpiceTarget(Target):
             elif value >= self.vih_rel * self.vsup:
                 value = 1
             else:
-                raise Exception(f'Invalid logic level: {value}.')
+                raise A2DError(f'Invalid logic level: {value}.')
 
         # implement the requested check
         if action.above is not None:
@@ -357,6 +405,16 @@ class SpiceTarget(Target):
     def check_results(self, results, checks):
         for check in checks:
             self.impl_expect(results=results, time=check[0], action=check[1])
+
+    def impl_print(self, results, time, action):
+        # get port values
+        port_values = [results[f'{port.name}'](time) for port in action.ports]
+        # print formatted output
+        print(action.format_str.format(*port_values))
+
+    def print_results(self, results, prints):
+        for print_ in prints:
+            self.impl_print(results=results, time=print_[0], action=print_[1])
 
     def ngspice_cmds(self, tb_file):
         # build up the command

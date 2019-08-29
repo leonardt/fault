@@ -22,19 +22,34 @@ class SelectPath:
         self.path[index] = value
 
     def make_path(self, separator):
-        path_str = ""
-        # Skip outermost circuit definition (top) and innermost port
-        # (appended next)
+        # Initialize empty path
+        path = []
+
+        # Add the second through second-to-last entries to the path string.
+        # Note that the first path entry is simply skipped.
         for x in self.path[1:-1]:
-            path_str += x.instance.name + separator
+            if isinstance(x, str):
+                path += [x]
+            else:
+                path += [x.instance.name]
+
+        # Append the final path entry
         if isinstance(self.path[-1], fault.WrappedVerilogInternalPort):
-            path_str += self.path[-1].path
+            path += [self.path[-1].path]
+        elif isinstance(self.path[-1], str):
+            path += [self.path[-1]]
         else:
-            path_str += verilog_name(self.path[-1].name)
-        return path_str
+            path += [verilog_name(self.path[-1].name)]
+
+        # Return the path string constructed with the provided separator.
+        return separator.join(path)
 
     @property
     def system_verilog_path(self):
+        return self.make_path(".")
+
+    @property
+    def spice_path(self):
         return self.make_path(".")
 
     @property

@@ -1,33 +1,20 @@
-import logging
 import fault
-from .array import Array
 from pathlib import Path
-import subprocess
 import magma as m
 import fault.actions as actions
 from fault.actions import Poke, Eval
 from fault.verilog_target import VerilogTarget, verilog_name
 import fault.value_utils as value_utils
-import fault.verilator_utils as verilator_utils
+from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
+                                   verilator_version)
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from hwtypes import BitVector, SIntVector, AbstractBitVectorMeta
-import subprocess
-from fault.random import random_bv, constrained_random_bv
+from hwtypes import BitVector, AbstractBitVectorMeta
+from fault.random import constrained_random_bv
+from fault.subprocess_run import subprocess_run
 import fault.utils as utils
-import platform
-import os
 import fault.expression as expression
-
-
-def log(logger, message):
-    """
-    Helper function to ignore empty log messages
-    """
-    if message:
-        for line in message.splitlines():
-            logger(message)
 
 
 # max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -92,9 +79,9 @@ int main(int argc, char **argv) {{
 
 class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
-                 flags=[], skip_compile=False, include_verilog_libraries=[],
-                 include_directories=[], magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts={}, skip_verilator=False):
+                 flags=None, skip_compile=False, include_verilog_libraries=None,
+                 include_directories=None, magma_output="coreir-verilog",
+                 circuit_name=None, magma_opts=None, skip_verilator=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -105,31 +92,32 @@ class VerilatorTarget(VerilogTarget):
             -I flag. From the the verilator docs:
                 -I<dir>                    Directory to search for includes
         """
+        # Set defaults
+        if include_verilog_libraries is None:
+            include_verilog_libraries = []
+        if magma_opts is None:
+            magma_opts = {}
+
+        # Call super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
-        self.flags = flags
-        self.include_directories = include_directories
 
         # Compile the design using `verilator`, if not skip
         if not skip_verilator:
             driver_file = self.directory / Path(
                 f"{self.circuit_name}_driver.cpp")
-            verilator_cmd = verilator_utils.verilator_cmd(
-                self.circuit_name, self.verilog_file.name,
-                self.include_verilog_libraries, self.include_directories,
-                driver_file.name, self.flags)
-            result = self.run_from_directory(verilator_cmd)
-            log(logging.info, result.stdout.decode())
-            log(logging.info, result.stderr.decode())
-            if result.returncode:
-                raise Exception(f"Running verilator cmd {verilator_cmd} failed:"
-                                f" {result.stderr.decode()}")
+            comp_cmd = verilator_comp_cmd(
+                top=self.circuit_name,
+                verilog_filename=self.verilog_file.name,
+                include_verilog_libraries=self.include_verilog_libraries,
+                include_directories=include_directories,
+                driver_filename=driver_file.name,
+                verilator_flags=flags
+            )
+            # shell=True since 'verilator' is actually a shell script
+            subprocess_run(comp_cmd, cwd=self.directory, shell=True)
         self.debug_includes = set()
-        verilator_version = subprocess.check_output("verilator --version",
-                                                    shell=True)
-        # Need to check version since they changed how internal signal access
-        # works
-        self.verilator_version = float(verilator_version.split()[1])
+        self.verilator_version = verilator_version()
 
     def get_verilator_prefix(self):
         if self.verilator_version > 3.874:
@@ -443,6 +431,10 @@ for ({loop_expr}) {{
         return [f"fscanf({action.file.name_without_ext}_file, "
                 f"\"{action._format}\", {var_args});"]
 
+    def make_delay(self, i, action):
+        # TODO: figure out how delay should be interpreted for VerilatorTarget
+        raise NotImplementedError
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
@@ -485,34 +477,30 @@ for ({loop_expr}) {{
 
         return src
 
-    def run_from_directory(self, cmd):
-        logging.debug(cmd)
-        return subprocess.run(cmd, cwd=self.directory, shell=True,
-                              capture_output=True)
-
-    def run(self, actions, verilator_includes=[], num_tests=0,
+    def run(self, actions, verilator_includes=None, num_tests=0,
             _circuit=None):
-        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
+        # Set defaults
+        if verilator_includes is None:
+            verilator_includes = []
+
         # Write the verilator driver to file.
         src = self.generate_code(actions, verilator_includes, num_tests,
                                  _circuit)
+        driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         with open(driver_file, "w") as f:
             f.write(src)
-        # Run a series of commands: run the Makefile output by verilator, and
-        # finally run the executable created by verilator.
-        verilator_make_cmd = verilator_utils.verilator_make_cmd(
-            self.circuit_name)
-        result = self.run_from_directory(verilator_make_cmd)
-        log(logging.debug, result.stdout.decode())
-        assert not result.returncode, "Running verilator make_cmd_failed" \
-            + result.stderr.decode()
-        result = self.run_from_directory(
-            f"/bin/bash -c \"set -e -o pipefail; ./obj_dir/V{self.circuit_name}"
-            f" | tee ./obj_dir/{self.circuit_name}.log\"")
-        log(logging.info, result.stdout.decode())
-        log(logging.info, result.stderr.decode())
-        assert not result.returncode, "Running verilator binary failed: " + \
-            result.stderr.decode()
+
+        # Run makefile created by verilator
+        make_cmd = verilator_make_cmd(self.circuit_name)
+        subprocess_run(make_cmd, cwd=self.directory)
+
+        # Run the executable created by verilator and write the standard
+        # output to a logfile for later review or processing
+        exe_cmd = [f'./obj_dir/V{self.circuit_name}']
+        result = subprocess_run(exe_cmd, cwd=self.directory)
+        log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
+        with open(log, 'w') as f:
+            f.write(result.stdout)
 
     def add_assumptions(self, circuit, actions, i):
         main_body = ""

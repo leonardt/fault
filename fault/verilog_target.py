@@ -14,24 +14,25 @@ class VerilogTarget(Target):
     Provides reuseable target logic for compiling circuits into verilog files.
     """
     def __init__(self, circuit, circuit_name=None, directory="build/",
-                 skip_compile=False, include_verilog_libraries=[],
-                 magma_output="verilog", magma_opts={}):
+                 skip_compile=False, include_verilog_libraries=None,
+                 magma_output="verilog", magma_opts=None):
         super().__init__(circuit)
 
         if circuit_name is None:
-            self.circuit_name = self.circuit.name
-        else:
-            self.circuit_name = circuit_name
+            circuit_name = self.circuit.name
+        self.circuit_name = circuit_name
 
         self.directory = Path(directory)
         os.makedirs(directory, exist_ok=True)
 
         self.skip_compile = skip_compile
 
+        if include_verilog_libraries is None:
+            include_verilog_libraries = []
         self.include_verilog_libraries = include_verilog_libraries
 
         self.magma_output = magma_output
-        self.magma_opts = magma_opts
+        self.magma_opts = magma_opts if magma_opts is not None else {}
 
         if hasattr(circuit, "verilog_file_name") and \
                 os.path.splitext(circuit.verilog_file_name)[-1] == ".sv":
@@ -116,6 +117,8 @@ class VerilogTarget(Target):
             return self.make_var(i, action)
         if isinstance(action, actions.FileScanFormat):
             return self.make_file_scan_format(i, action)
+        if isinstance(action, actions.Delay):
+            return self.make_delay(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -164,4 +167,16 @@ class VerilogTarget(Target):
 
     @abstractmethod
     def make_var(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_delay(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_while(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_if(self, i, action):
         pass

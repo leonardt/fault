@@ -2,19 +2,18 @@ import logging
 import magma as m
 import fault.actions as actions
 from fault.magma_simulator_target import MagmaSimulatorTarget
-from fault.logging import warning
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.verilogams_target import VerilogAMSTarget
 from fault.spice_target import SpiceTarget
-from fault.actions import Poke, Expect, Step, Print, Loop, While, If
+from fault.actions import Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
-from fault.wrapper import CircuitWrapper, PortWrapper, InstanceWrapper
+from fault.wrapper import CircuitWrapper, PortWrapper
 from fault.file import File
+from fault.select_path import SelectPath
 import fault.expression as expression
-import copy
 import os
 import inspect
 from fault.config import get_test_dir
@@ -55,13 +54,20 @@ class Tester:
     __test__ = False  # Tell pytest to skip this class for discovery
 
     def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
-                 reset: m.ResetType = None):
+                 reset: m.ResetType = None, poke_delay_default=None,
+                 expect_strict_default=False):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
         `reset`: optional, a port from `circuit` corresponding to the reset
+        `poke_delay_default`: default time delay after each poke.  if left
+        at None, the target-specific default will be used.
+        `expect_strict_default`: if True, use strict equality check if
+        not specified by the user.
         """
         self._circuit = circuit
+        self.poke_delay_default = poke_delay_default
+        self.expect_strict_default = expect_strict_default
         self.actions = []
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
@@ -97,10 +103,15 @@ class Tester:
             return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
-    def poke(self, port, value):
+    def poke(self, port, value, delay=None):
         """
         Set `port` to be `value`
         """
+        # set defaults
+        if delay is None:
+            delay = self.poke_delay_default
+
+        # implement poke
         if isinstance(port, m.TupleType):
             for p, v in zip(port, value):
                 self.poke(p, v)
@@ -108,7 +119,7 @@ class Tester:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
                 value = make_value(port, value)
-            self.actions.append(actions.Poke(port, value))
+            self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
         """
@@ -125,10 +136,15 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def expect(self, port, value, **kwargs):
+    def expect(self, port, value, strict=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+
+        # implement expect
         if not isinstance(value, (actions.Peek, PortWrapper,
                                   LoopIndex, expression.Expression)):
             value = make_value(port, value)
@@ -395,6 +411,10 @@ class Tester:
 
         # de-assert reset
         self.poke(self.reset_port, 0 if active_high else 1)
+
+    def internal(self, *args):
+        # return a SelectPath containing the desired path
+        return SelectPath([self.circuit] + list(args))
 
 
 class LoopIndex:

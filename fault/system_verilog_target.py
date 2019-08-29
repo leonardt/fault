@@ -103,8 +103,9 @@ class SystemVerilogTarget(VerilogTarget):
                     containing the generated testbench code.
 
         ext_srcs: Shorter alias for "include_verilog_libraries" argument.
-                  It is illegal to specify both "include_verilog_libraries"
-                  and "ext_srcs".
+                  If both "include_verilog_libraries" and ext_srcs are
+                  specified, then the sources from include_verilog_libraries
+                  will be processed first.
 
         use_input_wires: If True, drive DUT inputs through wires that are in
                          turn assigned to a reg.
@@ -113,15 +114,10 @@ class SystemVerilogTarget(VerilogTarget):
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
-            if ext_srcs is None:
-                include_verilog_libraries = []
-            else:
-                include_verilog_libraries = ext_srcs
-        else:
-            if ext_srcs is None:
-                pass
-            else:
-                raise ValueError('Cannot specify both "include_verilog_libraries" and "ext_srcs".')  # noqa
+            include_verilog_libraries = []
+        if ext_srcs is None:
+            ext_srcs = []
+        include_verilog_libraries = include_verilog_libraries + ext_srcs
 
         # set default for there being an external model file
         if ext_model_file is None:
@@ -243,7 +239,17 @@ class SystemVerilogTarget(VerilogTarget):
         name = self.make_name(action.port)
         # For now we assume that verilog can handle big ints
         value = self.process_value(action.port, action.value)
-        return [f"{name} = {value};", f"#{self.clock_step_delay};"]
+        # Build up the poke action, including delay
+        retval = []
+        retval += [f'{name} = {value};']
+        if action.delay is None:
+            retval += [f'#{self.clock_step_delay};']
+        else:
+            retval += [f'#({action.delay}*1s);']
+        return retval
+
+    def make_delay(self, i, action):
+        return [f'#({action.time}*1s);']
 
     def make_print(self, i, action):
         # build up argument list for the $write command
@@ -537,15 +543,15 @@ end
             sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
                                      cmd_file=self.write_ncsim_tcl())
             bin_cmd = None
-            err_str = None
+            sim_err_str = None
         elif self.simulator == 'vcs':
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
             bin_cmd = [bin_file]
-            err_str = 'Error'
+            sim_err_str = 'Error'
         elif self.simulator == 'iverilog':
             sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
             bin_cmd = ['vvp', '-N', bin_file]
-            err_str = 'ERROR'
+            sim_err_str = 'ERROR'
         else:
             raise NotImplementedError(self.simulator)
 
@@ -553,15 +559,12 @@ end
         sim_cmd += self.flags
 
         # compile the simulation
-        sim_res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
-        assert not sim_res.returncode, 'Error running system verilog simulator'
+        subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
-            bin_res = subprocess_run(bin_cmd, cwd=self.directory,
-                                     env=self.sim_env)
-            assert not bin_res.returncode, f'Running {self.simulator} binary failed'  # noqa
-            assert err_str not in str(bin_res.stdout), f'"{err_str}" found in stdout of {self.simulator} run'  # noqa
+            subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
+                           err_str=sim_err_str)
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
