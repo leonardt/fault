@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from fault.subprocess_run import subprocess_run
 
@@ -45,6 +46,9 @@ def si_netlist(lib, cell, cds_lib='cds.lib', cwd='.', view='schematic',
     # path wrapping
     cwd = Path(cwd)
     out = Path(out)
+
+    # create the output directory if needed
+    os.makedirs(cwd, exist_ok=True)
 
     # write si.env file
     si_env = si_env_tmpl.format(lib=lib, cell=cell, view=view)
