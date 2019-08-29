@@ -5,8 +5,9 @@ import logging
 
 class FaultConfig:
     def __init__(self):
-        # initialize
-        self.opts = {}
+        # options
+        self.remove_conda = False
+        self.add_env_vars = {}
 
         # read in config information
         self.read_cfg_files()
@@ -25,24 +26,30 @@ class FaultConfig:
                 with open(loc, 'r') as f:
                     try:
                         new_opts = yaml.safe_load(f)
-                        self.opts.update(new_opts)
+                        self.update_from_opts(new_opts)
                     except yaml.YAMLError as yaml_err:
                         logging.warn(f'Skipping config file {loc} due to a parsing error.  Error message:')  # noqa
                         logging.warn(f'{yaml_err}')
 
+    def update_from_opts(self, opts):
+        if 'remove_conda' in opts:
+            self.remove_conda = opts['remove_conda']
+        if 'add_env_vars' in opts:
+            self.add_env_vars.update(opts['add_env_vars'])
+
     def get_sim_env(self):
         env = os.environ.copy()
 
-        if self.opts.get('remove_conda', False):
-            self.remove_conda(env)
+        if self.remove_conda:
+            self.remove_conda_from_env(env)
 
-        for key, val in self.opts.get('add_env_vars', {}).items():
+        for key, val in self.add_env_vars.items():
             env[f'{key}'] = f'{val}'
 
         return env
 
     @staticmethod
-    def remove_conda(env):
+    def remove_conda_from_env(env):
         '''Returns a copy of the current environment with conda directories
            removed from the path.'''
 
