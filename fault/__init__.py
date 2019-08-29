@@ -10,7 +10,7 @@ from .tester_samples import (SRAMTester, InvTester, BufTester,
                              NandTester, NorTester)
 from .random import random_bit, random_bv
 from .util import clog2
-from .spice_target import A2DError
+from .spice_target import A2DError, ExpectError
 
 
 class WrappedVerilogInternalPort:

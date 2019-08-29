@@ -21,6 +21,13 @@ class A2DError(Exception):
     pass
 
 
+# similar idea for ExpectError -- make it easier to catch
+# exceptions due to mismatch in expected value and actual
+# value, rather than raising a generic AssertionError
+class ExpectError(Exception):
+    pass
+
+
 class CompiledSpiceActions:
     def __init__(self, pwls, checks, prints, stop_time, saves):
         self.pwls = pwls
@@ -401,14 +408,18 @@ class SpiceTarget(Target):
         # implement the requested check
         if action.above is not None:
             if action.below is not None:
-                assert action.above <= value <= action.below, f'Expected {action.above} to {action.below}, got {value}'  # noqa
+                if not (action.above <= value <= action.below):
+                    raise ExpectError(f'Expected {action.above} to {action.below}, got {value}')  # noqa
             else:
-                assert action.above <= value, f'Expected above {action.above}, got {value}'  # noqa
+                if not (action.above <= value):
+                    raise ExpectError(f'Expected above {action.above}, got {value}')  # noqa
         else:
             if action.below is not None:
-                assert value <= action.below, f'Expected below {action.below}, got {value}'  # noqa
+                if not (value <= action.below):
+                    raise ExpectError(f'Expected below {action.below}, got {value}')  # noqa
             else:
-                assert value == action.value, f'Expected {action.value}, got {value}'  # noqa
+                if not (value == action.value):
+                    raise ExpectError(f'Expected {action.value}, got {value}')  # noqa
 
     def check_results(self, results, checks):
         for check in checks:

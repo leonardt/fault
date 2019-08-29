@@ -75,7 +75,7 @@ def main():
         print(f'Iteration {k}: noise={noise}')
         try:
             run(noise=noise)
-        except (fault.A2DError, AssertionError):
+        except (fault.A2DError, fault.ExpectError):
             up = noise
         else:
             dn = noise
