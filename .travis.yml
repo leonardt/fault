@@ -11,6 +11,7 @@ matrix:
         - libmpfr-dev
         - libmpc-dev
         - verilator
+        - ngspice
     env:
     - CC=gcc-7
     - CXX=g++-7
@@ -20,6 +21,7 @@ matrix:
       homebrew:
         packages:
           - verilator
+          - ngspice
 
 # python managed by conda until 3.7 available
 # python:
