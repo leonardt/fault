@@ -49,7 +49,7 @@ def test_tester_magma_internal_signals(target, simulator, caplog):
         tester.print("Q=%d\n", signal)
     run_test(target, simulator, tester)
     messages = [record.message for record in caplog.records]
-    if simulator == "verilator":
+    if target == "verilator":
         actual = "\n".join(messages[-6:-2])
     elif simulator == "ncsim":
         actual = "\n".join(messages[-9:-5])
@@ -78,7 +78,7 @@ def test_tester_poke_internal_register(target, simulator, caplog):
         tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
     run_test(target, simulator, tester)
     messages = [record.message for record in caplog.records]
-    if simulator == "verilator":
+    if target == "verilator":
         actual = "\n".join(messages[-6:-2])
     elif simulator == "ncsim":
         actual = "\n".join(messages[-9:-5])
