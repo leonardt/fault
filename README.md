@@ -108,6 +108,8 @@ for i in reversed(range(4)):
     tester.circuit.config_reg.conf_reg.value = i
     tester.step(2)
     tester.circuit.config_reg.conf_reg.O.expect(i)
+    # You can also print these internal signals using the getattr interface
+    tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
 ```
 
 ## FAQ
