@@ -111,10 +111,20 @@ class Tester:
         if delay is None:
             delay = self.poke_delay_default
 
+        def recurse(port):
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    self.poke(getattr(port, k), v)
+            else:
+                for p, v in zip(port, value):
+                    self.poke(p, v, delay)
+
         # implement poke
         if isinstance(port, m.TupleType):
-            for p, v in zip(port, value):
-                self.poke(p, v)
+            recurse(port)
+        elif isinstance(port, SelectPath) and \
+                isinstance(port[-1], m.TupleType):
+            recurse(port)
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
@@ -140,15 +150,28 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
-        # set defaults
-        if strict is None:
-            strict = self.expect_strict_default
+        def recurse(port):
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    self.expect(getattr(port, k), v)
+            else:
+                for p, v in zip(port, value):
+                    self.expect(p, v, strict, **kwargs)
+        if isinstance(port, m.TupleType):
+            recurse(port)
+        elif isinstance(port, SelectPath) and \
+                isinstance(port[-1], m.TupleType):
+            recurse(port[-1])
+        else:
+            # set defaults
+            if strict is None:
+                strict = self.expect_strict_default
 
-        # implement expect
-        if not isinstance(value, (actions.Peek, PortWrapper,
-                                  LoopIndex, expression.Expression)):
-            value = make_value(port, value)
-        self.actions.append(actions.Expect(port, value, **kwargs))
+            # implement expect
+            if not isinstance(value, (actions.Peek, PortWrapper,
+                                      LoopIndex, expression.Expression)):
+                value = make_value(port, value)
+            self.actions.append(actions.Expect(port, value, **kwargs))
 
     def eval(self):
         """
