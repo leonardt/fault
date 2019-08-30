@@ -34,7 +34,7 @@ def run_test(target, simulator, tester):
         tester.compile_and_run(target, **kwargs)
 
 
-def test_tester_magma_internal_signals(target, simulator):
+def test_tester_magma_internal_signals(target, simulator, caplog):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -46,10 +46,18 @@ def test_tester_magma_internal_signals(target, simulator):
         tester.circuit.config_reg.Q.expect(i)
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
+        tester.print("Q=%d\n", signal)
     run_test(target, simulator, tester)
+    messages = [record.message for record in caplog.records]
+    assert """\
+Q=0
+Q=1
+Q=2
+Q=3\
+""" == "\n".join(messages[-6:-2]), "Print of internal register value did not work"
 
 
-def test_tester_poke_internal_register(target, simulator):
+def test_tester_poke_internal_register(target, simulator, caplog):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -60,7 +68,15 @@ def test_tester_poke_internal_register(target, simulator):
         tester.circuit.config_reg.conf_reg.value = i
         tester.step(2)
         tester.circuit.config_reg.conf_reg.O.expect(i)
+        tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
     run_test(target, simulator, tester)
+    messages = [record.message for record in caplog.records]
+    assert """\
+O=3
+O=2
+O=1
+O=0\
+""" == "\n".join(messages[-6:-2]), "Print of internal register value did not work"
 
 
 def test_setattr_nested_arrays_by_element(target, simulator):

@@ -243,8 +243,27 @@ class VerilatorTarget(VerilogTarget):
             return result
 
     def make_print(self, i, action):
-        ports = ", ".join(f"top->{verilog_name(port.name)}" for port in
-                          action.ports)
+        port_names = []
+        prefix = self.get_verilator_prefix()
+        for port in action.ports:
+            if isinstance(port, fault.WrappedVerilogInternalPort):
+                path = port.path.replace(".", "->")
+                name = f"{prefix}->{path}"
+            elif isinstance(port, PortWrapper):
+                port = port.select_path
+                name = port.verilator_path
+                if len(port) > 2:
+                    name = f"{prefix}->" + name
+                if self.verilator_version >= 3.856:
+                    if len(port) > 2:
+                        self.debug_includes.add(f"{port[0].circuit.name}")
+                for item in port[1:-1]:
+                    circuit_name = type(item.instance).name
+                    self.debug_includes.add(f"{circuit_name}")
+            else:
+                name = verilog_name(port.name)
+            port_names.append(name)
+        ports = ", ".join(f"top->{name}" for name in port_names)
         if ports:
             ports = ", " + ports
         return [f'printf("{action.format_str}"{ports});']
