@@ -100,6 +100,8 @@ equal to `1`.
 ```python
 tester = fault.Tester(SimpleALU, SimpleALU.CLK)
 tester.circuit.CLK = 0
+# Set config_en to 0 so stepping the clock doesn't clobber the poked value
+tester.circuit.config_en = 0
 # Initialize
 tester.step(2)
 for i in reversed(range(4)):
