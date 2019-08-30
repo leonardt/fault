@@ -165,6 +165,8 @@ class SystemVerilogTarget(VerilogTarget):
         self.declarations.extend(decls)
 
     def make_name(self, port):
+        if isinstance(port, PortWrapper):
+            port = port.select_path
         if isinstance(port, SelectPath):
             if len(port) > 2:
                 name = f"dut.{port.system_verilog_path}"

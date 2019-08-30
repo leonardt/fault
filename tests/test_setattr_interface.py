@@ -49,12 +49,14 @@ def test_tester_magma_internal_signals(target, simulator, caplog):
         tester.print("Q=%d\n", signal)
     run_test(target, simulator, tester)
     messages = [record.message for record in caplog.records]
-    assert """\
+    actual = "\n".join(messages[-6:-2])
+    expected = """\
 Q=0
 Q=1
 Q=2
 Q=3\
-""" == "\n".join(messages[-6:-2]), "Print of internal register value did not work"
+"""
+    assert expected == actual, "Print of internal register value did not work"
 
 
 def test_tester_poke_internal_register(target, simulator, caplog):
@@ -71,12 +73,14 @@ def test_tester_poke_internal_register(target, simulator, caplog):
         tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
     run_test(target, simulator, tester)
     messages = [record.message for record in caplog.records]
-    assert """\
+    actual = "\n".join(messages[-6:-2])
+    expected = """\
 O=3
 O=2
 O=1
 O=0\
-""" == "\n".join(messages[-6:-2]), "Print of internal register value did not work"
+"""
+    assert expected == actual, "Print of internal register value did not work"
 
 
 def test_setattr_nested_arrays_by_element(target, simulator):
