@@ -589,4 +589,3 @@ def test_nested_tuple_circuit(target, simulator):
         if target == "system-verilog":
             kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
-
