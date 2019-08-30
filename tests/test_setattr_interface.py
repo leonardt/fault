@@ -51,6 +51,8 @@ def test_tester_magma_internal_signals(target, simulator, caplog):
     messages = [record.message for record in caplog.records]
     if target == "verilator":
         actual = "\n".join(messages[-6:-2])
+    elif simulator == "iverilog":
+        actual = "\n".join(messages[-6:-2])
     elif simulator == "ncsim":
         actual = "\n".join(messages[-9:-5])
     elif simulator == "vcs":
@@ -69,6 +71,7 @@ def test_tester_poke_internal_register(target, simulator, caplog):
 
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
+    tester.circuit.config_en = 0
     # Initialize
     tester.step(2)
     for i in reversed(range(4)):
@@ -79,6 +82,8 @@ def test_tester_poke_internal_register(target, simulator, caplog):
     run_test(target, simulator, tester)
     messages = [record.message for record in caplog.records]
     if target == "verilator":
+        actual = "\n".join(messages[-6:-2])
+    elif simulator == "iverilog":
         actual = "\n".join(messages[-6:-2])
     elif simulator == "ncsim":
         actual = "\n".join(messages[-9:-5])
