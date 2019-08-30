@@ -34,7 +34,7 @@ def run_test(target, simulator, tester):
         tester.compile_and_run(target, **kwargs)
 
 
-def test_tester_magma_internal_signals(target, simulator):
+def test_tester_magma_internal_signals(target, simulator, caplog):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -46,21 +46,56 @@ def test_tester_magma_internal_signals(target, simulator):
         tester.circuit.config_reg.Q.expect(i)
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
+        tester.print("Q=%d\n", signal)
     run_test(target, simulator, tester)
+    messages = [record.message for record in caplog.records]
+    if target == "verilator":
+        actual = "\n".join(messages[-6:-2])
+    elif simulator == "iverilog":
+        actual = "\n".join(messages[-6:-2])
+    elif simulator == "ncsim":
+        actual = "\n".join(messages[-9:-5])
+    elif simulator == "vcs":
+        actual = "\n".join(messages[-12:-8])
+    expected = """\
+Q=0
+Q=1
+Q=2
+Q=3\
+"""
+    assert expected == actual, "Print of internal register value did not work"
 
 
-def test_tester_poke_internal_register(target, simulator):
+def test_tester_poke_internal_register(target, simulator, caplog):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
+    tester.circuit.config_en = 0
     # Initialize
     tester.step(2)
     for i in reversed(range(4)):
         tester.circuit.config_reg.conf_reg.value = i
         tester.step(2)
         tester.circuit.config_reg.conf_reg.O.expect(i)
+        tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
     run_test(target, simulator, tester)
+    messages = [record.message for record in caplog.records]
+    if target == "verilator":
+        actual = "\n".join(messages[-6:-2])
+    elif simulator == "iverilog":
+        actual = "\n".join(messages[-6:-2])
+    elif simulator == "ncsim":
+        actual = "\n".join(messages[-9:-5])
+    elif simulator == "vcs":
+        actual = "\n".join(messages[-12:-8])
+    expected = """\
+O=3
+O=2
+O=1
+O=0\
+"""
+    assert expected == actual, "Print of internal register value did not work"
 
 
 def test_setattr_nested_arrays_by_element(target, simulator):
