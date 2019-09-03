@@ -9,11 +9,11 @@ LAYOUT PRIMARY '{layout_primary}'
 LAYOUT PATH '{layout_path}'
 LVS REPORT '{lvs_report}'
 
-MASK SVDB DIRECTORY svdb QUERY XRC
+MASK SVDB DIRECTORY "svdb" QUERY XRC
 
 PEX NETLIST {out} {netlist_format} 1 LAYOUTNAMES
-PEX REPORT "{dist_report}" LAYOUTNAMES
-PEX REPORT COUPLING CAPACITANCE {c_cap_report}
+
+DRC ICSTATION YES
 
 {include_files}
 '''
@@ -23,7 +23,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         lvs_report='lvs.report', out=None, dist_report='dist.report',
         c_cap_report='c_cap.report', netlist_format='HSPICE',
         layout_system='GDSII', layout_primary=None, nl='\n',
-        type='rcc', extra_opts=None):
+        type='c', extra_opts=None):
 
     # set defaults
     if rules is None:
@@ -67,7 +67,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['calibre']
         args += extra_opts
         args += ['-xrc', '-phdb']
-        args += [cmd_file]
+        args += [f'{cmd_file}']
         subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
     xrc_phdb()
 
@@ -78,7 +78,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += extra_opts
         args += ['-xrc', '-pdb']
         args += [f'-{type}']
-        args += [cmd_file]
+        args += [f'{cmd_file}']
         subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
     xrc_pdb()
 
@@ -88,7 +88,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['calibre']
         args += extra_opts
         args += ['-xrc', '-fmt']
-        args += ['-all']
-        args += [cmd_file]
+        args += [f'-{type}']
+        args += [f'{cmd_file}']
         subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
     xrc_fmt()
