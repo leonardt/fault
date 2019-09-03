@@ -23,8 +23,6 @@ LVS REPORT \\"{out}\\"
 def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
         out='lvs.report', layout_system='GDSII', source_system='SPICE',
         source_primary=None, layout_primary=None, nl='\n', extra_opts=None):
-    # NOTE: cwd should be set to the directory that contains the cds.lib
-    # file.
 
     # set defaults
     if rules is None:
