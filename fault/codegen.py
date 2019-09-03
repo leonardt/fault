@@ -33,6 +33,9 @@ class CodeGenerator:
         for arg in args:
             self.print(f'{self.tab_count*self.tab}{arg}{self.nl}')
 
+    def println_space_sep(self, *args):
+        self.println(' '.join(f'{arg}' for arg in args))
+
     def println_comma_sep(self, *args, indent=True):
         if indent:
             self.indent()

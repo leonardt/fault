@@ -1,5 +1,6 @@
 import logging
 import shlex
+import os
 from subprocess import Popen, PIPE, CompletedProcess
 from fault.user_cfg import FaultConfig
 
@@ -108,6 +109,10 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
         env = FaultConfig().get_sim_env()
     if add_to_env is not None:
         env.update(**add_to_env)
+
+    # make the directory if needed
+    if cwd is not None:
+        os.makedirs(cwd, exist_ok=True)
 
     # temporarily use plain formatting for all logging handlers.  this
     # makes the output cleaner and more readable -- otherwise the

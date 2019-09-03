@@ -13,7 +13,7 @@ from .util import clog2
 from .spice_target import A2DError, ExpectError
 from .mstools.si_netlist import si_netlist
 from .mstools.strmout import strmout
-from .mstools.lvs import lvs, xrc
+from .mstools.calibre import lvs, xrc
 
 
 class WrappedVerilogInternalPort:
