@@ -61,7 +61,7 @@ def process_output(fd, err_str, disp_type, name):
 
 def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
                    chk_ret_code=True, shell=False, plain_logging=True,
-                   use_fault_cfg=True):
+                   use_fault_cfg=True, add_to_env=None):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
     # come in, looks for errors in STDOUT and STDERR (raising an exception if
     # one is found), and can check the return code from the subprocess
@@ -99,10 +99,15 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
     #                by typical suprocess calls.
     # use_fault_cfg: If True (default) and env is None, then use FaultConfig
     #                to fill in default environment variables.
+    # add_to_env: Dictionary of environment variables to add to the
+    #             "env" (which is either user-provided or set using
+    #             the fault defaults)
 
-    # set defaults
+    # setup the environment
     if env is None and use_fault_cfg:
         env = FaultConfig().get_sim_env()
+    if add_to_env is not None:
+        env.update(**add_to_env)
 
     # temporarily use plain formatting for all logging handlers.  this
     # makes the output cleaner and more readable -- otherwise the
