@@ -22,12 +22,12 @@ def strmout(lib, cell, cwd='.', run_dir='.', view='layout', out=None,
     # construct the command
     args = []
     args += ['strmout']
-    args += ['-library', lib]
-    args += ['-strmFile', out]
-    args += ['-topCell', cell]
-    args += ['-view', view]
-    args += ['-logFile', log]
-    args += ['-runDir', run_dir]
+    args += ['-library', f'{lib}']
+    args += ['-strmFile', f'{out}']
+    args += ['-topCell', f'{cell}']
+    args += ['-view', f'{view}']
+    args += ['-logFile', f'{log}']
+    args += ['-runDir', f'{run_dir}']
     if len(no_warn) > 0:
         args += ['-noWarn', ' '.join(f'{w}' for w in no_warn)]
 
