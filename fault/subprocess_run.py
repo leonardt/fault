@@ -2,7 +2,7 @@ import logging
 import shlex
 import os
 from subprocess import Popen, PIPE, CompletedProcess
-from fault.user_cfg import FaultConfig
+from .user_cfg import FaultConfig
 
 
 # Terminal formatting codes

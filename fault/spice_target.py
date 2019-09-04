@@ -6,7 +6,7 @@ import fault
 import hwtypes
 from fault.target import Target
 from fault.spice import SpiceNetlist
-from fault.result_parse import nut_parse, hspice_parse
+from fault.result_parse import nut_parse, hspice_parse, psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
@@ -147,8 +147,10 @@ class SpiceTarget(Target):
         subprocess_run(cmd, cwd=self.directory, env=self.sim_env)
 
         # process the results
-        if self.simulator in {'ngspice', 'spectre'}:
+        if self.simulator in {'ngspice'}:
             results = nut_parse(raw_file)
+        elif self.simulator in {'spectre'}:
+            results = psf_parse(raw_file)
         elif self.simulator in {'hspice'}:
             results = hspice_parse(raw_file)
         else:
@@ -370,12 +372,16 @@ class SpiceTarget(Target):
                 ic[f'X0.{key.spice_path}'] = val
             else:
                 ic[f'{key}'] = val
-        netlist.ic(ic)
+        if ic != {}:
+            netlist.ic(ic)
 
         # specify the transient analysis
         t_step = (self.t_step if self.t_step is not None
                   else comp.stop_time / 1000)
-        uic = self.ic != {}
+        if self.ic != {}:
+            uic = True
+        else:
+            uic = False
         netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
 
         # generate control statement
@@ -387,7 +393,7 @@ class SpiceTarget(Target):
             netlist.println('exit')
             netlist.end_control()
         elif self.simulator == 'hspice':
-            netlist.options('post')
+            netlist.options('csdf')
 
         # end the netlist
         netlist.end_file()
@@ -464,10 +470,13 @@ class SpiceTarget(Target):
         cmd = []
         cmd += ['spectre']
         cmd += [f'{tb_file}']
-        cmd += ['-format', 'nutbin']
-        raw_file = (Path(self.directory) / 'out.raw').absolute()
-        cmd += ['-raw', f'{raw_file}']
+        cmd += ['-format', 'psfascii']
+        raw_dir = (Path(self.directory) / 'psf').resolve()
+        cmd += ['-raw', f'{raw_dir}']
         cmd += self.flags
+
+        # figure out where the PSF results will be stored
+        raw_file = raw_dir / 'timeSweep.tran.tran'
 
         # return command and corresponding raw file
         return cmd, raw_file
