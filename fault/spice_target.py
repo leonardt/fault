@@ -12,6 +12,10 @@ from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
 from fault.select_path import SelectPath
+try:
+    from decida.SimulatorNetlist import SimulatorNetlist
+except ModuleNotFoundError:
+    print('Failed to import SimulatorNetlist from DeCiDa.  The conn_order=parse will not be available for SpiceTarget.')  # noqa
 
 
 # define a custom error for A2D conversion to make it easier
@@ -41,7 +45,7 @@ class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
-                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
+                 vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None, cap_loads=None):
         """
         circuit: a magma circuit
@@ -271,7 +275,7 @@ class SpiceTarget(Target):
         if self.conn_order == 'alpha':
             return self.get_alpha_ordered_ports()
         elif self.conn_order == 'parse':
-            raise Exception('Spice parsing is not implemented yet.')
+            return self.get_parse_ordered_ports()
         else:
             raise Exception(f'Unknown conn_order: {self.conn_order}.')
 
@@ -308,6 +312,15 @@ class SpiceTarget(Target):
 
         # return ordered list of ports
         return retval
+
+    def get_parse_ordered_ports(self):
+        for path in self.model_paths:
+            parser = SimulatorNetlist(path)
+            ports = parser.get_subckt(f'{self.circuit.name}', detail='ports')
+            if ports is not None:
+                return ports
+            else:
+                continue
 
     def write_test_bench(self, comp, tb_file=None):
         # create a new netlist
