@@ -43,7 +43,7 @@ class RulGen(CodeGenerator):
             args += [format, '1']
         if names is not None:
             args += [names]
-        self.cmdln(args)
+        self.cmdln(*args)
 
     def include(self, *files):
         for file in files:
@@ -73,7 +73,7 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
     gen.layout(system=layout_system, primary=layout_primary, path=layout)
     gen.source(system=source_system, primary=source_primary, path=schematic)
     gen.lvs_report(lvs_report)
-    gen.include(rules)
+    gen.include(*rules)
 
     # write the command file
     rul_file = Path(cwd) / 'cal_lvs.rul'
@@ -91,7 +91,8 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
 
 def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', layout_primary=None,
-        svdb_directory='svdb', xrc_netlist=None, netlist_format='HSPICE'):
+        svdb_directory='svdb', xrc_netlist=None, netlist_format='HSPICE',
+        mode='c'):
 
     # set defaults
     if rules is None:
@@ -108,7 +109,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
     gen.mask_svdb(svdb_directory, query='XRC')
     gen.pex_netlist(xrc_netlist, format=netlist_format)
     gen.cmdln('DRC', 'ICSTATION', 'YES')  # TODO: is this command needed?
-    gen.include(rules)
+    gen.include(*rules)
 
     # write command file
     rul_file = Path(cwd) / 'cal_xrc.rul'
@@ -130,7 +131,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['calibre']
         args += ['-64']
         args += ['-xrc', '-pdb']
-        args += [f'-{type}']
+        args += [f'-{mode}']
         args += [f'{rul_file}']
         subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
     pdb()
@@ -141,7 +142,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['calibre']
         args += ['-64']
         args += ['-xrc', '-fmt']
-        args += [f'-{type}']
+        args += [f'-{mode}']
         args += [f'{rul_file}']
         subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
     fmt()
