@@ -22,6 +22,7 @@ matrix:
         packages:
           - verilator
           - ngspice
+          - fftw
 
 # python managed by conda until 3.7 available
 # python:
