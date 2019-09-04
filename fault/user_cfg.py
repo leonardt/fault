@@ -7,7 +7,8 @@ class _FaultConfig:
     def __init__(self):
         # initialization
         self.remove_conda = False
-        self.add_env_vars = {}
+        self.env_vars = {}
+        self.path_env_vars = {}
         self.cds_lib = None
         self.lvs_rules = []
         self.xrc_rules = []
@@ -42,12 +43,13 @@ class _FaultConfig:
         if 'remove_conda' in opts:
             self.remove_conda = opts['remove_conda']
         if 'add_env_vars' in opts:
-            self.add_env_vars.update(opts['add_env_vars'])
+            self.env_vars.update(opts['add_env_vars'])
+        if 'env_vars' in opts:
+            self.env_vars.update(opts['env_vars'])
+        if 'path_env_vars' in opts:
+            for key, val in opts['path_env_vars'].items():
+                self.env_vars[key] = Path(loc.parent, val).resolve()
         if 'cds_lib' in opts:
-            # determine absolute path to cds.lib using
-            # the YAML file location as the base.  if
-            # the cds_lib value is already absolute, then
-            # the YAML file location is just ignored
             self.cds_lib = Path(loc.parent, opts['cds_lib']).resolve()
         if 'lvs_rules' in opts:
             self.lvs_rules.extend(opts['lvs_rules'])
@@ -60,7 +62,7 @@ class _FaultConfig:
         if self.remove_conda:
             self.remove_conda_from_env(env)
 
-        for key, val in self.add_env_vars.items():
+        for key, val in self.env_vars.items():
             env[f'{key}'] = f'{val}'
 
         return env
