@@ -108,7 +108,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
     gen.lvs_report(lvs_report)
     gen.mask_svdb(svdb_directory, query='XRC')
     gen.pex_netlist(xrc_netlist, format=netlist_format)
-    gen.cmdln('DRC', 'ICSTATION', 'YES')  # TODO: is this command needed?
+    gen.cmdln('DRC', 'ICSTATION', 'YES')  # TODO: why is this command needed?
     gen.include(*rules)
 
     # write command file

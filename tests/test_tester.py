@@ -12,7 +12,7 @@ from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
                      TestBasicClkCircuit, TestNestedArraysCircuit,
                      TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
                      TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
-                     TestSIntCircuit)
+                     TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit)
 
 
 def pytest_generate_tests(metafunc):
@@ -538,6 +538,52 @@ def test_sint_circuit(target, simulator):
         tester.circuit.I = int(inputs[i])
         tester.eval()
         tester.circuit.O.expect(int(inputs[i]))
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)
+
+
+def test_tuple_circuit(target, simulator):
+    circ = TestTupleCircuit
+
+    tester = fault.Tester(circ)
+    tester.circuit.I = (4, 2)
+    tester.eval()
+    tester.circuit.O.expect((4, 2))
+    tester.circuit.I = {"a": 4, "b": 2}
+    tester.eval()
+    tester.circuit.O.expect({"a": 4, "b": 2})
+
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)
+
+
+def test_nested_tuple_circuit(target, simulator):
+    circ = TestNestedTupleCircuit
+
+    tester = fault.Tester(circ)
+    tester.circuit.I = ((4, 2), 2)
+    tester.eval()
+    tester.circuit.O.expect(((4, 2), 2))
+    tester.circuit.I.a = (3, 1)
+    tester.eval()
+    tester.circuit.O.a.expect((3, 1))
+    tester.circuit.O.expect(((3, 1), 2))
+    tester.circuit.I = {"a": {"k": 4, "v": 2}, "b": 2}
+    tester.eval()
+    tester.circuit.O.expect({"a": {"k": 4, "v": 2}, "b": 2})
+    tester.circuit.I = {"a": (6, 5), "b": 3}
+    tester.eval()
+    tester.circuit.O.expect({"a": (6, 5), "b": 3})
+    tester.circuit.I = ({"k": 4, "v": 2}, 2)
+    tester.eval()
+    tester.circuit.O.expect(({"k": 4, "v": 2}, 2))
+
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
