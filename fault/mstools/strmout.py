@@ -1,15 +1,19 @@
 import os
+from pathlib import Path
 from fault.subprocess_run import subprocess_run
+from fault import FaultConfig
 
 
-def strmout(lib, cell, cwd='.', run_dir='.', view='layout', out=None,
+def strmout(lib, cell, cds_lib=None, cwd='.', view='layout', out=None,
             env=None, add_to_env=None, log='strmOut.log', no_warn=None):
-    # NOTE: cwd should be set to the directory that contains the cds.lib
-    # file.
+    # resolve paths
+    cwd = Path(cwd).resolve()
 
     # set defaults
+    if cds_lib is None:
+        cds_lib = FaultConfig.cds_lib
     if out is None:
-        out = f'{cell}.gds'
+        out = cwd / f'{cell}.gds'
     if no_warn is None:
         # TODO: What do these numbers correspond to?  They're set
         # automatically by the CAD tool GUI.
@@ -17,7 +21,6 @@ def strmout(lib, cell, cwd='.', run_dir='.', view='layout', out=None,
 
     # create the output directory if needed
     os.makedirs(cwd, exist_ok=True)
-    os.makedirs(run_dir, exist_ok=True)
 
     # construct the command
     args = []
@@ -27,9 +30,10 @@ def strmout(lib, cell, cwd='.', run_dir='.', view='layout', out=None,
     args += ['-topCell', f'{cell}']
     args += ['-view', f'{view}']
     args += ['-logFile', f'{log}']
-    args += ['-runDir', f'{run_dir}']
+    args += ['-runDir', f'{cwd}']
     if len(no_warn) > 0:
         args += ['-noWarn', ' '.join(f'{w}' for w in no_warn)]
 
     # run the command
-    subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
+    launch_dir = Path(cds_lib).resolve().parent
+    subprocess_run(args, cwd=launch_dir, env=env, add_to_env=add_to_env)

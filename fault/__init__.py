@@ -1,3 +1,4 @@
+from .user_cfg import FaultConfig
 from .real_type import RealIn, RealOut, RealKind, RealType
 from .elect_type import ElectIn, ElectOut, ElectKind, ElectType
 from .tester import Tester

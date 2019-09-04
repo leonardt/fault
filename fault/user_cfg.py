@@ -3,14 +3,20 @@ from pathlib import Path
 import logging
 
 
-class FaultConfig:
+class _FaultConfig:
     def __init__(self):
-        # options
+        # initialization
         self.remove_conda = False
         self.add_env_vars = {}
+        self.cds_lib = None
+        self.lvs_rules = []
+        self.xrc_rules = []
 
         # read in config information
         self.read_cfg_files()
+
+        # determine simulation environment
+        self.env = self.compute_env()
 
     def read_cfg_files(self):
         try:
@@ -20,24 +26,35 @@ class FaultConfig:
             logging.warn('Please run "pip install pyyaml" to fix this.')
             return
 
-        locs = [Path.home() / '.faultrc', Path('.') / 'fault.yml']
+        locs = [Path.home() / '.faultrc', 'fault.yml', 'fault.yaml']
         for loc in locs:
+            loc = Path(loc).resolve()
             if loc.exists():
                 with open(loc, 'r') as f:
                     try:
-                        new_opts = yaml.safe_load(f)
-                        self.update_from_opts(new_opts)
+                        opts = yaml.safe_load(f)
+                        self.update_from_opts(opts=opts, loc=loc)
                     except yaml.YAMLError as yaml_err:
                         logging.warn(f'Skipping config file {loc} due to a parsing error.  Error message:')  # noqa
                         logging.warn(f'{yaml_err}')
 
-    def update_from_opts(self, opts):
+    def update_from_opts(self, opts, loc):
         if 'remove_conda' in opts:
             self.remove_conda = opts['remove_conda']
         if 'add_env_vars' in opts:
             self.add_env_vars.update(opts['add_env_vars'])
+        if 'cds_lib' in opts:
+            # determine absolute path to cds.lib using
+            # the YAML file location as the base.  if
+            # the cds_lib value is already absolute, then
+            # the YAML file location is just ignored
+            self.cds_lib = Path(loc.parent, opts['cds_lib']).resolve()
+        if 'lvs_rules' in opts:
+            self.lvs_rules.extend(opts['lvs_rules'])
+        if 'xrc_rules' in opts:
+            self.xrc_rules.extend(opts['xrc_rules'])
 
-    def get_sim_env(self):
+    def compute_env(self):
         env = os.environ.copy()
 
         if self.remove_conda:
@@ -74,3 +91,8 @@ class FaultConfig:
 
         # update the PATH variable
         env['PATH'] = os.pathsep.join(str(entry) for entry in path_entries)
+
+
+# Instantiate FaultConfig object to avoid having to parse the config
+# files again and again
+FaultConfig = _FaultConfig()

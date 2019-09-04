@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from fault.subprocess_run import subprocess_run
+from fault import FaultConfig
 
 
 si_env_tmpl = '''\
@@ -41,11 +42,16 @@ auCdlDefNetlistProc = "ansCdlSubcktCall"
 '''
 
 
-def si_netlist(lib, cell, cds_lib='cds.lib', cwd='.', view='schematic',
-               out='netlist', del_incl=True, env=None, add_to_env=None):
+def si_netlist(lib, cell, cds_lib=None, cwd='.', view='schematic',
+               out=None, del_incl=True, env=None, add_to_env=None):
     # path wrapping
-    cwd = Path(cwd)
-    out = Path(out)
+    cwd = Path(cwd).resolve()
+
+    # set defaults
+    if cds_lib is None:
+        cds_lib = FaultConfig.cds_lib
+    if out is None:
+        out = cwd / f'{cell}.sp'
 
     # create the output directory if needed
     os.makedirs(cwd, exist_ok=True)

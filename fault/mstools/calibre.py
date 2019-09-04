@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
 from fault.subprocess_run import subprocess_run
 from fault.codegen import CodeGenerator
+from fault import FaultConfig
 
 
 class RulGen(CodeGenerator):
@@ -58,15 +60,18 @@ class RulGen(CodeGenerator):
 
 def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', source_system='SPICE',
-        source_primary=None, layout_primary=None):
+        source_primary=None, layout_primary=None, rul_file='cal_lvs.rul'):
+    # resolve paths
+    layout = Path(layout).resolve()
+    schematic = Path(schematic).resolve()
 
     # set defaults
     if rules is None:
-        rules = []
+        rules = FaultConfig.lvs_rules
     if source_primary is None:
-        source_primary = Path(schematic).stem
+        source_primary = schematic.stem
     if layout_primary is None:
-        layout_primary = Path(layout).stem
+        layout_primary = layout.stem
 
     # generate the command file
     gen = RulGen()
@@ -76,8 +81,8 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
     gen.include(*rules)
 
     # write the command file
-    rul_file = Path(cwd) / 'cal_lvs.rul'
-    gen.write_to_file(rul_file)
+    os.makedirs(cwd, exist_ok=True)
+    gen.write_to_file(Path(cwd) / rul_file)
 
     # run the command
     args = []
@@ -92,15 +97,17 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
 def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', layout_primary=None,
         svdb_directory='svdb', xrc_netlist=None, netlist_format='HSPICE',
-        mode='c'):
+        mode='c', rul_file='cal_xrc.rul'):
+    # resolve paths
+    layout = Path(layout).resolve()
 
     # set defaults
     if rules is None:
-        rules = []
+        rules = FaultConfig.xrc_rules
     if layout_primary is None:
-        layout_primary = Path(layout).stem
+        layout_primary = layout.stem
     if xrc_netlist is None:
-        xrc_netlist = Path(layout).stem + '.sp'
+        xrc_netlist = layout.stem + '.sp'
 
     # generate the command file
     gen = RulGen()
@@ -112,8 +119,8 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
     gen.include(*rules)
 
     # write command file
-    rul_file = Path(cwd) / 'cal_xrc.rul'
-    gen.write_to_file(rul_file)
+    os.makedirs(cwd, exist_ok=True)
+    gen.write_to_file(Path(cwd) / rul_file)
 
     # Step 1: LVS
     def phdb():

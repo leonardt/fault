@@ -2,7 +2,7 @@ import logging
 import shlex
 import os
 from subprocess import Popen, PIPE, CompletedProcess
-from .user_cfg import FaultConfig
+from fault import FaultConfig
 
 
 # Terminal formatting codes
@@ -106,7 +106,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
 
     # setup the environment
     if env is None and use_fault_cfg:
-        env = FaultConfig().get_sim_env()
+        env = FaultConfig.env
     if add_to_env is not None:
         env.update(**add_to_env)
 
