@@ -6,8 +6,7 @@ import fault
 import hwtypes
 from fault.target import Target
 from fault.spice import SpiceNetlist
-from fault.nutascii_parse import nutascii_parse
-from fault.psf_parse import psf_parse
+from fault.result_parse import nut_parse, hspice_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
@@ -15,7 +14,7 @@ from fault.select_path import SelectPath
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:
-    print('Failed to import SimulatorNetlist from DeCiDa.  The conn_order=parse will not be available for SpiceTarget.')  # noqa
+    print('Failed to import DeCiDa.  SPICE capabilities will be limited.')
 
 
 # define a custom error for A2D conversion to make it easier
@@ -136,23 +135,22 @@ class SpiceTarget(Target):
 
         # generate simulator commands
         if self.simulator == 'ngspice':
-            sim_cmds, raw_file = self.ngspice_cmds(tb_file)
+            cmd, raw_file = self.ngspice_cmds(tb_file)
         elif self.simulator == 'spectre':
-            sim_cmds, raw_file = self.spectre_cmds(tb_file)
+            cmd, raw_file = self.spectre_cmds(tb_file)
         elif self.simulator == 'hspice':
-            sim_cmds, raw_file = self.hspice_cmds(tb_file)
+            cmd, raw_file = self.hspice_cmds(tb_file)
         else:
             raise NotImplementedError(self.simulator)
 
         # run the simulation commands
-        for sim_cmd in sim_cmds:
-            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
+        subprocess_run(cmd, cwd=self.directory, env=self.sim_env)
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
-            results = nutascii_parse(raw_file)
+            results = nut_parse(raw_file)
         elif self.simulator in {'hspice'}:
-            results = psf_parse(raw_file)
+            results = hspice_parse(raw_file)
         else:
             raise NotImplementedError(self.simulator)
 
@@ -384,7 +382,7 @@ class SpiceTarget(Target):
         if self.simulator == 'ngspice':
             netlist.start_control()
             netlist.println('run')
-            netlist.println('set filetype=ascii')
+            netlist.println('set filetype=binary')
             netlist.println('write')
             netlist.println('exit')
             netlist.end_control()
@@ -459,39 +457,32 @@ class SpiceTarget(Target):
         cmd += self.flags
 
         # return command and corresponding raw file
-        return [cmd], raw_file
+        return cmd, raw_file
 
     def spectre_cmds(self, tb_file):
         # build up the command
         cmd = []
         cmd += ['spectre']
         cmd += [f'{tb_file}']
-        cmd += ['-format', 'nutascii']
+        cmd += ['-format', 'nutbin']
         raw_file = (Path(self.directory) / 'out.raw').absolute()
         cmd += ['-raw', f'{raw_file}']
         cmd += self.flags
 
         # return command and corresponding raw file
-        return [cmd], raw_file
+        return cmd, raw_file
 
     def hspice_cmds(self, tb_file):
         # build up the simulation command
-        sim_cmd = []
-        sim_cmd += ['hspice']
-        sim_cmd += ['-i', f'{tb_file}']
+        cmd = []
+        cmd += ['hspice']
+        cmd += ['-i', f'{tb_file}']
         out_file = (Path(self.directory) / 'out.raw').absolute()
-        sim_cmd += ['-o', f'{out_file}']
-        sim_cmd += self.flags
+        cmd += ['-o', f'{out_file}']
+        cmd += self.flags
 
         # build up the conversion command
-        conv_cmd = []
-        conv_cmd += ['converter']
-        conv_cmd += ['-t', 'PSF']
         tr0_file = out_file.with_suffix(out_file.suffix + '.tr0')
-        conv_cmd += ['-i', f'{tr0_file}']
-        psf_file = (Path(self.directory) / 'out.psf').absolute()
-        conv_cmd += ['-o', f'{psf_file.with_suffix("")}']
-        conv_cmd += ['-a']
 
         # return command and corresponding raw file
-        return [sim_cmd, conv_cmd], psf_file
+        return cmd, tr0_file
