@@ -327,7 +327,8 @@ class SpiceTarget(Target):
     def get_parse_ordered_ports(self):
         for path in self.model_paths:
             parser = SimulatorNetlist(f'{path}')
-            ports = parser.get_subckt(f'{self.circuit.name}', detail='ports')
+            search_name = f'{self.circuit.name}'.lower()
+            ports = parser.get_subckt(search_name, detail='ports')
             if ports is not None:
                 return ports
             else:
