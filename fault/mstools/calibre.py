@@ -67,7 +67,7 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
 
     # set defaults
     if rules is None:
-        rules = FaultConfig.lvs_rules
+        rules = FaultConfig.cal_lvs_rules
     if source_primary is None:
         source_primary = schematic.stem
     if layout_primary is None:
@@ -103,7 +103,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
 
     # set defaults
     if rules is None:
-        rules = FaultConfig.xrc_rules
+        rules = FaultConfig.cal_xrc_rules
     if layout_primary is None:
         layout_primary = layout.stem
     if xrc_netlist is None:

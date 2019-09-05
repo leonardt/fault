@@ -10,8 +10,11 @@ class _FaultConfig:
         self.env_vars = {}
         self.path_env_vars = {}
         self.cds_lib = None
-        self.lvs_rules = []
-        self.xrc_rules = []
+        self.cal_lvs_rules = []
+        self.cal_xrc_rules = []
+        self.ngspice_models = []
+        self.hspice_models = []
+        self.spectre_models = []
 
         # read in config information
         self.read_cfg_files()
@@ -20,6 +23,13 @@ class _FaultConfig:
         self.env = self.compute_env()
 
     def read_cfg_files(self):
+        locs = [Path.home() / '.faultrc',
+                'fault.yml',
+                'fault.yaml']
+        for loc in locs:
+            self.load_yaml(loc)
+
+    def load_yaml(self, loc):
         try:
             import yaml
         except ModuleNotFoundError:
@@ -27,34 +37,47 @@ class _FaultConfig:
             logging.warn('Please run "pip install pyyaml" to fix this.')
             return
 
-        locs = [Path.home() / '.faultrc', 'fault.yml', 'fault.yaml']
-        for loc in locs:
-            loc = Path(loc).resolve()
-            if loc.exists():
-                with open(loc, 'r') as f:
-                    try:
-                        opts = yaml.safe_load(f)
-                        self.update_from_opts(opts=opts, loc=loc)
-                    except yaml.YAMLError as yaml_err:
-                        logging.warn(f'Skipping config file {loc} due to a parsing error.  Error message:')  # noqa
-                        logging.warn(f'{yaml_err}')
+        loc = Path(loc).resolve()
+        if loc.exists():
+            with open(loc, 'r') as f:
+                try:
+                    opts = yaml.safe_load(f)
+                    self.update_from_opts(opts=opts, loc=loc)
+                except yaml.YAMLError as yaml_err:
+                    logging.warn(f'Skipping config file {loc} due to a parsing error.  Error message:')  # noqa
+                    logging.warn(f'{yaml_err}')
 
     def update_from_opts(self, opts, loc):
-        if 'remove_conda' in opts:
-            self.remove_conda = opts['remove_conda']
-        if 'add_env_vars' in opts:
-            self.env_vars.update(opts['add_env_vars'])
-        if 'env_vars' in opts:
-            self.env_vars.update(opts['env_vars'])
-        if 'path_env_vars' in opts:
-            for key, val in opts['path_env_vars'].items():
-                self.env_vars[key] = Path(loc.parent, val).resolve()
-        if 'cds_lib' in opts:
-            self.cds_lib = Path(loc.parent, opts['cds_lib']).resolve()
-        if 'lvs_rules' in opts:
-            self.lvs_rules.extend(opts['lvs_rules'])
-        if 'xrc_rules' in opts:
-            self.xrc_rules.extend(opts['xrc_rules'])
+        for opt_name, opt_val in opts.items():
+            if opt_name == 'remove_conda':
+                self.remove_conda = opt_val
+            elif opt_name in ['env_vars', 'add_env_vars']:
+                self.env_vars.update(opt_val)
+            elif opt_name == 'path_env_vars':
+                for key, val in opt_val.items():
+                    self.env_vars[key] = Path(loc.parent, val).resolve()
+            elif opt_name == 'cds_lib':
+                self.cds_lib = Path(loc.parent, opt_val).resolve()
+            elif opt_name == 'cal_lvs_rules':
+                for val in opt_val:
+                    self.cal_lvs_rules.append(Path(loc.parent, val).resolve())
+            elif opt_name == 'cal_xrc_rules':
+                for val in opt_val:
+                    self.cal_xrc_rules.append(Path(loc.parent, val).resolve())
+            elif opt_name == 'ngspice_models':
+                for val in opt_val:
+                    self.ngspice_models.append(Path(loc.parent, val).resolve())
+            elif opt_name == 'hspice_models':
+                for val in opt_val:
+                    self.hspice_models.append(Path(loc.parent, val).resolve())
+            elif opt_name == 'spectre_models':
+                for val in opt_val:
+                    self.spectre_models.append(Path(loc.parent, val).resolve())
+            elif opt_name == 'include':
+                if not isinstance(opt_val, list):
+                    opt_val = [opt_val]
+                for val in opt_val:
+                    self.load_yaml(Path(loc.parent, val))
 
     def compute_env(self):
         env = os.environ.copy()

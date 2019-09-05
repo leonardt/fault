@@ -11,6 +11,7 @@ from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
 from fault.select_path import SelectPath
+from .user_cfg import FaultConfig
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:
@@ -103,6 +104,16 @@ class SpiceTarget(Target):
         if simulator not in {'ngspice', 'spectre', 'hspice'}:
             raise ValueError(f'Unsupported simulator {simulator}')
 
+        # set model_paths
+        if model_paths is None:
+            model_paths = []
+        if simulator == 'ngspice':
+            model_paths = FaultConfig.ngspice_models + model_paths
+        elif simulator == 'hspice':
+            model_paths = FaultConfig.hspice_models + model_paths
+        elif simulator == 'spectre':
+            model_paths = FaultConfig.spectre_models + model_paths
+
         # make directory if needed
         os.makedirs(directory, exist_ok=True)
 
@@ -111,7 +122,7 @@ class SpiceTarget(Target):
         self.simulator = simulator
         self.vsup = vsup
         self.rout = rout
-        self.model_paths = model_paths if model_paths is not None else []
+        self.model_paths = model_paths
         self.sim_env = sim_env
         self.t_step = t_step
         self.clock_step_delay = clock_step_delay
@@ -315,12 +326,14 @@ class SpiceTarget(Target):
 
     def get_parse_ordered_ports(self):
         for path in self.model_paths:
-            parser = SimulatorNetlist(path)
+            parser = SimulatorNetlist(f'{path}')
             ports = parser.get_subckt(f'{self.circuit.name}', detail='ports')
             if ports is not None:
                 return ports
             else:
                 continue
+        else:
+            raise Exception(f'Could not find subcircuit {self.circuit.name}.')
 
     def write_test_bench(self, comp, tb_file=None):
         # create a new netlist
@@ -329,7 +342,7 @@ class SpiceTarget(Target):
 
         # add include files
         for file_ in self.model_paths:
-            netlist.include(file_)
+            netlist.include(Path(file_).resolve())
 
         # instantiate the DUT
         dut_name = f'{self.circuit.name}'

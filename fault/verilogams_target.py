@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from .select_path import SelectPath
 from .system_verilog_target import SystemVerilogTarget
+from .user_cfg import FaultConfig
 
 
 class VerilogAMSTarget(SystemVerilogTarget):
@@ -54,8 +55,13 @@ class VerilogAMSTarget(SystemVerilogTarget):
 
         # update flags argument
         flags = flags if flags is not None else []
-        model_paths = model_paths if model_paths is not None else []
+
+        # update model paths
+        if model_paths is None:
+            model_paths = []
+        model_path = FaultConfig.spectre_models + model_paths
         for path in model_paths:
+            path = Path(path).resolve()
             flags += ['-modelpath', f'{path}']
 
         # update ext_srcs
