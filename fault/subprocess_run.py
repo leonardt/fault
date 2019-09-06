@@ -141,7 +141,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
         # get return code and check result if desired
         returncode = p.wait()
         if chk_ret_code:
-            assert not returncode, f'Got non-zero return code: {returncode}'
+            assert not returncode, f'Got non-zero return code: {returncode}. \n {stderr}'
 
         # return a completed process object containing the results
         retval = CompletedProcess(args=args, returncode=returncode,
