@@ -56,7 +56,7 @@ def process_output(fd, disp_type, name):
     return retval
 
 
-def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
+def subprocess_run(args, cwd=None, env=None, disp_type='print', err_str=None,
                    chk_ret_code=True, shell=False, plain_logging=True,
                    use_fault_cfg=True):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
@@ -138,8 +138,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
         # get return code and check result if desired
         returncode = p.wait()
         if chk_ret_code:
-            assert not returncode, f'Got non-zero return code: {returncode}.' \
-                                   f'\n STDERR: {stderr} \n STDOUT: {stdout}'
+            assert not returncode, f'Got non-zero return code: {returncode}.'
 
         # look for errors in STDOUT or STDERR
         if err_str is not None:
