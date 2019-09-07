@@ -28,35 +28,32 @@ def display_line(line, disp_type):
         raise Exception(f'Invalid log_type: {disp_type}.')
 
 
-def process_output(fd, err_str, disp_type, name):
+def process_output(fd, disp_type, name):
     # generic line-processing function to display lines
     # as they are produced as output in and check for errors.
 
-    retval = []
+    retval = ''
     any_line = False
     for line in fd:
+        # Add line to value to be returned
+        retval += line
+
         # Display opening text if needed
         if not any_line:
             any_line = True
             display_line(MAGENTA + BRIGHT + f'<{name}>' + RESET_ALL,
                          disp_type=disp_type)
 
-        # strip whitespace at end (including newline)
-        line = line.rstrip()
         # display if desired
-        display_line(line=line, disp_type=disp_type)
-        # check for error
-        if err_str is not None:
-            assert err_str not in line, f'Found error in {name}: {line}'  # noqa
-        # add line to the queue of outputs
-        retval.append(line)
+        display_line(line=line.rstrip(), disp_type=disp_type)
+
     # Display closing text if needed
     if any_line:
         display_line(MAGENTA + BRIGHT + f'</{name}>' + RESET_ALL,
                      disp_type=disp_type)
 
     # Return the full output contents for further processing
-    return '\n'.join(retval)
+    return retval
 
 
 def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
@@ -130,18 +127,23 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
     with Popen(args, cwd=cwd, env=env, stdout=PIPE, stderr=PIPE, bufsize=1,
                universal_newlines=True, shell=shell) as p:
 
-        # process STDOUT, then STDERR
+        # print out STDOUT, then STDERR
         # threads could be used here but pytest does not detect exceptions
-        # in child threads, so for now the outputs are processed sequentially
-        stdout = process_output(fd=p.stdout, err_str=err_str,
-                                disp_type=disp_type, name='STDOUT')
-        stderr = process_output(fd=p.stderr, err_str=err_str,
-                                disp_type=disp_type, name='STDERR')
+        # in child threads, so for now the outputs are printed sequentially
+        stdout = process_output(fd=p.stdout, disp_type=disp_type,
+                                name='STDOUT')
+        stderr = process_output(fd=p.stderr, disp_type=disp_type,
+                                name='STDERR')
 
         # get return code and check result if desired
         returncode = p.wait()
         if chk_ret_code:
-            assert not returncode, f'Got non-zero return code: {returncode}. \n {stderr}'
+            assert not returncode, f'Got non-zero return code: {returncode}.'
+
+        # look for errors in STDOUT or STDERR
+        if err_str is not None:
+            assert err_str not in stdout, f'Found "{err_str}" in STDOUT.'  # noqa
+            assert err_str not in stderr, f'Found "{err_str}" in STDERR.'  # noqa
 
         # return a completed process object containing the results
         retval = CompletedProcess(args=args, returncode=returncode,
