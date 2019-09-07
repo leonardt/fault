@@ -56,7 +56,7 @@ def process_output(fd, disp_type, name):
     return retval
 
 
-def subprocess_run(args, cwd=None, env=None, disp_type='print', err_str=None,
+def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
                    chk_ret_code=True, shell=False, plain_logging=True,
                    use_fault_cfg=True):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
@@ -127,6 +127,12 @@ def subprocess_run(args, cwd=None, env=None, disp_type='print', err_str=None,
     with Popen(args, cwd=cwd, env=env, stdout=PIPE, stderr=PIPE, bufsize=1,
                universal_newlines=True, shell=shell) as p:
 
+        # get return code and check result if desired
+        returncode = p.wait()
+
+        if returncode:
+            disp_type = 'print'
+
         # print out STDOUT, then STDERR
         # threads could be used here but pytest does not detect exceptions
         # in child threads, so for now the outputs are printed sequentially
@@ -135,8 +141,6 @@ def subprocess_run(args, cwd=None, env=None, disp_type='print', err_str=None,
         stderr = process_output(fd=p.stderr, disp_type=disp_type,
                                 name='STDERR')
 
-        # get return code and check result if desired
-        returncode = p.wait()
         if chk_ret_code:
             assert not returncode, f'Got non-zero return code: {returncode}.'
 
