@@ -2,8 +2,14 @@ from fault.codegen import CodeGenerator
 
 
 class SpiceNetlist(CodeGenerator):
-    def comment(self, text):
-        self.println(f'* {text}')
+    def comment(self, text=None):
+        # generate comment string
+        if text is None:
+            c = ''
+        else:
+            c = f' {text}'
+        # print the comment
+        self.println(f'*{c}')
 
     def ic(self, cond):
         line = []
@@ -40,6 +46,20 @@ class SpiceNetlist(CodeGenerator):
             line += [f'{key}={val}']
         line = ' '.join(line)
         self.println(line)
+
+    @staticmethod
+    def ordered_ports(mapping=None, order=None):
+        # set defaults
+        if mapping is None:
+            mapping = {}
+        if order is None:
+            order = []
+
+        # return ordered list of ports
+        retval = []
+        for port in order:
+            retval += [mapping[port]]
+        return retval
 
     def instantiate(self, name, *ports, inst_name=None):
         # set defaults

@@ -83,3 +83,6 @@ def si_netlist(lib, cell, cds_lib=None, cwd='.', view='schematic',
     # write netlist to desired file
     with open(out, 'w') as f:
         f.write(text)
+
+    # return location where netlist was written
+    return out
