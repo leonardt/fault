@@ -139,7 +139,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
         print(RED + BRIGHT + f'Found {len(err_msg)} error(s):' + RESET_ALL)
         for k, e in enumerate(err_msg):
             print(RED + BRIGHT + f'{k+1}) {e}' + RESET_ALL)
-        raise Exception()
+        raise AssertionError
 
     # if there were no errors, then return directly
     return CompletedProcess(args=args, returncode=returncode,
