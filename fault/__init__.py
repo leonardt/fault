@@ -16,6 +16,7 @@ from .mstools.si_netlist import si_netlist
 from .mstools.strmout import strmout
 from .mstools.calibre import lvs, xrc
 from .mstools.rect import RectCell
+from .mstools.grid import GridDesign
 
 
 class WrappedVerilogInternalPort:
