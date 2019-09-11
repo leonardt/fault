@@ -81,7 +81,8 @@ class VerilatorTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/",
                  flags=None, skip_compile=False, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts=None, skip_verilator=False):
+                 circuit_name=None, magma_opts=None, skip_verilator=False,
+                 disp_type='on_error'):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -97,6 +98,9 @@ class VerilatorTarget(VerilogTarget):
             include_verilog_libraries = []
         if magma_opts is None:
             magma_opts = {}
+
+        # Save settings
+        self.disp_type = disp_type
 
         # Call super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
@@ -115,9 +119,12 @@ class VerilatorTarget(VerilogTarget):
                 verilator_flags=flags
             )
             # shell=True since 'verilator' is actually a shell script
-            subprocess_run(comp_cmd, cwd=self.directory, shell=True)
+            subprocess_run(comp_cmd, cwd=self.directory, shell=True,
+                           disp_type=self.disp_type)
+
+        # Initialize variables
         self.debug_includes = set()
-        self.verilator_version = verilator_version()
+        self.verilator_version = verilator_version(disp_type=self.disp_type)
 
     def get_verilator_prefix(self):
         if self.verilator_version > 3.874:
@@ -511,12 +518,13 @@ for ({loop_expr}) {{
 
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
-        subprocess_run(make_cmd, cwd=self.directory)
+        subprocess_run(make_cmd, cwd=self.directory, disp_type=self.disp_type)
 
         # Run the executable created by verilator and write the standard
         # output to a logfile for later review or processing
         exe_cmd = [f'./obj_dir/V{self.circuit_name}']
-        result = subprocess_run(exe_cmd, cwd=self.directory)
+        result = subprocess_run(exe_cmd, cwd=self.directory,
+                                disp_type=self.disp_type)
         log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
         with open(log, 'w') as f:
             f.write(result.stdout)

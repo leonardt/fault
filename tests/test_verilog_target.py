@@ -1,4 +1,3 @@
-import logging
 import tempfile
 import magma as m
 import fault
@@ -11,7 +10,7 @@ import shutil
 from .common import (TestBasicCircuit, TestPeekCircuit,
                      TestDoubleNestedArraysCircuit, TestBasicClkCircuit,
                      TestNestedArraysCircuit, TestTupleCircuit,
-                     define_simple_circuit)
+                     define_simple_circuit, outlines)
 
 
 def pytest_generate_tests(metafunc):
@@ -26,16 +25,19 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("target,simulator", targets)
 
 
-def run(circ, actions, Target, simulator, flags=[]):
+def run(circ, actions, Target, simulator, flags=None, disp_type='on_error'):
+    # set defaults
+    if flags is None:
+        flags = []
+
+    # run the simulation
     with tempfile.TemporaryDirectory(dir=".") as tempdir:
         if Target == fault.verilator_target.VerilatorTarget:
-            target = Target(
-                circ, directory=f"{tempdir}/",
-                flags=flags)
+            target = Target(circ, directory=f"{tempdir}/", flags=flags,
+                            disp_type=disp_type)
         else:
-            target = Target(
-                circ, directory=f"{tempdir}/",
-                simulator=simulator)
+            target = Target(circ, directory=f"{tempdir}/", simulator=simulator,
+                            disp_type=disp_type)
         if Target == fault.system_verilog_target.SystemVerilogTarget:
             target.run(actions)
         else:
@@ -95,8 +97,7 @@ def test_target_double_nested_arrays_bulk(target, simulator):
     run(circ, actions, target, simulator)
 
 
-def test_target_clock(caplog, target, simulator):
-    caplog.set_level(logging.INFO)
+def test_target_clock(capsys, target, simulator):
     circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
@@ -109,8 +110,9 @@ def test_target_clock(caplog, target, simulator):
         Eval(),
         Print("%x\n", circ.O),
     ]
-    run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    messages = [record.message for record in caplog.records]
+    run(circ, actions, target, simulator, flags=["-Wno-lint"],
+        disp_type='realtime')
+    messages = outlines(capsys)
 
     if target == fault.verilator_target.VerilatorTarget:
         assert messages[-4] == "0"
@@ -129,8 +131,7 @@ def test_target_clock(caplog, target, simulator):
             raise NotImplementedError(f"Unsupported simulator: {simulator}")
 
 
-def test_print_nested_arrays(caplog, target, simulator):
-    caplog.set_level(logging.INFO)
+def test_print_nested_arrays(capsys, target, simulator):
     circ = TestNestedArraysCircuit
     actions = [
         Poke(circ.I, [BitVector[4](i) for i in range(3)]),
@@ -142,8 +143,9 @@ def test_print_nested_arrays(caplog, target, simulator):
         Eval(),
     ] + [Print("%x\n", i) for i in circ.O]
 
-    run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    messages = [record.message for record in caplog.records]
+    run(circ, actions, target, simulator, flags=["-Wno-lint"],
+        disp_type='realtime')
+    messages = outlines(capsys)
     if target == fault.verilator_target.VerilatorTarget:
         actual = "\n".join(messages[-10:-1])
     else:
@@ -165,8 +167,7 @@ def test_print_nested_arrays(caplog, target, simulator):
 2"""
 
 
-def test_print_double_nested_arrays(caplog, target, simulator):
-    caplog.set_level(logging.INFO)
+def test_print_double_nested_arrays(capsys, target, simulator):
     circ = TestDoubleNestedArraysCircuit
     actions = [
         Poke(circ.I, [[BitVector[4](i + j * 3) for i in range(3)]
@@ -180,8 +181,9 @@ def test_print_double_nested_arrays(caplog, target, simulator):
                       for j in range(2)]),
         Eval(),
     ] + [Print("%x\n", j) for i in circ.O for j in i]
-    run(circ, actions, target, simulator, flags=["-Wno-lint"])
-    messages = [record.message for record in caplog.records]
+    run(circ, actions, target, simulator, flags=["-Wno-lint"],
+        disp_type='realtime')
+    messages = outlines(capsys)
     if target == fault.verilator_target.VerilatorTarget:
         actual = "\n".join(messages[-19:-1])
     else:

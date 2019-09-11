@@ -23,6 +23,13 @@ def pytest_sim_params(metafunc, *args):
         metafunc.parametrize("target,simulator", targets)
 
 
+def outlines(capsys):
+    captured = capsys.readouterr()
+    lines = captured.out.splitlines()
+    lines = [line.rstrip() for line in lines]
+    return lines
+
+
 def define_simple_circuit(T, circ_name, has_clk=False):
     class _Circuit(m.Circuit):
         __test__ = False   # Disable pytest discovery

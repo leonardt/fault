@@ -1,12 +1,12 @@
 from .subprocess_run import subprocess_run
 
 
-def verilator_version():
+def verilator_version(disp_type='on_error'):
     # assemble the command
     cmd = ['verilator', '--version']
 
     # run the command and parse out the version number
-    result = subprocess_run(cmd, shell=True)
+    result = subprocess_run(cmd, shell=True, disp_type=disp_type)
     version = float(result.stdout.split()[1])
 
     # return version number

@@ -43,7 +43,7 @@ class SystemVerilogTarget(VerilogTarget):
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
-                 use_input_wires=False, parameters=None):
+                 use_input_wires=False, parameters=None, disp_type='on_error'):
         """
         circuit: a magma circuit
 
@@ -111,6 +111,10 @@ class SystemVerilogTarget(VerilogTarget):
                          turn assigned to a reg.
 
         parameters: Dictionary of parameters to be defined for the DUT.
+
+        disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
+                   is an error.  If 'realtime', print out STDOUT as lines come
+                   in, then print STDERR after the process completes.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -160,6 +164,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.top_module = top_module
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
+        self.disp_type = disp_type
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -561,12 +566,13 @@ end
         sim_cmd += self.flags
 
         # compile the simulation
-        subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
+        subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
+                       disp_type=self.disp_type)
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
             subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
-                           err_str=sim_err_str)
+                           err_str=sim_err_str, disp_type=self.disp_type)
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file

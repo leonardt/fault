@@ -35,7 +35,8 @@ class SpiceTarget(Target):
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
-                 bus_order='descend', flags=None, ic=None):
+                 bus_order='descend', flags=None, ic=None,
+                 disp_type='on_error'):
         """
         circuit: a magma circuit
 
@@ -82,6 +83,10 @@ class SpiceTarget(Target):
 
         flags: List of additional arguments that should be passed to the
                simulator.
+
+        disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
+                   is an error.  If 'realtime', print out STDOUT as lines come
+                   in, then print STDERR after the process completes.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -111,6 +116,7 @@ class SpiceTarget(Target):
         self.bus_order = bus_order
         self.flags = flags if flags is not None else []
         self.ic = ic if ic is not None else {}
+        self.disp_type = disp_type
 
     def run(self, actions):
         # compile the actions
@@ -131,7 +137,8 @@ class SpiceTarget(Target):
 
         # run the simulation commands
         for sim_cmd in sim_cmds:
-            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env)
+            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
+                           disp_type=self.disp_type)
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:

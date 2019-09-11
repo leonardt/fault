@@ -6,7 +6,7 @@ import random
 import pytest
 from .common import (SimpleALU, TestNestedArraysCircuit,
                      TestDoubleNestedArraysCircuit, TestTupleCircuit,
-                     AndCircuit)
+                     AndCircuit, outlines)
 
 
 def pytest_generate_tests(metafunc):
@@ -21,11 +21,12 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("target,simulator", targets)
 
 
-def run_test(target, simulator, tester):
+def run_test(target, simulator, tester, disp_type='on_error'):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {
             "directory": _dir,
-            "magma_opts": {"verilator_debug": True}
+            "magma_opts": {"verilator_debug": True},
+            "disp_type": disp_type
         }
         if target == "verilator":
             kwargs["flags"] = ["-Wno-fatal"]
@@ -34,7 +35,7 @@ def run_test(target, simulator, tester):
         tester.compile_and_run(target, **kwargs)
 
 
-def test_tester_magma_internal_signals(target, simulator, caplog):
+def test_tester_magma_internal_signals(target, simulator, capsys):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -47,16 +48,16 @@ def test_tester_magma_internal_signals(target, simulator, caplog):
         signal = tester.circuit.config_reg.Q
         tester.circuit.config_reg.Q.expect(signal)
         tester.print("Q=%d\n", signal)
-    run_test(target, simulator, tester)
-    messages = [record.message for record in caplog.records]
+    run_test(target, simulator, tester, disp_type='realtime')
+    messages = outlines(capsys)
     if target == "verilator":
-        actual = "\n".join(messages[-6:-2])
+        actual = "\n".join(messages[-5:-1])
     elif simulator == "iverilog":
-        actual = "\n".join(messages[-6:-2])
+        actual = "\n".join(messages[-5:-1])
     elif simulator == "ncsim":
-        actual = "\n".join(messages[-9:-5])
+        actual = "\n".join(messages[-8:-4])
     elif simulator == "vcs":
-        actual = "\n".join(messages[-12:-8])
+        actual = "\n".join(messages[-11:-7])
     expected = """\
 Q=0
 Q=1
@@ -66,7 +67,7 @@ Q=3\
     assert expected == actual, "Print of internal register value did not work"
 
 
-def test_tester_poke_internal_register(target, simulator, caplog):
+def test_tester_poke_internal_register(target, simulator, capsys):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -79,16 +80,16 @@ def test_tester_poke_internal_register(target, simulator, caplog):
         tester.step(2)
         tester.circuit.config_reg.conf_reg.O.expect(i)
         tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
-    run_test(target, simulator, tester)
-    messages = [record.message for record in caplog.records]
+    run_test(target, simulator, tester, disp_type='realtime')
+    messages = outlines(capsys)
     if target == "verilator":
-        actual = "\n".join(messages[-6:-2])
+        actual = "\n".join(messages[-5:-1])
     elif simulator == "iverilog":
-        actual = "\n".join(messages[-6:-2])
+        actual = "\n".join(messages[-5:-1])
     elif simulator == "ncsim":
-        actual = "\n".join(messages[-9:-5])
+        actual = "\n".join(messages[-8:-4])
     elif simulator == "vcs":
-        actual = "\n".join(messages[-12:-8])
+        actual = "\n".join(messages[-11:-7])
     expected = """\
 O=3
 O=2
