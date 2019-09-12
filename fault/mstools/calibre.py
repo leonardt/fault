@@ -97,24 +97,36 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
 def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', layout_primary=None,
         svdb_directory='svdb', xrc_netlist=None, netlist_format='HSPICE',
-        mode='c', rul_file='cal_xrc.rul'):
+        mode='c', rul_file='cal_xrc.rul', schematic=None,
+        source_system='SPICE', source_primary=None):
     # resolve paths
     layout = Path(layout).resolve()
+    if schematic is not None:
+        schematic = Path(schematic).resolve()
 
     # set defaults
     if rules is None:
         rules = FaultConfig.cal_xrc_rules
     if layout_primary is None:
         layout_primary = layout.stem
+    if source_primary is None and schematic is not None:
+        source_primary = schematic.stem
     if xrc_netlist is None:
         xrc_netlist = layout.stem + '.sp'
 
     # generate the command file
     gen = RulGen()
     gen.layout(system=layout_system, primary=layout_primary, path=layout)
+    if schematic is not None:
+        gen.source(system=source_system, primary=source_primary,
+                   path=schematic)
     gen.lvs_report(lvs_report)
     gen.mask_svdb(svdb_directory, query='XRC')
-    gen.pex_netlist(xrc_netlist, format=netlist_format)
+    if schematic is not None:
+        names = 'SOURCENAMES'
+    else:
+        names = 'LAYOUTNAMES'
+    gen.pex_netlist(xrc_netlist, format=netlist_format, names=names)
     gen.cmdln('DRC', 'ICSTATION', 'YES')  # TODO: why is this command needed?
     gen.include(*rules)
 
