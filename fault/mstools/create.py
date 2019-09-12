@@ -60,6 +60,5 @@ def instantiate_into(parent, instances=None, labels=None):
         cmds += [label.create_cmd(var_name(parent))]
     # save DB
     cmds += [save_cell(parent)]
-    print(cmds)
     # run the skill code
     run_skill('\n'.join(cmds), cds_lib=parent.cds_lib)

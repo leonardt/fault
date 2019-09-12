@@ -20,16 +20,16 @@ class BBox:
     def __str__(self):
         return f'BBox({self.llx}, {self.lly}, {self.urx}, {self.ury})'
 
-    def at_top(self, e, th=0.1):
+    def at_top(self, e, th=0.001):
         return 1 - th < (e.y - self.lly) / self.height < 1 + th
 
-    def at_bottom(self, e, th=0.1):
+    def at_bottom(self, e, th=0.001):
         return -th < (e.y - self.lly) / self.height < +th
 
-    def at_right(self, e, th=0.1):
+    def at_right(self, e, th=0.001):
         return 1 - th < (e.x - self.llx) / self.width < 1 + th
 
-    def at_left(self, e, th=0.1):
+    def at_left(self, e, th=0.001):
         return -th < (e.x - self.llx) / self.width < +th
 
     @property

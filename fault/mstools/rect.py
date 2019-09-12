@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 class RectCell:
     def __init__(self, lib, cell, layout_view='layout', cds_lib=None,
                  bbox=None, labels=None, top=None, bottom=None,
-                 left=None, right=None):
+                 left=None, right=None, instantiate=True):
         # set defaults
         if cds_lib is None:
             cds_lib = FaultConfig.cds_lib
@@ -26,13 +26,21 @@ class RectCell:
             labels = get_labels(lib=lib, cell=cell, view=layout_view,
                                 cds_lib=cds_lib)
         if top is None:
-            top = [e.text for e in labels if bbox.at_top(e)]
+            top = [e for e in labels if bbox.at_top(e)]
+            top = sorted(top, key=lambda e: +e.x)
+            top = [e.text for e in top]
         if bottom is None:
-            bottom = [e.text for e in labels if bbox.at_bottom(e)]
+            bottom = [e for e in labels if bbox.at_bottom(e)]
+            bottom = sorted(bottom, key=lambda e: +e.x)
+            bottom = [e.text for e in bottom]
         if left is None:
-            left = [e.text for e in labels if bbox.at_left(e)]
+            left = [e for e in labels if bbox.at_left(e)]
+            left = sorted(left, key=lambda e: -e.y)
+            left = [e.text for e in left]
         if right is None:
-            right = [e.text for e in labels if bbox.at_right(e)]
+            right = [e for e in labels if bbox.at_right(e)]
+            right = sorted(right, key=lambda e: -e.y)
+            right = [e.text for e in right]
 
         # save settings
         self.lib = lib
@@ -45,6 +53,7 @@ class RectCell:
         self.bottom = bottom
         self.right = right
         self.left = left
+        self.instantiate = instantiate
 
     @property
     def llx(self):
