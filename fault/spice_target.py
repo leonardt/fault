@@ -42,7 +42,7 @@ class CompiledSpiceActions:
 
 
 class SpiceTarget(Target):
-    def __init__(self, circuit, directory="build/", simulator='ngspice',
+    def __init__(self, circuit, directory=None, simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
@@ -99,6 +99,10 @@ class SpiceTarget(Target):
         """
         # call the super constructor
         super().__init__(circuit)
+
+        # set defaults
+        if directory is None:
+            directory = FaultConfig.cwd
 
         # sanity check
         if simulator not in {'ngspice', 'spectre', 'hspice'}:

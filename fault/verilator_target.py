@@ -13,6 +13,7 @@ import math
 from hwtypes import BitVector, AbstractBitVectorMeta
 from fault.random import constrained_random_bv
 from fault.subprocess_run import subprocess_run
+from fault.user_cfg import FaultConfig
 import fault.utils as utils
 import fault.expression as expression
 
@@ -78,7 +79,7 @@ int main(int argc, char **argv) {{
 
 
 class VerilatorTarget(VerilogTarget):
-    def __init__(self, circuit, directory="build/",
+    def __init__(self, circuit, directory=None,
                  flags=None, skip_compile=False, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False):
@@ -93,6 +94,8 @@ class VerilatorTarget(VerilogTarget):
                 -I<dir>                    Directory to search for includes
         """
         # Set defaults
+        if directory is None:
+            directory = FaultConfig.cwd
         if include_verilog_libraries is None:
             include_verilog_libraries = []
         if magma_opts is None:

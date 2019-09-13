@@ -6,7 +6,7 @@ from .user_cfg import FaultConfig
 
 
 class VerilogAMSTarget(SystemVerilogTarget):
-    def __init__(self, circuit, simulator='ncsim', directory='build/',
+    def __init__(self, circuit, simulator='ncsim', directory=None,
                  model_paths=None, stop_time=1, vsup=1.0, rout=1, flags=None,
                  ext_srcs=None, use_spice=None, use_input_wires=True,
                  ext_model_file=True, bus_delim='<>', ic=None, **kwargs):
@@ -37,6 +37,9 @@ class VerilogAMSTarget(SystemVerilogTarget):
         c_1.
         ic: Dictionary mapping nets or SelectPaths to initialization values.
         """
+        # set defaults
+        if directory is None:
+            directory = FaultConfig.cwd
 
         # save settings
         self.stop_time = stop_time

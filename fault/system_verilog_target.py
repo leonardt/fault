@@ -11,6 +11,7 @@ from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
 from fault.real_type import RealKind
+from fault.user_cfg import FaultConfig
 import os
 from numbers import Number
 
@@ -35,7 +36,7 @@ endmodule
 
 
 class SystemVerilogTarget(VerilogTarget):
-    def __init__(self, circuit, circuit_name=None, directory="build/",
+    def __init__(self, circuit, circuit_name=None, directory=None,
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
@@ -112,6 +113,10 @@ class SystemVerilogTarget(VerilogTarget):
 
         parameters: Dictionary of parameters to be defined for the DUT.
         """
+        # set default directory if needed
+        if directory is None:
+            directory = FaultConfig.cwd
+
         # set default for list of external sources
         if include_verilog_libraries is None:
             include_verilog_libraries = []

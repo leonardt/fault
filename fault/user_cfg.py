@@ -7,6 +7,7 @@ class _FaultConfig:
     def __init__(self):
         # initialization
         self.remove_conda = False
+        self.cwd = 'build/'
         self.env_vars = {}
         self.path_env_vars = {}
         self.cds_lib = None
