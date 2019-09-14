@@ -1,7 +1,6 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from fault import FaultConfig, si_netlist
-from fault.subprocess_run import subprocess_run
 from fault.spice import SpiceNetlist
 from .label import get_labels
 from .bbox import get_bbox

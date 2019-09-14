@@ -42,8 +42,13 @@ auCdlDefNetlistProc = "ansCdlSubcktCall"
 '''
 
 
-def si_netlist(lib, cell, cds_lib=None, cwd='.', view='schematic',
-               out=None, del_incl=True, env=None, add_to_env=None):
+def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
+               out=None, del_incl=True, env=None, add_to_env=None,
+               disp_mode='on_error'):
+    # set defaults
+    if cwd is None:
+        cwd = FaultConfig.cwd
+
     # path wrapping
     cwd = Path(cwd).resolve()
 
@@ -67,7 +72,8 @@ def si_netlist(lib, cell, cds_lib=None, cwd='.', view='schematic',
     args += ['-cdslib', f'{cds_lib}']
     args += ['-batch']
     args += ['-command', 'netlist']
-    subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
+    subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
+                   disp_mode=disp_mode)
 
     # get netlist text and filter out include statements
     with open(cwd / 'netlist', 'r') as f:

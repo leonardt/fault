@@ -4,8 +4,13 @@ from fault.subprocess_run import subprocess_run
 from fault import FaultConfig
 
 
-def strmout(lib, cell, cds_lib=None, cwd='.', view='layout', out=None,
-            env=None, add_to_env=None, log='strmOut.log', no_warn=None):
+def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
+            env=None, add_to_env=None, log='strmOut.log', no_warn=None,
+            disp_mode='on_error'):
+    # set defaults
+    if cwd is None:
+        cwd = FaultConfig.cwd
+
     # resolve paths
     cwd = Path(cwd).resolve()
 
@@ -36,4 +41,5 @@ def strmout(lib, cell, cds_lib=None, cwd='.', view='layout', out=None,
 
     # run the command
     launch_dir = Path(cds_lib).resolve().parent
-    subprocess_run(args, cwd=launch_dir, env=env, add_to_env=add_to_env)
+    subprocess_run(args, cwd=launch_dir, env=env, add_to_env=add_to_env,
+                   disp_mode=disp_mode)

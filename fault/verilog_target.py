@@ -7,13 +7,14 @@ from fault.util import flatten
 import os
 from fault.select_path import SelectPath
 from fault.verilog_utils import verilog_name
+from .user_cfg import FaultConfig
 
 
 class VerilogTarget(Target):
     """
     Provides reuseable target logic for compiling circuits into verilog files.
     """
-    def __init__(self, circuit, circuit_name=None, directory="build/",
+    def __init__(self, circuit, circuit_name=None, directory=None,
                  skip_compile=False, include_verilog_libraries=None,
                  magma_output="verilog", magma_opts=None):
         super().__init__(circuit)
@@ -22,6 +23,8 @@ class VerilogTarget(Target):
             circuit_name = self.circuit.name
         self.circuit_name = circuit_name
 
+        if directory is None:
+            directory = FaultConfig.directory
         self.directory = Path(directory)
         os.makedirs(directory, exist_ok=True)
 

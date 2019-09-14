@@ -58,14 +58,17 @@ class RulGen(CodeGenerator):
         return f"'{s}'"
 
 
-def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
+def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', source_system='SPICE',
-        source_primary=None, layout_primary=None, rul_file='cal_lvs.rul'):
+        source_primary=None, layout_primary=None, rul_file='cal_lvs.rul',
+        disp_type='on_error'):
     # resolve paths
     layout = Path(layout).resolve()
     schematic = Path(schematic).resolve()
 
     # set defaults
+    if cwd is None:
+        cwd = FaultConfig.cwd
     if rules is None:
         rules = FaultConfig.cal_lvs_rules
     if source_primary is None:
@@ -91,20 +94,22 @@ def lvs(layout, schematic, rules=None, cwd='.', env=None, add_to_env=None,
     args += ['-hier']
     args += [f'{rul_file}']
     subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
-                   err_str='INCORRECT')
+                   err_str='INCORRECT', disp_type=disp_type)
 
 
-def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
+def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', layout_primary=None,
         svdb_directory='svdb', xrc_netlist=None, netlist_format='HSPICE',
         mode='c', rul_file='cal_xrc.rul', schematic=None,
-        source_system='SPICE', source_primary=None):
+        source_system='SPICE', source_primary=None, disp_type='on_error'):
     # resolve paths
     layout = Path(layout).resolve()
     if schematic is not None:
         schematic = Path(schematic).resolve()
 
     # set defaults
+    if cwd is None:
+        cwd = FaultConfig.cwd
     if rules is None:
         rules = FaultConfig.cal_xrc_rules
     if layout_primary is None:
@@ -141,8 +146,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['-64']
         args += ['-xrc', '-phdb']
         args += [f'{rul_file}']
-        subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
-    phdb()
+        return args
 
     # Step 2: PDB
     def pdb():
@@ -152,8 +156,7 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['-xrc', '-pdb']
         args += [f'-{mode}']
         args += [f'{rul_file}']
-        subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
-    pdb()
+        return args
 
     # Step 3: FMT
     def fmt():
@@ -163,5 +166,9 @@ def xrc(layout, rules=None, cwd='.', env=None, add_to_env=None,
         args += ['-xrc', '-fmt']
         args += [f'-{mode}']
         args += [f'{rul_file}']
-        subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env)
-    fmt()
+        return args
+
+    # run the commands
+    args = [phdb(), pdb(), fmt()]
+    subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
+                   disp_type=disp_type)

@@ -46,7 +46,8 @@ class SpiceTarget(Target):
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
-                 bus_order='descend', flags=None, ic=None, cap_loads=None):
+                 bus_order='descend', flags=None, ic=None, cap_loads=None,
+                 disp_type='on_error'):
         """
         circuit: a magma circuit
 
@@ -96,6 +97,10 @@ class SpiceTarget(Target):
 
         cap_loads: Dictionary mapping device ports to capacitive loads
                    that should be added to those ports.
+
+        disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
+                   is an error.  If 'realtime', print out STDOUT as lines come
+                   in, then print STDERR after the process completes.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -140,6 +145,7 @@ class SpiceTarget(Target):
         self.flags = flags if flags is not None else []
         self.ic = ic if ic is not None else {}
         self.cap_loads = cap_loads if cap_loads is not None else {}
+        self.disp_type = disp_type
 
     def run(self, actions):
         # compile the actions

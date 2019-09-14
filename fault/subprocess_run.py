@@ -1,68 +1,66 @@
-import logging
 import shlex
 import os
 from subprocess import Popen, PIPE, CompletedProcess
+from collections import Iterable
 from fault import FaultConfig
 
 
 # Terminal formatting codes
 MAGENTA = '\x1b[35m'
 CYAN = '\x1b[36m'
+RED = '\x1b[31m'
 BRIGHT = '\x1b[1m'
 RESET_ALL = '\x1b[0m'
 
 
-def display_line(line, disp_type):
-    # generic function to display a line using various
-    # methods.
+class PrintDisplay:
+    def __init__(self, mode):
+        self.mode = mode
+        self.lines = []
 
-    # then display the line using the desired method
-    if disp_type is None:
-        pass
-    elif disp_type == 'print':
-        print(line)
-    elif disp_type == 'info':
-        logging.info(line.rstrip())
-    elif disp_type == 'warn':
-        logging.warning(line.rstrip())
-    else:
-        raise Exception(f'Invalid log_type: {disp_type}.')
-
-
-def process_output(fd, err_str, disp_type, name):
-    # generic line-processing function to display lines
-    # as they are produced as output in and check for errors.
-
-    retval = []
-    any_line = False
-    for line in fd:
-        # Display opening text if needed
-        if not any_line:
-            any_line = True
-            display_line(MAGENTA + BRIGHT + f'<{name}>' + RESET_ALL,
-                         disp_type=disp_type)
-
-        # strip whitespace at end (including newline)
+    def print(self, line):
         line = line.rstrip()
-        # display if desired
-        display_line(line=line, disp_type=disp_type)
-        # check for error
-        if err_str is not None:
-            assert err_str not in line, f'Found error in {name}: {line}'  # noqa
-        # add line to the queue of outputs
-        retval.append(line)
-    # Display closing text if needed
-    if any_line:
-        display_line(MAGENTA + BRIGHT + f'</{name}>' + RESET_ALL,
-                     disp_type=disp_type)
+        if self.mode == 'realtime':
+            print(line)
+        elif self.mode == 'on_error':
+            self.lines.append(line)
+        else:
+            raise Exception('Invalid mode.')
 
-    # Return the full output contents for further processing
-    return '\n'.join(retval)
+    def error_printing(self):
+        if self.mode == 'on_error':
+            for line in self.lines:
+                print(line)
+
+    def process_output(self, fd, name):
+        # generic line-processing function to display lines
+        # as they are produced as output in and check for errors.
+
+        retval = ''
+        any_line = False
+        for line in fd:
+            # Add line to value to be returned
+            retval += line
+
+            # Display opening text if needed
+            if not any_line:
+                any_line = True
+                self.print(MAGENTA + BRIGHT + f'<{name}>' + RESET_ALL)
+
+            # display if desired
+            self.print(line)
+
+        # Display closing text if needed
+        if any_line:
+            self.print(MAGENTA + BRIGHT + f'</{name}>' + RESET_ALL)
+
+        # Return the full output contents for further processing
+        return retval
 
 
-def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
-                   chk_ret_code=True, shell=False, plain_logging=True,
-                   use_fault_cfg=True, add_to_env=None):
+def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
+                   chk_ret_code=True, shell=False, use_fault_cfg=True,
+                   add_to_env=None):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
     # come in, looks for errors in STDOUT and STDERR (raising an exception if
     # one is found), and can check the return code from the subprocess
@@ -78,14 +76,16 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
     #
     # args: List of arguments, with the same meaning as subprocess.run.
     #       Unlike subprocess.run, however, this should always be a list.
+    #       It is also allowed to pass a list of lists, in which case the
+    #       the arguments are interpeted as a sequence of commands to be
+    #       run via subprocess_run.
     # cwd: Directory in which to run the subprocess.
     # env: Dictionary representing the environment variables to be set
     #      while running the subprocess.  In None, defaults are determined
     #      based on one of the optional fault user config files.
-    # disp_type: None, 'print', 'info', or 'warn'.  If None, don't display
-    #            anything while running the subprocess.  If 'print', use
-    #            the Python 'print' command to display output.  If 'info',
-    #            using logging.info, and if 'warn', use logging.warning.
+    # disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
+    #            is an error.  If 'realtime', print out STDOUT as lines come
+    #            in, then print STDERR after the process completes.
     # err_str: If not None, look for err_str in each line of STDOUT and
     #          STDERR, raising an AssertionError if it is found.
     # chk_ret_code: If True, check the return code after the subprocess runs,
@@ -94,15 +94,28 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
     #        a string, then Popen with shell=True.  This is sometimes needed
     #        when running programs if they are actually scripts (e.g.,
     #        Verilator)
-    # plain_logging: If True (default), use plain output formatting for
-    #                all logging.  This is recommended since it makes
-    #                it easier to read the many lines of output produced
-    #                by typical suprocess calls.
     # use_fault_cfg: If True (default) and env is None, then use FaultConfig
     #                to fill in default environment variables.
     # add_to_env: Dictionary of environment variables to add to the
     #             "env" (which is either user-provided or set using
     #             the fault defaults)
+
+    # if 
+    args = list(args)
+    if isinstance(args[0], Iterable) and not 
+        if isinstance(args, str):
+            # single command can be passed as a string
+            args = [args]
+        elif isinstance(args, Iterable):
+            # args might be a generator so it is first converted
+            # to a list to allow indexing
+            args = list(args)
+            if isinstance(args[0], str):
+                pass
+            elif isinstance(args[0], Iterable)
+        if isinstance(args, Iterable) and not isinstance(args, str):
+            # args 
+            args = list(args)
 
     # setup the environment
     if env is None and use_fault_cfg:
@@ -111,56 +124,59 @@ def subprocess_run(args, cwd=None, env=None, disp_type='info', err_str=None,
         env.update(**add_to_env)
 
     # make the directory if needed
-    if cwd is not None:
-        os.makedirs(cwd, exist_ok=True)
+    if cwd is None:
+        cwd = FaultConfig.cwd
+    os.makedirs(cwd, exist_ok=True)
 
-    # temporarily use plain formatting for all logging handlers.  this
-    # makes the output cleaner and more readable -- otherwise the
-    # output lines would all be prepended with the debug level,
-    # line number, etc.
-    if plain_logging:
-        orig_fmts = []
-        handlers = logging.getLogger().handlers
-        plain_fmt = logging.Formatter()
-        for handler in handlers:
-            orig_fmts.append(handler.formatter)
-            handler.setFormatter(plain_fmt)
+    # make sure all arguments have been converted to strings
+    args = [f'{arg}' for arg in args]
+
+    # set up printing
+    display = PrintDisplay(mode=disp_type)
 
     # print out the command in a format that can be copy-pasted
     # directly into a terminal (i.e., with proper quoting of arguments)
     cmd_str = ' '.join(shlex.quote(arg) for arg in args)
-    display_line(CYAN + BRIGHT + 'Running command: ' + RESET_ALL + cmd_str,
-                 disp_type=disp_type)
+    display.print(CYAN + BRIGHT + 'Running command: ' + RESET_ALL + cmd_str)
 
     # combine arguments into a string if needed for shell=True
     if shell:
         args = cmd_str
 
     # run the subprocess
+    err_msg = []
     with Popen(args, cwd=cwd, env=env, stdout=PIPE, stderr=PIPE, bufsize=1,
                universal_newlines=True, shell=shell) as p:
 
-        # process STDOUT, then STDERR
+        # print out STDOUT, then STDERR
         # threads could be used here but pytest does not detect exceptions
-        # in child threads, so for now the outputs are processed sequentially
-        stdout = process_output(fd=p.stdout, err_str=err_str,
-                                disp_type=disp_type, name='STDOUT')
-        stderr = process_output(fd=p.stderr, err_str=err_str,
-                                disp_type=disp_type, name='STDERR')
+        # in child threads, so for now the outputs are printed sequentially
+        stdout = display.process_output(fd=p.stdout, name='STDOUT')
+        stderr = display.process_output(fd=p.stderr, name='STDERR')
 
         # get return code and check result if desired
         returncode = p.wait()
-        if chk_ret_code:
-            assert not returncode, f'Got non-zero return code: {returncode}'
 
-        # return a completed process object containing the results
-        retval = CompletedProcess(args=args, returncode=returncode,
-                                  stdout=stdout, stderr=stderr)
+        if chk_ret_code and returncode:
+            err_msg += [f'Got return code {returncode}.']
 
-    # go back to using the original formatters for each logging handler
-    if plain_logging:
-        for handler, fmt in zip(handlers, orig_fmts):
-            handler.setFormatter(fmt)
+        # look for errors in STDOUT or STDERR
+        if err_str is not None:
+            if err_str in stdout:
+                err_msg += [f'Found "{err_str}" in STDOUT.']
+            if err_str in stderr:
+                err_msg += [f'Found "{err_str}" in STDERR.']
 
-    # return the output from the subprocess
-    return retval
+    # if any errors were found, print out STDOUT and STDERR if they haven't
+    # already been printed, then print out what the error(s) were and
+    # raise an exception
+    if len(err_msg) != 0:
+        display.error_printing()
+        print(RED + BRIGHT + f'Found {len(err_msg)} error(s):' + RESET_ALL)
+        for k, e in enumerate(err_msg):
+            print(RED + BRIGHT + f'{k+1}) {e}' + RESET_ALL)
+        raise AssertionError
+
+    # if there were no errors, then return directly
+    return CompletedProcess(args=args, returncode=returncode,
+                            stdout=stdout, stderr=stderr)

@@ -166,7 +166,11 @@ class GridDesign:
                 inst.conn[inst_port].name = port_list[self.lcount[kind]]
                 self.lcount[kind] += 1
 
-    def write_netlist(self, cwd):
+    def write_netlist(self, cwd=None):
+        # set defaults
+        if cwd is None:
+            cwd = FaultConfig.cwd
+
         # create a grid of spice instances
         sgrid = []
         inst_count = 0
