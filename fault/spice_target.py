@@ -42,6 +42,7 @@ class CompiledSpiceActions:
         self.stop_time = stop_time
         self.saves = saves
 
+
 def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
     # parse the netlist
     spice_model_path = Path(file_name).resolve()

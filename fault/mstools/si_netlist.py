@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from fault.subprocess_run import subprocess_run
+from fault.spice_target import DeclareFromSpice
 from fault import FaultConfig
 
 
@@ -42,6 +43,17 @@ auCdlDefNetlistProc = "ansCdlSubcktCall"
 '''
 
 
+def DeclareFromSchematic(lib, cell, *args, mode='digital', **kwargs):
+    # generate the netlist
+    out = si_netlist(lib, cell, *args, **kwargs)
+
+    # create circuit from generated netlist
+    circuit = DeclareFromSpice(out, subckt_name=f'{cell}', mode=mode)
+
+    # return the circuit
+    return circuit
+
+
 def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
                out=None, del_incl=True, env=None, add_to_env=None,
                disp_type='on_error'):
@@ -54,9 +66,10 @@ def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
     # path wrapping
     cwd = Path(cwd).resolve()
 
-    # set more defaults...
+    # set output location
     if out is None:
         out = cwd / f'{cell}.sp'
+    out = Path(out).resolve()
 
     # create the output directory if needed
     os.makedirs(cwd, exist_ok=True)

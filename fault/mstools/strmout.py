@@ -2,6 +2,18 @@ import os
 from pathlib import Path
 from fault.subprocess_run import subprocess_run
 from fault import FaultConfig
+from .calibre import DeclareFromGDS
+
+
+def DeclareFromLayout(lib, cell, *args, mode='digital', **kwargs):
+    # stream out the layout to GDS
+    out = strmout(lib, cell, *args, **kwargs)
+
+    # declare the circuit from GDS
+    circuit = DeclareFromGDS(layout=out, layout_primary=cell, mode=mode)
+
+    # return the circuit
+    return circuit
 
 
 def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
@@ -21,9 +33,10 @@ def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
     cwd = Path(cwd).resolve()
     os.makedirs(cwd, exist_ok=True)
 
-    # set more defaults...
+    # set the output path
     if out is None:
         out = cwd / f'{cell}.gds'
+    out = Path(out).resolve()
 
     # construct the command
     args = []
@@ -41,3 +54,6 @@ def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
     launch_dir = Path(cds_lib).resolve().parent
     subprocess_run(args, cwd=launch_dir, env=env, add_to_env=add_to_env,
                    disp_type=disp_type)
+
+    # return the output location
+    return out
