@@ -12,12 +12,12 @@ from .tester_samples import (SRAMTester, InvTester, BufTester,
 from .random import random_bit, random_bv
 from .util import clog2
 from .spice_target import A2DError, ExpectError
-from .mstools.si_netlist import si_netlist
-from .mstools.strmout import strmout
-from .mstools.calibre import lvs, xrc
+from .spice_target import DeclareFromSpice
+from .mstools.si_netlist import si_netlist, DeclareFromSchematic
 from .mstools.rect import RectCell
 from .mstools.grid import GridDesign
-from .spice_target import DeclareFromSpice
+from .mstools.calibre import lvs, xrc, DeclareFromGDS
+from .mstools.strmout import strmout, DeclareFromLayout
 
 
 class WrappedVerilogInternalPort:
