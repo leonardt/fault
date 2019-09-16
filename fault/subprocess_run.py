@@ -63,6 +63,9 @@ def make_cmd_str(args):
 
 
 def write_script(cmds, env, cwd, script):
+    # resolve path to working directory
+    cwd = Path(cwd).resolve()
+
     # determine file name
     file_name = (cwd / f'{script}').resolve()
     # write file contents
@@ -77,6 +80,8 @@ def write_script(cmds, env, cwd, script):
         # the command(s) to follow
         for key, val in env.items():
             f.write(f'export {key}="{val}"\n')
+        # change directory
+        f.write(f'cd {cwd}\n')
         # write the commands themselves in order
         for cmd in cmds:
             f.write(make_cmd_str(cmd) + '\n')

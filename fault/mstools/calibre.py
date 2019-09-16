@@ -175,31 +175,44 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
     os.makedirs(cwd, exist_ok=True)
     gen.write_to_file(Path(cwd) / rul_file)
 
-    # Step 1: LVS
-    phdb = []
-    phdb += ['calibre']
-    phdb += ['-64']
-    phdb += ['-xrc', '-phdb']
-    phdb += [f'{rul_file}']
+    # build up list of commands
+    cmds = []
 
-    # Step 2: PDB
+    # LVS
+    if schematic is None:
+        phdb = []
+        phdb += ['calibre']
+        phdb += ['-64']
+        phdb += ['-xrc', '-phdb']
+        phdb += [f'{rul_file}']
+        cmds.append(phdb)
+    else:
+        lvs = []
+        lvs += ['calibre']
+        lvs += ['-lvs']
+        lvs += ['-hier']
+        lvs += [f'{rul_file}']
+        cmds.append(lvs)
+
+    # PDB
     pdb = []
     pdb += ['calibre']
     pdb += ['-64']
     pdb += ['-xrc', '-pdb']
     pdb += [f'-{mode}']
     pdb += [f'{rul_file}']
+    cmds.append(pdb)
 
-    # Step 3: FMT
+    # FMT
     fmt = []
     fmt += ['calibre']
     fmt += ['-64']
     fmt += ['-xrc', '-fmt']
     fmt += [f'-{mode}']
     fmt += [f'{rul_file}']
+    cmds.append(fmt)
 
     # run the commands
-    cmds = [phdb, pdb, fmt]
     subprocess_run_batch(cmds, cwd=cwd, env=env, add_to_env=add_to_env,
                          disp_type=disp_type, script=script)
 
