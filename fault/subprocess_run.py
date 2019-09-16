@@ -67,13 +67,17 @@ def write_script(cmds, env, cwd, script):
     file_name = (cwd / f'{script}').resolve()
     # write file contents
     with open(file_name, 'w') as f:
-        header = []
-        header += ['#!/usr/bin/env']
-        header += ['-i']
+        # run in a clean environment
+        # ref: https://unix.stackexchange.com/questions/98829
+        f.write('''\
+#!/bin/sh
+[ -z "$CLEANED" ] && exec /bin/env -i CLEANED=1 /bin/sh "$0" "$@"
+''')
+        # export all variables that should be set for
+        # the command(s) to follow
         for key, val in env.items():
-            header += [f'{key}', f'{val}']
-        header += ['bash']
-        f.write(' '.join(header) + '\n')
+            f.write(f'export {key}="{val}"\n')
+        # write the commands themselves in order
         for cmd in cmds:
             f.write(make_cmd_str(cmd) + '\n')
     # set file permissions
