@@ -53,7 +53,11 @@ def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
 
     # use the first subcircuit defined if none is specified
     if subckt_name is None:
-        subckt_name = parser.get('subckts')[0]
+        subckts = parser.get('subckts')
+        if len(subckts) == 0:
+            raise Exception(f'Could not find any circuit definitions in {file_name}.')  # noqa
+        else:
+            subckt_name = parser.get('subckts')[0]
 
     # get the port list for the subcircuit
     search_name = f'{subckt_name}'.lower()
@@ -192,6 +196,11 @@ class SpiceTarget(Target):
         self.cap_loads = cap_loads if cap_loads is not None else {}
         self.disp_type = disp_type
 
+        # set list of signals to save
+        self.saves = set()
+        for port in self.circuit.interface.ports.keys():
+            self.saves.add(f'{port}')
+
     def run(self, actions):
         # compile the actions
         comp = self.compile_actions(actions)
@@ -265,7 +274,6 @@ class SpiceTarget(Target):
         pwc_dict = {}
         checks = []
         prints = []
-        saves = set()
 
         # expand buses as needed
         _actions = []
@@ -306,11 +314,8 @@ class SpiceTarget(Target):
                     t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
-                saves.add(f'{action.port.name}')
             elif isinstance(action, Print):
                 prints.append((t, action))
-                for port in action.ports:
-                    saves.add(f'{port.name}')
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -330,7 +335,7 @@ class SpiceTarget(Target):
             checks=checks,
             prints=prints,
             stop_time=t,
-            saves=saves
+            saves=self.saves
         )
 
     @staticmethod
@@ -383,11 +388,8 @@ class SpiceTarget(Target):
         for path in self.model_paths:
             parser = SimulatorNetlist(f'{path}')
             search_name = f'{self.circuit.name}'.lower()
-            ports = parser.get_subckt(search_name, detail='ports')
-            if ports is not None:
-                return ports
-            else:
-                continue
+            if search_name in parser.get('subckts'):
+                return parser.get_subckt(search_name, detail='ports')
         else:
             raise Exception(f'Could not find subcircuit {self.circuit.name}.')
 
@@ -431,9 +433,6 @@ class SpiceTarget(Target):
             netlist.voltage(vnet, '0', pwl=pwl_v)
             netlist.voltage(snet, '0', pwl=pwl_s)
 
-        # save signals that need to be saved
-        netlist.probe(*comp.saves)
-
         # specify initial conditions if needed
         ic = {}
         for key, val in self.ic.items():
@@ -463,6 +462,14 @@ class SpiceTarget(Target):
             netlist.end_control()
         elif self.simulator == 'hspice':
             netlist.options('csdf')
+
+        # save signals that need to be saved
+        if self.simulator == 'spectre':
+            netlist.probe(*comp.saves, wrap=True)
+        elif self.simulator == 'hspice':
+            netlist.probe(*comp.saves, wrap=True, antype='TRAN')
+        elif self.simulator == 'ngspice':
+            netlist.probe(*comp.saves, wrap=True)
 
         # end the netlist
         netlist.end_file()
@@ -545,7 +552,7 @@ class SpiceTarget(Target):
         cmd += self.flags
 
         # figure out where the PSF results will be stored
-        raw_file = raw_dir / 'timeSweep.tran.tran'
+        raw_file = raw_dir / 'transient1.tran.tran'
 
         # return command and corresponding raw file
         return cmd, raw_file
