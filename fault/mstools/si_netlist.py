@@ -56,29 +56,39 @@ def DeclareFromSchematic(lib, cell, *args, mode='digital', **kwargs):
 
 def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
                out=None, del_incl=True, env=None, add_to_env=None,
-               disp_type='on_error', script=None):
-    # set defaults
+               disp_type='on_error', script=None, netdir=None):
+    # set cwd
     if cwd is None:
         cwd = FaultConfig.cwd
-    if cds_lib is None:
-        cds_lib = FaultConfig.cds_lib
+    cwd = Path(cwd).resolve()
+    os.makedirs(cwd, exist_ok=True)
+
+    # set script name
     if script is None:
         script = f'netlist_{cell}.sh'
 
-    # path wrapping
-    cwd = Path(cwd).resolve()
+    # set netdir
+    if netdir is None:
+        netdir = cwd / f'{Path(script).stem}'
+    netdir = Path(netdir).resolve()
+    os.makedirs(netdir, exist_ok=True)
+
+    # set cds_lib
+    if cds_lib is None:
+        cds_lib = FaultConfig.cds_lib
 
     # set output location
     if out is None:
         out = cwd / f'{cell}.sp'
     out = Path(out).resolve()
 
-    # create the output directory if needed
+    # create the output directories if needed
     os.makedirs(cwd, exist_ok=True)
+    os.makedirs(netdir, exist_ok=True)
 
     # write si.env file
     si_env = si_env_tmpl.format(lib=lib, cell=cell, view=view)
-    with open(cwd / 'si.env', 'w') as f:
+    with open(netdir / 'si.env', 'w') as f:
         f.write(si_env)
 
     # run netlister
@@ -87,11 +97,11 @@ def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
     args += ['-cdslib', f'{cds_lib}']
     args += ['-batch']
     args += ['-command', 'netlist']
-    subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
+    subprocess_run(args, cwd=netdir, env=env, add_to_env=add_to_env,
                    disp_type=disp_type, script=script)
 
     # get netlist text and filter out include statements
-    with open(cwd / 'netlist', 'r') as f:
+    with open(netdir / 'netlist', 'r') as f:
         lines = f.readlines()
     text = ''
     for line in lines:

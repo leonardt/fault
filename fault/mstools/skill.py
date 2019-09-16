@@ -4,15 +4,18 @@ from fault.subprocess_run import subprocess_run
 from fault.user_cfg import FaultConfig
 
 
-def run_skill(skill_cmds, cds_lib=None, cwd=None, name=None,
-              disp_type='on_error', script=None):
+def run_skill(skill_cmds, cds_lib=None, cwd=None, disp_type='on_error',
+              script=None, name=None):
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
     if cds_lib is None:
         cds_lib = FaultConfig.cds_lib
     if name is None:
-        name = 'skill'
+        if script is None:
+            name = 'skill'
+        else:
+            name = Path(script).stem
 
     # determine where the script should be run
     run_dir = Path(cds_lib).resolve().parent
