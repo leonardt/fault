@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
-from fault.subprocess_run import subprocess_run
+
 from fault import FaultConfig
+from fault.subprocess_run import subprocess_run
 from .calibre import DeclareFromGDS
 
 

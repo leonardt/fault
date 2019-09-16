@@ -1,10 +1,12 @@
+import os.path
 import tempfile
+
 import magma as m
-import fault
 from hwtypes import BitVector
+
+import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.tester import Tester
-import os.path
 from .common import TestBasicCircuit, TestBasicClkCircuit
 
 

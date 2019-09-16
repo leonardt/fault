@@ -1,9 +1,10 @@
-import magma as m
-import mantle
-import fault
-from hwtypes import BitVector
-import pytest
 import shutil
+
+import magma as m
+import pytest
+from hwtypes import BitVector
+
+import fault
 
 
 @pytest.mark.skipif(not shutil.which("irun"), reason="irun not available")

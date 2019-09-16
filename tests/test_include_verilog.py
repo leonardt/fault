@@ -1,9 +1,11 @@
-import pathlib
-import tempfile
-import fault
-import magma as m
 import os
+import pathlib
 import shutil
+import tempfile
+
+import magma as m
+
+import fault
 
 
 def pytest_generate_tests(metafunc):

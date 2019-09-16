@@ -1,12 +1,13 @@
-from abc import abstractmethod
-import magma as m
-from fault.target import Target
-from pathlib import Path
-import fault.actions as actions
-from fault.util import flatten
 import os
+from abc import abstractmethod
+from pathlib import Path
+
+import magma as m
+
+import fault.actions as actions
 from fault.select_path import SelectPath
-from fault.verilog_utils import verilog_name
+from fault.target import Target
+from fault.util import flatten
 from .user_cfg import FaultConfig
 
 

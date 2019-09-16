@@ -1,12 +1,14 @@
 
-import typing as tp
-import random
 import itertools as it
-from hwtypes import AbstractBitVector, AbstractBit
-from hwtypes import BitVector, Bit, SIntVector
-from hwtypes import z3BitVector, z3Bit
+import typing as tp
 from collections.abc import Mapping
+
 import z3
+from hwtypes import AbstractBitVector, AbstractBit
+from hwtypes import BitVector, Bit
+from hwtypes import z3BitVector, z3Bit
+
+import random
 
 
 def constrained_random_bv(width, pred):

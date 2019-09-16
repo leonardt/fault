@@ -1,9 +1,11 @@
-from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
-from magma.simulator.python_simulator import PythonSimulator
-from hwtypes import BitVector, SIntVector, UIntVector, Bit
 from inspect import signature
 from itertools import product
+
 import pytest
+from hwtypes import BitVector, SIntVector, Bit
+from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
+from magma.simulator.python_simulator import PythonSimulator
+
 import fault
 
 

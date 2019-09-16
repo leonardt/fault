@@ -1,7 +1,7 @@
 from pathlib import Path
-from .skill import run_skill
-from fault.user_cfg import FaultConfig
 
+from fault.user_cfg import FaultConfig
+from .skill import run_skill
 
 GET_BBOX = '''\
 fp = outfile("{file_name}" "w")

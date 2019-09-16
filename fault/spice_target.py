@@ -1,19 +1,22 @@
 import os
-from pathlib import Path
-from copy import copy
-import magma as m
-import fault
-import hwtypes
-from fault.target import Target
-from fault.spice import SpiceNetlist
-from fault.result_parse import nut_parse, hspice_parse, psf_parse
-from fault.subprocess_run import subprocess_run
-from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay, Print
-from fault.select_path import SelectPath
-from fault.real_type import RealInOut
-from .user_cfg import FaultConfig
 import shutil
+from copy import copy
+from pathlib import Path
+
+import hwtypes
+import magma as m
+
+import fault
+from fault.actions import Poke, Expect, Delay, Print
+from fault.pwl import pwc_to_pwl
+from fault.real_type import RealInOut
+from fault.result_parse import nut_parse, hspice_parse, psf_parse
+from fault.select_path import SelectPath
+from fault.spice import SpiceNetlist
+from fault.subprocess_run import subprocess_run
+from fault.target import Target
+from .user_cfg import FaultConfig
+
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:

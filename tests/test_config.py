@@ -1,5 +1,6 @@
-import fault
 import os
+
+import fault
 import fault.config
 from .common import TestTupleCircuit
 

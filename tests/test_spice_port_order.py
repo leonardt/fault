@@ -1,4 +1,5 @@
 import magma as m
+
 import fault
 from fault.spice_target import SpiceTarget
 

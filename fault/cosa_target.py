@@ -1,10 +1,13 @@
-import magma as m
-from fault.verilog_target import VerilogTarget, verilog_name
-from pathlib import Path
-import fault.utils as utils
-import os
 import ast
+import os
+from pathlib import Path
+
 import astor
+import magma as m
+
+import fault.utils as utils
+from fault.verilog_target import VerilogTarget
+from fault.verilog_utils import verilog_name
 
 
 class BVReplacer(ast.NodeTransformer):

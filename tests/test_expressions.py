@@ -1,15 +1,15 @@
 """
 Test the construction of expression trees from Peeked values
 """
+import operator
 import shutil
 import tempfile
-import operator
+
+import hwtypes
+import magma as m
 import pytest
 
 import fault
-import magma as m
-import mantle
-import hwtypes
 
 
 def run_test(tester, target, simulator):

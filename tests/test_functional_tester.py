@@ -1,10 +1,12 @@
-import fault
-from hwtypes import BitVector
-from fault.functional_tester import FunctionalTester
+import tempfile
+
 import magma as m
 import mantle
-import tempfile
 import pytest
+from hwtypes import BitVector
+
+import fault
+from fault.functional_tester import FunctionalTester
 
 
 @pytest.mark.skip("Blocked by https://github.com/rdaly525/coreir/issues/627")

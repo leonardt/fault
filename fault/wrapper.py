@@ -1,7 +1,8 @@
-import fault
-from fault.select_path import SelectPath
-import fault.expression as expression
 import magma as m
+
+import fault
+import fault.expression as expression
+from fault.select_path import SelectPath
 
 
 class Wrapper:

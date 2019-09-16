@@ -1,11 +1,12 @@
-import fault
 import magma
 from hwtypes import BitVector, Bit
-from fault.value import AnyValue, UnknownValue, HiZ
-from fault.real_type import RealType, RealKind
-from fault.array import Array
-from fault.select_path import SelectPath
 from hwtypes.adt import Enum
+
+import fault
+from fault.array import Array
+from fault.real_type import RealType, RealKind
+from fault.select_path import SelectPath
+from fault.value import AnyValue, UnknownValue, HiZ
 
 
 def make_value(port, value):

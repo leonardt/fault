@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-from fault.subprocess_run import subprocess_run, subprocess_run_batch
+
+from fault import FaultConfig
 from fault.codegen import CodeGenerator
 from fault.spice_target import DeclareFromSpice
-from fault import FaultConfig
+from fault.subprocess_run import subprocess_run, subprocess_run_batch
 
 
 class RulGen(CodeGenerator):

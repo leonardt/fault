@@ -1,24 +1,26 @@
-import logging
+import inspect
+import os
+import tempfile
+from typing import List
+
 import magma as m
+
 import fault.actions as actions
-from fault.magma_simulator_target import MagmaSimulatorTarget
-from fault.vector_builder import VectorBuilder
-from fault.value_utils import make_value
-from fault.verilator_target import VerilatorTarget
-from fault.system_verilog_target import SystemVerilogTarget
-from fault.verilogams_target import VerilogAMSTarget
-from fault.spice_target import SpiceTarget
+import fault.expression as expression
+import logging
 from fault.actions import Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
-from fault.wrapper import CircuitWrapper, PortWrapper
-from fault.file import File
-from fault.select_path import SelectPath
-import fault.expression as expression
-import os
-import inspect
 from fault.config import get_test_dir
-from typing import List
-import tempfile
+from fault.file import File
+from fault.magma_simulator_target import MagmaSimulatorTarget
+from fault.select_path import SelectPath
+from fault.spice_target import SpiceTarget
+from fault.system_verilog_target import SystemVerilogTarget
+from fault.value_utils import make_value
+from fault.vector_builder import VectorBuilder
+from fault.verilator_target import VerilatorTarget
+from fault.verilogams_target import VerilogAMSTarget
+from fault.wrapper import CircuitWrapper, PortWrapper
 
 
 class Tester:

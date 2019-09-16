@@ -1,9 +1,11 @@
 import tempfile
-from fault import SymbolicTester
-from hwtypes import BitVector
-from pysmt.shortcuts import Solver
-from pysmt.exceptions import NoSolverAvailableError
+
 import pytest
+from hwtypes import BitVector
+from pysmt.exceptions import NoSolverAvailableError
+from pysmt.shortcuts import Solver
+
+from fault import SymbolicTester
 from .common import SimpleALU
 
 

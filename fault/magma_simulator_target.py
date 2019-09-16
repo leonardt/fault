@@ -1,7 +1,8 @@
-from hwtypes import BitVector
 import magma as m
-from magma.simulator.python_simulator import PythonSimulator
+from hwtypes import BitVector
 from magma.simulator.coreir_simulator import CoreIRSimulator
+from magma.simulator.python_simulator import PythonSimulator
+
 import fault.actions
 from fault.target import Target
 

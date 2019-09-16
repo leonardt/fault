@@ -1,6 +1,6 @@
 import fault
-from fault.common import get_renamed_port
 from fault import AnyValue
+from fault.common import get_renamed_port
 
 
 class FunctionalTester(fault.Tester):

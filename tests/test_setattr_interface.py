@@ -1,9 +1,11 @@
-import tempfile
-import fault
-from fault import Tester
 import shutil
-import random
+import tempfile
+
 import pytest
+
+import fault
+import random
+from fault import Tester
 from .common import (SimpleALU, TestNestedArraysCircuit,
                      TestDoubleNestedArraysCircuit, TestTupleCircuit,
                      AndCircuit, outlines)

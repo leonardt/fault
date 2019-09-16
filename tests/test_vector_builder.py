@@ -1,6 +1,7 @@
-import random
 from hwtypes import BitVector
+
 import fault
+import random
 from fault.actions import Poke, Expect, Eval, Step, Print
 from fault.array import Array
 from fault.vector_builder import VectorBuilder

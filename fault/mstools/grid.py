@@ -1,8 +1,10 @@
+from copy import deepcopy
 from pathlib import Path
+
 from fault import FaultConfig, si_netlist
 from fault.spice import SpiceNetlist
-from copy import deepcopy
 from .create import instantiate_into
+
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:

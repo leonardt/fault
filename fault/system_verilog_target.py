@@ -1,20 +1,22 @@
-from fault.verilog_target import VerilogTarget, verilog_name
-import magma as m
-from pathlib import Path
-import fault.actions as actions
-from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
-                     AbstractBitVector)
-import fault.value_utils as value_utils
-from fault.select_path import SelectPath
-from fault.wrapper import PortWrapper
-from fault.subprocess_run import subprocess_run
-import fault
-import fault.expression as expression
-from fault.real_type import RealKind
-from fault.user_cfg import FaultConfig
 import os
 from numbers import Number
+from pathlib import Path
 
+import magma as m
+from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
+                     AbstractBitVector)
+
+import fault
+import fault.actions as actions
+import fault.expression as expression
+import fault.value_utils as value_utils
+from fault.real_type import RealKind
+from fault.select_path import SelectPath
+from fault.subprocess_run import subprocess_run
+from fault.user_cfg import FaultConfig
+from fault.verilog_target import VerilogTarget
+from fault.verilog_utils import verilog_name
+from fault.wrapper import PortWrapper
 
 src_tpl = """\
 module {circuit_name}_tb;

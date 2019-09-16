@@ -1,8 +1,9 @@
-import fault
-from fault.random import random_bv, random_bit
 import magma as m
 from hwtypes import BitVector, Bit
+
+import fault
 from fault.common import get_renamed_port
+from fault.random import random_bv, random_bit
 
 
 def get_random_arr(name, port):

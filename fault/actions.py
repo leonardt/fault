@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+
 import fault
-from fault.select_path import SelectPath
 import fault.expression as expression
+from fault.select_path import SelectPath
 
 
 class Action(ABC):

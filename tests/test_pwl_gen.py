@@ -1,5 +1,6 @@
-from fault.pwl import pwc_to_pwl
 from math import isclose
+
+from fault.pwl import pwc_to_pwl
 
 
 def check_pwl_result(meas, expct):

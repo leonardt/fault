@@ -1,6 +1,7 @@
 from fault import FaultConfig
-from .label import get_labels
 from .bbox import get_bbox
+from .label import get_labels
+
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:

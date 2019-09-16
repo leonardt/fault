@@ -1,5 +1,5 @@
-import os
 from pathlib import Path
+
 from .select_path import SelectPath
 from .system_verilog_target import SystemVerilogTarget
 from .user_cfg import FaultConfig

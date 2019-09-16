@@ -1,22 +1,24 @@
-import fault
-from pathlib import Path
-import magma as m
-import fault.actions as actions
-from fault.actions import Poke, Eval
-from fault.verilog_target import VerilogTarget, verilog_name
-import fault.value_utils as value_utils
-from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
-                                   verilator_version)
-from fault.select_path import SelectPath
-from fault.wrapper import PortWrapper, InstanceWrapper
 import math
+from pathlib import Path
+
+import magma as m
 from hwtypes import BitVector, AbstractBitVectorMeta
+
+import fault
+import fault.actions as actions
+import fault.expression as expression
+import fault.utils as utils
+import fault.value_utils as value_utils
+from fault.actions import Poke, Eval
 from fault.random import constrained_random_bv
+from fault.select_path import SelectPath
 from fault.subprocess_run import subprocess_run
 from fault.user_cfg import FaultConfig
-import fault.utils as utils
-import fault.expression as expression
-
+from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
+                                   verilator_version)
+from fault.verilog_target import VerilogTarget
+from fault.verilog_utils import verilog_name
+from fault.wrapper import PortWrapper, InstanceWrapper
 
 # max_bits = 64 if platform.architecture()[0] == "64bit" else 32
 max_bits = 32

@@ -1,4 +1,5 @@
 import magma as m
+
 from fault import Tester
 
 

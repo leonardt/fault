@@ -1,9 +1,10 @@
-import pytest
 import magma as m
+import pytest
 from hwtypes import BitVector
+
 from fault.array import Array
-from fault.value_utils import make_value
 from fault.value import AnyValue, UnknownValue
+from fault.value_utils import make_value
 
 
 class Foo(m.Circuit):

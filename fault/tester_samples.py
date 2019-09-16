@@ -1,5 +1,6 @@
-import fault
 from abc import ABCMeta, abstractmethod
+
+import fault
 
 
 class GenericCellTester(fault.Tester, metaclass=ABCMeta):

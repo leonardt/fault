@@ -1,8 +1,9 @@
-from hwtypes import BitVector
 import magma
+from hwtypes import BitVector
+
 import fault.actions as actions
-from fault.value_utils import make_value
 from fault.value import AnyValue
+from fault.value_utils import make_value
 
 
 class VectorBuilder:

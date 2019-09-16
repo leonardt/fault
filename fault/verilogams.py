@@ -1,6 +1,7 @@
 import magma as m
-from fault.codegen import CodeGenerator
+
 from fault import ElectIn, ElectOut, RealIn, RealOut
+from fault.codegen import CodeGenerator
 
 
 class VAMSPort():

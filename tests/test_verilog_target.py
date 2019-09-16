@@ -1,12 +1,14 @@
+import shutil
 import tempfile
+
 import magma as m
-import fault
+import pytest
 from hwtypes import BitVector
+
+import fault
 import random
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.random import random_bv
-import pytest
-import shutil
 from .common import (TestBasicCircuit, TestPeekCircuit,
                      TestDoubleNestedArraysCircuit, TestBasicClkCircuit,
                      TestNestedArraysCircuit, TestTupleCircuit,

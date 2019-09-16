@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-from fault.subprocess_run import subprocess_run
-from fault.spice_target import DeclareFromSpice
-from fault import FaultConfig
 
+from fault import FaultConfig
+from fault.spice_target import DeclareFromSpice
+from fault.subprocess_run import subprocess_run
 
 si_env_tmpl = '''\
 simLibName = "{lib}"

@@ -2,12 +2,14 @@
 Tests support for selecting different implementations of a DUT (or
 subcomponents of a DUT)
 """
-import magma as m
-import mantle
-import fault
-import hwtypes as ht
 import os
 import tempfile
+
+import hwtypes as ht
+import magma as m
+import mantle
+
+import fault
 
 
 def test_top():

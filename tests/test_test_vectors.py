@@ -1,8 +1,9 @@
 from itertools import product
+
+import magma as m
 import pytest
 from hwtypes import Bit
-import magma as m
-import mantle
+
 from fault.test_vectors import (generate_function_test_vectors,
                                 generate_simulator_test_vectors)
 from fault.value import AnyValue

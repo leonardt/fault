@@ -1,6 +1,8 @@
 from pathlib import Path
-import fault
+
 import magma as m
+
+import fault
 from .common import pytest_sim_params
 
 

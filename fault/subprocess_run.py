@@ -1,9 +1,9 @@
-import shlex
 import os
-from subprocess import Popen, PIPE, CompletedProcess
-from fault import FaultConfig
+import shlex
 from pathlib import Path
+from subprocess import Popen, PIPE, CompletedProcess
 
+from fault import FaultConfig
 
 # Terminal formatting codes
 MAGENTA = '\x1b[35m'
@@ -62,7 +62,7 @@ def subprocess_run_batch(cmds, *args, cwd=None, name=None, **kwargs):
     # make the directory if needed
     if cwd is None:
         cwd = FaultConfig.cwd
-    cwd = Path()
+    cwd = Path(cwd).resolve()
     os.makedirs(cwd, exist_ok=True)
 
     for cmd in cmds:

@@ -1,13 +1,15 @@
-import magma as m
-import random
-from hwtypes import BitVector
-import hwtypes
-import fault
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek
-import fault.actions as actions
-import tempfile
 import os
+import tempfile
+
+import hwtypes
+import magma as m
 import pytest
+from hwtypes import BitVector
+
+import fault
+import fault.actions as actions
+import random
+from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
                      TestBasicClkCircuit, TestNestedArraysCircuit,
                      TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,

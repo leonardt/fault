@@ -1,7 +1,7 @@
 from pathlib import Path
-from .skill import run_skill
-from fault.user_cfg import FaultConfig
 
+from fault.user_cfg import FaultConfig
+from .skill import run_skill
 
 CREATE_LABEL = '''\
 dbCreateLabel({cell_view} list("{layer}" "{purpose}") list({x} {y}) "{text}" "{justify}" "{orient}" "{font}" {height})'''  # noqa

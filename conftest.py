@@ -1,6 +1,7 @@
+import magma
 import pytest
 from magma import clear_cachedFunctions
-import magma
+
 import logging
 
 collect_ignore = ["src"]  # pip folder that contains dependencies like magma

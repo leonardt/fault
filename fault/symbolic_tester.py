@@ -1,8 +1,8 @@
 import fault
+import fault.actions as actions
+from fault.cosa_target import CoSATarget
 from fault.tester import Tester
 from fault.wrapper import Wrapper, PortWrapper, InstanceWrapper
-from fault.cosa_target import CoSATarget
-import fault.actions as actions
 
 
 class SymbolicWrapper(Wrapper):
