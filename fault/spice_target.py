@@ -198,8 +198,12 @@ class SpiceTarget(Target):
 
         # set list of signals to save
         self.saves = set()
-        for port in self.circuit.interface.ports.keys():
-            self.saves.add(f'{port}')
+        for name, port in self.circuit.interface.ports.items():
+            if isinstance(port, m.BitsType):
+                for k in range(len(port)):
+                    self.saves.add(self.bit_from_bus(name, k))
+            else:
+                self.saves.add(f'{name}')
 
     def run(self, actions):
         # compile the actions
@@ -219,7 +223,8 @@ class SpiceTarget(Target):
             raise NotImplementedError(self.simulator)
 
         # run the simulation commands
-        subprocess_run(cmd, cwd=self.directory, env=self.sim_env)
+        subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
+                       script=f'run_spice_{self.simulator}.sh')
 
         # process the results
         if self.simulator in {'ngspice'}:

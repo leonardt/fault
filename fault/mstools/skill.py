@@ -5,7 +5,7 @@ from fault.user_cfg import FaultConfig
 
 
 def run_skill(skill_cmds, cds_lib=None, cwd=None, name=None,
-              disp_type='on_error'):
+              disp_type='on_error', script=None):
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
@@ -27,4 +27,5 @@ def run_skill(skill_cmds, cds_lib=None, cwd=None, name=None,
     args = []
     args += ['dbAccess']
     args += ['-load', str(Path(f.name).resolve())]
-    subprocess_run(args, cwd=run_dir, err_str='*Error*', disp_type=disp_type)
+    subprocess_run(args, cwd=run_dir, err_str='*Error*', disp_type=disp_type,
+                   script=script)

@@ -54,7 +54,7 @@ def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
     # run the command
     launch_dir = Path(cds_lib).resolve().parent
     subprocess_run(args, cwd=launch_dir, env=env, add_to_env=add_to_env,
-                   disp_type=disp_type)
+                   disp_type=disp_type, script=f'strmout_{lib}_{cell}.sh')
 
     # return the output location
     return out

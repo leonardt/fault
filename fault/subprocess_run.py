@@ -58,20 +58,72 @@ class PrintDisplay:
         return retval
 
 
-def subprocess_run_batch(cmds, *args, cwd=None, name=None, **kwargs):
-    # make the directory if needed
+def make_cmd_str(args):
+    return ' '.join(shlex.quote(arg) for arg in args)
+
+
+def write_script(cmds, env, cwd, script):
+    # determine file name
+    file_name = (cwd / f'{script}').resolve()
+    # write file contents
+    with open(file_name, 'w') as f:
+        header = []
+        header += ['#!/usr/bin/env']
+        header += ['-i']
+        for key, val in env.items():
+            header += [f'{key}', f'{val}']
+        header += ['bash']
+        f.write(' '.join(header) + '\n')
+        for cmd in cmds:
+            f.write(make_cmd_str(cmd) + '\n')
+    # set file permissions
+    file_name.chmod(0o755)
+
+
+def resolve_env(env=None, use_fault_cfg=True, add_to_env=None):
+    # if the user provided an environment, just use that
+    if env is not None:
+        return env
+
+    # otherwise either use the environment from FaultConfig
+    # or a copy of the current environment
+    if use_fault_cfg:
+        env = FaultConfig.env
+    else:
+        env = os.environ.copy()
+
+    # add more environment variables if desired
+    if add_to_env is not None:
+        env.update(**add_to_env)
+
+    # return the environment
+    return env
+
+
+def subprocess_run_batch(cmds, cwd=None, env=None, use_fault_cfg=True,
+                         add_to_env=None, script=None, **kwargs):
+    # make the working directory if needed
     if cwd is None:
         cwd = FaultConfig.cwd
     cwd = Path(cwd).resolve()
     os.makedirs(cwd, exist_ok=True)
 
-    for cmd in cmds:
-        subprocess_run(cmd, *args, cwd=cwd, name=name, **kwargs)
+    # determine the environment to use
+    env = resolve_env(env=env, use_fault_cfg=use_fault_cfg,
+                      add_to_env=add_to_env)
+
+    # write script if desired
+    if script is not None:
+        write_script(cmds=cmds, env=env, cwd=cwd, script=script)
+
+    # run the commands in sequence and return list of CompletedProcess objects
+    return [subprocess_run(cmd, cwd=cwd, env=env, script=None, **kwargs)
+            for cmd in cmds]
 
 
 def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
                    chk_ret_code=True, shell=False, use_fault_cfg=True,
-                   add_to_env=None, name=None):
+                   add_to_env=None, script=None):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
     # come in, looks for errors in STDOUT and STDERR (raising an exception if
     # one is found), and can check the return code from the subprocess
@@ -107,17 +159,23 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
     # add_to_env: Dictionary of environment variables to add to the
     #             "env" (which is either user-provided or set using
     #             the fault defaults)
+    # script: Name of the script to be generated.  if "None", don't generate
+    #         a script.  The script generation capability is useful for
+    #         debugging commands.
 
     # setup the environment
-    if env is None and use_fault_cfg:
-        env = FaultConfig.env
-    if add_to_env is not None:
-        env.update(**add_to_env)
+    env = resolve_env(env=env, use_fault_cfg=use_fault_cfg,
+                      add_to_env=add_to_env)
 
     # make the directory if needed
     if cwd is None:
         cwd = FaultConfig.cwd
+    cwd = Path(cwd).resolve()
     os.makedirs(cwd, exist_ok=True)
+
+    # write script if desired
+    if script is not None:
+        write_script(cmds=[args], env=env, cwd=cwd, script=script)
 
     # make sure all arguments have been converted to strings
     args = [f'{arg}' for arg in args]
@@ -127,7 +185,7 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
 
     # print out the command in a format that can be copy-pasted
     # directly into a terminal (i.e., with proper quoting of arguments)
-    cmd_str = ' '.join(shlex.quote(arg) for arg in args)
+    cmd_str = make_cmd_str(args)
     display.print(CYAN + BRIGHT + 'Running command: ' + RESET_ALL + cmd_str)
 
     # combine arguments into a string if needed for shell=True

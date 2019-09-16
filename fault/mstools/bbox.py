@@ -41,12 +41,14 @@ class BBox:
         return self.ury - self.lly
 
 
-def get_bbox(lib, cell, view, cds_lib=None, cwd=None):
+def get_bbox(lib, cell, view, cds_lib=None, cwd=None, script=None):
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
     if cds_lib is None:
         cds_lib = FaultConfig.cds_lib
+    if script is None:
+        script = f'bbox_{cell}'
 
     # run skill commands to get the bounding box
     lfile = Path(cwd).resolve() / 'bbox.txt'
@@ -56,7 +58,7 @@ def get_bbox(lib, cell, view, cds_lib=None, cwd=None):
         cell=cell,
         view=view
     )
-    run_skill(skill_cmds, cds_lib=cds_lib)
+    run_skill(skill_cmds, cds_lib=cds_lib, script=script)
 
     # read bounding box results
     with open(lfile, 'r') as f:

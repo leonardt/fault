@@ -63,7 +63,7 @@ class RulGen(CodeGenerator):
 def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', source_system='SPICE',
         source_primary=None, layout_primary=None, rul_file='cal_lvs.rul',
-        disp_type='on_error'):
+        disp_type='on_error', script=None):
     # resolve paths
     layout = Path(layout).resolve()
     schematic = Path(schematic).resolve()
@@ -77,6 +77,8 @@ def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
         source_primary = schematic.stem
     if layout_primary is None:
         layout_primary = layout.stem
+    if script is None:
+        f'lvs_{layout_primary}.sh'
 
     # generate the command file
     gen = RulGen()
@@ -96,7 +98,8 @@ def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
     args += ['-hier']
     args += [f'{rul_file}']
     subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
-                   err_str='INCORRECT', disp_type=disp_type)
+                   err_str='INCORRECT', disp_type=disp_type,
+                   script=script)
 
 
 def DeclareFromGDS(layout, *args, layout_primary=None, mode='digital',
@@ -121,7 +124,8 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', layout_primary=None,
         svdb_directory='svdb', out=None, netlist_format='HSPICE',
         mode='c', rul_file='cal_xrc.rul', schematic=None,
-        source_system='SPICE', source_primary=None, disp_type='on_error'):
+        source_system='SPICE', source_primary=None, disp_type='on_error',
+        script=None):
     # TODO: fix behavior when a schematic is specified
 
     # resolve paths
@@ -145,6 +149,8 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
         source_primary = schematic.stem
     if out is None:
         out = cwd / f'{layout.stem}.sp'
+    if script is None:
+        script = f'xrc_{layout_primary}.sh'
 
     # make sure that output is a Path
     out = Path(out).resolve()
@@ -195,7 +201,7 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
     # run the commands
     cmds = [phdb, pdb, fmt]
     subprocess_run_batch(cmds, cwd=cwd, env=env, add_to_env=add_to_env,
-                         disp_type=disp_type)
+                         disp_type=disp_type, script=script)
 
     # return the location of the netlist (as a Path)
     return out

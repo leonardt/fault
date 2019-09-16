@@ -56,12 +56,14 @@ def DeclareFromSchematic(lib, cell, *args, mode='digital', **kwargs):
 
 def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
                out=None, del_incl=True, env=None, add_to_env=None,
-               disp_type='on_error'):
+               disp_type='on_error', script=None):
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
     if cds_lib is None:
         cds_lib = FaultConfig.cds_lib
+    if script is None:
+        script = f'netlist_{cell}.sh'
 
     # path wrapping
     cwd = Path(cwd).resolve()
@@ -86,7 +88,7 @@ def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
     args += ['-batch']
     args += ['-command', 'netlist']
     subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
-                   disp_type=disp_type)
+                   disp_type=disp_type, script=script)
 
     # get netlist text and filter out include statements
     with open(cwd / 'netlist', 'r') as f:

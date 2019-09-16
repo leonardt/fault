@@ -39,15 +39,19 @@ def var_name(x):
     return f'{x.lib}_{x.cell}_{x.layout_view}'
 
 
-def instantiate_into(parent, instances=None, labels=None):
-    # open DB
-    cmds = []
-    cmds += [open_cell_view(parent, 'w')]
-    # instantiate cells, opening them as necessary
+def instantiate_into(parent, instances=None, labels=None,
+                     script=None):
+    # set defaults
     if instances is None:
         instances = []
     if labels is None:
         labels = []
+    if script is None:
+        script = f'gen_{parent.cell}.sh'
+    # open DB
+    cmds = []
+    cmds += [open_cell_view(parent, 'w')]
+    # instantiate cells, opening them as necessary
     names = set()
     for inst in instances:
         if var_name(inst) not in names:
@@ -59,4 +63,5 @@ def instantiate_into(parent, instances=None, labels=None):
     # save DB
     cmds += [save_cell(parent)]
     # run the skill code
-    run_skill('\n'.join(cmds), cds_lib=parent.cds_lib)
+    run_skill('\n'.join(cmds), cds_lib=parent.cds_lib,
+              script=script)

@@ -12,7 +12,7 @@ import fault.value_utils as value_utils
 from fault.actions import Poke, Eval
 from fault.random import constrained_random_bv
 from fault.select_path import SelectPath
-from fault.subprocess_run import subprocess_run
+from fault.subprocess_run import subprocess_run, subprocess_run_batch
 from fault.user_cfg import FaultConfig
 from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
                                    verilator_version)
@@ -125,7 +125,8 @@ class VerilatorTarget(VerilogTarget):
             )
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
-                           disp_type=self.disp_type)
+                           disp_type=self.disp_type,
+                           script='verilator_compile.sh')
 
         # Initialize variables
         self.debug_includes = set()
@@ -521,18 +522,20 @@ for ({loop_expr}) {{
         with open(driver_file, "w") as f:
             f.write(src)
 
-        # Run makefile created by verilator
-        make_cmd = verilator_make_cmd(self.circuit_name)
-        subprocess_run(make_cmd, cwd=self.directory, disp_type=self.disp_type)
+        # Run makefile created by verilator, then run the executable created by
+        # verilator
+        cmds = []
+        cmds += [verilator_make_cmd(self.circuit_name)]
+        cmds += [[f'./obj_dir/V{self.circuit_name}']]
+        result = subprocess_run_batch(cmds,
+                                      cwd=self.directory,
+                                      disp_type=self.disp_type,
+                                      script='verilator_run.sh')
 
-        # Run the executable created by verilator and write the standard
-        # output to a logfile for later review or processing
-        exe_cmd = [f'./obj_dir/V{self.circuit_name}']
-        result = subprocess_run(exe_cmd, cwd=self.directory,
-                                disp_type=self.disp_type)
+        # write the standard output to a logfile
         log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
         with open(log, 'w') as f:
-            f.write(result.stdout)
+            f.write(result[1].stdout)
 
     def add_assumptions(self, circuit, actions, i):
         main_body = ""

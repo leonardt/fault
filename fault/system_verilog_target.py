@@ -579,7 +579,8 @@ end
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
             subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
-                           err_str=sim_err_str, disp_type=self.disp_type)
+                           err_str=sim_err_str, disp_type=self.disp_type,
+                           script=f'run_sv_{self.simulator}.sh')
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file

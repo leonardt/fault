@@ -67,12 +67,15 @@ class LayoutLabel:
                            height=height)
 
 
-def get_labels(lib, cell, view, cds_lib=None, cwd=None):
+def get_labels(lib, cell, view, cds_lib=None, cwd=None,
+               script=None):
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
     if cds_lib is None:
         cds_lib = FaultConfig.cds_lib
+    if script is None:
+        script = f'labels_{cell}.sh'
 
     # run skill code to get label locations
     lfile = Path(cwd).resolve() / 'labels.txt'
@@ -82,7 +85,7 @@ def get_labels(lib, cell, view, cds_lib=None, cwd=None):
         cell=cell,
         view=view
     )
-    run_skill(skill_cmds, cds_lib=cds_lib, cwd=cwd)
+    run_skill(skill_cmds, cds_lib=cds_lib, cwd=cwd, script=script)
 
     # parse results
     labels = []
