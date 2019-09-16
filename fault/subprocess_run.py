@@ -1,8 +1,8 @@
 import shlex
 import os
 from subprocess import Popen, PIPE, CompletedProcess
-from collections import Iterable
 from fault import FaultConfig
+from pathlib import Path
 
 
 # Terminal formatting codes
@@ -58,9 +58,20 @@ class PrintDisplay:
         return retval
 
 
+def subprocess_run_batch(cmds, *args, cwd=None, name=None, **kwargs):
+    # make the directory if needed
+    if cwd is None:
+        cwd = FaultConfig.cwd
+    cwd = Path()
+    os.makedirs(cwd, exist_ok=True)
+
+    for cmd in cmds:
+        subprocess_run(cmd, *args, cwd=cwd, name=name, **kwargs)
+
+
 def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
                    chk_ret_code=True, shell=False, use_fault_cfg=True,
-                   add_to_env=None):
+                   add_to_env=None, name=None):
     # "Deluxe" version of subprocess.run that can display STDOUT lines as they
     # come in, looks for errors in STDOUT and STDERR (raising an exception if
     # one is found), and can check the return code from the subprocess
@@ -76,9 +87,6 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
     #
     # args: List of arguments, with the same meaning as subprocess.run.
     #       Unlike subprocess.run, however, this should always be a list.
-    #       It is also allowed to pass a list of lists, in which case the
-    #       the arguments are interpeted as a sequence of commands to be
-    #       run via subprocess_run.
     # cwd: Directory in which to run the subprocess.
     # env: Dictionary representing the environment variables to be set
     #      while running the subprocess.  In None, defaults are determined
@@ -99,23 +107,6 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
     # add_to_env: Dictionary of environment variables to add to the
     #             "env" (which is either user-provided or set using
     #             the fault defaults)
-
-    # if 
-    args = list(args)
-    if isinstance(args[0], Iterable) and not 
-        if isinstance(args, str):
-            # single command can be passed as a string
-            args = [args]
-        elif isinstance(args, Iterable):
-            # args might be a generator so it is first converted
-            # to a list to allow indexing
-            args = list(args)
-            if isinstance(args[0], str):
-                pass
-            elif isinstance(args[0], Iterable)
-        if isinstance(args, Iterable) and not isinstance(args, str):
-            # args 
-            args = list(args)
 
     # setup the environment
     if env is None and use_fault_cfg:

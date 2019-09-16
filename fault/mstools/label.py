@@ -1,6 +1,6 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
 from .skill import run_skill
+from fault.user_cfg import FaultConfig
 
 
 CREATE_LABEL = '''\
@@ -67,18 +67,28 @@ class LayoutLabel:
                            height=height)
 
 
-def get_labels(lib, cell, view, cds_lib):
+def get_labels(lib, cell, view, cds_lib=None, cwd=None):
+    # set defaults
+    if cwd is None:
+        cwd = FaultConfig.cwd
+    if cds_lib is None:
+        cds_lib = FaultConfig.cds_lib
+
+    # run skill code to get label locations
+    lfile = Path(cwd).resolve() / 'labels.txt'
+    skill_cmds = GET_LABELS.format(
+        file_name=lfile,
+        lib=lib,
+        cell=cell,
+        view=view
+    )
+    run_skill(skill_cmds, cds_lib=cds_lib, cwd=cwd)
+
+    # parse results
     labels = []
-    with TemporaryDirectory(dir='.') as d:
-        lfile = Path(d).resolve() / 'labels.txt'
-        skill_cmds = GET_LABELS.format(
-            file_name=lfile,
-            lib=lib,
-            cell=cell,
-            view=view
-        )
-        run_skill(skill_cmds, cds_lib=cds_lib)
-        with open(lfile, 'r') as f:
-            for line in f:
-                labels += [LayoutLabel.from_string(line)]
+    with open(lfile, 'r') as f:
+        for line in f:
+            labels += [LayoutLabel.from_string(line)]
+
+    # return list of labels
     return labels

@@ -11,7 +11,9 @@ from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
 from fault.select_path import SelectPath
+from fault.real_type import RealInOut
 from .user_cfg import FaultConfig
+import shutil
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:
@@ -40,9 +42,41 @@ class CompiledSpiceActions:
         self.stop_time = stop_time
         self.saves = saves
 
+def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
+    # parse the netlist
+    spice_model_path = Path(file_name).resolve()
+    parser = SimulatorNetlist(f'{spice_model_path}')
+
+    # use the first subcircuit defined if none is specified
+    if subckt_name is None:
+        subckt_name = parser.get('subckts')[0]
+
+    # get the port list for the subcircuit
+    search_name = f'{subckt_name}'.lower()
+    ports = parser.get_subckt(search_name, detail='ports')
+
+    # declare the circuit and return it
+    args = []
+    args += [subckt_name]
+    for port in ports:
+        args += [f'{port}']
+        if mode == 'digital':
+            args += [m.BitInOut]
+        elif mode == 'analog':
+            args += [RealInOut]
+        else:
+            raise ValueError(f'Unknown mode: {mode}')
+
+    # Declare spice circuit and specify source location
+    circuit = m.DeclareCircuit(*args)
+    circuit.spice_model_path = spice_model_path
+
+    # Return the circuit
+    return circuit
+
 
 class SpiceTarget(Target):
-    def __init__(self, circuit, directory=None, simulator='ngspice',
+    def __init__(self, circuit, directory=None, simulator=None,
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
@@ -108,14 +142,21 @@ class SpiceTarget(Target):
         # set defaults
         if directory is None:
             directory = FaultConfig.cwd
+        if simulator is None:
+            for sim_option in ['spectre', 'hspice', 'ngspice']:
+                if shutil.which(sim_option):
+                    simulator = sim_option
+                    break
 
         # sanity check
-        if simulator not in {'ngspice', 'spectre', 'hspice'}:
+        if simulator not in {'spectre', 'hspice', 'ngspice'}:
             raise ValueError(f'Unsupported simulator {simulator}')
 
         # set model_paths
         if model_paths is None:
             model_paths = []
+        if hasattr(circuit, 'spice_model_path'):
+            model_paths = [f'{circuit.spice_model_path}'] + model_paths
         if simulator == 'ngspice':
             model_paths = FaultConfig.ngspice_models + model_paths
         elif simulator == 'hspice':

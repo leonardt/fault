@@ -1,10 +1,6 @@
-from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
-from fault import FaultConfig, si_netlist
-from fault.spice import SpiceNetlist
+from fault import FaultConfig
 from .label import get_labels
 from .bbox import get_bbox
-from copy import deepcopy
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:

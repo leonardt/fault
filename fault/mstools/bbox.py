@@ -1,6 +1,6 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
 from .skill import run_skill
+from fault.user_cfg import FaultConfig
 
 
 GET_BBOX = '''\
@@ -41,20 +41,29 @@ class BBox:
         return self.ury - self.lly
 
 
-def get_bbox(lib, cell, view, cds_lib):
-    with TemporaryDirectory(dir='.') as d:
-        lfile = Path(d).resolve() / 'bbox.txt'
-        skill_cmds = GET_BBOX.format(
-            file_name=lfile,
-            lib=lib,
-            cell=cell,
-            view=view
-        )
-        run_skill(skill_cmds, cds_lib=cds_lib)
-        with open(lfile, 'r') as f:
-            text = f.readlines()[0]
+def get_bbox(lib, cell, view, cds_lib=None, cwd=None):
+    # set defaults
+    if cwd is None:
+        cwd = FaultConfig.cwd
+    if cds_lib is None:
+        cds_lib = FaultConfig.cds_lib
 
+    # run skill commands to get the bounding box
+    lfile = Path(cwd).resolve() / 'bbox.txt'
+    skill_cmds = GET_BBOX.format(
+        file_name=lfile,
+        lib=lib,
+        cell=cell,
+        view=view
+    )
+    run_skill(skill_cmds, cds_lib=cds_lib)
+
+    # read bounding box results
+    with open(lfile, 'r') as f:
+        text = f.readlines()[0]
     vals = [float(tok) for tok in text.split()]
+
+    # return bounding box object
     return BBox(
         llx=vals[0],
         lly=vals[1],

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from fault.subprocess_run import subprocess_run
+from fault.subprocess_run import subprocess_run, subprocess_run_batch
 from fault.codegen import CodeGenerator
 from fault import FaultConfig
 
@@ -140,35 +140,29 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
     gen.write_to_file(Path(cwd) / rul_file)
 
     # Step 1: LVS
-    def phdb():
-        args = []
-        args += ['calibre']
-        args += ['-64']
-        args += ['-xrc', '-phdb']
-        args += [f'{rul_file}']
-        return args
+    phdb = []
+    phdb += ['calibre']
+    phdb += ['-64']
+    phdb += ['-xrc', '-phdb']
+    phdb += [f'{rul_file}']
 
     # Step 2: PDB
-    def pdb():
-        args = []
-        args += ['calibre']
-        args += ['-64']
-        args += ['-xrc', '-pdb']
-        args += [f'-{mode}']
-        args += [f'{rul_file}']
-        return args
+    pdb = []
+    pdb += ['calibre']
+    pdb += ['-64']
+    pdb += ['-xrc', '-pdb']
+    pdb += [f'-{mode}']
+    pdb += [f'{rul_file}']
 
     # Step 3: FMT
-    def fmt():
-        args = []
-        args += ['calibre']
-        args += ['-64']
-        args += ['-xrc', '-fmt']
-        args += [f'-{mode}']
-        args += [f'{rul_file}']
-        return args
+    fmt = []
+    fmt += ['calibre']
+    fmt += ['-64']
+    fmt += ['-xrc', '-fmt']
+    fmt += [f'-{mode}']
+    fmt += [f'{rul_file}']
 
     # run the commands
-    args = [phdb(), pdb(), fmt()]
-    subprocess_run(args, cwd=cwd, env=env, add_to_env=add_to_env,
-                   disp_type=disp_type)
+    cmds = [phdb, pdb, fmt]
+    subprocess_run_batch(cmds, cwd=cwd, env=env, add_to_env=add_to_env,
+                         disp_type=disp_type)

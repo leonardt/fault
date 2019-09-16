@@ -1,5 +1,4 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
 from fault import FaultConfig, si_netlist
 from fault.spice import SpiceNetlist
 from copy import deepcopy

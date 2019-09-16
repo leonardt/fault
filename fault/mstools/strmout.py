@@ -6,26 +6,24 @@ from fault import FaultConfig
 
 def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
             env=None, add_to_env=None, log='strmOut.log', no_warn=None,
-            disp_mode='on_error'):
+            disp_type='on_error'):
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
-
-    # resolve paths
-    cwd = Path(cwd).resolve()
-
-    # set defaults
     if cds_lib is None:
         cds_lib = FaultConfig.cds_lib
-    if out is None:
-        out = cwd / f'{cell}.gds'
     if no_warn is None:
         # TODO: What do these numbers correspond to?  They're set
         # automatically by the CAD tool GUI.
         no_warn = [156, 246, 269, 270]
 
-    # create the output directory if needed
+    # determine full path to working directory and create it if needed
+    cwd = Path(cwd).resolve()
     os.makedirs(cwd, exist_ok=True)
+
+    # set more defaults...
+    if out is None:
+        out = cwd / f'{cell}.gds'
 
     # construct the command
     args = []
@@ -42,4 +40,4 @@ def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
     # run the command
     launch_dir = Path(cds_lib).resolve().parent
     subprocess_run(args, cwd=launch_dir, env=env, add_to_env=add_to_env,
-                   disp_mode=disp_mode)
+                   disp_type=disp_type)

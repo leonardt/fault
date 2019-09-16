@@ -1,20 +1,16 @@
-import magma as m
 import fault
-from pathlib import Path
 
 # declare circuit
-dut = m.DeclareCircuit('myinv', 'in_', m.BitIn, 'out', m.BitOut,
-                       'vdd', m.BitIn, 'vss', m.BitIn)
+dut = fault.DeclareFromSpice('myinv.sp')
 
 # define the test
-t = fault.Tester(dut)
-t.poke(dut.vss, False)
-t.poke(dut.vdd, True)
-t.poke(dut.in_, False)
-t.expect(dut.out, True)
-t.poke(dut.in_, True)
-t.expect(dut.out, False)
+t = fault.Tester(dut, expect_strict_default=True)
+t.poke(dut.vss, 0)
+t.poke(dut.vdd, 1)
+t.poke(dut.in_, 0)
+t.expect(dut.out, 1)
+t.poke(dut.in_, 1)
+t.expect(dut.out, 0)
 
 # run the test
-t.compile_and_run(target='spice', simulator='ngspice', vsup=1.5,
-                  model_paths=[Path('myinv.sp').resolve()])
+t.compile_and_run(target='spice', vsup=1.5)
