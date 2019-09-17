@@ -61,19 +61,19 @@ class CSDFData:
 
 def nut_parse(nut_file, time='time'):
     data = decida.Data.Data()
-    data.read_nutmeg(nut_file)
+    data.read_nutmeg(f'{nut_file}')
     return data_to_interp(data=data, time=time)
 
 
 def psf_parse(psf_file, time='time'):
     data = decida.Data.Data()
-    data.read_psf(psf_file)
+    data.read_psf(f'{psf_file}')
     return data_to_interp(data=data, time=time)
 
 
 def hspice_parse(tr0_file, time='time'):
     data = CSDFData()
-    data.read(tr0_file)
+    data.read(f'{tr0_file}')
     return data_to_interp(data=data, time=time)
 
 

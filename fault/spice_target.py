@@ -83,9 +83,9 @@ def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
 
 
 MONTE_CARLO_SPECTRE = '''\
-mc1 montecarlo variations={variations} savefamilyplots=yes numruns={numruns} {
+mc1 montecarlo variations={variations} savefamilyplots=yes numruns={numruns} {{
     tran1 tran start=0 stop={stop}
-}
+}}
 '''
 
 
@@ -584,8 +584,8 @@ class SpiceTarget(Target):
             raw_files = [raw_dir / 'transient1.tran.tran']
         else:
             raw_files = []
-            for k in range(self.mc_runs):
-                raw_file = f'transient1-{k}_transient1.tran.tran'
+            for k in range(0, self.mc_runs + 1):
+                raw_file = 'transient1-{:03d}_transient1.tran.tran'.format(k)
                 raw_files.append(raw_dir / raw_file)
 
         # return command and corresponding raw file
