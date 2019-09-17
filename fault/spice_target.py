@@ -23,17 +23,16 @@ except ModuleNotFoundError:
     print('Failed to import DeCiDa.  SPICE capabilities will be limited.')
 
 
-# define a custom error for A2D conversion to make it easier
-# to catch this specific issue (for example, in adapting
-# tests based on the previous test result)
-class A2DError(Exception):
+# Custom exceptions to make it easier to catch specific errors
+class FaultError(Exception):
     pass
 
 
-# similar idea for ExpectError -- make it easier to catch
-# exceptions due to mismatch in expected value and actual
-# value, rather than raising a generic AssertionError
-class ExpectError(Exception):
+class A2DError(FaultError):
+    pass
+
+
+class ExpectError(FaultError):
     pass
 
 
@@ -83,13 +82,20 @@ def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
     return circuit
 
 
+MONTE_CARLO_SPECTRE = '''\
+mc1 montecarlo variations={variations} savefamilyplots=yes numruns={numruns} {
+    tran1 tran start=0 stop={stop}
+}
+'''
+
+
 class SpiceTarget(Target):
     def __init__(self, circuit, directory=None, simulator=None,
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None, cap_loads=None,
-                 disp_type='on_error'):
+                 disp_type='on_error', mc_runs=0, mc_variations='all'):
         """
         circuit: a magma circuit
 
@@ -143,6 +149,11 @@ class SpiceTarget(Target):
         disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
                    is an error.  If 'realtime', print out STDOUT as lines come
                    in, then print STDERR after the process completes.
+
+        mc_runs: Number of Monte-Carlo runs for the simulation (defaults to
+                 zero, meaning that Monte-Carlo simulation will not be used.
+
+        mc_variations: 'process', 'mismatch', or 'all'.  Defaults to 'all'.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -195,6 +206,8 @@ class SpiceTarget(Target):
         self.ic = ic if ic is not None else {}
         self.cap_loads = cap_loads if cap_loads is not None else {}
         self.disp_type = disp_type
+        self.mc_variations = mc_variations
+        self.mc_runs = mc_runs
 
         # set list of signals to save
         self.saves = set()
@@ -214,11 +227,11 @@ class SpiceTarget(Target):
 
         # generate simulator commands
         if self.simulator == 'ngspice':
-            cmd, raw_file = self.ngspice_cmds(tb_file)
+            cmd, raw_files = self.ngspice_cmds(tb_file)
         elif self.simulator == 'spectre':
-            cmd, raw_file = self.spectre_cmds(tb_file)
+            cmd, raw_files = self.spectre_cmds(tb_file)
         elif self.simulator == 'hspice':
-            cmd, raw_file = self.hspice_cmds(tb_file)
+            cmd, raw_files = self.hspice_cmds(tb_file)
         else:
             raise NotImplementedError(self.simulator)
 
@@ -227,20 +240,21 @@ class SpiceTarget(Target):
                        script=f'run_spice_{self.simulator}.sh')
 
         # process the results
-        if self.simulator in {'ngspice'}:
-            results = nut_parse(raw_file)
-        elif self.simulator in {'spectre'}:
-            results = psf_parse(raw_file)
-        elif self.simulator in {'hspice'}:
-            results = hspice_parse(raw_file)
-        else:
-            raise NotImplementedError(self.simulator)
+        for raw_file in raw_files:
+            if self.simulator in {'ngspice'}:
+                results = nut_parse(raw_file)
+            elif self.simulator in {'spectre'}:
+                results = psf_parse(raw_file)
+            elif self.simulator in {'hspice'}:
+                results = hspice_parse(raw_file)
+            else:
+                raise NotImplementedError(self.simulator)
 
-        # print results
-        self.print_results(results=results, prints=comp.prints)
+            # print results
+            self.print_results(results=results, prints=comp.prints)
 
-        # check results
-        self.check_results(results=results, checks=comp.checks)
+            # check results
+            self.check_results(results=results, checks=comp.checks)
 
     def expand_bus(self, action):
         # define bit-access function for the action's value
@@ -455,7 +469,8 @@ class SpiceTarget(Target):
             uic = True
         else:
             uic = False
-        netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
+        if self.simulator in {'hspice', 'ngspice'}:
+            netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
 
         # generate control statement
         if self.simulator == 'ngspice':
@@ -468,16 +483,24 @@ class SpiceTarget(Target):
         elif self.simulator == 'hspice':
             netlist.options('csdf')
 
-        # save signals that need to be saved
+        # write end of file
         if self.simulator == 'spectre':
             netlist.probe(*comp.saves, wrap=True)
+            if self.mc_runs == 0:
+                netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
+            else:
+                netlist.println('simulator lang=spectre')
+                netlist.print(MONTE_CARLO_SPECTRE.format(
+                    variations=self.mc_variations,
+                    numruns=self.mc_runs,
+                    stop=comp.stop_time
+                ))
         elif self.simulator == 'hspice':
             netlist.probe(*comp.saves, wrap=True, antype='TRAN')
+            netlist.end_file()
         elif self.simulator == 'ngspice':
             netlist.probe(*comp.saves, wrap=True)
-
-        # end the netlist
-        netlist.end_file()
+            netlist.end_file()
 
         # write spice file
         tb_file = (tb_file if tb_file is not None
@@ -544,7 +567,7 @@ class SpiceTarget(Target):
         cmd += self.flags
 
         # return command and corresponding raw file
-        return cmd, raw_file
+        return cmd, [raw_file]
 
     def spectre_cmds(self, tb_file):
         # build up the command
@@ -557,10 +580,16 @@ class SpiceTarget(Target):
         cmd += self.flags
 
         # figure out where the PSF results will be stored
-        raw_file = raw_dir / 'transient1.tran.tran'
+        if self.mc_runs == 0:
+            raw_files = [raw_dir / 'transient1.tran.tran']
+        else:
+            raw_files = []
+            for k in range(self.mc_runs):
+                raw_file = f'transient1-{k}_transient1.tran.tran'
+                raw_files.append(raw_dir / raw_file)
 
         # return command and corresponding raw file
-        return cmd, raw_file
+        return cmd, raw_files
 
     def hspice_cmds(self, tb_file):
         # build up the simulation command
@@ -575,4 +604,4 @@ class SpiceTarget(Target):
         tr0_file = out_file.with_suffix(out_file.suffix + '.tr0')
 
         # return command and corresponding raw file
-        return cmd, tr0_file
+        return cmd, [tr0_file]
