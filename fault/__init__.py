@@ -14,7 +14,7 @@ from .util import clog2
 from .spice_target import A2DError, ExpectError, FaultError
 from .spice_target import DeclareFromSpice
 from .mstools.si_netlist import si_netlist, DeclareFromSchematic
-from .mstools.rect import RectCell
+from .mstools.rect import RectCellMod
 from .mstools.grid import GridDesign
 from .mstools.calibre import lvs, xrc, DeclareFromGDS
 from .mstools.strmout import strmout, DeclareFromLayout

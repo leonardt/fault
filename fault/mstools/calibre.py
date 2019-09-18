@@ -62,23 +62,35 @@ class RulGen(CodeGenerator):
 
 def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', source_system='SPICE',
-        source_primary=None, layout_primary=None, rul_file='cal_lvs.rul',
+        source_primary=None, layout_primary=None, rul_file=None,
         disp_type='on_error', script=None):
-    # resolve paths
-    layout = Path(layout).resolve()
-    schematic = Path(schematic).resolve()
-
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
+    cwd = Path(cwd).resolve()
+    os.makedirs(cwd, exist_ok=True)
+
+    # determine LVS rules
     if rules is None:
         rules = FaultConfig.cal_lvs_rules
-    if source_primary is None:
-        source_primary = schematic.stem
+
+    # determine layout name if needed
+    layout = Path(layout).resolve()
     if layout_primary is None:
         layout_primary = layout.stem
+
+    # determine schematic name if needed
+    schematic = Path(schematic).resolve()
+    if source_primary is None:
+        source_primary = schematic.stem
+
+    # determine the name of the rule file if needed
+    if rul_file is None:
+        rul_file = cwd / f'cal_lvs_{layout_primary}.rul'
+
+    # determine where the lvs script should go if needed
     if script is None:
-        f'lvs_{layout_primary}.sh'
+        script = cwd / f'lvs_{layout_primary}.sh'
 
     # generate the command file
     gen = RulGen()
@@ -88,8 +100,7 @@ def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
     gen.include(*rules)
 
     # write the command file
-    os.makedirs(cwd, exist_ok=True)
-    gen.write_to_file(Path(cwd) / rul_file)
+    gen.write_to_file(rul_file)
 
     # run the command
     args = []
@@ -123,37 +134,42 @@ def DeclareFromGDS(layout, *args, layout_primary=None, mode='digital',
 def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', layout_primary=None,
         svdb_directory='svdb', out=None, netlist_format='HSPICE',
-        mode='c', rul_file='cal_xrc.rul', schematic=None,
+        mode='c', rul_file=None, schematic=None,
         source_system='SPICE', source_primary=None, disp_type='on_error',
         script=None):
-    # TODO: fix behavior when a schematic is specified
-
-    # resolve paths
-    layout = Path(layout).resolve()
-    if schematic is not None:
-        schematic = Path(schematic).resolve()
-
     # set location of working directory
     if cwd is None:
         cwd = FaultConfig.cwd
     cwd = Path(cwd).resolve()
+    os.makedirs(cwd, exist_ok=True)
 
-    # set other defaults
-    if cwd is None:
-        cwd = FaultConfig.cwd
+    # determine rules location if needed
     if rules is None:
         rules = FaultConfig.cal_xrc_rules
+
+    # determine layout name if needed
+    layout = Path(layout).resolve()
     if layout_primary is None:
         layout_primary = layout.stem
-    if source_primary is None and schematic is not None:
-        source_primary = schematic.stem
+
+    # determine schematic name if needed/applicable
+    if schematic is not None:
+        schematic = Path(schematic).resolve()
+        if source_primary is None:
+            source_primary = schematic.stem
+
+    # set output spice netlist name if needed
     if out is None:
         out = cwd / f'{layout.stem}.sp'
-    if script is None:
-        script = f'xrc_{layout_primary}.sh'
-
-    # make sure that output is a Path
     out = Path(out).resolve()
+
+    # set rule file location if needed
+    if rul_file is None:
+        rul_file = cwd / f'cal_xrc_{layout_primary}.rul'
+
+    # set script location
+    if script is None:
+        script = cwd / f'xrc_{layout_primary}.sh'
 
     # generate the command file
     gen = RulGen()
@@ -172,8 +188,7 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
     gen.include(*rules)
 
     # write command file
-    os.makedirs(cwd, exist_ok=True)
-    gen.write_to_file(Path(cwd) / rul_file)
+    gen.write_to_file(rul_file)
 
     # build up list of commands
     cmds = []

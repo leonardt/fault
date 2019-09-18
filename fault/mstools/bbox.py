@@ -1,7 +1,15 @@
+import os
 from pathlib import Path
 
 from fault.user_cfg import FaultConfig
 from .skill import run_skill
+from .transform import trmat
+
+try:
+    import numpy as np
+except ModuleNotFoundError:
+    print('Failed to import numpy for BBox.')
+
 
 GET_BBOX = '''\
 fp = outfile("{file_name}" "w")
@@ -11,11 +19,28 @@ fprintf(fp, "%L %L %L %L", nth(0 nth(0 bBox)), nth(1 nth(0 bBox)), nth(0 nth(1 b
 
 
 class BBox:
-    def __init__(self, llx, lly, urx, ury):
+    def __init__(self, llx=None, lly=None, urx=None, ury=None, corners=None):
+        # two ways to instantiate:
+        # 1) by providing llx/lly/urx/ury (corners must be None)
+        # 2) by providing a 2x4 array of corners (llx/lly/urx/ury must be None)
+
+        if corners is None:
+            assert all(v is not None for v in [llx, lly, urx, ury])
+            corners = np.array([[llx, urx, urx, llx],
+                                [lly, lly, ury, ury]], dtype=float)
+        else:
+            assert all(v is None for v in [llx, lly, urx, ury])
+            llx = float(np.min(corners[0, :]))
+            lly = float(np.min(corners[1, :]))
+            urx = float(np.max(corners[0, :]))
+            ury = float(np.max(corners[1, :]))
+
+        # save settings
         self.llx = llx
         self.lly = lly
         self.urx = urx
         self.ury = ury
+        self.corners = corners
 
     def __str__(self):
         return f'BBox({self.llx}, {self.lly}, {self.urx}, {self.ury})'
@@ -32,6 +57,15 @@ class BBox:
     def at_left(self, e, th=0.001):
         return -th < (e.x - self.llx) / self.width < +th
 
+    def transform(self, kind):
+        return BBox(corners=trmat(kind).dot(self.corners))
+
+    def translate(self, xoff, yoff):
+        corners = self.corners
+        corners[0, :] += xoff
+        corners[1, :] += yoff
+        return BBox(corners=corners)
+
     @property
     def width(self):
         return self.urx - self.llx
@@ -42,18 +76,20 @@ class BBox:
 
 
 def get_bbox(lib, cell, view, cds_lib=None, cwd=None, script=None):
-    # set defaults
+    # get working directory
     if cwd is None:
         cwd = FaultConfig.cwd
-    if cds_lib is None:
-        cds_lib = FaultConfig.cds_lib
+    cwd = Path(cwd).resolve()
+    os.makedirs(cwd, exist_ok=True)
+
+    # determine script name if needed 
     if script is None:
-        script = f'bbox_{cell}'
+        script = cwd / f'bbox_{cell}.sh'
 
     # run skill commands to get the bounding box
-    lfile = Path(cwd).resolve() / 'bbox.txt'
+    bbfile = cwd / f'bbox_{cell}.txt'
     skill_cmds = GET_BBOX.format(
-        file_name=lfile,
+        file_name=bbfile,
         lib=lib,
         cell=cell,
         view=view
@@ -61,7 +97,7 @@ def get_bbox(lib, cell, view, cds_lib=None, cwd=None, script=None):
     run_skill(skill_cmds, cds_lib=cds_lib, script=script)
 
     # read bounding box results
-    with open(lfile, 'r') as f:
+    with open(bbfile, 'r') as f:
         text = f.readlines()[0]
     vals = [float(tok) for tok in text.split()]
 

@@ -65,7 +65,7 @@ def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
 
     # set script name
     if script is None:
-        script = f'netlist_{cell}.sh'
+        script = cwd / f'netlist_{cell}.sh'
 
     # set netdir
     if netdir is None:
@@ -81,10 +81,6 @@ def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
     if out is None:
         out = cwd / f'{cell}.sp'
     out = Path(out).resolve()
-
-    # create the output directories if needed
-    os.makedirs(cwd, exist_ok=True)
-    os.makedirs(netdir, exist_ok=True)
 
     # write si.env file
     si_env = si_env_tmpl.format(lib=lib, cell=cell, view=view)

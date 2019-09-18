@@ -1,7 +1,15 @@
+import os
 from pathlib import Path
 
 from fault.user_cfg import FaultConfig
 from .skill import run_skill
+from .transform import trmat
+
+try:
+    import numpy as np
+except ModuleNotFoundError:
+    print('Failed to import numpy for LayoutLabel.')
+
 
 CREATE_LABEL = '''\
 dbCreateLabel({cell_view} list("{layer}" "{purpose}") list({x} {y}) "{text}" "{justify}" "{orient}" "{font}" {height})'''  # noqa
@@ -18,13 +26,28 @@ foreach(shape cv~>shapes
 
 
 class LayoutLabel:
-    def __init__(self, layer, purpose, x, y, text, justify, orient,
-                 font, height):
-        self.layer = layer
-        self.purpose = purpose
+    def __init__(self, text, x=None, y=None, point=None, layer='M1',
+                 purpose='label', justify='centerCenter', orient='R0',
+                 font='stick', height=0.03):
+        # two ways to specify the location:
+        # 1) values for x and y
+        # 2) numpy array with two values: [x, y]
+
+        if x is not None and y is not None:
+            assert point is None
+            point = np.array([x, y], dtype=float)
+        elif point is not None:
+            assert x is None and y is None
+            x = point[0]
+            y = point[1]
+
+        # save settings
+        self.text = text
         self.x = x
         self.y = y
-        self.text = text
+        self.point = point
+        self.layer = layer
+        self.purpose = purpose
         self.justify = justify
         self.orient = orient
         self.font = font
@@ -32,6 +55,28 @@ class LayoutLabel:
 
     def __str__(self):
         return f'LayoutLabel("{self.text}")'
+
+    def transform(self, kind):
+        # TODO: update orientation of label
+        point = trmat(kind).dot(self.point)
+        return LayoutLabel(text=self.text, point=point, layer=self.layer,
+                           purpose=self.purpose, justify=self.justify,
+                           orient=self.orient, font=self.font,
+                           height=self.height)
+
+    def translate(self, xoff, yoff):
+        off = np.array([xoff, yoff], dtype=float)
+        point = self.point + off
+        return LayoutLabel(text=self.text, point=point, layer=self.layer,
+                           purpose=self.purpose, justify=self.justify,
+                           orient=self.orient, font=self.font,
+                           height=self.height)
+
+    def rename(self, text):
+        return LayoutLabel(text=text, point=self.point, layer=self.layer,
+                           purpose=self.purpose, justify=self.justify,
+                           orient=self.orient, font=self.font,
+                           height=self.height)
 
     def create_cmd(self, cell_view):
         # return the label
@@ -69,18 +114,20 @@ class LayoutLabel:
 
 def get_labels(lib, cell, view, cds_lib=None, cwd=None,
                script=None):
-    # set defaults
+    # determine working directory
     if cwd is None:
         cwd = FaultConfig.cwd
-    if cds_lib is None:
-        cds_lib = FaultConfig.cds_lib
+    cwd = Path(cwd).resolve()
+    os.makedirs(cwd, exist_ok=True)
+
+    # determine script name if needed
     if script is None:
-        script = f'labels_{cell}.sh'
+        script = cwd / f'labels_{cell}.sh'
 
     # run skill code to get label locations
-    lfile = Path(cwd).resolve() / 'labels.txt'
+    lafile = cwd / f'labels_{cell}.txt'
     skill_cmds = GET_LABELS.format(
-        file_name=lfile,
+        file_name=lafile,
         lib=lib,
         cell=cell,
         view=view
@@ -89,7 +136,7 @@ def get_labels(lib, cell, view, cds_lib=None, cwd=None,
 
     # parse results
     labels = []
-    with open(lfile, 'r') as f:
+    with open(lafile, 'r') as f:
         for line in f:
             labels += [LayoutLabel.from_string(line)]
 
