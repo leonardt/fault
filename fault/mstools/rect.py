@@ -127,7 +127,10 @@ class RectCellMod:
     def __init__(self, lib, cell, layout_view='layout',
                  schematic_view='schematic', cds_lib=None, bbox=None,
                  top=None, bottom=None, left=None, right=None,
-                 empty=False, spice_netlist=None):
+                 empty=False, spice_netlist=None, print_status=True):
+
+        if print_status:
+            FaultConfig.print(f'Creating RectCellMod {cell}.', level=1)
 
         # figure out bounding box if needed
         if bbox is None:
@@ -170,4 +173,4 @@ class RectCellMod:
         return RectCellInst(self)
 
     def transform(self, kind):
-        return RectCellInst(self, kind)
+        return RectCellInst(self, orient=kind)

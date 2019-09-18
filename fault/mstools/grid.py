@@ -17,7 +17,11 @@ except ModuleNotFoundError:
 class GridDesign(RectCellMod):
     def __init__(self, grid, cell, lib=None, layout_view='layout',
                  cds_lib=None, top=None, bottom=None, left=None,
-                 right=None):
+                 right=None, print_status=True):
+
+        if print_status:
+            FaultConfig.print(f'Creating GridDesign {cell}.', level=1)
+
         # wrap "grid" as necessary to make it 2D,
         # and make unique instances of modules as
         # necessary
@@ -48,7 +52,7 @@ class GridDesign(RectCellMod):
         # determine library automatically if it has
         # not been determined already
         if lib is None:
-            lib = grid[0][0].lib
+            lib = self.grid[0][0].mod.lib
 
         # name instances
         self.name_instances()
@@ -82,22 +86,23 @@ class GridDesign(RectCellMod):
         # give names to unnamed internal signals
         self.name_internal_nets()
 
-        # write netlist
-        all_label_names = top + bottom + left + right
-        spice_netlist = self.gen_netlist(cell=cell, labels=all_label_names)
-
         # determine if any cells are non-empty (detail needed for LVS)
         # "empty" generally means that the cell entirely consists of
         # wiring, which means that its subckt definition would be empty
         # (i.e., connections would be made at a higher level)
         empty = all(all(elem.mod.empty for elem in row) for row in self.grid)
 
+        # write netlist
+        all_label_names = top + bottom + left + right
+        spice_netlist = self.gen_netlist(cell=cell, labels=all_label_names)
+
         # call the super constructor
         super().__init__(lib=lib, cell=cell, layout_view=layout_view,
                          schematic_view=None, cds_lib=cds_lib, bbox=bbox,
                          top=top_labels, bottom=bottom_labels,
                          left=left_labels, right=right_labels,
-                         empty=empty, spice_netlist=spice_netlist)
+                         empty=empty, spice_netlist=spice_netlist,
+                         print_status=False)
 
     def get_row(self, num):
         return self.grid[num]

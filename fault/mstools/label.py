@@ -122,7 +122,7 @@ def get_labels(lib, cell, view, cds_lib=None, cwd=None,
 
     # determine script name if needed
     if script is None:
-        script = cwd / f'labels_{cell}.sh'
+        script = cwd / f'get_labels_{cell}.sh'
 
     # run skill code to get label locations
     lafile = cwd / f'labels_{cell}.txt'

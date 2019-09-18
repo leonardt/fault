@@ -148,7 +148,7 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def expect(self, port, value, strict=None, **kwargs):
+    def expect(self, port, value, strict=None, caller=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
@@ -168,12 +168,18 @@ class Tester:
             # set defaults
             if strict is None:
                 strict = self.expect_strict_default
+            if caller is None:
+                try:
+                    caller = inspect.getframeinfo(inspect.stack()[1][0])
+                except IndexError:
+                    pass
 
             # implement expect
             if not isinstance(value, (actions.Peek, PortWrapper,
                                       LoopIndex, expression.Expression)):
                 value = make_value(port, value)
-            self.actions.append(actions.Expect(port, value, **kwargs))
+            self.actions.append(actions.Expect(port, value, caller=caller,
+                                **kwargs))
 
     def eval(self):
         """
@@ -411,17 +417,11 @@ class Tester:
         self.wait_until_high(signal)
 
     def pulse_high(self, signal):
-        # first make sure the signal is actually low to begin with
-        self.expect(signal, 0)
-
         # first set the signal high, then bring it low again
         self.poke(signal, 1)
         self.poke(signal, 0)
 
     def pulse_low(self, signal):
-        # first make sure the signal is actually high to begin with
-        self.expect(signal, 1)
-
         # first set the signal low, then bring it high again
         self.poke(signal, 0)
         self.poke(signal, 1)

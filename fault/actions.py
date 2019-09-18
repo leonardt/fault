@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import fault
 import fault.expression as expression
 from fault.select_path import SelectPath
+from .fault_errors import ExpectError
 
 
 class Action(ABC):
@@ -89,7 +90,7 @@ def is_output(port):
 
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None):
+                 above=None, below=None, caller=None):
         # call super constructor
         super().__init__(port, value)
 
@@ -113,6 +114,24 @@ class Expect(PortAction):
         self.strict = strict
         self.above = above
         self.below = below
+        self.caller = caller
+
+    def error_out(self, msg=''):
+        # add newline at beginning to make the error easier to read
+        msg = '\n' + msg
+        # add the traceback information if available
+        traceback = self.traceback
+        if traceback is not None:
+            msg += f'\n{traceback}'
+        # raise the exception
+        raise ExpectError(msg)
+
+    @property
+    def traceback(self):
+        if self.caller is not None:
+            return f'FaultError @ {self.caller.filename}:{self.caller.lineno}'
+        else:
+            return None
 
 
 class Assume(PortAction):

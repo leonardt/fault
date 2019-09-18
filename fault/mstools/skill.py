@@ -33,6 +33,8 @@ def run_skill(skill_cmds, cds_lib=None, cwd=None, disp_type='on_error',
         f.write(skill_cmds)
         f.flush()
 
+    FaultConfig.print(f'Running SKILL script {file_name.name}', level=1)
+
     # run the skill commands
     args = []
     args += ['dbAccess']

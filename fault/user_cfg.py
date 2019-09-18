@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import logging
@@ -17,6 +18,7 @@ class _FaultConfig:
         self.ngspice_models = []
         self.hspice_models = []
         self.spectre_models = []
+        self.print_level = 0
 
         # read in config information
         self.read_cfg_files()
@@ -80,6 +82,10 @@ class _FaultConfig:
                     opt_val = [opt_val]
                 for val in opt_val:
                     self.load_yaml(Path(loc.parent, val))
+            elif opt_name == 'print_level':
+                self.print_level = opt_val
+            else:
+                raise Exception(f'Invalid option: {opt_name}.')
 
     def compute_env(self):
         env = os.environ.copy()
@@ -91,6 +97,11 @@ class _FaultConfig:
             env[f'{key}'] = f'{val}'
 
         return env
+
+    def print(self, *args, level=0, **kwargs):
+        if self.print_level >= level:
+            print(*args, **kwargs)
+            sys.stdout.flush()
 
     @staticmethod
     def remove_conda_from_env(env):

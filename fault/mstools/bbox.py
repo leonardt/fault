@@ -61,9 +61,8 @@ class BBox:
         return BBox(corners=trmat(kind).dot(self.corners))
 
     def translate(self, xoff, yoff):
-        corners = self.corners.copy()
-        corners[0, :] += xoff
-        corners[1, :] += yoff
+        off = np.array([xoff, yoff], dtype=float)
+        corners = self.corners + off[:, None]
         return BBox(corners=corners)
 
     @property
@@ -84,7 +83,7 @@ def get_bbox(lib, cell, view, cds_lib=None, cwd=None, script=None):
 
     # determine script name if needed
     if script is None:
-        script = cwd / f'bbox_{cell}.sh'
+        script = cwd / f'get_bbox_{cell}.sh'
 
     # run skill commands to get the bounding box
     bbfile = cwd / f'bbox_{cell}.txt'

@@ -16,24 +16,13 @@ from fault.spice import SpiceNetlist
 from fault.subprocess_run import subprocess_run
 from fault.target import Target
 from .user_cfg import FaultConfig
+from .fault_errors import A2DError
+from inspect import getframeinfo, stack
 
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
 except ModuleNotFoundError:
     print('Failed to import DeCiDa.  SPICE capabilities will be limited.')
-
-
-# Custom exceptions to make it easier to catch specific errors
-class FaultError(Exception):
-    pass
-
-
-class A2DError(FaultError):
-    pass
-
-
-class ExpectError(FaultError):
-    pass
 
 
 class CompiledSpiceActions:
@@ -527,20 +516,25 @@ class SpiceTarget(Target):
                 raise A2DError(f'Invalid logic level: {value}.')
 
         # implement the requested check
+        err_str = f'Time: {time:0.3e} s\n'
         if action.above is not None:
             if action.below is not None:
                 if not (action.above <= value <= action.below):
-                    raise ExpectError(f'Expected {action.above} to {action.below}, got {value}')  # noqa
+                    err_str += f'Expected {action.above} to {action.below}, got {value}.'  # noqa
+                    action.error_out(err_str)
             else:
                 if not (action.above <= value):
-                    raise ExpectError(f'Expected above {action.above}, got {value}')  # noqa
+                    err_str += f'{t_str}: Expected above {action.above}, got {value}.'  # noqa
+                    action.error_out(err_str)
         else:
             if action.below is not None:
                 if not (value <= action.below):
-                    raise ExpectError(f'Expected below {action.below}, got {value}')  # noqa
+                    err_str += f'{t_str}: Expected below {action.below}, got {value}.'  # noqa
+                    action.error_out(err_str)
             else:
                 if not (value == action.value):
-                    raise ExpectError(f'Expected {action.value}, got {value}')  # noqa
+                    err_str += f'Expected {action.value}, got {value}.'
+                    action.error_out(err_str)
 
     def check_results(self, results, checks):
         for check in checks:

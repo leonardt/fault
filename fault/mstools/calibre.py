@@ -64,6 +64,7 @@ def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
         lvs_report='lvs.report', layout_system='GDSII', source_system='SPICE',
         source_primary=None, layout_primary=None, rul_file=None,
         disp_type='on_error', script=None):
+
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
@@ -78,6 +79,8 @@ def lvs(layout, schematic, rules=None, cwd=None, env=None, add_to_env=None,
     layout = Path(layout).resolve()
     if layout_primary is None:
         layout_primary = layout.stem
+
+    FaultConfig.print(f'Running LVS for {layout_primary}', level=1)
 
     # determine schematic name if needed
     schematic = Path(schematic).resolve()
@@ -137,6 +140,7 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
         mode='c', rul_file=None, schematic=None,
         source_system='SPICE', source_primary=None, disp_type='on_error',
         script=None):
+
     # set location of working directory
     if cwd is None:
         cwd = FaultConfig.cwd
@@ -151,6 +155,8 @@ def xrc(layout, rules=None, cwd=None, env=None, add_to_env=None,
     layout = Path(layout).resolve()
     if layout_primary is None:
         layout_primary = layout.stem
+
+    FaultConfig.print(f'Running XRC for {layout_primary}', level=1)
 
     # determine schematic name if needed/applicable
     if schematic is not None:

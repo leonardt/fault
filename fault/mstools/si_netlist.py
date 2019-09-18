@@ -57,6 +57,9 @@ def DeclareFromSchematic(lib, cell, *args, mode='digital', **kwargs):
 def si_netlist(lib, cell, cds_lib=None, cwd=None, view='schematic',
                out=None, del_incl=True, env=None, add_to_env=None,
                disp_type='on_error', script=None, netdir=None):
+
+    FaultConfig.print(f'Netlisting {lib}/{cell}', level=1)
+
     # set cwd
     if cwd is None:
         cwd = FaultConfig.cwd

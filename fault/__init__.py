@@ -1,4 +1,5 @@
 from .user_cfg import FaultConfig
+from .fault_errors import A2DError, ExpectError, FaultError
 from .real_type import RealIn, RealOut, RealKind, RealType
 from .elect_type import ElectIn, ElectOut, ElectKind, ElectType
 from .tester import Tester
@@ -11,7 +12,6 @@ from .tester_samples import (SRAMTester, InvTester, BufTester,
                              NandTester, NorTester)
 from .random import random_bit, random_bv
 from .util import clog2
-from .spice_target import A2DError, ExpectError, FaultError
 from .spice_target import DeclareFromSpice
 from .mstools.si_netlist import si_netlist, DeclareFromSchematic
 from .mstools.rect import RectCellMod

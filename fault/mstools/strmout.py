@@ -20,6 +20,9 @@ def DeclareFromLayout(lib, cell, *args, mode='digital', **kwargs):
 def strmout(lib, cell, cds_lib=None, cwd=None, view='layout', out=None,
             env=None, add_to_env=None, log='strmOut.log', no_warn=None,
             disp_type='on_error'):
+
+    FaultConfig.print(f'Streaming out {lib}/{cell}', level=1)
+
     # set defaults
     if cwd is None:
         cwd = FaultConfig.cwd
