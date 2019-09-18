@@ -12,15 +12,15 @@ def sort_labels(labels, bbox):
     # find labels along top and sort left to right
     top = [e for e in labels if bbox.at_top(e)]
     top = sorted(top, key=lambda e: +e.x)
-    
+
     # find labels along bottom and sort left to right
     bottom = [e for e in labels if bbox.at_bottom(e)]
     bottom = sorted(bottom, key=lambda e: +e.x)
-    
+
     # find labels along the left edge and sort top to bottom
     left = [e for e in labels if bbox.at_left(e)]
     left = sorted(left, key=lambda e: -e.y)
-    
+
     # find labels along the right edge and sort top to bottom
     right = [e for e in labels if bbox.at_right(e)]
     right = sorted(right, key=lambda e: -e.y)
@@ -74,7 +74,10 @@ class RectCellInst:
         self.update_geometry()
 
     def edge_names(self, edge_kind):
-        return [v.text for v in getattr(self, edge_kind)]
+        return [label.text for label in getattr(self, edge_kind)]
+
+    def edge_nets(self, edge_kind):
+        return [self.net_conn[label.text] for label in getattr(self, edge_kind)]
 
     def wire_edge(self, edge_kind, nets):
         # connect all pins along the given edge
@@ -89,7 +92,7 @@ class RectCellInst:
         edge_names = self.edge_names(edge_kind)
         for pin_name in edge_names:
             if pin_name not in self.net_conn:
-                self.conn[pin_name] = SpiceNet()
+                self.net_conn[pin_name] = SpiceNet()
 
     @property
     def labels(self):
@@ -168,4 +171,3 @@ class RectCellMod:
 
     def transform(self, kind):
         return RectCellInst(self, kind)
-

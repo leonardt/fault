@@ -22,11 +22,12 @@ def trmat(kind):
     elif kind == 'R270':
         return rotmat(270)
     elif kind == 'MX':
-        return np.array([[+1,  0],
-                         [ 0, -1]], dtype=float)
+        return np.array([[+1, 0],
+                         [0, -1]],
+                        dtype=float)
     elif kind == 'MY':
-        return np.array([[-1,  0],
-                         [ 0, +1]], dtype=float)
+        return np.array([[-1, 0],
+                         [0, +1]],
+                        dtype=float)
     else:
         raise Exception(f'Invalid transformation: {kind}.')
-

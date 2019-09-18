@@ -82,7 +82,7 @@ def get_bbox(lib, cell, view, cds_lib=None, cwd=None, script=None):
     cwd = Path(cwd).resolve()
     os.makedirs(cwd, exist_ok=True)
 
-    # determine script name if needed 
+    # determine script name if needed
     if script is None:
         script = cwd / f'bbox_{cell}.sh'
 

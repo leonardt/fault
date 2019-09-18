@@ -14,7 +14,7 @@ dbCreateInst({parent} {child} "{name}" list({x} {y}) "{orient}")'''
 
 
 CREATE_BOUNDARY = '''\
-dbCreateRect({parent} list( "prBoundary" "boundary" ) list( {llx}:{lly} {urx}:{ury} ) )'''
+dbCreateRect({parent} list( "prBoundary" "boundary" ) list( {llx}:{lly} {urx}:{ury} ) )'''  # noqa
 
 
 def open_cell_view(x, mode):
