@@ -193,6 +193,15 @@ class Tester:
         """
         self.actions.append(actions.Delay(time=time))
 
+    def get_value(self, port):
+        """
+        Returns an object with a "value" property that will
+        be filled after the simulation completes.
+        """
+        action = actions.GetValue(port=port)
+        self.actions.append(action)
+        return action
+
     def step(self, steps=1):
         """
         Step the clock `steps` times.

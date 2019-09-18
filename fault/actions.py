@@ -88,6 +88,12 @@ def is_output(port):
         return not port.isoutput()
 
 
+class GetValue(PortAction):
+    def __init__(self, port):
+        self.port = port
+        self.value = None
+
+
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
                  above=None, below=None, caller=None):

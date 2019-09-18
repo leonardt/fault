@@ -7,7 +7,7 @@ import hwtypes
 import magma as m
 
 import fault
-from fault.actions import Poke, Expect, Delay, Print
+from fault.actions import Poke, Expect, Delay, Print, GetValue
 from fault.pwl import pwc_to_pwl
 from fault.real_type import RealInOut
 from fault.result_parse import nut_parse, hspice_parse, psf_parse
@@ -26,12 +26,13 @@ except ModuleNotFoundError:
 
 
 class CompiledSpiceActions:
-    def __init__(self, pwls, checks, prints, stop_time, saves):
+    def __init__(self, pwls, checks, prints, stop_time, saves, gets):
         self.pwls = pwls
         self.checks = checks
         self.prints = prints
         self.stop_time = stop_time
         self.saves = saves
+        self.gets = gets
 
 
 def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
@@ -239,6 +240,9 @@ class SpiceTarget(Target):
             else:
                 raise NotImplementedError(self.simulator)
 
+            # implement all of the gets
+            self.impl_all_gets(results=results, gets=comp.gets)
+
             # print results
             self.print_results(results=results, prints=comp.prints)
 
@@ -282,6 +286,7 @@ class SpiceTarget(Target):
         pwc_dict = {}
         checks = []
         prints = []
+        gets = []
 
         # expand buses as needed
         _actions = []
@@ -324,6 +329,8 @@ class SpiceTarget(Target):
                 checks.append((t, action))
             elif isinstance(action, Print):
                 prints.append((t, action))
+            elif isinstance(action, GetValue):
+                gets.append((t, action))
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -342,6 +349,7 @@ class SpiceTarget(Target):
             pwls=pwls,
             checks=checks,
             prints=prints,
+            gets=gets,
             stop_time=t,
             saves=self.saves
         )
@@ -549,6 +557,16 @@ class SpiceTarget(Target):
     def print_results(self, results, prints):
         for print_ in prints:
             self.impl_print(results=results, time=print_[0], action=print_[1])
+
+    def impl_all_gets(self, results, gets):
+        for get in gets:
+            self.impl_get(results=results, time=get[0], action=get[1])
+
+    def impl_get(self, results, time, action):
+        # get port values
+        port_value = results[f'{action.port.name}'](time)
+        # write value back to action
+        action.value = port_value
 
     def ngspice_cmds(self, tb_file):
         # build up the command
