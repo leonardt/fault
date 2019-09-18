@@ -61,7 +61,7 @@ class BBox:
         return BBox(corners=trmat(kind).dot(self.corners))
 
     def translate(self, xoff, yoff):
-        corners = self.corners
+        corners = self.corners.copy()
         corners[0, :] += xoff
         corners[1, :] += yoff
         return BBox(corners=corners)
