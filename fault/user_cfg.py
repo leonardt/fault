@@ -18,6 +18,7 @@ class _FaultConfig:
         self.ngspice_models = []
         self.hspice_models = []
         self.spectre_models = []
+        self.spectre_models_mc = []
         self.print_level = 0
 
         # read in config information
@@ -77,6 +78,10 @@ class _FaultConfig:
             elif opt_name == 'spectre_models':
                 for val in opt_val:
                     self.spectre_models.append(Path(loc.parent, val).resolve())
+            elif opt_name == 'spectre_models_mc':
+                for val in opt_val:
+                    path = Path(loc.parent, val).resolve()
+                    self.spectre_models_mc.append(path)
             elif opt_name == 'include':
                 if not isinstance(opt_val, list):
                     opt_val = [opt_val]

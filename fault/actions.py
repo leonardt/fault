@@ -131,8 +131,8 @@ class Expect(PortAction):
 
     def error_out(self, msg='', header_len=10, header_char='@'):
         # add newline at beginning to make the error easier to read
-        header = header_char*header_len
-        msg = '\n' + header + '\n' +  msg
+        header = header_char * header_len
+        msg = '\n' + header + '\n' + msg
         # add the traceback information if available
         traceback = self.traceback
         if traceback is not None:

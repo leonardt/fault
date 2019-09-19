@@ -4,6 +4,11 @@ from .select_path import SelectPath
 from .system_verilog_target import SystemVerilogTarget
 from .user_cfg import FaultConfig
 
+try:
+    from decida.SimulatorNetlist import SimulatorNetlist
+except ModuleNotFoundError:
+    print('Failed to import DeCiDa for VerilogAMSTarget.')
+
 
 class VerilogAMSTarget(SystemVerilogTarget):
     def __init__(self, circuit, simulator='ncsim', directory=None,
@@ -45,7 +50,6 @@ class VerilogAMSTarget(SystemVerilogTarget):
         self.stop_time = stop_time
         self.vsup = vsup
         self.rout = rout
-        self.use_spice = use_spice if use_spice is not None else []
         self.bus_delim = bus_delim
         self.ic = ic if ic is not None else {}
 
@@ -59,10 +63,19 @@ class VerilogAMSTarget(SystemVerilogTarget):
         # update flags argument
         flags = flags if flags is not None else []
 
-        # update model paths
+        # update use_spice
         if model_paths is None:
             model_paths = []
-        model_path = FaultConfig.spectre_models + model_paths
+        if use_spice is None:
+            subckts = set()
+            for model_path in model_paths:
+                parser = SimulatorNetlist(f'{model_path}')
+                subckts.update(parser.get('subckts'))
+            use_spice = list(subckts)
+        self.use_spice = use_spice
+
+        # update model paths
+        model_paths = FaultConfig.spectre_models + model_paths
         for path in model_paths:
             path = Path(path).resolve()
             flags += ['-modelpath', f'{path}']

@@ -573,6 +573,7 @@ end
         sim_cmd += self.flags
 
         # compile the simulation
+        FaultConfig.print(f'Running SystemVerilog simulation for {self.circuit.name}', level=1)  # noqa
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
                        disp_type=self.disp_type)
 

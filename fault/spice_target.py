@@ -181,7 +181,11 @@ class SpiceTarget(Target):
         elif simulator == 'hspice':
             model_paths = FaultConfig.hspice_models + model_paths
         elif simulator == 'spectre':
-            model_paths = FaultConfig.spectre_models + model_paths
+            if mc_runs > 0:
+                spectre_models = FaultConfig.spectre_models_mc
+            else:
+                spectre_models = FaultConfig.spectre_models
+            model_paths = spectre_models + model_paths
 
         # make directory if needed
         os.makedirs(directory, exist_ok=True)
