@@ -149,8 +149,11 @@ class GridDesign(RectCellMod):
                        for inst_label in getattr(inst, kind)]
         # return list of labels that have the correct external pin
         # name added
-        return [inst_label.rename(pin_name)
-                for (inst_label, pin_name) in zip(inst_labels, names)]
+        retval = []
+        for inst_label, pin_name in zip(inst_labels, names):
+            if pin_name is not None:
+                retval.append(inst_label.rename(pin_name))
+        return retval
 
     def gen_layout(self, lib, cell, view, bbox, labels):
         insts = []
@@ -195,7 +198,8 @@ class GridDesign(RectCellMod):
                      for edge_net in inst.edge_nets(kind)]
         # name all of the nets in the correct order
         for (edge_net, pin_name) in zip(edge_nets, names):
-            edge_net.name = pin_name
+            if pin_name is not None:
+                edge_net.name = pin_name
 
     def name_internal_nets(self):
         tmpno = count()
