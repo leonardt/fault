@@ -6,6 +6,16 @@ except ModuleNotFoundError:
     print('Failed to import libraries for results parsing.  Capabilities may be limited.')  # noqa
 
 
+class SpiceResult:
+    def __init__(self, t, v):
+        self.t = t
+        self.v = v
+        self.func = interp1d(t, v, bounds_error=False, fill_value=(v[0], v[-1]))
+
+    def __call__(self, t):
+        return self.func(t)
+
+
 # temporary measure -- CSDF parsing is broken in
 # DeCiDa so a simple parser is implemented here
 class CSDFData:
@@ -98,8 +108,7 @@ def data_to_interp(data, time, strip_vi=True):
             continue
 
         # create interpolator
-        result = interp1d(time_vec, value_vec, bounds_error=False,
-                          fill_value=(value_vec[0], value_vec[-1]))
+        result = SpiceResult(t=time_vec, v=value_vec)
 
         # add interpolator to dictionary
         retval[name] = result

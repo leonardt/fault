@@ -7,7 +7,7 @@ import hwtypes
 import magma as m
 
 import fault
-from fault.actions import Poke, Expect, Delay, Print, GetValue
+from fault.actions import Poke, Expect, Delay, Print, GetValue, MeasDelay
 from fault.pwl import pwc_to_pwl
 from fault.real_type import RealInOut
 from fault.result_parse import nut_parse, hspice_parse, psf_parse
@@ -21,18 +21,21 @@ from inspect import getframeinfo, stack
 
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
+    import numpy as np
 except ModuleNotFoundError:
-    print('Failed to import DeCiDa.  SPICE capabilities will be limited.')
+    print('Failed to import DeCiDa or Numpy for SpiceTarget.')
 
 
 class CompiledSpiceActions:
-    def __init__(self, pwls, checks, prints, stop_time, saves, gets):
+    def __init__(self, pwls, checks, prints, stop_time, saves, gets,
+                 meas_delays):
         self.pwls = pwls
         self.checks = checks
         self.prints = prints
         self.stop_time = stop_time
         self.saves = saves
         self.gets = gets
+        self.meas_delays = meas_delays
 
 
 def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
@@ -85,7 +88,8 @@ class SpiceTarget(Target):
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None, cap_loads=None,
-                 disp_type='on_error', mc_runs=0, mc_variations='all'):
+                 disp_type='on_error', mc_runs=0, mc_variations='all',
+                 vol_rel=0.1, voh_rel=0.9, no_run=False):
         """
         circuit: a magma circuit
 
@@ -144,6 +148,12 @@ class SpiceTarget(Target):
                  zero, meaning that Monte-Carlo simulation will not be used.
 
         mc_variations: 'process', 'mismatch', or 'all'.  Defaults to 'all'.
+
+        vol_rel: Falling edge threshold as a fraction of vsup
+
+        voh_rel: Rising edge threshold as a fraction of vsup
+
+        no_run: If True, don't actually run the simulation.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -198,6 +208,9 @@ class SpiceTarget(Target):
         self.disp_type = disp_type
         self.mc_variations = mc_variations
         self.mc_runs = mc_runs
+        self.vol_rel = vol_rel
+        self.voh_rel = voh_rel
+        self.no_run = no_run
 
         # set list of signals to save
         self.saves = set()
@@ -226,8 +239,10 @@ class SpiceTarget(Target):
             raise NotImplementedError(self.simulator)
 
         # run the simulation commands
-        subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
-                       script=f'run_spice_{self.simulator}.sh')
+        if not self.no_run:
+            FaultConfig.print(f'Running SPICE simulation for {self.circuit.name}', level=1)  # noqa
+            subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
+                           script=f'run_spice_{self.simulator}.sh')
 
         # process the results
         for raw_file in raw_files:
@@ -240,11 +255,14 @@ class SpiceTarget(Target):
             else:
                 raise NotImplementedError(self.simulator)
 
+            # print results
+            self.print_results(results=results, prints=comp.prints)
+
             # implement all of the gets
             self.impl_all_gets(results=results, gets=comp.gets)
 
-            # print results
-            self.print_results(results=results, prints=comp.prints)
+            # implement all of the delay measurements
+            self.meas_delays(results=results, meas_list=comp.meas_delays)
 
             # check results
             self.check_results(results=results, checks=comp.checks)
@@ -287,6 +305,7 @@ class SpiceTarget(Target):
         checks = []
         prints = []
         gets = []
+        meas_delays = []
 
         # expand buses as needed
         _actions = []
@@ -331,6 +350,8 @@ class SpiceTarget(Target):
                 prints.append((t, action))
             elif isinstance(action, GetValue):
                 gets.append((t, action))
+            elif isinstance(action, MeasDelay):
+                meas_delays.append((t, action))
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -350,6 +371,7 @@ class SpiceTarget(Target):
             checks=checks,
             prints=prints,
             gets=gets,
+            meas_delays=meas_delays,
             stop_time=t,
             saves=self.saves
         )
@@ -567,6 +589,30 @@ class SpiceTarget(Target):
         port_value = results[f'{action.port.name}'](time)
         # write value back to action
         action.value = port_value
+
+    def meas_delays(self, results, meas_list):
+        for meas in meas_list:
+            self.impl_meas_delay(results=results, time=meas[0], action=meas[1])
+
+    def impl_meas_delay(self, results, time, action):
+        result = results[f'{action.port.name}']
+        t, v = result.t, result.v
+        start_idx = np.searchsorted(t, time)
+        if action.kind == 'rising':
+            if action.thresh is not None:
+                thresh = action.thresh
+            else:
+                thresh = self.voh_rel * self.vsup
+            stop_idx = np.where(v[start_idx:] >= thresh)[0][0] + start_idx
+        elif action.kind == 'falling':
+            if action.thresh is not None:
+                thresh = action.thresh
+            else:
+                thresh = self.vol_rel * self.vsup
+            stop_idx = np.where(v[start_idx:] <= thresh)[0][0] + start_idx
+        else:
+            raise Exception(f'Invalid MeasDelay kind: "{action.kind}".')
+        action.value = t[stop_idx] - t[start_idx]
 
     def ngspice_cmds(self, tb_file):
         # build up the command

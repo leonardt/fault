@@ -88,6 +88,13 @@ def is_output(port):
         return not port.isoutput()
 
 
+class MeasDelay(PortAction):
+    def __init__(self, port, kind='rising', thresh=None):
+        self.port = port
+        self.kind = kind
+        self.thresh = thresh
+
+
 class GetValue(PortAction):
     def __init__(self, port):
         self.port = port
@@ -122,20 +129,23 @@ class Expect(PortAction):
         self.below = below
         self.caller = caller
 
-    def error_out(self, msg=''):
+    def error_out(self, msg='', header_len=10, header_char='@'):
         # add newline at beginning to make the error easier to read
-        msg = '\n' + msg
+        header = header_char*header_len
+        msg = '\n' + header + '\n' +  msg
         # add the traceback information if available
         traceback = self.traceback
         if traceback is not None:
             msg += f'\n{traceback}'
+        # add footer
+        msg += '\n' + header
         # raise the exception
         raise ExpectError(msg)
 
     @property
     def traceback(self):
         if self.caller is not None:
-            return f'FaultError @ {self.caller.filename}:{self.caller.lineno}'
+            return f'Traceback: {self.caller.filename}:{self.caller.lineno}'
         else:
             return None
 

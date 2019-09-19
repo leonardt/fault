@@ -148,7 +148,7 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def expect(self, port, value, strict=None, caller=None, **kwargs):
+    def expect(self, port, value=None, strict=None, caller=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
@@ -192,6 +192,15 @@ class Tester:
         Wait the specified amount of time before proceeding
         """
         self.actions.append(actions.Delay(time=time))
+
+    def meas_delay(self, *args, **kwargs):
+        """
+        Measures the delay on the port until the specified
+        kind of edge (rising or falling).
+        """
+        action = actions.MeasDelay(*args, **kwargs)
+        self.actions.append(action)
+        return action
 
     def get_value(self, port):
         """
