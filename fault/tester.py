@@ -103,6 +103,10 @@ class Tester:
             return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
+    def is_recursive_type(self, T):
+        return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
+            not isinstance(T.T, (m._BitKind, m.BitType))
+
     def poke(self, port, value, delay=None):
         """
         Set `port` to be `value`
@@ -120,15 +124,10 @@ class Tester:
                     self.poke(p, v, delay)
 
         # implement poke
-        if isinstance(port, m.TupleType):
-            recurse(port)
-        elif isinstance(port, m.ArrayType) and \
-                not isinstance(port.T, m._BitKind):
+        if self.is_recursive_type(port):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                (isinstance(port[-1], m.TupleType) or
-                 isinstance(port[-1], m.ArrayType) and
-                 not isinstance(port[-1].T, (m._BitKind, m.BitType))):
+                (self.is_recursive_type(port[-1].T)):
             recurse(port[-1])
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
@@ -162,15 +161,10 @@ class Tester:
             else:
                 for p, v in zip(port, value):
                     self.expect(p, v, strict, **kwargs)
-        if isinstance(port, m.TupleType):
-            recurse(port)
-        elif isinstance(port, m.ArrayType) and \
-                not isinstance(port.T, m._BitKind):
+        if self.is_recursive_type(port):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                (isinstance(port[-1], m.TupleType) or \
-                 isinstance(port[-1], m.ArrayType) and \
-                 not isinstance(port[-1].T, m._BitKind)):
+                (self.is_recursive_type(port[-1].T)):
             recurse(port[-1])
         else:
             # set defaults
