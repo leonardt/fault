@@ -127,7 +127,7 @@ class Tester:
         if self.is_recursive_type(port):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1].T)):
+                (self.is_recursive_type(port[-1])):
             recurse(port[-1])
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
@@ -164,7 +164,7 @@ class Tester:
         if self.is_recursive_type(port):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1].T)):
+                (self.is_recursive_type(port[-1])):
             recurse(port[-1])
         else:
             # set defaults
