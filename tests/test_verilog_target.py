@@ -80,9 +80,11 @@ def test_target_nested_arrays_bulk(target, simulator):
     circ = TestNestedArraysCircuit
     expected = [random.randint(0, (1 << 4) - 1) for i in range(3)]
     actions = []
-    actions.append(Poke(circ.I, expected))
+    for i in range(3):
+        actions.append(Poke(circ.I[i], expected[i]))
     actions.append(Eval())
-    actions.append(Expect(circ.O, expected))
+    for i in range(3):
+        actions.append(Expect(circ.O[i], expected[i]))
     run(circ, actions, target, simulator)
 
 

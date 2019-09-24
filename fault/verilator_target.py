@@ -3,7 +3,8 @@ from pathlib import Path
 import magma as m
 import fault.actions as actions
 from fault.actions import Poke, Eval
-from fault.verilog_target import VerilogTarget, verilog_name
+from fault.verilog_target import VerilogTarget
+from fault.verilog_utils import verilator_name
 import fault.value_utils as value_utils
 from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
                                    verilator_version)
@@ -137,7 +138,7 @@ class VerilatorTarget(VerilogTarget):
             path = value.port.path.replace(".", "->")
             return f"top->{self.get_verilator_prefix()}->{path}"
         else:
-            return f"top->{verilog_name(value.port.name)}"
+            return f"top->{verilator_name(value.port.name)}"
 
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
@@ -209,7 +210,7 @@ class VerilatorTarget(VerilogTarget):
                         circuit_name += f"_W{circuit.coreir_genargs['width']}"
                 self.debug_includes.add(f"{circuit_name}")
         else:
-            name = verilog_name(action.port.name)
+            name = verilator_name(action.port.name)
 
         # Special case poking internal registers
         is_reg_poke = isinstance(action.port, SelectPath) and \
@@ -268,7 +269,7 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name = type(item.instance).name
                     self.debug_includes.add(f"{circuit_name}")
             else:
-                name = verilog_name(port.name)
+                name = verilator_name(port.name)
             port_names.append(name)
         ports = ", ".join(f"top->{name}" for name in port_names)
         if ports:
@@ -297,7 +298,7 @@ class VerilatorTarget(VerilogTarget):
                 self.debug_includes.add(f"{circuit_name}")
             debug_name = action.port[-1].debug_name
         else:
-            name = verilog_name(action.port.name)
+            name = verilator_name(action.port.name)
             debug_name = action.port.debug_name
         value = action.value
         if isinstance(value, actions.Peek):
@@ -330,7 +331,7 @@ class VerilatorTarget(VerilogTarget):
                 "tracer->dump(main_time);", "#endif"]
 
     def make_step(self, i, action):
-        name = verilog_name(action.clock.name)
+        name = verilator_name(action.clock.name)
         code = []
         code.append("top->eval();")
         for step in range(action.steps):
@@ -371,7 +372,7 @@ if ({name}_file == NULL) {{
         return [f"fclose({action.file.name_without_ext}_file);"]
 
     def make_file_write(self, i, action):
-        value = f"top->{verilog_name(action.value.name)}"
+        value = f"top->{verilator_name(action.value.name)}"
         if action.file.endianness == "big":
             loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
         else:

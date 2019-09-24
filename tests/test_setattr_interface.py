@@ -139,7 +139,7 @@ def test_setattr_double_nested_arrays_bulk(target, simulator):
     circ = TestDoubleNestedArraysCircuit
     tester = Tester(circ)
     expected = []
-    val = [random.randint(0, (1 << 4) - 1) for _ in range(3) for _ in range(2)]
+    val = [[random.randint(0, (1 << 4) - 1) for _ in range(3)] for _ in range(2)]
     tester.circuit.I = val
     tester.eval()
     tester.circuit.O.expect(val)

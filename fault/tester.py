@@ -122,9 +122,14 @@ class Tester:
         # implement poke
         if isinstance(port, m.TupleType):
             recurse(port)
-        elif isinstance(port, SelectPath) and \
-                isinstance(port[-1], m.TupleType):
+        elif isinstance(port, m.ArrayType) and \
+                not isinstance(port.T, m._BitKind):
             recurse(port)
+        elif isinstance(port, SelectPath) and \
+                (isinstance(port[-1], m.TupleType) or
+                 isinstance(port[-1], m.ArrayType) and
+                 not isinstance(port[-1].T, (m._BitKind, m.BitType))):
+            recurse(port[-1])
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
@@ -159,8 +164,13 @@ class Tester:
                     self.expect(p, v, strict, **kwargs)
         if isinstance(port, m.TupleType):
             recurse(port)
+        elif isinstance(port, m.ArrayType) and \
+                not isinstance(port.T, m._BitKind):
+            recurse(port)
         elif isinstance(port, SelectPath) and \
-                isinstance(port[-1], m.TupleType):
+                (isinstance(port[-1], m.TupleType) or \
+                 isinstance(port[-1], m.ArrayType) and \
+                 not isinstance(port[-1].T, m._BitKind)):
             recurse(port[-1])
         else:
             # set defaults
