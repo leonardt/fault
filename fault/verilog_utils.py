@@ -19,6 +19,7 @@ def verilog_name(name):
         return f"{tuple_name}_{index}"
     raise NotImplementedError(name, type(name))
 
+
 def verilator_name(name):
     name = verilog_name(name)
     # pg 21 of verilator 4.018 manual
