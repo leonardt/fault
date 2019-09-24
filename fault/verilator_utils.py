@@ -1,4 +1,5 @@
 from .subprocess_run import subprocess_run
+from .verilog_utils import verilog_name
 
 
 def verilator_version(disp_type='on_error'):
@@ -57,3 +58,15 @@ def verilator_make_cmd(top):
     cmd += ['-f', f'V{top}.mk']
     cmd += [f'V{top}']
     return cmd
+
+
+def verilator_process_symbol(symbol):
+    # pg 21 of verilator 4.018 manual
+    # To avoid conicts with Verilator's internal symbols, any double
+    # underscore are replaced with ___05F (5F is the hex code of an underscore.)
+    return symbol.replace("__", "___05F")
+
+
+def verilator_name(name):
+    name = verilog_name(name)
+    return verilator_process_symbol(name)

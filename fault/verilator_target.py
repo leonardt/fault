@@ -4,10 +4,10 @@ import magma as m
 import fault.actions as actions
 from fault.actions import Poke, Eval
 from fault.verilog_target import VerilogTarget
-from fault.verilog_utils import verilator_name
 import fault.value_utils as value_utils
 from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
-                                   verilator_version)
+                                   verilator_version, verilator_name,
+                                   verilator_process_symbol)
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
@@ -208,7 +208,7 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name += f"_I{circuit.coreir_configargs['init']}"
                     if circuit.coreir_genargs['width'] != 1:
                         circuit_name += f"_W{circuit.coreir_genargs['width']}"
-                self.debug_includes.add(f"{circuit_name}")
+                self.debug_includes.add(f"{verilator_process_symbol(circuit_name)}")
         else:
             name = verilator_name(action.port.name)
 
@@ -267,7 +267,7 @@ class VerilatorTarget(VerilogTarget):
                         self.debug_includes.add(f"{port[0].circuit.name}")
                 for item in port[1:-1]:
                     circuit_name = type(item.instance).name
-                    self.debug_includes.add(f"{circuit_name}")
+                    self.debug_includes.add(f"{verilator_process_symbol(circuit_name)}")
             else:
                 name = verilator_name(port.name)
             port_names.append(name)
@@ -295,7 +295,7 @@ class VerilatorTarget(VerilogTarget):
                     self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
                 circuit_name = type(item.instance).name
-                self.debug_includes.add(f"{circuit_name}")
+                self.debug_includes.add(f"{verilator_process_symbol(circuit_name)}")
             debug_name = action.port[-1].debug_name
         else:
             name = verilator_name(action.port.name)
@@ -309,7 +309,7 @@ class VerilatorTarget(VerilogTarget):
                     self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
-                self.debug_includes.add(f"{circuit_name}")
+                self.debug_includes.add(f"{verilator_process_symbol(circuit_name)}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
         value = self.process_value(action.port, value)
         port = action.port
