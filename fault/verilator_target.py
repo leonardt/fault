@@ -196,6 +196,7 @@ class VerilatorTarget(VerilogTarget):
             for item in action.port[1:-1]:
                 circuit = type(item.instance)
                 circuit_name = circuit.verilog_name
+                circuit_name = verilator_process_symbol(circuit_name)
                 # Verilator specializes each parametrization into a separate
                 # mdoule, this is an attempt to reverse engineer the naming
                 # scheme
@@ -208,8 +209,7 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name += f"_I{circuit.coreir_configargs['init']}"
                     if circuit.coreir_genargs['width'] != 1:
                         circuit_name += f"_W{circuit.coreir_genargs['width']}"
-                self.debug_includes.add(
-                    f"{verilator_process_symbol(circuit_name)}")
+                self.debug_includes.add(f"{circuit_name}")
         else:
             name = verilator_name(action.port.name)
 
