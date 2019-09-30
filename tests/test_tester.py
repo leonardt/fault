@@ -155,9 +155,11 @@ def test_tester_nested_arrays_bulk(target, simulator):
     tester.poke(circ.I, val)
     tester.eval()
     tester.expect(circ.O, val)
-    expected.append(Poke(circ.I, fault.array.Array(val, 3)))
+    for i in range(3):
+        expected.append(Poke(circ.I[i], val[i]))
     expected.append(Eval())
-    expected.append(Expect(circ.O, fault.array.Array(val, 3)))
+    for i in range(3):
+        expected.append(Expect(circ.O[i], val[i]))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
@@ -248,10 +250,20 @@ def test_print_arrays(capsys):
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
 Actions:
-    0: Poke(DoubleNestedArraysCircuit.I, Array([Array([BitVector[4](0), BitVector[4](1), BitVector[4](2)], 3), Array([BitVector[4](3), BitVector[4](4), BitVector[4](5)], 3)], 2))
-    1: Eval()
-    2: Expect(DoubleNestedArraysCircuit.O, Array([Array([BitVector[4](0), BitVector[4](1), BitVector[4](2)], 3), Array([BitVector[4](3), BitVector[4](4), BitVector[4](5)], 3)], 2))
-    3: Print("%08x", DoubleNestedArraysCircuit.O)
+    0: Poke(DoubleNestedArraysCircuit.I[0][0], 0)
+    1: Poke(DoubleNestedArraysCircuit.I[0][1], 1)
+    2: Poke(DoubleNestedArraysCircuit.I[0][2], 2)
+    3: Poke(DoubleNestedArraysCircuit.I[1][0], 3)
+    4: Poke(DoubleNestedArraysCircuit.I[1][1], 4)
+    5: Poke(DoubleNestedArraysCircuit.I[1][2], 5)
+    6: Eval()
+    7: Expect(DoubleNestedArraysCircuit.O[0][0], 0)
+    8: Expect(DoubleNestedArraysCircuit.O[0][1], 1)
+    9: Expect(DoubleNestedArraysCircuit.O[0][2], 2)
+    10: Expect(DoubleNestedArraysCircuit.O[1][0], 3)
+    11: Expect(DoubleNestedArraysCircuit.O[1][1], 4)
+    12: Expect(DoubleNestedArraysCircuit.O[1][2], 5)
+    13: Print("%08x", DoubleNestedArraysCircuit.O)
 """  # nopep8
 
 

@@ -1,7 +1,12 @@
 import logging
 import magma as m
 import fault.actions as actions
-from fault.magma_simulator_target import MagmaSimulatorTarget
+try:
+    from fault.magma_simulator_target import MagmaSimulatorTarget
+except ModuleNotFoundError:
+    MagmaSimulatorTarget = None
+    pass
+
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
@@ -90,9 +95,15 @@ class Tester:
         if target == "verilator":
             return VerilatorTarget(self._circuit, **kwargs)
         elif target == "coreir":
+            if MagmaSimulatorTarget is None:
+                raise Exception("MagmaSimulatorTarget could not be imported, "
+                                "please install coreir/pycoreir")
             return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='coreir', **kwargs)
         elif target == "python":
+            if MagmaSimulatorTarget is None:
+                raise Exception("MagmaSimulatorTarget could not be imported, "
+                                "please install coreir/pycoreir")
             return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='python', **kwargs)
         elif target == "system-verilog":
@@ -102,6 +113,10 @@ class Tester:
         elif target == "spice":
             return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
+
+    def is_recursive_type(self, T):
+        return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
+            not isinstance(T.T, (m._BitKind, m.BitType))
 
     def poke(self, port, value, delay=None):
         """
@@ -120,11 +135,11 @@ class Tester:
                     self.poke(p, v, delay)
 
         # implement poke
-        if isinstance(port, m.TupleType):
+        if self.is_recursive_type(port):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                isinstance(port[-1], m.TupleType):
-            recurse(port)
+                (self.is_recursive_type(port[-1])):
+            recurse(port[-1])
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
@@ -157,10 +172,10 @@ class Tester:
             else:
                 for p, v in zip(port, value):
                     self.expect(p, v, strict, **kwargs)
-        if isinstance(port, m.TupleType):
+        if self.is_recursive_type(port):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                isinstance(port[-1], m.TupleType):
+                (self.is_recursive_type(port[-1])):
             recurse(port[-1])
         else:
             # set defaults
