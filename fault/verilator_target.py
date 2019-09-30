@@ -51,6 +51,9 @@ void my_assert(
     std::cerr << \"i        : \" << std::dec << i << std::endl;
     std::cerr << \"Port     : \" << port << std::endl;
 #if VM_TRACE
+    // Dump one more timestep so we see the current values
+    main_time++;
+    tracer->dump(main_time);
     tracer->close();
 #endif
     exit(1);

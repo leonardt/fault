@@ -1,7 +1,12 @@
 import logging
 import magma as m
 import fault.actions as actions
-from fault.magma_simulator_target import MagmaSimulatorTarget
+try:
+    from fault.magma_simulator_target import MagmaSimulatorTarget
+except ModuleNotFoundError:
+    MagmaSimulatorTarget = None
+    pass
+
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
@@ -90,9 +95,15 @@ class Tester:
         if target == "verilator":
             return VerilatorTarget(self._circuit, **kwargs)
         elif target == "coreir":
+            if MagmaSimulatorTarget is None:
+                raise Exception("MagmaSimulatorTarget could not be imported, "
+                                "please install coreir/pycoreir")
             return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='coreir', **kwargs)
         elif target == "python":
+            if MagmaSimulatorTarget is None:
+                raise Exception("MagmaSimulatorTarget could not be imported, "
+                                "please install coreir/pycoreir")
             return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='python', **kwargs)
         elif target == "system-verilog":

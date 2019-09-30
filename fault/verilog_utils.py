@@ -18,3 +18,11 @@ def verilog_name(name):
             pass
         return f"{tuple_name}_{index}"
     raise NotImplementedError(name, type(name))
+
+
+def verilator_name(name):
+    name = verilog_name(name)
+    # pg 21 of verilator 4.018 manual
+    # To avoid conicts with Verilator's internal symbols, any double
+    # underscore are replaced with ___05F (5F is the hex code of an underscore.)
+    return name.replace("__", "___05F")
