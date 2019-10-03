@@ -1,5 +1,5 @@
 import fault
-from fault.verilog_utils import verilog_name
+from fault.verilog_utils import verilog_name, verilator_name
 
 
 class SelectPath:
@@ -21,7 +21,7 @@ class SelectPath:
     def __setitem__(self, index, value):
         self.path[index] = value
 
-    def make_path(self, separator):
+    def make_path(self, separator, name_func=verilog_name):
         # Initialize empty path
         path = []
 
@@ -39,7 +39,7 @@ class SelectPath:
         elif isinstance(self.path[-1], str):
             path += [self.path[-1]]
         else:
-            path += [verilog_name(self.path[-1].name)]
+            path += [name_func(self.path[-1].name)]
 
         # Return the path string constructed with the provided separator.
         return separator.join(path)
@@ -54,7 +54,7 @@ class SelectPath:
 
     @property
     def verilator_path(self):
-        return self.make_path("->")
+        return self.make_path("->", name_func=verilator_name)
 
     @property
     def debug_name(self):
