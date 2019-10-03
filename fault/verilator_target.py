@@ -16,10 +16,10 @@ from fault.random import constrained_random_bv
 from fault.subprocess_run import subprocess_run
 import fault.utils as utils
 import fault.expression as expression
+import platform
 
 
-# max_bits = 64 if platform.architecture()[0] == "64bit" else 32
-max_bits = 32
+max_bits = 64 if platform.architecture()[0] == "64bit" else 32
 
 
 src_tpl = """\
