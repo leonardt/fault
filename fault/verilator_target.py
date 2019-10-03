@@ -325,7 +325,7 @@ class VerilatorTarget(VerilogTarget):
                 value = action.value[j * slice_range:min(
                     (j + 1) * slice_range, action.value.num_bits)]
                 asserts += [f"my_assert(top->{name}[{j}], {value}, "
-                    f"{i}, \"{debug_name}\");"]
+                            f"{i}, \"{debug_name}\");"]
             return asserts
         else:
             value = self.process_value(action.port, value)
