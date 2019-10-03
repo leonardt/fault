@@ -12,7 +12,8 @@ from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
                      TestBasicClkCircuit, TestNestedArraysCircuit,
                      TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
                      TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
-                     TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit)
+                     TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit,
+                     TestUInt64Circuit, TestUInt128Circuit)
 
 
 def pytest_generate_tests(metafunc):
@@ -160,6 +161,46 @@ def test_tester_nested_arrays_bulk(target, simulator):
     expected.append(Eval())
     for i in range(3):
         expected.append(Expect(circ.O[i], val[i]))
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_big_int(target, simulator):
+    circ = TestUInt64Circuit
+    tester = fault.Tester(circ)
+    expected = []
+    val = random.randint(0, (1 << 64) - 1)
+    tester.poke(circ.I, val)
+    tester.eval()
+    tester.expect(circ.O, val)
+    expected.append(Poke(circ.I, val))
+    expected.append(Eval())
+    expected.append(Expect(circ.O, val))
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_128(target, simulator):
+    circ = TestUInt128Circuit
+    tester = fault.Tester(circ)
+    expected = []
+    val = random.randint(0, (1 << 128) - 1)
+    tester.poke(circ.I, val)
+    tester.eval()
+    tester.expect(circ.O, val)
+    expected.append(Poke(circ.I, val))
+    expected.append(Eval())
+    expected.append(Expect(circ.O, val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
