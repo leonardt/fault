@@ -222,14 +222,16 @@ class VerilatorTarget(VerilogTarget):
 
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
-            asserts = []
-            for i in range(math.ceil(action.value.num_bits / max_bits)):
-                value = action.value[i * max_bits:min(
-                    (i + 1) * max_bits, action.value.num_bits)]
-                asserts += [f"top->{name}[{i}] = {value};"]
+            pokes = []
+            # For some reason, verilator chunks it by 32 instead of max_bits
+            slice_range = 32
+            for i in range(math.ceil(action.value.num_bits / slice_range)):
+                value = action.value[i * slice_range:min(
+                    (i + 1) * slice_range, action.value.num_bits)]
+                pokes += [f"top->{name}[{i}] = {value};"]
             if is_reg_poke:
                 raise NotImplementedError()
-            return asserts
+            return pokes
         else:
             value = action.value
             if isinstance(value, actions.FileRead):
@@ -314,20 +316,32 @@ class VerilatorTarget(VerilogTarget):
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
-        value = self.process_value(action.port, value)
-        port = action.port
-        if isinstance(port, SelectPath):
-            port = port[-1]
-        elif isinstance(port, fault.WrappedVerilogInternalPort):
-            port = port.type_
-        if isinstance(port, m._BitType):
-            port_len = 1
+        if isinstance(action.value, BitVector) and \
+                action.value.num_bits > max_bits:
+            asserts = []
+            # For some reason, verilator chunks it by 32 instead of max_bits
+            slice_range = 32
+            for j in range(math.ceil(action.value.num_bits / slice_range)):
+                value = action.value[j * slice_range:min(
+                    (j + 1) * slice_range, action.value.num_bits)]
+                asserts += [f"my_assert(top->{name}[{j}], {value}, "
+                    f"{i}, \"{debug_name}\");"]
+            return asserts
         else:
-            port_len = len(port)
-        mask = (1 << port_len) - 1
+            value = self.process_value(action.port, value)
+            port = action.port
+            if isinstance(port, SelectPath):
+                port = port[-1]
+            elif isinstance(port, fault.WrappedVerilogInternalPort):
+                port = port.type_
+            if isinstance(port, m._BitType):
+                port_len = 1
+            else:
+                port_len = len(port)
+            mask = (1 << port_len) - 1
 
-        return [f"my_assert(top->{name}, {value} & {mask}, "
-                f"{i}, \"{debug_name}\");"]
+            return [f"my_assert(top->{name}, {value} & {mask}, "
+                    f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
         return ["top->eval();", "main_time++;", "#if VM_TRACE",

@@ -49,6 +49,8 @@ TestBasicCircuit = define_simple_circuit(m.Bit, "BasicCircuit")
 TestArrayCircuit = define_simple_circuit(m.Array[3, m.Bit], "ArrayCircuit")
 TestByteCircuit = define_simple_circuit(m.Bits[8], "ByteCircuit")
 TestUInt32Circuit = define_simple_circuit(m.UInt[32], "UInt32Circuit")
+TestUInt64Circuit = define_simple_circuit(m.UInt[64], "UInt64Circuit")
+TestUInt128Circuit = define_simple_circuit(m.UInt[128], "UInt128Circuit")
 TestSIntCircuit = define_simple_circuit(m.SInt[4], "SIntCircuit")
 TestNestedArraysCircuit = define_simple_circuit(m.Array[3, m.Bits[4]],
                                                 "NestedArraysCircuit")
