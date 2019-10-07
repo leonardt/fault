@@ -88,7 +88,7 @@ def is_output(port):
 
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None):
+                 above=None, below=None, save_for_later=False):
         # call super constructor
         super().__init__(port, value)
 
@@ -112,6 +112,7 @@ class Expect(PortAction):
         self.strict = strict
         self.above = above
         self.below = below
+        self.save_for_later = save_for_later
 
 
 class Assume(PortAction):
