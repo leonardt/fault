@@ -7,6 +7,7 @@ from .common import pytest_sim_params
 def pytest_generate_tests(metafunc):
     pytest_sim_params(metafunc, 'verilog-ams', 'spice')
 
+
 def test_inv_tf(
     target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     vol_rel=0.1, voh_rel=0.9
@@ -33,7 +34,7 @@ def test_inv_tf(
     for k in [.4, .5, .6]:
         in_ = k * vsup
         tester.poke(dut.in_, in_)
-        # We might not know the expected value now, but we'll want to check later
+        # We might not know the expected value now but will want to check later
         tester.expect(dut.out, 0, save_for_later=True)
 
     # set options
@@ -57,4 +58,3 @@ def test_inv_tf(
     # for our own tests
     assert b <= a, "Inverter tf is not always decreasing"
     assert c <= b, "Inverter tf is not always decreasing"
-
