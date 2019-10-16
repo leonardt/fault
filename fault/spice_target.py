@@ -202,6 +202,16 @@ class SpiceTarget(Target):
             if isinstance(action, (Poke, Expect)) \
                and isinstance(action.port, m.BitsType):
                 _actions += self.expand_bus(action)
+            elif (isinstance(action, (Poke, Expect))
+                  and isinstance(action.port.name, m.ref.ArrayRef)):
+                # The default way magma deals with naming one pin of a bus
+                # does not match our spice convention. We need to get the
+                # name of the original bus and index it ourselves.
+                bus_name = action.port.name.array.name
+                bus_index = action.port.name.index
+                bit_name = self.bit_from_bus(bus_name, bus_index)
+                action.port = m.BitType(name=bit_name)
+                _actions.append(action)
             else:
                 _actions.append(action)
         actions = _actions
