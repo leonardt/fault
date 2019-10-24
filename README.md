@@ -128,25 +128,25 @@ Here are the supported Python values for poking the following port types:
   For example, suppose I have a port `I` of type `m.Array[3, m.Bits[3]]`. 
   I can poke it as follows:
   ```python
-val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
-tester.poke(circ.I, val)
+  val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
+  tester.poke(circ.I, val)
   ```
   You can also poke it by element as follows:
   ```python
-for i in range(3):
-    val = random.randint(0, (1 << 4) - 1)
-    tester.poke(circ.I[i], val)
-    tester.eval()
-    tester.expect(circ.O[i], val)
+  for i in range(3):
+      val = random.randint(0, (1 << 4) - 1)
+      tester.poke(circ.I[i], val)
+      tester.eval()
+      tester.expect(circ.O[i], val)
   ```
 * `m.Tuple(a=m.Bits[4], b=m.Bits[4])` - `tuple` (where the length of the tuple is equal to the number of fields), `dict` (where there is a one-to-one mapping between key/value pairs to the tuple fields).  Example:
   ```python
-tester.circuit.I = (4, 2)
-tester.eval()
-tester.circuit.O.expect((4, 2))
-tester.circuit.I = {"a": 4, "b": 2}
-tester.eval()
-tester.circuit.O.expect({"a": 4, "b": 2})
+  tester.circuit.I = (4, 2)
+  tester.eval()
+  tester.circuit.O.expect((4, 2))
+  tester.circuit.I = {"a": 4, "b": 2}
+  tester.eval()
+  tester.circuit.O.expect({"a": 4, "b": 2})
   ```
 
 ### How do I generate waveforms with fault?
