@@ -114,6 +114,41 @@ for i in reversed(range(4)):
 
 ## FAQ
 
+### What Python values can I use to poke/expect ports?
+Here are the supported Python values for poking the following port types:
+* `m.Bit` - `bool` (`True`/`False`) or `int` (`0`/`1`) or `hwtypes.Bit`
+* `m.Bits[N]` - `hwtypes.BitVector[N]`, `int` (where the number of bits used to
+  express it is equal to `N`)
+* `m.SInt[N]` - `hwtypes.SIntVector[N]`, `int` (where the number of bits used to
+  express it is equal to `N`)
+* `m.UInt[N]` - `hwtypes.UIntVector[N]`, `int` (where the number of bits used to
+  express it is equal to `N`)
+* `m.Array[N, T]` - `list` (where the length of the list is equal to `N` and
+  the elements recursively conform to the supported types of values for `T`).
+  For example, suppose I have a port `I` of type `m.Array[3, m.Bits[3]]`. 
+  I can poke it as follows:
+  ```python
+val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
+tester.poke(circ.I, val)
+  ```
+  You can also poke it by element as follows:
+  ```python
+for i in range(3):
+    val = random.randint(0, (1 << 4) - 1)
+    tester.poke(circ.I[i], val)
+    tester.eval()
+    tester.expect(circ.O[i], val)
+  ```
+* `m.Tuple(a=m.Bits[4], b=m.Bits[4])` - `tuple` (where the length of the tuple is equal to the number of fields), `dict` (where there is a one-to-one mapping between key/value pairs to the tuple fields).  Example:
+  ```python
+tester.circuit.I = (4, 2)
+tester.eval()
+tester.circuit.O.expect((4, 2))
+tester.circuit.I = {"a": 4, "b": 2}
+tester.eval()
+tester.circuit.O.expect({"a": 4, "b": 2})
+  ```
+
 ### How do I generate waveforms with fault?
 
 Fault supports generating `.vcd` dumps when using the `verilator` and
