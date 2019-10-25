@@ -28,7 +28,11 @@ class PortAction(Action):
 
     def retarget(self, new_circuit, clock):
         cls = type(self)
-        new_port = new_circuit.interface.ports[str(self.port.name)]
+        port = self.port
+        if isinstance(port, SelectPath):
+            port = port[-1]
+
+        new_port = new_circuit.interface.ports[str(port.name)]
         return cls(new_port, self.value)
 
 
