@@ -114,6 +114,67 @@ for i in reversed(range(4)):
 
 ## FAQ
 
+### How can I write test bench logic that depends on the runtime state of the circuit?
+A common pattern in testing is to only perform certain actions depending on the
+state of the circuit.  For example, one may only want to expect an output value
+when a valid signal is high, ignoring it otherwise.  Another pattern is to change
+the expected value over time by using a looping structure.  Finally, one may
+want to expect a value that is a function of other runtime values.  To support
+these pattern, `fault` provides support "peeking" values, performing expressions
+on "peeked" values, if statements, and while loops.  
+
+#### Peek Expressions
+Suppose we had a circuit as follows:
+```python
+class BinaryOpCircuit(m.Circuit):
+    IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5])]
+    IO += ["O", m.Out(m.UInt[5])]
+
+    @classmethod
+    def definition(io):
+        m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
+```
+We can write a generic test that expects the output `O` in terms
+of the inputs `I0` and `I1` (rather than computing the expected value in
+Python).
+```python
+tester = fault.Tester(BinaryOpCircuit)
+for _ in range(5):
+    tester.poke(tester._circuit.I0, hwtypes.BitVector.random(5))
+    tester.poke(tester._circuit.I1, hwtypes.BitVector.random(5))
+    tester.eval()
+    expected = tester.circuit.I0 + tester.circuit.I1
+    expected &= tester.circuit.I1 - tester.circuit.I0
+    tester.circuit.O.expect(expected)
+```
+This is a useful pattern for writing reuseable test components (e.g.  composign
+the output checking logic with various input stimuli generators).
+
+#### Control Structures
+The `tester._while(<test>)` action accepts a Peek value or expression as the test condition for a loop and returns a child tester that allows the user to add actions to the body of the loop.  Here's a simple example that loops until a done signal is asserted, printing some debug information in the loop body:
+```python
+# Wait for loop to complete
+loop = tester._while(dut.n_done)
+debug_print(loop, dut)
+loop.step()
+loop.step()
+
+# check final state
+tester.circuit.count.expect(expected_num_cycles - 1)
+```
+Notice that you can also add actions after the loop to check expected behavior
+after the loop has completed.
+
+The `tester._if(<test>)` action behaves similarly by accepting a test peek value or expression and conditionally executes actions depending on the
+result of the expression.  Here is a simple example:
+```python
+if_tester = tester._if(tester.circuit.O == 0)
+if_tester.circuit.I = 1
+else_tester = if_tester._else().poke(circ.I, 0)
+else_tester.circuit.I = 0
+tester.eval()
+```
+
 ### What Python values can I use to poke/expect ports?
 Here are the supported Python values for poking the following port types:
 * `m.Bit` - `bool` (`True`/`False`) or `int` (`0`/`1`) or `hwtypes.Bit`
