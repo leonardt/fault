@@ -170,7 +170,7 @@ result of the expression.  Here is a simple example:
 ```python
 if_tester = tester._if(tester.circuit.O == 0)
 if_tester.circuit.I = 1
-else_tester = if_tester._else().poke(circ.I, 0)
+else_tester = if_tester._else()
 else_tester.circuit.I = 0
 tester.eval()
 ```
