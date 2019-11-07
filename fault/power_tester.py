@@ -3,7 +3,7 @@ from fault import Tester
 
 
 class PowerTester(Tester):
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.supply0s = []
         self.supply1s = []

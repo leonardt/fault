@@ -58,8 +58,8 @@ class Tester:
 
     __test__ = False  # Tell pytest to skip this class for discovery
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
-                 reset: m.ResetType = None, poke_delay_default=None,
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
+                 reset: m.Reset = None, poke_delay_default=None,
                  expect_strict_default=False):
         """
         `circuit`: the device under test (a magma circuit)
@@ -74,10 +74,10 @@ class Tester:
         self.poke_delay_default = poke_delay_default
         self.expect_strict_default = expect_strict_default
         self.actions = []
-        if clock is not None and not isinstance(clock, m.ClockType):
+        if clock is not None and not isinstance(clock, m.Clock):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
-        if reset is not None and not isinstance(reset, m.ResetType):
+        if reset is not None and not isinstance(reset, m.Reset):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
         self.targets = {}
@@ -115,8 +115,8 @@ class Tester:
         raise NotImplementedError(target)
 
     def is_recursive_type(self, T):
-        return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
-            not isinstance(T.T, (m._BitKind, m.BitType))
+        return issubclass(T, m.Tuple) or issubclass(T, m.Array) and \
+            not issubclass(T.T, m.Digital)
 
     def poke(self, port, value, delay=None):
         """
@@ -135,7 +135,7 @@ class Tester:
                     self.poke(p, v, delay)
 
         # implement poke
-        if self.is_recursive_type(port):
+        if self.is_recursive_type(port.type_):
             recurse(port)
         elif isinstance(port, SelectPath) and \
                 (self.is_recursive_type(port[-1])):
@@ -143,7 +143,7 @@ class Tester:
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
-                value = make_value(port, value)
+                value = make_value(port.type_, value)
             self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
@@ -172,7 +172,7 @@ class Tester:
             else:
                 for p, v in zip(port, value):
                     self.expect(p, v, strict, **kwargs)
-        if self.is_recursive_type(port):
+        if self.is_recursive_type(port.type_):
             recurse(port)
         elif isinstance(port, SelectPath) and \
                 (self.is_recursive_type(port[-1])):
@@ -185,7 +185,7 @@ class Tester:
             # implement expect
             if not isinstance(value, (actions.Peek, PortWrapper,
                                       LoopIndex, expression.Expression)):
-                value = make_value(port, value)
+                value = make_value(port.type_, value)
             self.actions.append(actions.Expect(port, value, **kwargs))
 
     def eval(self):
@@ -466,7 +466,7 @@ class LoopIndex:
 class LoopTester(Tester):
     __unique_index_id = -1
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         LoopTester.__unique_index_id += 1
         self.index = LoopIndex(
@@ -475,13 +475,13 @@ class LoopTester(Tester):
 
 class ElseTester(Tester):
     def __init__(self, else_actions: List, circuit: m.Circuit,
-                 clock: m.ClockType = None):
+                 clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.actions = else_actions
 
 
 class IfTester(Tester):
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.else_actions = []
 
