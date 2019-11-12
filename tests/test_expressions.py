@@ -95,6 +95,8 @@ def test_binop_two_signals_setattr(target, simulator, op):
         tester.eval()
         tester.circuit.O.expect(getattr(operator, op)(tester.circuit.I0_out,
                                                       tester.circuit.I1_out))
+        tester.circuit.O.expect(getattr(operator, op)(tester.circuit.I0,
+                                                      tester.circuit.I1))
 
     run_test(tester, target, simulator)
 
@@ -150,6 +152,11 @@ def test_op_tree(target, simulator):
             tester.peek(tester._circuit.I1_out)
         expected &= tester.peek(tester._circuit.I1_out) - \
             tester.peek(tester._circuit.I0_out)
+        tester.expect(tester._circuit.O, expected)
+        expected = tester.peek(tester._circuit.I0) + \
+            tester.peek(tester._circuit.I1)
+        expected &= tester.peek(tester._circuit.I1) - \
+            tester.peek(tester._circuit.I0)
         tester.expect(tester._circuit.O, expected)
 
     run_test(tester, target, simulator)

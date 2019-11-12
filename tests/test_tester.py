@@ -54,6 +54,24 @@ def test_tester_basic(target, simulator):
     check(tester.actions[4], Print("%08x", circ.O))
     tester.eval()
     check(tester.actions[5], Eval())
+    tester.poke(circ.I, 0)
+    tester.eval()
+    tester.expect(circ.O, 0)
+    tester.poke(circ.I, True)
+    tester.eval()
+    tester.expect(circ.O, True)
+    tester.poke(circ.I, False)
+    tester.eval()
+    tester.expect(circ.O, False)
+    tester.poke(circ.I, False)
+    tester.eval()
+    tester.expect(circ.O, False)
+    tester.poke(circ.I, hwtypes.Bit(1))
+    tester.eval()
+    tester.expect(circ.O, hwtypes.Bit(1))
+    tester.poke(circ.I, hwtypes.Bit(0))
+    tester.eval()
+    tester.expect(circ.O, hwtypes.Bit(0))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
@@ -589,6 +607,10 @@ def test_sint_circuit(target, simulator):
 
     for i in range(10):
         tester.circuit.I = int(inputs[i])
+        tester.eval()
+        tester.circuit.O.expect(inputs[i])
+    for i in range(10):
+        tester.circuit.I = inputs[i]
         tester.eval()
         tester.circuit.O.expect(int(inputs[i]))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
