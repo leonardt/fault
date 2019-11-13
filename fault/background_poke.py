@@ -1,5 +1,6 @@
 from fault.actions import Poke
-import heapq, math
+import heapq
+import math
 from functools import total_ordering
 
 
@@ -11,7 +12,6 @@ class Thread():
     # when checking clock value at time t, check time t+epsilon instead
     # this avoids ambiguity when landing exactly on the clock edge
     epsilon = 1e-18
-
 
     def __init__(self, time, poke):
         self.poke = poke.copy()
@@ -62,6 +62,7 @@ class Thread():
         Returns a new Poke object with the correct value set for time t.
         Sets the port and value but NOT the delay.
         '''
+        # TODO don't poke at the same time twice
         missed_update_msg = 'Background Poke thread not updated in time'
         assert t <= self.next_update + self.epsilon, missed_update_msg
         value = self.get_val(t)
@@ -69,29 +70,116 @@ class Thread():
         poke.value = value
         return poke
 
-
     def __lt__(self, other):
         return self.next_update < other
 
+
 class ThreadPool():
-    pass
+    # if the next background update is within epsilon of the next manual
+    # update, then the background one comes first
+    # Which comes first is arbitrary, but this epsilon makes it consistent
+    epsilon = 1e-18
+
+    def __init__(self, time):
+        self.t = time
+        self.background_threads = []
+        self.active_ports = set()
+
+    def get_next_update_time(self):
+        if len(self.background_threads) == 0:
+            return float('inf')
+        else:
+            return self.background_threads[0].next_update
+
+    def delay(self, t_delay):
+        '''
+        Create a list of actions that need to happen during this delay.
+        Returns (free_time, actions), where free_time is the delay that should
+        happen before the first action in actions.
+        '''
+        t = self.t
+        t_end = self.t + t_delay
+        free_time = self.get_next_update_time() - self.t
+        if free_time > t_delay:
+            self.t = t_end
+            return (t_delay, [])
+        else:
+            actions = []
+            while self.get_next_update_time() <= t_end + self.epsilon:
+                thread = heapq.heappop(self.background_threads)
+                action = thread.step()
+                next_thing_time = min(self.get_next_update_time(), t_end)
+                action.delay = next_thing_time - t
+                t = next_thing_time
+                actions.append(action)
+                heapq.heappush(self.background_threads, thread)
+
+            # t_end has less floating point error than t
+            self.t = t_end
+            return (free_time, actions)
+
+    def add(self, background_poke):
+        error_msg = 'Cannot add existing background thread'
+        assert background_poke.port not in self.active_ports, error_msg
+        self.active_ports.add(background_poke.port)
+        thread = Thread(self.t, background_poke)
+        heapq.heappush(self.background_threads, thread)
+
+    def remove(self, port):
+        self.active_ports.remove(port)
+        for thread in self.background_threads:
+            if thread.poke.port == port:
+                offender = thread
+        self.background_threads.remove(offender)
+        poke = offender.step(self.t)
+        if poke is None:
+            return []
+        else:
+            return [poke]
+
+    def process(self, action, delay):
+        new_action_list = []
+        is_background = (isinstance(action, Poke)
+                         and action.background_params is not None)
+
+        # check whether this is currently a background port
+        if action.port in self.active_ports:
+            new_action_list += self.remove(action.port)
+
+        # if the new port is background we must add it before doing delay
+        if is_background:
+            self.add(action)
+
+        # we might cut action's delay short to allow some background pokes
+        new_delay, actions = self.delay(delay)
+
+        # now we add this (shortened) action back in
+        if not is_background:
+            new_action = action.copy()
+            new_action.delay = new_delay
+            new_action_list.append(new_action)
+
+        new_action_list += actions
+        return new_action_list
 
 
 def process_action_list(actions, clock_step_delay):
     """
     Replace Pokes with background_params with many individual pokes.
     Automatically interleaves multiple background tasks with other pokes.
-    Throws a NotImplementedError if there's a background task during an 
+    Throws a NotImplementedError if there's a background task during an
     interval of time not known at compile time.
     """
 
-    new_action_list = []
-    t = 0
-    for a in actions:
-        if isinstance(a, Poke) and a.background_params is not None:
-            #do something
-            pass
+    def get_delay(a):
+        if a.delay is not None:
+            return a.delay
         else:
-            new_action_list.append(a)
+            return clock_step_delay
 
-
+    background_pool = ThreadPool(0)
+    new_action_list = []
+    for a in actions:
+        delay = get_delay(a)
+        new_action_list += background_pool.process(a, delay)
+    return new_action_list
