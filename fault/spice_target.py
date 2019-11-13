@@ -12,6 +12,7 @@ from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print
 from fault.select_path import SelectPath
+from fault.background_poke import process_action_list
 
 
 # define a custom error for A2D conversion to make it easier
@@ -122,6 +123,11 @@ class SpiceTarget(Target):
         self.saved_for_later = []
 
     def run(self, actions):
+        # expand background pokes into regular pokes
+        print('before', len(actions))
+        actions = process_action_list(actions, self.clock_step_delay)
+        print('after', len(actions))
+
         # compile the actions
         comp = self.compile_actions(actions)
 

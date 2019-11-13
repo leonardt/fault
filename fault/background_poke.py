@@ -2,6 +2,7 @@ from fault.actions import Poke
 import heapq
 import math
 from functools import total_ordering
+import copy
 
 
 @total_ordering
@@ -14,13 +15,17 @@ class Thread():
     epsilon = 1e-18
 
     def __init__(self, time, poke):
-        self.poke = poke.copy()
+        print('creating thread for', poke, 'at time', time)
+        self.poke = copy.copy(poke)
         self.poke.params = None
         self.poke.delay = None
-        params = poke.params
+        params = poke.delay
         self.start = time
-        self.next_update = 0
+        self.next_update = time
         type_ = params.get('type', 'clock')
+
+        print('type_ is', type_)
+        print(params)
 
         # Each type must set a get_val(t) function and a dt
         if type_ == 'clock':
@@ -56,8 +61,10 @@ class Thread():
 
             self.get_val = get_val
             self.dt = params.get('dt', 1 / (freq*self.default_steps_per_cycle))
+            print('calculate dt of', self.dt, 'from', freq, self.default_steps_per_cycle)
 
     def step(self, t):
+        #print('stepping thread ', self, 'at time', t)
         '''
         Returns a new Poke object with the correct value set for time t.
         Sets the port and value but NOT the delay.
@@ -65,9 +72,11 @@ class Thread():
         # TODO don't poke at the same time twice
         missed_update_msg = 'Background Poke thread not updated in time'
         assert t <= self.next_update + self.epsilon, missed_update_msg
+        self.next_update = t + self.dt
         value = self.get_val(t)
-        poke = self.poke.copy()
+        poke = copy.copy(self.poke)
         poke.value = value
+        #print('after step, next scheduled update is', self.next_update)
         return poke
 
     def __lt__(self, other):
@@ -97,25 +106,33 @@ class ThreadPool():
         Returns (free_time, actions), where free_time is the delay that should
         happen before the first action in actions.
         '''
+        #print('Thread pool is doing a delay of ', t_delay, 'at time', self.t)
         t = self.t
         t_end = self.t + t_delay
         free_time = self.get_next_update_time() - self.t
         if free_time > t_delay:
+            #print('pool update not needed', t)
             self.t = t_end
             return (t_delay, [])
         else:
             actions = []
+            #print('entering while loop')
             while self.get_next_update_time() <= t_end + self.epsilon:
                 thread = heapq.heappop(self.background_threads)
-                action = thread.step()
+                action = thread.step(t)
+                heapq.heappush(self.background_threads, thread)
+
+                # we had to put the thread back on the heap in order to
+                # calculate the next update
                 next_thing_time = min(self.get_next_update_time(), t_end)
+                #print('calculated next thing time', next_thing_time, 'at time', t)
                 action.delay = next_thing_time - t
                 t = next_thing_time
                 actions.append(action)
-                heapq.heappush(self.background_threads, thread)
 
             # t_end has less floating point error than t
             self.t = t_end
+            #print('ending updates at time', t_end)
             return (free_time, actions)
 
     def add(self, background_poke):
@@ -140,10 +157,11 @@ class ThreadPool():
     def process(self, action, delay):
         new_action_list = []
         is_background = (isinstance(action, Poke)
-                         and action.background_params is not None)
+                         and type(action.delay) == dict)
 
-        # check whether this is currently a background port
-        if action.port in self.active_ports:
+        # check whether this is a poke taking over a background port
+        if (isinstance(action, Poke)
+            and action.port in self.active_ports):
             new_action_list += self.remove(action.port)
 
         # if the new port is background we must add it before doing delay
@@ -155,7 +173,7 @@ class ThreadPool():
 
         # now we add this (shortened) action back in
         if not is_background:
-            new_action = action.copy()
+            new_action = copy.copy(action)
             new_action.delay = new_delay
             new_action_list.append(new_action)
 
@@ -172,8 +190,13 @@ def process_action_list(actions, clock_step_delay):
     """
 
     def get_delay(a):
-        if a.delay is not None:
-            return a.delay
+        if not hasattr(a, 'delay'):
+            return getattr(a, 'time', 0)
+        elif a.delay is not None:
+            if type(a.delay) == dict:
+                return 0
+            else:
+                return a.delay
         else:
             return clock_step_delay
 
