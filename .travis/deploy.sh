@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+if [ $TRAVIS_OS_NAME = 'linux' ]; then
 export PATH=$TRAVIS_BUILD_DIR/miniconda/bin:$PATH
 source activate test-env
 
@@ -16,3 +17,4 @@ pip install twine
 python setup.py sdist build
 
 twine upload dist/*
+fi
