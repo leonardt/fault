@@ -8,7 +8,7 @@ import copy
 @total_ordering
 class Thread():
     # if sin wave dt is unspecified, use period/default_steps_per_cycle
-    default_steps_per_cycle = 20
+    default_steps_per_cycle = 10
 
     # when checking clock value at time t, check time t+epsilon instead
     # this avoids ambiguity when landing exactly on the clock edge
@@ -38,9 +38,9 @@ class Thread():
             def get_val(t):
                 cycle_location = ((t - self.start + self.epsilon) / period) % 1
                 if initial_value == 0:
-                    return cycle_location > (1 - duty_cycle)
+                    return 1 if cycle_location > (1 - duty_cycle) else 0
                 else:
-                    return cycle_location < duty_cycle
+                    return 1 if cycle_location < duty_cycle else 0
 
             self.get_val = get_val
             self.dt = period/2
@@ -49,10 +49,11 @@ class Thread():
             freq = params.get('freq', 1e6)
             period = params.get('period', 1/freq)
             freq = 1 / period
+            print('Settled on frequency', freq)
             amplitude = params.get('amplitude', 1)
             offset = params.get('offset', 0)
             phase_degrees = params.get('phase_degrees', 0)
-            conv = math.pi / 180
+            conv = math.pi / 180.0
             phase_radians = params.get('phase_radians', phase_degrees * conv)
 
             def get_val(t):
@@ -61,10 +62,10 @@ class Thread():
 
             self.get_val = get_val
             self.dt = params.get('dt', 1 / (freq*self.default_steps_per_cycle))
-            print('calculate dt of', self.dt, 'from', freq, self.default_steps_per_cycle)
+            print('calculated dt of', self.dt, 'from', freq, self.default_steps_per_cycle)
 
     def step(self, t):
-        #print('stepping thread ', self, 'at time', t)
+        print('stepping thread ', self, 'at time', t)
         '''
         Returns a new Poke object with the correct value set for time t.
         Sets the port and value but NOT the delay.

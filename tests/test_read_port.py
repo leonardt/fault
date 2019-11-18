@@ -12,6 +12,10 @@ def test_inv_tf(
     target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     vol_rel=0.1, voh_rel=0.9
 ):
+    #target = 'verilog-ams'
+    #simulator = 'ncsim'
+    target = 'spice'
+    simulator = 'ngspice'
     # declare circuit
     myinv = m.DeclareCircuit(
         'myinv',
