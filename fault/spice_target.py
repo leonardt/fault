@@ -34,7 +34,7 @@ class CompiledSpiceActions:
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
-                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
+                 t_step=None, clock_step_delay=5e-9, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None,
                  disp_type='on_error'):
@@ -130,6 +130,7 @@ class SpiceTarget(Target):
 
         # compile the actions
         comp = self.compile_actions(actions)
+        print('compiled action pwls:', comp.pwls)
 
         # write the testbench
         tb_file = self.write_test_bench(comp)
@@ -246,7 +247,7 @@ class SpiceTarget(Target):
                 pwc_dict[action_port_name][1].append((t, stim_s))
                 # increment time if desired
                 if action.delay is None:
-                    t += self.clock_step_delay * 1e-9
+                    t += self.clock_step_delay
                 else:
                     t += action.delay
             elif isinstance(action, Expect):
