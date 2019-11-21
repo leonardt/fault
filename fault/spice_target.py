@@ -10,7 +10,7 @@ from fault.nutascii_parse import nutascii_parse
 from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay, Print
+from fault.actions import Poke, Expect, Delay, Print, Read
 from fault.select_path import SelectPath
 
 
@@ -22,10 +22,11 @@ class A2DError(Exception):
 
 
 class CompiledSpiceActions:
-    def __init__(self, pwls, checks, prints, stop_time, saves):
+    def __init__(self, pwls, checks, prints, reads, stop_time, saves):
         self.pwls = pwls
         self.checks = checks
         self.prints = prints
+        self.reads = reads
         self.stop_time = stop_time
         self.saves = saves
 
@@ -151,6 +152,9 @@ class SpiceTarget(Target):
         # print results
         self.print_results(results=results, prints=comp.prints)
 
+        # set values on reads
+        self.process_reads(results, comp.reads)
+
         # check results
         self.check_results(results=results, checks=comp.checks)
 
@@ -191,6 +195,7 @@ class SpiceTarget(Target):
         pwc_dict = {}
         checks = []
         prints = []
+        reads = []
         saves = set()
 
         # expand buses as needed
@@ -237,6 +242,9 @@ class SpiceTarget(Target):
                 prints.append((t, action))
                 for port in action.ports:
                     saves.add(f'{port.name}')
+            elif isinstance(action, Read):
+                reads.append((t, action))
+                saves.add(f'{action.port.name}')
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -255,6 +263,7 @@ class SpiceTarget(Target):
             pwls=pwls,
             checks=checks,
             prints=prints,
+            reads=reads,
             stop_time=t,
             saves=saves
         )
@@ -422,6 +431,11 @@ class SpiceTarget(Target):
     def print_results(self, results, prints):
         for print_ in prints:
             self.impl_print(results=results, time=print_[0], action=print_[1])
+
+    def process_reads(self, results, reads):
+        for time, read in reads:
+            value = results[f'{read.port.name}'](time)
+            read.value = value
 
     def ngspice_cmds(self, tb_file):
         # build up the command
