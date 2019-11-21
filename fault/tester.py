@@ -161,6 +161,15 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
+    def read(self, port):
+        """
+        Returns a Read action. After running the simulation, the value of
+        `port` will be saved in the Read object's 'value' attribute.
+        """
+        r = actions.Read(port)
+        self.actions.append(r)
+        return r
+
     def expect(self, port, value, strict=None, **kwargs):
         """
         Expect the current value of `port` to be `value`

@@ -75,11 +75,24 @@ class Print(Action):
 class Read(Action):
     def __init__(self, port):
         super().__init__()
-
         self.port = port
+
+    def __getattr__(self, name):
+        if name == 'value':
+            err_msg = 'value has not been set for {self}'
+            err_msg += ', did the simulation finish running yet?'
+            assert False, err_msg
+        else:
+            raise AttributeError
 
     def __str__(self):
         return f"Read({self.port.debug_name})"
+
+    def retarget(self, new_circuit, clock):
+        cls = type(self)
+        new_port = new_circuit.interface.ports[str(self.port.name)]
+        return cls(new_port)
+
 
 
 def is_inout(port):

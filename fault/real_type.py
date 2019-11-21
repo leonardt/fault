@@ -11,6 +11,8 @@ class RealType(Type):
     def isoriented(cls, direction):
         return cls.direction == direction
 
+    __hash__ = Type.__hash__
+
 
 class RealKind(Kind):
     def __init__(cls, name, bases, dct):
@@ -52,6 +54,8 @@ class RealKind(Kind):
         elif cls.isoriented(OUTPUT):
             return RealIn
         return cls
+
+    __hash__ = Kind.__hash__
 
 
 def MakeReal(**kwargs):
