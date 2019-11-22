@@ -215,18 +215,12 @@ class SpiceTarget(Target):
         # expand buses as needed
         _actions = []
         for action in actions:
-            if isinstance(action, (Poke, Expect)) \
+            if isinstance(action, (Poke, Expect, Read)) \
                and isinstance(action.port, m.BitsType):
                 _actions += self.expand_bus(action)
-            elif (isinstance(action, (Poke, Expect))
+            elif (isinstance(action, (Poke, Expect, Read))
                   and isinstance(action.port.name, m.ref.ArrayRef)):
-                # The default way magma deals with naming one pin of a bus
-                # does not match our spice convention. We need to get the
-                # name of the original bus and index it ourselves.
-                bus_name = action.port.name.array.name
-                bus_index = action.port.name.index
-                bit_name = self.bit_from_bus(bus_name, bus_index)
-                action.port = m.BitType(name=bit_name)
+                action.port = self.select_bit_from_bus(action.port)
                 _actions.append(action)
             else:
                 _actions.append(action)
@@ -269,6 +263,12 @@ class SpiceTarget(Target):
             elif isinstance(action, Read):
                 reads.append((t, action))
                 saves.add(f'{action.port.name}')
+                # phase could be relative to another signal
+                if 'ref' in action.params:
+                    if isinstance(action.params['ref'].name, m.ref.ArrayRef):
+                        ref = self.select_bit_from_bus(action.params['ref'])
+                        action.params['ref'] = ref
+                    saves.add(f'{action.params["ref"].name}')
             elif isinstance(action, Delay):
                 t += action.time
             else:
@@ -313,6 +313,17 @@ class SpiceTarget(Target):
             return f'{port}_{k}'
         else:
             raise Exception(f'Unknown bus delimeter: {self.bus_delim}')
+
+    def select_bit_from_bus(self, port):
+        # The default way magma deals with naming one pin of a bus
+        # does not match our spice convention. We need to get the
+        # name of the original bus and index it ourselves.
+        bus_name = port.name.array.name
+        bus_index = port.name.index
+        bit_name = self.bit_from_bus(bus_name, bus_index)
+        new_port = m.BitType(name=bit_name)
+        return new_port
+
 
     def get_alpha_ordered_ports(self):
         # get ports sorted in alphabetical order
@@ -465,6 +476,15 @@ class SpiceTarget(Target):
             elif read.style == 'edge':
                 value = self.find_edge(res.x, res.y, time, **read.params)
                 read.value = value
+            elif read.style == 'phase':
+                assert 'ref' in read.params, 'Phase read requires reference signal param'
+                res_ref = results[f'{read.params["ref"].name}']
+                ref = self.find_edge(res_ref.x, res_ref.y, time, count=2)
+                edge = self.find_edge(res.x, res.y, time + ref[0])
+                fraction = (edge[0] - ref[1]) / (ref[0] -ref[1])
+                print(ref, edge)
+                # TODO multiply by 2pi?
+                read.value = fraction
             else:
                 raise NotImplementedError(f'Unknown read style "{read.style}"')
 
@@ -480,34 +500,35 @@ class SpiceTarget(Target):
             # default comes out to 0.5
             height = self.vsup * (self.vih_rel + self.vil_rel) / 2
 
-        if not rising:
+        # deal with `rising` and `forward`
+        # normally a low-to-high finder
+        if (rising ^ forward):
             print('Flipping thing')
             y = [(-1*z + 2*height) for z in y]
-
-        # deal with `forward`
         direction = 1 if forward else -1
         # we want to start on the far side of the interval containing t_start
         # to make sure we catch any edge near t_start
         side = 'left' if forward else 'right'
 
         start_index = np.searchsorted(x, t_start, side=side)
-        #if start_index == len(x):
-        #    # happens when forward=False and the edge find is the end of the sim
-        #    print('SPECIAL CASE')
-        #    start_index -= 1
+        if start_index == len(x):
+            # happens when forward=False and the edge find is the end of the sim
+            print('SPECIAL CASE')
+            start_index -= 1
         #print('found start index', start_index, 'between', x[start_index], x[start_index+1])
         i = start_index
         edges = []
         while len(edges) < count:
             print('i starts at', i, 'x is', x[i], 'y is', y[i])
-            print('wil iterate as long as y[i] is higher than', height)
+            print('will iterate as long as y[i] is higher than', height)
+            # move until we hit low
             while y[i] > height:
                 i += direction
                 if i < 0 or i >= len(y):
                     msg = f'only {len(edges)} of requested {count} edges found'
                     raise EdgeNotFoundError(msg)
             print('middle is at', i, 'x is', x[i], 'y is', y[i])
-            # now move backwards until we hit the low
+            # now move until we hit the high
             while y[i] <= height:
                 i += direction
                 if i < 0 or i >= len(y):
