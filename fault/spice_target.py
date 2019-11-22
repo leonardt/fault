@@ -482,7 +482,6 @@ class SpiceTarget(Target):
                 ref = self.find_edge(res_ref.x, res_ref.y, time, count=2)
                 edge = self.find_edge(res.x, res.y, time + ref[0])
                 fraction = (edge[0] - ref[1]) / (ref[0] -ref[1])
-                print(ref, edge)
                 # TODO multiply by 2pi?
                 read.value = fraction
             else:
@@ -494,7 +493,6 @@ class SpiceTarget(Target):
         waveform crosses height (defaut is ???). Searches backwards by
         default (frequency now is probably based on the last few edges?)
         '''
-        print('\nNEW REQUEST', forward, rising, t_start)
 
         if height is None:
             # default comes out to 0.5
@@ -503,7 +501,6 @@ class SpiceTarget(Target):
         # deal with `rising` and `forward`
         # normally a low-to-high finder
         if (rising ^ forward):
-            print('Flipping thing')
             y = [(-1*z + 2*height) for z in y]
         direction = 1 if forward else -1
         # we want to start on the far side of the interval containing t_start
@@ -513,21 +510,17 @@ class SpiceTarget(Target):
         start_index = np.searchsorted(x, t_start, side=side)
         if start_index == len(x):
             # happens when forward=False and the edge find is the end of the sim
-            print('SPECIAL CASE')
             start_index -= 1
-        #print('found start index', start_index, 'between', x[start_index], x[start_index+1])
+
         i = start_index
         edges = []
         while len(edges) < count:
-            print('i starts at', i, 'x is', x[i], 'y is', y[i])
-            print('will iterate as long as y[i] is higher than', height)
             # move until we hit low
             while y[i] > height:
                 i += direction
                 if i < 0 or i >= len(y):
                     msg = f'only {len(edges)} of requested {count} edges found'
                     raise EdgeNotFoundError(msg)
-            print('middle is at', i, 'x is', x[i], 'y is', y[i])
             # now move until we hit the high
             while y[i] <= height:
                 i += direction
@@ -539,13 +532,9 @@ class SpiceTarget(Target):
             # TODO: there's an issue because of the discrepancy between the requested
             # start time and actually staring at the nearest edge
 
-            print('finishes at', i, 'x is', x[i], 'y is', y[i])
             # the crossing happens from i to i+1
             fraction = (height-y[i]) / (y[i-direction]-y[i])
-            print('fraction is', fraction)
             t = x[i] + fraction * (x[i+1] - x[i])
-            print('found edge at ', t)
-            print('which maps to offset of ', t-t_start)
             if t==t_start:
                 print('EDGE EXACTLY AT EDGE FIND REQUEST')
             edges.append(t-t_start)
