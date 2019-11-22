@@ -33,6 +33,19 @@ def test_spice_bus(target, simulator, vsup=1.5):
     tester.poke(dut.a, 0b011)
     tester.expect(dut.b, 0b110)
 
+    # test one bit of the bus at a time
+    tester.poke(dut.a[0], 0)
+    tester.expect(dut.b[0], 1)
+    tester.poke(dut.a[0], 1)
+    tester.expect(dut.b[0], 0)
+    tester.expect(dut.b[2], 1)
+
+    tester.poke(dut.a[1], 0)
+    tester.expect(dut.b[1], 0)
+    tester.poke(dut.a[1], 1)
+    tester.expect(dut.b[1], 1)
+    tester.expect(dut.b[2], 1)
+
     # set options
     kwargs = dict(
         target=target,
