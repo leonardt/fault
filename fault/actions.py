@@ -73,13 +73,15 @@ class Print(Action):
 
 
 class Read(Action):
-    def __init__(self, port):
+    def __init__(self, port, style='single', params={}):
         super().__init__()
         self.port = port
+        self.style = style
+        self.params = params
 
     def __getattr__(self, name):
         if name == 'value':
-            err_msg = 'value has not been set for {self}'
+            err_msg = f'value has not been set for {self}'
             err_msg += ', did the simulation finish running yet?'
             assert False, err_msg
         else:

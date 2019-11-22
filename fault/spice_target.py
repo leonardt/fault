@@ -4,6 +4,7 @@ from copy import copy
 import magma as m
 import fault
 import hwtypes
+import numpy as np
 from fault.target import Target
 from fault.spice import SpiceNetlist
 from fault.nutascii_parse import nutascii_parse
@@ -20,6 +21,9 @@ from fault.select_path import SelectPath
 class A2DError(Exception):
     pass
 
+# edge finder is used for measuring phase, freq, etc.
+class EdgeNotFoundError(Exception):
+    pass
 
 class CompiledSpiceActions:
     def __init__(self, pwls, checks, prints, reads, stop_time, saves):
@@ -148,6 +152,16 @@ class SpiceTarget(Target):
             results = psf_parse(raw_file)
         else:
             raise NotImplementedError(self.simulator)
+
+        #import matplotlib.pyplot as plt
+        #print(results.keys())
+        #print('HELLO')
+        #in_ = results['in_']
+        #out = results['out']
+        #plt.plot(in_.x, in_.y, '-o')
+        #plt.plot(out.x, out.y, '-o')
+        #plt.grid()
+        #plt.show()
 
         # print results
         self.print_results(results=results, prints=comp.prints)
@@ -434,8 +448,77 @@ class SpiceTarget(Target):
 
     def process_reads(self, results, reads):
         for time, read in reads:
-            value = results[f'{read.port.name}'](time)
-            read.value = value
+            res = results[f'{read.port.name}']
+            if read.style == 'single':
+                value = res(time)
+                read.value = value
+            elif read.style == 'edge':
+                value = self.find_edge(res.x, res.y, time, **read.params)
+                read.value = value
+            else:
+                raise NotImplementedError(f'Unknown read style "{read.style}"')
+
+    def find_edge(self, x, y, t_start, height=None, forward=False, count=1, rising=True):
+        '''
+        Search through data (x,y) starting at time t_start for when the
+        waveform crosses height (defaut is ???). Searches backwards by
+        default (frequency now is probably based on the last few edges?)
+        '''
+        print('\nNEW REQUEST', forward, rising, t_start)
+
+        if height is None:
+            # default comes out to 0.5
+            height = self.vsup * (self.vih_rel + self.vil_rel) / 2
+
+        if not rising:
+            print('Flipping thing')
+            y = [(-1*z + 2*height) for z in y]
+
+        # deal with `forward`
+        direction = 1 if forward else -1
+        # we want to start on the far side of the interval containing t_start
+        # to make sure we catch any edge near t_start
+        side = 'left' if forward else 'right'
+
+        start_index = np.searchsorted(x, t_start, side=side)
+        #if start_index == len(x):
+        #    # happens when forward=False and the edge find is the end of the sim
+        #    print('SPECIAL CASE')
+        #    start_index -= 1
+        #print('found start index', start_index, 'between', x[start_index], x[start_index+1])
+        i = start_index
+        edges = []
+        while len(edges) < count:
+            print('i starts at', i, 'x is', x[i], 'y is', y[i])
+            print('wil iterate as long as y[i] is higher than', height)
+            while y[i] > height:
+                i += direction
+                if i < 0 or i >= len(y):
+                    msg = f'only {len(edges)} of requested {count} edges found'
+                    raise EdgeNotFoundError(msg)
+            print('middle is at', i, 'x is', x[i], 'y is', y[i])
+            # now move backwards until we hit the low
+            while y[i] <= height:
+                i += direction
+                if i < 0 or i >= len(y):
+                    msg = f'only {len(edges)} of requested {count} edges found'
+                    raise EdgeNotFoundError(msg)
+
+
+            # TODO: there's an issue because of the discrepancy between the requested
+            # start time and actually staring at the nearest edge
+
+            print('finishes at', i, 'x is', x[i], 'y is', y[i])
+            # the crossing happens from i to i+1
+            fraction = (height-y[i]) / (y[i-direction]-y[i])
+            print('fraction is', fraction)
+            t = x[i] + fraction * (x[i+1] - x[i])
+            print('found edge at ', t)
+            print('which maps to offset of ', t-t_start)
+            if t==t_start:
+                print('EDGE EXACTLY AT EDGE FIND REQUEST')
+            edges.append(t-t_start)
+        return edges
 
     def ngspice_cmds(self, tb_file):
         # build up the command
