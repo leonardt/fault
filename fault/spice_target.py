@@ -13,6 +13,7 @@ from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print, Read
 from fault.select_path import SelectPath
+from fault.background_poke import process_action_list
 
 
 # define a custom error for A2D conversion to make it easier
@@ -38,7 +39,7 @@ class CompiledSpiceActions:
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
-                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
+                 t_step=None, clock_step_delay=5e-9, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None,
                  disp_type='on_error'):
@@ -123,9 +124,18 @@ class SpiceTarget(Target):
         self.ic = ic if ic is not None else {}
         self.disp_type = disp_type
 
+        # place for saving expects that were "save_for_later"
+        self.saved_for_later = []
+
     def run(self, actions):
+        # expand background pokes into regular pokes
+        print('before', len(actions))
+        actions = process_action_list(actions, self.clock_step_delay)
+        print('after', len(actions))
+
         # compile the actions
         comp = self.compile_actions(actions)
+        print('compiled action pwls:', comp.pwls)
 
         # write the testbench
         tb_file = self.write_test_bench(comp)
@@ -250,7 +260,7 @@ class SpiceTarget(Target):
                 pwc_dict[action_port_name][1].append((t, stim_s))
                 # increment time if desired
                 if action.delay is None:
-                    t += self.clock_step_delay * 1e-9
+                    t += self.clock_step_delay
                 else:
                     t += action.delay
             elif isinstance(action, Expect):
@@ -440,6 +450,11 @@ class SpiceTarget(Target):
                 value = 1
             else:
                 raise A2DError(f'Invalid logic level: {value}.')
+
+        if action.save_for_later:
+            # save the value and don't check
+            self.saved_for_later.append(value)
+            return
 
         # implement the requested check
         if action.above is not None:
