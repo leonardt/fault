@@ -173,6 +173,8 @@ def test_phase(
     # in[0] gets inverted, in[1] gets buffered
     # I want in[0] to be a 1kHz clock
     # I want in[1] to be a 1kHz clock but delayed by 0.2 ms, so 0.2 cycles
+    tester.poke(dut.a[0], 1, delay = 0.2e-3)
+    tester.poke(dut.a[1], 1, delay = 0.3e-3)
     tester.poke(dut.a[0], 0, delay = 0.2e-3)
     tester.poke(dut.a[1], 0, delay = 0.3e-3)
     tester.poke(dut.a[0], 1, delay = 0.2e-3)
@@ -182,8 +184,9 @@ def test_phase(
     tester.poke(dut.a[0], 1, delay = 0.2e-3)
     tester.poke(dut.a[1], 1, delay = 0.3e-3)
 
-    # we'll just test on the clean input signals for now
-    tester.read(dut.a[1], style='phase', params={'ref':dut.a[0]})
+    a = tester.read(dut.a[1], style='phase', params={'ref':dut.a[0]})
+    b = tester.read(dut.a[1], style='phase', params={'ref':dut.b[0]})
+    c = tester.read(dut.a[0], style='phase', params={'ref':dut.a[1]})
 
 
     # set options
@@ -199,3 +202,12 @@ def test_phase(
 
     # run the simulation
     tester.compile_and_run(**kwargs)
+
+    print('Look at measured phases')
+    print(a.value)
+    print(b.value)
+    print(c.value)
+
+    assert abs(a.value - 0.2) < 1e-2
+    assert abs(b.value - 0.7) < 1e-2
+    assert abs(c.value - 0.8) < 1e-2

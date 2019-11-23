@@ -480,8 +480,8 @@ class SpiceTarget(Target):
                 assert 'ref' in read.params, 'Phase read requires reference signal param'
                 res_ref = results[f'{read.params["ref"].name}']
                 ref = self.find_edge(res_ref.x, res_ref.y, time, count=2)
-                edge = self.find_edge(res.x, res.y, time + ref[0])
-                fraction = (edge[0] - ref[1]) / (ref[0] -ref[1])
+                before_cycle_end = self.find_edge(res.x, res.y, time + ref[0])
+                fraction = 1 + before_cycle_end[0] / (ref[0] -ref[1])
                 # TODO multiply by 2pi?
                 read.value = fraction
             else:
