@@ -174,9 +174,15 @@ class ThreadPool():
 
         # now we add this (shortened) action back in
         if not is_background:
-            new_action = copy.copy(action)
-            new_action.delay = new_delay
-            new_action_list.append(new_action)
+            # TODO: we used to use copies of the action so we weren't editing
+            # the delay of an action owned by someone else. But with the new
+            # Read action it's important that the object doesn't change 
+            # because the user is holding a pointer to the old Read object
+            action.delay = new_delay
+            new_action_list.append(action)
+            #new_action = copy.copy(action)
+            #new_action.delay = new_delay
+            #new_action_list.append(new_action)
 
         new_action_list += actions
         return new_action_list
