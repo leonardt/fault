@@ -230,6 +230,8 @@ directory will be placed in the same directory as the generated harness, which
 is controlled by the `directory` keyword argument (by default this is
 `"build/"`).
 
-For the `system-verilog/ncsim` target, tracing is enabled by default. For
-`ncsim`, the trace will be placed in a file called `verilog.vcd` in the same
-directory as the generated harness.
+For the `system-verilog` target, tracing is enabled by default.  Disable this
+feature using the `compile_and_run` parameter `dump_waveform=False`.  By
+default, the waveform file will be named `waveform.vcd` for `ncsim` and
+`waveform.vpd` for `vcs`.  The name of the file can be changed using the
+parameter `waveform_file="<file_name>"`.

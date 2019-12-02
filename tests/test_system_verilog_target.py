@@ -17,6 +17,6 @@ def test_vcs_waves():
     tester.step(2)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator="vcs",
-                               directory=_dir, vcs_waveform_file="waves.vcd")
-        assert os.path.exists(os.path.join(_dir, "waves.vcd"))
+                               directory=_dir, vcs_waveform_file="waves.vpd")
+        assert os.path.exists(os.path.join(_dir, "waves.vpd"))
 

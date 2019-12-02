@@ -39,12 +39,12 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
-                 num_cycles=10000, dump_vcd=True, no_warning=False,
+                 num_cycles=10000, dump_waveforms=True, no_warning=False,
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 vcs_waveform_file=None):
+                 waveform_file=None):
         """
         circuit: a magma circuit
 
@@ -117,7 +117,10 @@ class SystemVerilogTarget(VerilogTarget):
                    is an error.  If 'realtime', print out STDOUT as lines come
                    in, then print STDERR after the process completes.
 
-        vcs_waveform_file: name of file to dump waveforms for vcs
+        dump_waveforms: Enable tracing of internal values
+
+        waveform_file: name of file to dump waveforms (default is
+                       "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -154,7 +157,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
         self.num_cycles = num_cycles
-        self.dump_vcd = dump_vcd
+        self.dump_waveforms = dump_waveforms
         self.no_warning = no_warning
         self.declarations = []
         self.sim_env = sim_env
@@ -168,7 +171,14 @@ class SystemVerilogTarget(VerilogTarget):
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
-        self.vcs_waveform_file = vcs_waveform_file
+        self.waveform_file = waveform_file
+        if self.waveform_file is None and self.dump_waveforms:
+            if self.simulator == "vcs":
+                self.waveform_file = "waveform.vpd"
+            elif self.simulator == "ncsim"
+                self.waveform_file = "waveform.vcs"
+            else:
+                raise NotImplementedError(self.simulator)
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -517,7 +527,7 @@ end
             result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
 
-        if self.vcs_waveform_file is not None:
+        if self.dump_waveforms:
             initial_body += f"""
         $vcdplusfile("{self.vcs_waveform_file}");
         $vcdpluson();
@@ -626,8 +636,8 @@ end
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the simulation
         tcl_cmds = []
-        if self.dump_vcd:
-            tcl_cmds += [f'database -open -vcd vcddb -into verilog.vcd -default -timescale ps']  # noqa
+        if self.dump_waveforms:
+            tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale ps']  # noqa
             tcl_cmds += [f'probe -create -all -vcd -depth all']
         tcl_cmds += [f'run {self.num_cycles}ns']
         tcl_cmds += [f'quit']
@@ -723,7 +733,7 @@ end
         cmd += ['+v2k']
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
-        if self.dump_vcd:
+        if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
         # return arg list and binary file location
