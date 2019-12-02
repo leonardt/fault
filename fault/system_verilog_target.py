@@ -162,7 +162,7 @@ class SystemVerilogTarget(VerilogTarget):
         if dump_vcd is not None:
             warnings.warn("tester.compile_and_run parameter dump_vcd is "
                           "deprecated; use dump_waveforms instead.",
-                          warnings.DeprecationWarning)
+                          DeprecationWarning)
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
