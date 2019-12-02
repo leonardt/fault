@@ -174,9 +174,9 @@ class SystemVerilogTarget(VerilogTarget):
         self.waveform_file = waveform_file
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
-                self.waveform_file = "waveform.vpd"
-            elif self.simulator == "ncsim"
-                self.waveform_file = "waveform.vcs"
+                self.waveform_file = "waveforms.vpd"
+            elif self.simulator == "ncsim":
+                self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
 
@@ -527,9 +527,9 @@ end
             result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
 
-        if self.dump_waveforms:
+        if self.dump_waveforms and self.simulator == "vcs":
             initial_body += f"""
-        $vcdplusfile("{self.vcs_waveform_file}");
+        $vcdplusfile("{self.waveform_file}");
         $vcdpluson();
         $vcdplusmemon();
 """
