@@ -1,3 +1,4 @@
+import os.path
 import shutil
 import tempfile
 import fault
@@ -17,4 +18,5 @@ def test_vcs_waves():
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator="vcs",
                                directory=_dir, vcs_waveform_file="waves.vcd")
+        assert os.path.exists(os.path.join(_dir, "waves.vcd"))
 
