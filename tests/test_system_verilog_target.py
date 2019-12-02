@@ -11,7 +11,8 @@ def test_waves(simulator):
     if simulator == 'vcs' and not shutil.which("vcs"):
         pytest.skip("Skipping vcs waveform test because vcs is not available")
     if simulator == 'ncsim' and not shutil.which("irun"):
-        pytest.skip("Skipping ncsim waveform test because ncsim is not available")
+        pytest.skip("Skipping ncsim waveform test because ncsim is not "
+                    "available")
     suffix = "vcd" if simulator == "ncsim" else "vpd"
     circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
