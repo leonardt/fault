@@ -1,3 +1,4 @@
+import warnings
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
@@ -39,9 +40,9 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
-                 num_cycles=10000, dump_waveforms=True, no_warning=False,
-                 sim_env=None, ext_model_file=None, ext_libs=None,
-                 defines=None, flags=None, inc_dirs=None,
+                 num_cycles=10000, dump_waveforms=True, dump_vcd=None,
+                 no_warning=False, sim_env=None, ext_model_file=None,
+                 ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None):
@@ -158,6 +159,11 @@ class SystemVerilogTarget(VerilogTarget):
         self.clock_step_delay = clock_step_delay
         self.num_cycles = num_cycles
         self.dump_waveforms = dump_waveforms
+        if dump_vcd is not None:
+            warnings.warn("tester.compile_and_run parameter dump_vcd is "
+                          "deprecated; use dump_waveforms instead.",
+                          warnings.DeprecationWarning)
+            self.dump_waveforms = self.dump_vcd
         self.no_warning = no_warning
         self.declarations = []
         self.sim_env = sim_env
