@@ -43,7 +43,8 @@ class SystemVerilogTarget(VerilogTarget):
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
-                 use_input_wires=False, parameters=None, disp_type='on_error'):
+                 use_input_wires=False, parameters=None, disp_type='on_error',
+                 vcs_waveform_file=None):
         """
         circuit: a magma circuit
 
@@ -115,6 +116,8 @@ class SystemVerilogTarget(VerilogTarget):
         disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
                    is an error.  If 'realtime', print out STDOUT as lines come
                    in, then print STDERR after the process completes.
+
+        vcs_waveform_file: name of file to dump waveforms for vcs
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -165,6 +168,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
+        self.vcs_waveform_file = vcs_waveform_file
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -512,6 +516,13 @@ end
         for name, type_ in self.circuit.IO.ports.items():
             result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
+
+        if self.vcs_waveform_file is not None:
+            initial_body += f"""
+        $vcdplusfile("{self.vcs_waveform_file}");
+        $vcdpluson();
+        $vcdplusmemon();
+"""
 
         for i, action in enumerate(actions):
             code = self.generate_action_code(i, action)
