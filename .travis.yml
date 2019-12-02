@@ -69,7 +69,7 @@ install:
 # End setup CoSA dependencies
 
 script:
-- pytest --cov fault --codestyle fault -v --cov-report term-missing tests
+- pytest --cov fault --pycodestyle fault -v --cov-report term-missing tests
 deploy:
   provider: script
   script: /bin/bash .travis/deploy.sh
