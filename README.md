@@ -235,3 +235,9 @@ feature using the `compile_and_run` parameter `dump_waveform=False`.  By
 default, the waveform file will be named `waveforms.vcd` for `ncsim` and
 `waveforms.vpd` for `vcs`.  The name of the file can be changed using the
 parameter `waveform_file="<file_name>"`.
+
+### How do I pass through flags to the simulator?
+The `verilator` and `system-verilog` target support the parameter `flags` which
+accepts a list of flags (strings) that will be passed through to the simulator
+command (`verilator` for verilator, `irun` for ncsim, `vcs` for vcs, and
+`iverilog` for iverilog).
