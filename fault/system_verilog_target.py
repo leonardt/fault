@@ -40,7 +40,7 @@ class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
-                 simulator=None, timescale="1ns/1ns", clock_step_delay=5,
+                 simulator=None, timescale="1ns/1ns", clock_step_delay=5e-9,
                  num_cycles=10000, dump_vcd=True, no_warning=False,
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
