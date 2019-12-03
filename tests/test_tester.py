@@ -188,6 +188,30 @@ def test_tester_nested_arrays_bulk(target, simulator):
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
+def test_tester_double_nested_arrays_broadcast(target, simulator):
+    circ = TestDoubleNestedArraysCircuit
+    tester = fault.Tester(circ)
+    expected = []
+    val = random.randint(0, (1 << 4) - 1)
+    tester.poke(circ.I, val)
+    for j in range(2):
+        for i in range(3):
+            expected.append(Poke(circ.I[j][i], val))
+    tester.eval()
+    expected.append(Eval())
+    for j in range(2):
+        for i in range(3):
+            tester.expect(circ.O[j][i], val)
+            expected.append(Expect(circ.O[j][i], val))
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
 def test_tester_big_int(target, simulator):
     circ = TestUInt64Circuit
     tester = fault.Tester(circ)
