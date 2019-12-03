@@ -131,10 +131,8 @@ class Tester:
             if isinstance(value, dict):
                 for k, v in value.items():
                     self.poke(getattr(port, k), v)
-            elif isinstance(value, (int, BitVector)):
-                if not isinstance(port, m.ArrayType):
-                    raise TypeError("Can only broadcast poke values for "
-                                    f"arrays, not {type(port)}")
+            elif isinstance(port, m.ArrayType) and \
+                    isinstance(value, (int, BitVector, tuple, dict)):
                 # Broadcast value to children
                 for p in port:
                     self.poke(p, value, delay)
