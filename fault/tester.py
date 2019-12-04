@@ -24,6 +24,7 @@ import inspect
 from fault.config import get_test_dir
 from typing import List
 import tempfile
+from hwtypes import BitVector
 
 
 class Tester:
@@ -130,6 +131,11 @@ class Tester:
             if isinstance(value, dict):
                 for k, v in value.items():
                     self.poke(getattr(port, k), v)
+            elif isinstance(port, m.ArrayType) and \
+                    isinstance(value, (int, BitVector, tuple, dict)):
+                # Broadcast value to children
+                for p in port:
+                    self.poke(p, value, delay)
             else:
                 for p, v in zip(port, value):
                     self.poke(p, v, delay)

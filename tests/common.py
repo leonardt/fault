@@ -56,6 +56,9 @@ TestNestedArraysCircuit = define_simple_circuit(m.Array[3, m.Bits[4]],
                                                 "NestedArraysCircuit")
 TestDoubleNestedArraysCircuit = define_simple_circuit(
     m.Array[2, m.Array[3, m.Bits[4]]], "DoubleNestedArraysCircuit")
+TestNestedArrayTupleCircuit = define_simple_circuit(
+    m.Array[2, m.Array[3, m.Tuple(a=m.Bits[4], b=m.Bits[4])]],
+    "NestedArrayTupleCircuit")
 TestBasicClkCircuit = define_simple_circuit(m.Bit, "BasicClkCircuit", True)
 TestBasicClkCircuitCopy = define_simple_circuit(m.Bit, "BasicClkCircuitCopy",
                                                 True)
