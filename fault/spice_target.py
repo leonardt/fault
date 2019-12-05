@@ -129,13 +129,10 @@ class SpiceTarget(Target):
 
     def run(self, actions):
         # expand background pokes into regular pokes
-        print('before', len(actions))
         actions = process_action_list(actions, self.clock_step_delay)
-        print('after', len(actions))
 
         # compile the actions
         comp = self.compile_actions(actions)
-        print('compiled action pwls:', comp.pwls)
 
         # write the testbench
         tb_file = self.write_test_bench(comp)
@@ -152,8 +149,10 @@ class SpiceTarget(Target):
 
         # run the simulation commands
         for sim_cmd in sim_cmds:
-            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
+            res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
                            disp_type=self.disp_type)
+            #print(res.stdout)
+            print(res.stderr.strip())
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
