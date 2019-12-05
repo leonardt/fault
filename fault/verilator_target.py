@@ -281,6 +281,10 @@ class VerilatorTarget(VerilogTarget):
             ports = ", " + ports
         return [f'printf("{action.format_str}"{ports});']
 
+    def make_read(self, i, action):
+        msg = 'read not implemented for Verilator target'
+        raise NotImplementedError(msg)
+
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
         # perform the expect.
