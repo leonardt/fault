@@ -15,7 +15,7 @@ class Thread():
     epsilon = 1e-18
 
     def __init__(self, time, poke):
-        print('creating thread for', poke, 'at time', time)
+        #print('creating thread for', poke, 'at time', time)
         self.poke = copy.copy(poke)
         self.poke.params = None
         self.poke.delay = None
@@ -24,8 +24,8 @@ class Thread():
         self.next_update = time
         type_ = params.get('type', 'clock')
 
-        print('type_ is', type_)
-        print(params)
+        #print('type_ is', type_)
+        #print(params)
 
         # Each type must set a get_val(t) function and a dt
         if type_ == 'clock':
@@ -49,7 +49,6 @@ class Thread():
             freq = params.get('freq', 1e6)
             period = params.get('period', 1/freq)
             freq = 1 / period
-            print('Settled on frequency', freq)
             amplitude = params.get('amplitude', 1)
             offset = params.get('offset', 0)
             phase_degrees = params.get('phase_degrees', 0)
@@ -62,10 +61,8 @@ class Thread():
 
             self.get_val = get_val
             self.dt = params.get('dt', 1 / (freq*self.default_steps_per_cycle))
-            print('calculated dt of', self.dt, 'from', freq, self.default_steps_per_cycle)
 
     def step(self, t):
-        print('stepping thread ', self, 'at time', t)
         '''
         Returns a new Poke object with the correct value set for time t.
         Sets the port and value but NOT the delay.
@@ -73,11 +70,11 @@ class Thread():
         # TODO don't poke at the same time twice
         missed_update_msg = 'Background Poke thread not updated in time'
         assert t <= self.next_update + self.epsilon, missed_update_msg
-        self.next_update = t + self.dt
+        if abs(t - self.next_update) < self.epsilon:
+            self.next_update = t + self.dt
         value = self.get_val(t)
         poke = copy.copy(self.poke)
         poke.value = value
-        #print('after step, next scheduled update is', self.next_update)
         return poke
 
     def __lt__(self, other):
@@ -185,6 +182,11 @@ class ThreadPool():
             #new_action_list.append(new_action)
 
         new_action_list += actions
+        #print('ended up with', len(new_action_list), 'new actions')
+        #print('delay of first', new_action_list[0].delay, 'last', new_action_list[-1].delay)
+        #if len(new_action_list) > 1:
+        #    for action in new_action_list:
+        #        print('\t', action, '\t', action.delay)
         return new_action_list
 
 
