@@ -775,8 +775,9 @@ end
         if len(self.ext_libs) > 0:
             cmd += ['-Y.v', '-Y.sv']
 
-        # Icarus verilog does not have an option like "-v" that allows individual files
-        # to be included, so the best we can do is gather a list of unique library directories
+        # Icarus verilog does not have an option like "-v" that allows
+        # individual files to be included, so the best we can do is gather a
+        # list of unique library directories
         unq_lib_dirs = {}
         for lib in self.ext_libs:
             parent_dir = Path(lib).parent
