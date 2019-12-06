@@ -40,7 +40,7 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
-                 num_cycles=10000, dump_waveforms=None, dump_vcd=None,
+                 num_cycles=10000, dump_waveforms=True, dump_vcd=None,
                  no_warning=False, sim_env=None, ext_model_file=None,
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
@@ -141,13 +141,6 @@ class SystemVerilogTarget(VerilogTarget):
         # set default for magma compilation options
         magma_opts = magma_opts if magma_opts is not None else {}
 
-        # set default for waveform dumping, if the user hasn't specified it
-        if dump_waveforms is None:
-            if simulator == 'iverilog':
-                dump_waveforms = False
-            else:
-                dump_waveforms = True
-
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
@@ -188,7 +181,7 @@ class SystemVerilogTarget(VerilogTarget):
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 self.waveform_file = "waveforms.vpd"
-            elif self.simulator == "ncsim":
+            elif self.simulator in {"ncsim", "iverilog"}:
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
@@ -554,6 +547,12 @@ end
         $vcdplusfile("{self.waveform_file}");
         $vcdpluson();
         $vcdplusmemon();
+"""
+        elif self.dump_waveforms and self.simulator == "iverilog":
+            # https://iverilog.fandom.com/wiki/GTKWAVE
+            initial_body += f"""
+        $dumpfile("{self.waveform_file}");
+        $dumpvars(0, dut);
 """
 
         for i, action in enumerate(actions):
