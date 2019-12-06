@@ -410,8 +410,8 @@ end
         return retval
 
     def make_eval(self, i, action):
-        # Eval implicit in SV simulations
-        return []
+        # Emulate eval by inserting a delay
+        return ['#0;']
 
     def make_step(self, i, action):
         name = verilog_name(action.clock.name)
