@@ -103,6 +103,7 @@ def test_target_clock(capsys, target, simulator):
     circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
+        Eval(),
         Print("%x\n", circ.I),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
