@@ -214,7 +214,7 @@ def test_print_double_nested_arrays(capsys, target, simulator):
 6
 7
 8\
-""", out
+"""
 
 
 def test_target_tuple(target, simulator):
