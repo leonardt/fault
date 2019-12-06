@@ -1,6 +1,7 @@
 matrix:
   include:
   - os: linux
+    dist: bionic
     addons:
       apt:
         sources:
@@ -11,6 +12,7 @@ matrix:
         - libmpfr-dev
         - libmpc-dev
         - verilator
+        - iverilog
     env:
     - CC=gcc-7
     - CXX=g++-7
@@ -68,20 +70,6 @@ install:
 - export LD_LIBRARY_PATH="/home/travis/.smt_solvers/python-bindings-3.7:${LD_LIBRARY_PATH}"
 - pysmt-install --check
 # End setup CoSA dependencies
-
-before_script:
-# Begin install Icarus Verilog for Linux
-# We unfortunately cannot use the Travis package
-# list feature to do this because the default 
-# version for Xenial is too old.
-- |
-  if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-    echo "deb http://archive.ubuntu.com/ubuntu/ xenial universe" | sudo tee -a /etc/apt/sources.list
-    echo "deb-src http://archive.ubuntu.com/ubuntu/ xenial universe" | sudo tee -a /etc/apt/sources.list
-    sudo apt-get update
-    sudo apt-get install verilog
-  fi
-# End install Icarus Verilog for Linux
 
 script:
 - pytest --cov fault --pycodestyle fault -v --cov-report term-missing tests
