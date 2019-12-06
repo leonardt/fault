@@ -11,6 +11,7 @@ matrix:
         - libmpfr-dev
         - libmpc-dev
         - verilator
+        - iverilog
     env:
     - CC=gcc-7
     - CXX=g++-7
@@ -20,6 +21,7 @@ matrix:
       homebrew:
         packages:
           - verilator
+          - icarus-verilog
 
 # python managed by conda until 3.7 available
 # python:

@@ -40,7 +40,7 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
-                 num_cycles=10000, dump_waveforms=True, dump_vcd=None,
+                 num_cycles=10000, dump_waveforms=None, dump_vcd=None,
                  no_warning=False, sim_env=None, ext_model_file=None,
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
@@ -140,6 +140,13 @@ class SystemVerilogTarget(VerilogTarget):
 
         # set default for magma compilation options
         magma_opts = magma_opts if magma_opts is not None else {}
+
+        # set default for waveform dumping, if the user hasn't specified it
+        if dump_waveforms is None:
+            if simulator == 'iverilog':
+                dump_waveforms = False
+            else:
+                dump_waveforms = True
 
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
@@ -339,6 +346,7 @@ end
         return code.splitlines()
 
     def make_file_write(self, i, action):
+        # figure out how to loop over bytes to be written
         value = self.make_name(action.value)
         mask_size = action.file.chunk_size * 8
         decl = f"integer __i;"
@@ -348,12 +356,20 @@ end
             loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
         else:
             loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
-        code = f"""\
-for ({loop_expr}) begin
-    $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
-end
-"""  # noqa
-        return code.splitlines()
+
+        # build up the loop expression
+        code = []
+        code += [f'for ({loop_expr}) begin']
+        file_fd = f'{action.file.name_without_ext}_file'
+        byte_expr = f"({value} >> (8 * __i)) & {mask_size}'hFF"
+        if self.simulator == 'iverilog':
+            code += [f'    $fputc({byte_expr}, {file_fd});']
+        else:
+            code += [f'    $fwrite({file_fd}, "%c", {byte_expr});']
+        code += ['end']
+
+        # return the loop expression
+        return code
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -755,9 +771,18 @@ end
         bin_file = f'{self.circuit_name}_tb'
         cmd += [f'-o{bin_file}']
 
-        # library files
+        # look for *.v and *.sv files, if we're using library directories
+        if len(self.ext_libs) > 0:
+            cmd += ['-Y.v', '-Y.sv']
+
+        # Icarus verilog does not have an option like "-v" that allows individual files
+        # to be included, so the best we can do is gather a list of unique library directories
+        unq_lib_dirs = {}
         for lib in self.ext_libs:
-            cmd += [f'-l{lib}']
+            parent_dir = Path(lib).parent
+            if parent_dir not in unq_lib_dirs:
+                unq_lib_dirs[parent_dir] = None
+        cmd += [f'-y{unq_lib_dir}' for unq_lib_dir in unq_lib_dirs]
 
         # include directory search path
         for dir_ in self.inc_dirs:
