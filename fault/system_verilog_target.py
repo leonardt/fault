@@ -411,7 +411,7 @@ end
 
     def make_eval(self, i, action):
         # Emulate eval by inserting a delay
-        return ['#0;']
+        return ['#1;']
 
     def make_step(self, i, action):
         name = verilog_name(action.clock.name)
