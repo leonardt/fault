@@ -1,3 +1,4 @@
+import warnings
 import logging
 import magma as m
 import fault.actions as actions
@@ -78,6 +79,11 @@ class Tester:
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
+        # Make sure the user has initialized the clock before stepping it
+        # While verilator initializes the clock value to 0, this assumption
+        # does not hold for system verilog, so we log a warning (as to not
+        # break existing TBs)
+        self.clock_initialized = False
         if reset is not None and not isinstance(reset, m.ResetType):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
@@ -126,6 +132,9 @@ class Tester:
         # set defaults
         if delay is None:
             delay = self.poke_delay_default
+
+        if port is self.clock:
+            self.clock_initialized = True
 
         def recurse(port):
             if isinstance(value, dict):
@@ -252,6 +261,9 @@ class Tester:
         wants to compile a DUT once and run multiple tests with the same model,
         this avoids having to call verilator multiple times)
         """
+        if not self.clock_initialized:
+            warnings.warn("Clock has not been initialized, the initial value "
+                          "will be X for system verilog targets")
         self.targets[target] = self.make_target(target, **kwargs)
 
     def compile(self, target="verilator", **kwargs):

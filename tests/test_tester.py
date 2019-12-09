@@ -130,6 +130,22 @@ def test_tester_peek(target, simulator):
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
+def test_tester_no_clock_init(target, simulator):
+    circ = TestBasicClkCircuit
+    tester = fault.Tester(circ, circ.CLK)
+    tester.poke(circ.I, 0)
+    tester.expect(circ.O, 0)
+    tester.step()
+    with pytest.warns(UserWarning,
+                      match="Clock has not been initialized, the initial "
+                            "value will be X for system verilog targets"):
+        with tempfile.TemporaryDirectory(dir=".") as _dir:
+            if target == "verilator":
+                tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+            else:
+                tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
 def test_tester_peek_input(target, simulator):
     circ = TestBasicCircuit
     tester = fault.Tester(circ)
