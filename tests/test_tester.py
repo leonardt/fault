@@ -142,9 +142,11 @@ def test_tester_no_clock_init(target, simulator):
                             "a future release, this will be an error"):
         with tempfile.TemporaryDirectory(dir=".") as _dir:
             if target == "verilator":
-                tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+                tester.compile_and_run(target, directory=_dir,
+                                       flags=["-Wno-fatal"])
             else:
-                tester.compile_and_run(target, directory=_dir, simulator=simulator)
+                tester.compile_and_run(target, directory=_dir,
+                                       simulator=simulator)
 
 
 def test_tester_peek_input(target, simulator):
