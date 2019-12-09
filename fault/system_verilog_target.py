@@ -181,7 +181,7 @@ class SystemVerilogTarget(VerilogTarget):
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 self.waveform_file = "waveforms.vpd"
-            elif self.simulator == "ncsim":
+            elif self.simulator in {"ncsim", "iverilog"}:
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
@@ -269,9 +269,7 @@ class SystemVerilogTarget(VerilogTarget):
         # Build up the poke action, including delay
         retval = []
         retval += [f'{name} = {value};']
-        if action.delay is None:
-            retval += [f'#{self.clock_step_delay};']
-        else:
+        if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
 
@@ -412,14 +410,14 @@ end
         return retval
 
     def make_eval(self, i, action):
-        # Eval implicit in SV simulations
-        return []
+        # Emulate eval by inserting a delay
+        return ['#1;']
 
     def make_step(self, i, action):
         name = verilog_name(action.clock.name)
         code = []
         for step in range(action.steps):
-            code.append(f"#5 {name} ^= 1;")
+            code.append(f"#{self.clock_step_delay} {name} ^= 1;")
         return code
 
     def make_while(self, i, action):
@@ -538,6 +536,12 @@ end
         $vcdplusfile("{self.waveform_file}");
         $vcdpluson();
         $vcdplusmemon();
+"""
+        elif self.dump_waveforms and self.simulator == "iverilog":
+            # https://iverilog.fandom.com/wiki/GTKWAVE
+            initial_body += f"""
+        $dumpfile("{self.waveform_file}");
+        $dumpvars(0, dut);
 """
 
         for i, action in enumerate(actions):
