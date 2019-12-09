@@ -136,9 +136,10 @@ def test_tester_no_clock_init(target, simulator):
     tester.poke(circ.I, 0)
     tester.expect(circ.O, 0)
     tester.step()
-    with pytest.warns(UserWarning,
+    with pytest.warns(DeprecationWarning,
                       match="Clock has not been initialized, the initial "
-                            "value will be X for system verilog targets"):
+                            "value will be X for system verilog targets.  In "
+                            "a future release, this will be an error"):
         with tempfile.TemporaryDirectory(dir=".") as _dir:
             if target == "verilator":
                 tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])

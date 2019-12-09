@@ -263,7 +263,8 @@ class Tester:
         """
         if not self.clock_initialized:
             warnings.warn("Clock has not been initialized, the initial value "
-                          "will be X for system verilog targets")
+                          "will be X for system verilog targets.  In a future "
+                          "release, this will be an error", DeprecationWarning)
         self.targets[target] = self.make_target(target, **kwargs)
 
     def compile(self, target="verilator", **kwargs):
