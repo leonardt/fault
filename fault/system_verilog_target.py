@@ -45,7 +45,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, top_name=None, use_kratos=False):
+                 waveform_file=None, use_kratos=False):
         """
         circuit: a magma circuit
 
@@ -122,7 +122,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         waveform_file: name of file to dump waveforms (default is
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
-        top_name: top level test bench name (default is {circuit_name}_tb
+        use_kratos: If True, set the environment up for debugging in kratos
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -145,7 +145,7 @@ class SystemVerilogTarget(VerilogTarget):
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
-                         magma_opts)
+                         magma_opts, use_kratos=use_kratos)
 
         # sanity check
         if simulator is None:
@@ -186,7 +186,7 @@ class SystemVerilogTarget(VerilogTarget):
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
-        self.top_name = top_name if top_name is not None \
+        self.top_name = "TOP" if use_kratos is not None \
             else f"{circuit_name}_tb"
         self.use_kratos = use_kratos
         # check to see if runtime is installed
