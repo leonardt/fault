@@ -1,3 +1,4 @@
+import warnings
 import logging
 import magma as m
 import fault.actions as actions
@@ -78,6 +79,14 @@ class Tester:
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
+        # Make sure the user has initialized the clock before stepping it
+        # While verilator initializes the clock value to 0, this assumption
+        # does not hold for system verilog, so we log a warning (as to not
+        # break existing TBs)
+        self.clock_initialized = False
+        # Only report once, in case the user calls step with an uninitialized
+        # clock many times
+        self.clock_init_warning_reported = False
         if reset is not None and not isinstance(reset, m.ResetType):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
@@ -126,6 +135,9 @@ class Tester:
         # set defaults
         if delay is None:
             delay = self.poke_delay_default
+
+        if port is self.clock:
+            self.clock_initialized = True
 
         def recurse(port):
             if isinstance(value, dict):
@@ -213,6 +225,12 @@ class Tester:
         if self.clock is None:
             raise RuntimeError("Stepping tester without a clock (did you "
                                "specify a clock during initialization?)")
+        if not self.clock_initialized and \
+                not self.clock_init_warning_reported:
+            warnings.warn("Clock has not been initialized, the initial value "
+                          "will be X for system verilog targets.  In a future "
+                          "release, this will be an error", DeprecationWarning)
+            self.clock_init_warning_reported = True
         self.actions.append(actions.Step(self.clock, steps))
 
     def serialize(self):
