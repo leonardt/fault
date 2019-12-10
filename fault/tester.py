@@ -84,6 +84,9 @@ class Tester:
         # does not hold for system verilog, so we log a warning (as to not
         # break existing TBs)
         self.clock_initialized = False
+        # Only report once, in case the user calls step with an uninitialized
+        # clock many times
+        self.clock_init_warning_reported = False
         if reset is not None and not isinstance(reset, m.ResetType):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
@@ -222,6 +225,12 @@ class Tester:
         if self.clock is None:
             raise RuntimeError("Stepping tester without a clock (did you "
                                "specify a clock during initialization?)")
+        if not self.clock_initialized and \
+                not self.clock_init_warning_reported:
+            warnings.warn("Clock has not been initialized, the initial value "
+                          "will be X for system verilog targets.  In a future "
+                          "release, this will be an error", DeprecationWarning)
+            self.clock_init_warning_reported = True
         self.actions.append(actions.Step(self.clock, steps))
 
     def serialize(self):
@@ -261,10 +270,6 @@ class Tester:
         wants to compile a DUT once and run multiple tests with the same model,
         this avoids having to call verilator multiple times)
         """
-        if not self.clock_initialized:
-            warnings.warn("Clock has not been initialized, the initial value "
-                          "will be X for system verilog targets.  In a future "
-                          "release, this will be an error", DeprecationWarning)
         self.targets[target] = self.make_target(target, **kwargs)
 
     def compile(self, target="verilator", **kwargs):
