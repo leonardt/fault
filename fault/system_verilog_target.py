@@ -17,7 +17,7 @@ from numbers import Number
 
 
 src_tpl = """\
-module {circuit_name}_tb;
+module {top_name};
 {declarations}
 
     {circuit_name} #(
@@ -45,7 +45,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None):
+                 waveform_file=None, top_name=None, use_kratos=False):
         """
         circuit: a magma circuit
 
@@ -122,6 +122,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         waveform_file: name of file to dump waveforms (default is
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
+        top_name: top level test bench name (default is {circuit_name}_tb
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -185,6 +186,17 @@ class SystemVerilogTarget(VerilogTarget):
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
+        self.top_name = top_name if top_name is not None \
+            else f"{circuit_name}_tb"
+        self.use_kratos = use_kratos
+        # check to see if runtime is installed
+        if use_kratos:
+            try:
+                import kratos_runtime
+            except ImportError:
+                raise ImportError("Cannot find kratos-runtime in the system. "
+                                  "Please do \"pip install kratos-runtime\" "
+                                  "to install.")
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -566,7 +578,8 @@ end
             initial_body=initial_body,
             port_list=f',\n{2*tab}'.join(port_list),
             param_list=f',\n{2*tab}'.join(param_list),
-            circuit_name=self.circuit_name
+            circuit_name=self.circuit_name,
+            top_name=self.top_name
         )
 
         return src
@@ -604,6 +617,10 @@ end
 
         # add any extra flags
         sim_cmd += self.flags
+
+        # link the library over if using kratos to debug
+        if self.use_kratos:
+            self.link_kratos_lib()
 
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
@@ -651,6 +668,12 @@ end
     @staticmethod
     def make_line(text, tabs=0, tab='    ', nl='\n'):
         return f'{tabs*tab}{text}{nl}'
+
+    def link_kratos_lib(self):
+        from kratos_runtime import get_lib_path
+        os.symlink(get_lib_path(), os.path.join(self.directory, ))
+        # also add the directory to the current LD_LIBRARY_PATH
+        self.sim_env["LD_LIBRARY_PATH"] = self.directory
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the simulation
@@ -720,6 +743,11 @@ end
         if self.no_warning:
             cmd += ['-neverwarn']
 
+        # kratos flags
+        if self.use_kratos:
+            from kratos_runtime import get_ncsim_flag
+            cmd += get_ncsim_flag().split()
+
         # return arg list
         return cmd
 
@@ -752,6 +780,13 @@ end
         cmd += ['+v2k']
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
+
+        # kratos flags
+        if self.use_kratos:
+            # +vpi -load libkratos-runtime.so:initialize_runtime_vpi -acc+=rw
+            from kratos_runtime import get_vcs_flag
+            cmd += get_vcs_flag().split()
+
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
