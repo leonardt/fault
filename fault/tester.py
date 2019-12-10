@@ -61,7 +61,7 @@ class Tester:
     __test__ = False  # Tell pytest to skip this class for discovery
 
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
-                 reset: m.ResetType = None, poke_delay_default=None,
+                 reset: m.Reset = None, poke_delay_default=None,
                  expect_strict_default=False):
         """
         `circuit`: the device under test (a magma circuit)
@@ -87,7 +87,7 @@ class Tester:
         # Only report once, in case the user calls step with an uninitialized
         # clock many times
         self.clock_init_warning_reported = False
-        if reset is not None and not isinstance(reset, m.ResetType):
+        if reset is not None and not isinstance(reset, m.Reset):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
         self.targets = {}
