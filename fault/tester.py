@@ -60,7 +60,7 @@ class Tester:
 
     __test__ = False  # Tell pytest to skip this class for discovery
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
                  reset: m.ResetType = None, poke_delay_default=None,
                  expect_strict_default=False):
         """
@@ -76,7 +76,7 @@ class Tester:
         self.poke_delay_default = poke_delay_default
         self.expect_strict_default = expect_strict_default
         self.actions = []
-        if clock is not None and not isinstance(clock, m.ClockType):
+        if clock is not None and not isinstance(clock, m.Clock):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
         # Make sure the user has initialized the clock before stepping it
@@ -490,7 +490,7 @@ class LoopIndex:
 class LoopTester(Tester):
     __unique_index_id = -1
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         LoopTester.__unique_index_id += 1
         self.index = LoopIndex(
@@ -499,13 +499,13 @@ class LoopTester(Tester):
 
 class ElseTester(Tester):
     def __init__(self, else_actions: List, circuit: m.Circuit,
-                 clock: m.ClockType = None):
+                 clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.actions = else_actions
 
 
 class IfTester(Tester):
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.else_actions = []
 
