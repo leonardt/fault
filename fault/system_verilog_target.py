@@ -61,7 +61,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         magma_opts: Options dictionary for `magma.compile` command
 
-        simulator: "ncsim", "vcs", or "iverilog"
+        simulator: "ncsim", "vcs", "iverilog", or "vivado"
 
         timescale: Set the timescale for the verilog simulation
                    (default 1ns/1ns)
@@ -150,7 +150,7 @@ class SystemVerilogTarget(VerilogTarget):
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
-        if simulator not in {"vcs", "ncsim", "iverilog"}:
+        if simulator not in {"vcs", "ncsim", "iverilog", "vivado"}:
             raise ValueError(f"Unsupported simulator {simulator}")
 
         # save settings
@@ -181,7 +181,7 @@ class SystemVerilogTarget(VerilogTarget):
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 self.waveform_file = "waveforms.vpd"
-            elif self.simulator in {"ncsim", "iverilog"}:
+            elif self.simulator in {"ncsim", "iverilog", "vivado"}:
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
@@ -593,6 +593,11 @@ end
                                      cmd_file=self.write_ncsim_tcl())
             bin_cmd = None
             sim_err_str = None
+        elif self.simulator == 'vivado':
+            sim_cmd = self.vivado_cmd(sources=vlog_srcs,
+                                      cmd_file=self.write_vivado_tcl())
+            bin_cmd = None
+            sim_err_str = ['CRITICAL WARNING', 'ERROR', 'Fatal']
         elif self.simulator == 'vcs':
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
             bin_cmd = [bin_file]
