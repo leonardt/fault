@@ -1,6 +1,7 @@
 matrix:
   include:
   - os: linux
+    dist: bionic
     addons:
       apt:
         sources:

@@ -269,9 +269,7 @@ class SystemVerilogTarget(VerilogTarget):
         # Build up the poke action, including delay
         retval = []
         retval += [f'{name} = {value};']
-        if action.delay is None:
-            retval += [f'#{self.clock_step_delay};']
-        else:
+        if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
 
@@ -421,14 +419,14 @@ end
         return retval
 
     def make_eval(self, i, action):
-        # Eval implicit in SV simulations
-        return []
+        # Emulate eval by inserting a delay
+        return ['#1;']
 
     def make_step(self, i, action):
         name = verilog_name(action.clock.name)
         code = []
         for step in range(action.steps):
-            code.append(f"#5 {name} ^= 1;")
+            code.append(f"#{self.clock_step_delay} {name} ^= 1;")
         return code
 
     def make_while(self, i, action):
