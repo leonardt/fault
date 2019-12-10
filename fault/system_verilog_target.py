@@ -546,7 +546,7 @@ end
         $vcdpluson();
         $vcdplusmemon();
 """
-        elif self.dump_waveforms and self.simulator == "iverilog":
+        elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += f"""
         $dumpfile("{self.waveform_file}");
@@ -587,23 +587,36 @@ end
 
         # generate simulator commands
         if self.simulator == 'ncsim':
-            sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
-                                     cmd_file=self.write_ncsim_tcl())
-            bin_cmd = None
+            # Compile and run simulation
+            cmd_file = self.write_ncsim_tcl()
+            sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
             sim_err_str = None
-        elif self.simulator == 'vivado':
-            sim_cmd = self.vivado_cmd(sources=vlog_srcs,
-                                      cmd_file=self.write_vivado_tcl())
+            # Skip "bin_cmd"
             bin_cmd = None
-            sim_err_str = ['CRITICAL WARNING', 'ERROR', 'Fatal']
+            bin_err_str = None
+        elif self.simulator == 'vivado':
+            # Compile and run simulation
+            cmd_file = self.write_vivado_tcl(sources=vlog_srcs)
+            sim_cmd = self.vivado_cmd(cmd_file=cmd_file)
+            sim_err_str = ['CRITICAL WARNING', 'ERROR', 'Fatal', 'Error']
+            # Skip "bin_cmd"
+            bin_cmd = None
+            bin_err_str = None
         elif self.simulator == 'vcs':
+            # Compile simulation
+            # TODO: what error strings are expected at this stage?
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            sim_err_str = None
+            # Run simulation
             bin_cmd = [bin_file]
-            sim_err_str = 'Error'
+            bin_err_str = 'Error'
         elif self.simulator == 'iverilog':
+            # Compile simulation
             sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
+            sim_err_str = ['syntax error', 'I give up.']
+            # Run simulation
             bin_cmd = ['vvp', '-N', bin_file]
-            sim_err_str = 'ERROR'
+            bin_err_str = 'ERROR'
         else:
             raise NotImplementedError(self.simulator)
 
@@ -612,12 +625,12 @@ end
 
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
-                       disp_type=self.disp_type)
+                       err_str=sim_err_str, disp_type=self.disp_type)
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
             subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
-                           err_str=sim_err_str, disp_type=self.disp_type)
+                           err_str=bin_err_str, disp_type=self.disp_type)
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
@@ -658,13 +671,79 @@ end
         return f'{tabs*tab}{text}{nl}'
 
     def write_ncsim_tcl(self):
-        # construct the TCL commands to run the simulation
+        # construct the TCL commands to run the Incisive/Xcelium simulation
         tcl_cmds = []
         if self.dump_waveforms:
             tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale ps']  # noqa
             tcl_cmds += [f'probe -create -all -vcd -depth all']
         tcl_cmds += [f'run {self.num_cycles}ns']
         tcl_cmds += [f'quit']
+
+        # write the command file
+        cmd_file = Path(f'{self.circuit_name}_cmd.tcl')
+        with open(self.directory / cmd_file, 'w') as f:
+            f.write('\n'.join(tcl_cmds))
+
+        # return the path to the command file
+        return cmd_file
+
+    def write_vivado_tcl(self, sources=None, proj_name='project', proj_dir=None,
+                         proj_part=None):
+        # set defaults
+        if sources is None:
+            sources = []
+        if proj_dir is None:
+            proj_dir = f'{proj_name}'
+
+        # build up a list of commands to run a simulation with Vivado
+        tcl_cmds = []
+
+        # create the project
+        create_proj = f'create_project -force {proj_name} {proj_dir}'
+        if proj_part is not None:
+            create_proj += f' -part "{proj_part}"'
+        tcl_cmds += [create_proj]
+
+        # add source files and library files
+        vlog_add_files = []
+        vlog_add_files += [f'{src}' for src in sources]
+        vlog_add_files += [f'{lib}' for lib in self.ext_libs]
+        if len(vlog_add_files) > 0:
+            vlog_add_files = ' '.join(vlog_add_files)
+            tcl_cmds += [f'add_files "{vlog_add_files}"']
+
+        # add include file search paths
+        if len(self.inc_dirs) > 0:
+            vlog_inc_dirs = ' '.join(f'{dir_}' for dir_ in self.inc_dirs)
+            tcl_cmds += [f'set_property include_dirs "{vlog_inc_dirs}" [get_fileset sim_1]']  # noqa
+
+        # add verilog `defines
+        vlog_defs = []
+        for key, val in self.defines.items():
+            if val is not None:
+                vlog_defs += [f'{key}={val}']
+            else:
+                vlog_defs += [f'{key}']
+        if len(vlog_defs) > 0:
+            vlog_defs = ' '.join(vlog_defs)
+            tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
+
+        # set the name of the top module
+        if self.top_module is None and not self.ext_test_bench:
+            top = f'{self.circuit_name}_tb'
+        else:
+            top = self.top_module
+        if top is not None:
+            tcl_cmds += [f'set_property -name top -value {top} -objects [get_fileset sim_1]']  # noqa
+        else:
+            # have Vivado pick the top module automatically if not specified
+            tcl_cmds += [f'update_compile_order -fileset sim_1']
+
+        # run until $finish (as opposed to running for a certain amount of time)
+        tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
+
+        # run the simulation
+        tcl_cmds += ['launch_simulation']
 
         # write the command file
         cmd_file = Path(f'{self.circuit_name}_cmd.tcl')
@@ -724,6 +803,25 @@ end
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
+
+        # return arg list
+        return cmd
+
+    def vivado_cmd(self, cmd_file):
+        cmd = []
+
+        # binary name
+        cmd += ['vivado']
+
+        # run from an external script
+        cmd += ['-mode', 'batch']
+
+        # specify path to script
+        cmd += ['-source', f'{cmd_file}']
+
+        # turn off annoying output
+        cmd += ['-nolog']
+        cmd += ['-nojournal']
 
         # return arg list
         return cmd
