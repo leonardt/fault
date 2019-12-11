@@ -1,4 +1,4 @@
-from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
+from magma import Bit, Array, SInt, UInt, Bits
 from magma.simulator.python_simulator import PythonSimulator
 from hwtypes import BitVector, SIntVector, UIntVector, Bit
 from inspect import signature
@@ -72,11 +72,11 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
     args = []
     for i, (name, port) in enumerate(circuit.IO.items()):
         if port.isinput():
-            if isinstance(port, BitKind):
+            if issubclass(port, Bit):
                 args.append([Bit(0), Bit(1)])
-            elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
+            elif issubclass(port, Array) and issubclass(port.T, Bit):
                 num_bits = port.N
-                if isinstance(port, SIntKind):
+                if issubclass(port, SInt):
                     if input_ranges is None:
                         input_range = range(-2**(num_bits - 1),
                                             2**(num_bits - 1))
@@ -119,11 +119,11 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
     args = []
     for i, (name, port) in enumerate(circuit.IO.items()):
         if port.isinput():
-            if isinstance(port, BitKind):
+            if issubclass(port, Bit):
                 args.append([Bit(0), Bit(1)])
-            elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
+            elif issubclass(port, Array) and issubclass(port.T, Bit):
                 num_bits = port.N
-                if isinstance(port, SIntKind):
+                if issubclass(port, SInt):
                     if input_ranges is None:
                         start = -2**(num_bits - 1)
                         # We don't subtract one because range end is exclusive
@@ -160,8 +160,8 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         for i, (name, port) in enumerate(circuit.IO.items()):
             if port.isoutput():
                 val = simulator.get_value(getattr(circuit, name))
-                if isinstance(port, ArrayKind) and \
-                        not isinstance(port, (BitsKind, SIntKind, UIntKind)):
+                if issubclass(port, Array) and \
+                        not issubclass(port, (Bits, SInt, UInt)):
                     val = BitVector[len(port)](val)
                 testv[1].append(val)
 

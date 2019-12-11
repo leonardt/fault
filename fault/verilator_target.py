@@ -334,7 +334,7 @@ class VerilatorTarget(VerilogTarget):
                 port = port[-1]
             elif isinstance(port, fault.WrappedVerilogInternalPort):
                 port = port.type_
-            if isinstance(port, m._BitType):
+            if isinstance(port, m.Digital):
                 port_len = 1
             else:
                 port_len = len(port)

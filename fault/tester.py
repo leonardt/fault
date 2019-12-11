@@ -1,3 +1,4 @@
+import fault
 import warnings
 import logging
 import magma as m
@@ -125,8 +126,8 @@ class Tester:
         raise NotImplementedError(target)
 
     def is_recursive_type(self, T):
-        return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
-            not isinstance(T.T, (m._BitKind, m.BitType))
+        return isinstance(T, m.Tuple) or isinstance(T, m.Array) and \
+            not issubclass(T.T, m.Digital)
 
     def poke(self, port, value, delay=None):
         """
@@ -143,7 +144,7 @@ class Tester:
             if isinstance(value, dict):
                 for k, v in value.items():
                     self.poke(getattr(port, k), v)
-            elif isinstance(port, m.ArrayType) and \
+            elif isinstance(port, m.Array) and \
                     isinstance(value, (int, BitVector, tuple, dict)):
                 # Broadcast value to children
                 for p in port:
@@ -161,7 +162,13 @@ class Tester:
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
-                value = make_value(port, value)
+                if isinstance(port, SelectPath):
+                    type_ = type(port[-1])
+                elif isinstance(port, fault.WrappedVerilogInternalPort):
+                    type_ = port.type_
+                else:
+                    type_ = type(port)
+                value = make_value(type_, value)
             self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
@@ -203,7 +210,13 @@ class Tester:
             # implement expect
             if not isinstance(value, (actions.Peek, PortWrapper,
                                       LoopIndex, expression.Expression)):
-                value = make_value(port, value)
+                if isinstance(port, SelectPath):
+                    type_ = type(port[-1])
+                elif isinstance(port, fault.WrappedVerilogInternalPort):
+                    type_ = port.type_
+                else:
+                    type_ = type(port)
+                value = make_value(type_, value)
             self.actions.append(actions.Expect(port, value, **kwargs))
 
     def eval(self):
