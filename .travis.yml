@@ -71,6 +71,9 @@ install:
 - pysmt-install --check
 # End setup CoSA dependencies
 
+# install testing branch for importing kratos circuit
+pip install --ignore-installed git+http://github.com/Kuree/magma@from_kratos#egg=magma-lang
+
 script:
 - pytest --cov fault --pycodestyle fault -v --cov-report term-missing tests
 deploy:
