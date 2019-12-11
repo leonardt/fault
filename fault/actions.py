@@ -109,8 +109,8 @@ class Expect(PortAction):
             # sanity check
             assert rel_tol >= 0 and abs_tol >= 0, 'rel_tol and abs_tol must be non-negative.'  # noqa
 
-            above = value - rel_tol * value - abs_tol
-            below = value + rel_tol * value + abs_tol
+            above = value - rel_tol * abs(value) - abs_tol
+            below = value + rel_tol * abs(value) + abs_tol
 
         # save settings
         self.strict = strict
