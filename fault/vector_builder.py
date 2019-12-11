@@ -15,7 +15,7 @@ class VectorBuilder:
 
     def __empty_vector(self):
         ports = self.circuit.interface.ports
-        return [make_value(port, AnyValue) for port in ports.values()]
+        return [make_value(type(port), AnyValue) for port in ports.values()]
 
     def __indices(self, port):
         if port in self.port_to_index:
@@ -40,9 +40,9 @@ class VectorBuilder:
     def __eval(self):
         self.vectors.append(self.vectors[-1].copy())
         for port in self.circuit.interface.ports.values():
-            if port.isinput():
+            if port.is_input():
                 index = self.port_to_index[port]
-                self.vectors[-1][index] = make_value(port, AnyValue)
+                self.vectors[-1][index] = make_value(type(port), AnyValue)
 
     def process(self, action):
         if isinstance(action, (actions.Poke, actions.Expect)):

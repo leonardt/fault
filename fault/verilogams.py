@@ -51,11 +51,11 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     # module definition
     ports = []
     for name, type_ in circ.IO.ports.items():
-        if type_.isinput():
+        if type_.is_input():
             ports += [('input', f'{name}')]
-        elif type_.isoutput():
+        elif type_.is_output():
             ports += [('output', f'{name}')]
-        elif type_.isinout():
+        elif type_.is_inout():
             ports += [('inout', f'{name}')]
         else:
             raise Exception(f'Unsupported port type: {type_}')
@@ -69,7 +69,7 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
         elif type_ is RealIn or type_ is RealOut:
             vams_type = 'wreal'
         else:
-            vams_type = f'wire [{type_.size() - 1}:0]'
+            vams_type = f'wire [{len(type_) - 1}:0]'
         gen.decl_port_type(vams_type, f'{name}')
     gen.emptyln()
 

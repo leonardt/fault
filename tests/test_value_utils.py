@@ -15,13 +15,13 @@ class Foo(m.Circuit):
 
 def test_all():
     # Bit type.
-    assert make_value(Foo.a, BitVector[1](0)) == BitVector[1](0)
-    assert make_value(Foo.a, 0) == BitVector[1](0)
-    assert make_value(Foo.a, 1) == BitVector[1](1)
-    assert make_value(Foo.a, AnyValue) == AnyValue
-    assert make_value(Foo.a, UnknownValue) == UnknownValue
+    assert make_value(type(Foo.a), BitVector[1](0)) == BitVector[1](0)
+    assert make_value(type(Foo.a), 0) == BitVector[1](0)
+    assert make_value(type(Foo.a), 1) == BitVector[1](1)
+    assert make_value(type(Foo.a), AnyValue) == AnyValue
+    assert make_value(type(Foo.a), UnknownValue) == UnknownValue
     with pytest.raises(NotImplementedError) as pytest_e:
-        make_value(Foo.a, 2)
+        make_value(type(Foo.a), 2)
         assert False
     assert pytest_e.type == NotImplementedError
 
@@ -29,18 +29,18 @@ def test_all():
     # into the bit-vectors. The tests should pass for any number.
 
     # Bits type.
-    assert make_value(Foo.b, BitVector[8](5)) == BitVector[8](5)
-    assert make_value(Foo.b, 17) == BitVector[8](17)
-    assert make_value(Foo.b, AnyValue) == AnyValue
-    assert make_value(Foo.b, UnknownValue) == UnknownValue
+    assert make_value(type(Foo.b), BitVector[8](5)) == BitVector[8](5)
+    assert make_value(type(Foo.b), 17) == BitVector[8](17)
+    assert make_value(type(Foo.b), AnyValue) == AnyValue
+    assert make_value(type(Foo.b), UnknownValue) == UnknownValue
 
     # Array(Bit) type. Should be the same as above.
-    assert make_value(Foo.c, BitVector[12](83)) == BitVector[12](83)
-    assert make_value(Foo.c, 23) == BitVector[12](23)
-    assert make_value(Foo.c, AnyValue) == AnyValue
-    assert make_value(Foo.c, UnknownValue) == UnknownValue
+    assert make_value(type(Foo.c), BitVector[12](83)) == BitVector[12](83)
+    assert make_value(type(Foo.c), 23) == BitVector[12](23)
+    assert make_value(type(Foo.c), AnyValue) == AnyValue
+    assert make_value(type(Foo.c), UnknownValue) == UnknownValue
 
     # Array(Array(Bit)) type.
-    assert make_value(Foo.d, 894) == Array([BitVector[20](894)] * 16, 16)
-    assert make_value(Foo.d, AnyValue) == Array([AnyValue] * 16, 16)
-    assert make_value(Foo.d, UnknownValue) == Array([UnknownValue] * 16, 16)
+    assert make_value(type(Foo.d), 894) == Array([BitVector[20](894)] * 16, 16)
+    assert make_value(type(Foo.d), AnyValue) == Array([AnyValue] * 16, 16)
+    assert make_value(type(Foo.d), UnknownValue) == Array([UnknownValue] * 16, 16)

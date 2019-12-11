@@ -359,7 +359,7 @@ class Tester:
         known value
         """
         for name, port in self._circuit.IO.ports.items():
-            if port.isinput():
+            if port.is_input():
                 self.poke(self._circuit.interface.ports[name], 0)
 
     def clear(self):
