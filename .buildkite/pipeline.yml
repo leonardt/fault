@@ -16,6 +16,8 @@ steps:
       echo $$PATH
       
       # install python directories
+      pip install -e git+git://github.com/phanrahan/magma.git@hwtypes2#egg=magma-lang
+      pip install -e git+git://github.com/phanrahan/mantle.git@hwtypes2#egg=mantle
       pip install pytest-cov pytest-codestyle
       pip install mantle
       pip install -e .
