@@ -417,6 +417,7 @@ def test_tester_verilog_wrapped(target, simulator):
     tester = fault.Tester(circ, circ.CLK)
     tester.verilator_include("SimpleALU")
     tester.verilator_include("ConfigReg")
+    tester.circuit.CLK = 0
     for i in range(0, 4):
         tester.poke(
             fault.WrappedVerilogInternalPort("SimpleALU_inst0.config_reg.Q",

@@ -425,11 +425,13 @@ class Tester:
         `actions` list.
         """
         while_tester = LoopTester(self._circuit, self.clock)
+        while_tester.clock_initialized = self.clock_initialized
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
     def _if(self, cond):
         if_tester = IfTester(self._circuit, self.clock)
+        if_tester.clock_initialized = self.clock_initialized
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester
