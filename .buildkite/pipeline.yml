@@ -1,0 +1,58 @@
+steps:
+  - command: |
+      # set up environment
+      export PATH=/usr/local/miniconda/bin:/usr/local/bin:$$PATH
+      echo $$PATH
+      export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:/usr/local/lib
+      echo $$LD_LIBRARY_PATH
+
+      # tool setup
+      source /cad/modules/tcl/init/bash
+      module load base incisive vcs hspice spectre
+
+      # create conda env
+      conda create -p ./conda_env -m -y pip numpy python=3.7.3
+      export PATH=$$PWD/conda_env/bin:$$PATH
+      echo $$PATH
+      
+      # install python directories
+      pip install pytest-cov pytest-codestyle
+      pip install mantle
+      pip install -e .
+      
+      # install SMT solvers
+      mkdir ./smt_solvers
+      ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
+      
+      # run tests
+      ./conda_env/bin/pytest --cov fault --pycodestyle fault --cov-report term-missing tests -v -r s
+      
+      # run coverage
+      pip install python-coveralls
+      coveralls
+    label: "test"
+    agents:
+      fault: "true"
+  - command: |
+      # set up environment
+      source /etc/environment
+      echo $$PATH
+
+      # create virtual environment
+      python3.7 -m venv venv
+      source venv/bin/activate
+
+      # install python dependencies
+      pip install wheel
+      pip install mantle pytest
+      pip install -e .
+      
+      # run tests
+      pytest tests -x
+
+      # deactivate virtual environment
+      deactivate
+    label: "fpga_verif"
+    timeout_in_minutes: 60
+    agents:
+        fpga_verif: "true"
