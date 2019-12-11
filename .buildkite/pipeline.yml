@@ -48,7 +48,7 @@ steps:
       pip install -e .
       
       # run tests
-      pytest tests
+      pytest tests -x
 
       # deactivate virtual environment
       deactivate
