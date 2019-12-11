@@ -578,7 +578,8 @@ end
             port_list=f',\n{2*tab}'.join(port_list),
             param_list=f',\n{2*tab}'.join(param_list),
             circuit_name=self.circuit_name,
-            top_module=self.top_module
+            top_module=self.top_module if self.top_module is not None else
+            f"{self.circuit_name}_tb"
         )
 
         return src
@@ -711,7 +712,7 @@ end
 
         # determine the name of the top module
         if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
+            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
         else:
             top = self.top_module
 
