@@ -129,6 +129,16 @@ class Tester:
         return isinstance(T, m.Tuple) or isinstance(T, m.Array) and \
             not issubclass(T.T, m.Digital)
 
+    def get_type(self, port):
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, fault.WrappedVerilogInternalPort):
+            type_ = port.type_
+            print(port.type_)
+        else:
+            type_ = type(port)
+        return type_
+
     def poke(self, port, value, delay=None):
         """
         Set `port` to be `value`
@@ -162,12 +172,7 @@ class Tester:
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
                                       expression.Expression)):
-                if isinstance(port, SelectPath):
-                    type_ = type(port[-1])
-                elif isinstance(port, fault.WrappedVerilogInternalPort):
-                    type_ = port.type_
-                else:
-                    type_ = type(port)
+                type_ = self.get_type(port)
                 value = make_value(type_, value)
             self.actions.append(actions.Poke(port, value, delay=delay))
 
@@ -210,12 +215,7 @@ class Tester:
             # implement expect
             if not isinstance(value, (actions.Peek, PortWrapper,
                                       LoopIndex, expression.Expression)):
-                if isinstance(port, SelectPath):
-                    type_ = type(port[-1])
-                elif isinstance(port, fault.WrappedVerilogInternalPort):
-                    type_ = port.type_
-                else:
-                    type_ = type(port)
+                type_ = self.get_type(port)
                 value = make_value(type_, value)
             self.actions.append(actions.Expect(port, value, **kwargs))
 

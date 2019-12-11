@@ -225,7 +225,7 @@ class SystemVerilogTarget(VerilogTarget):
     def process_value(self, port, value):
         if isinstance(value, BitVector):
             value = f"{len(value)}'d{value.as_uint()}"
-        elif isinstance(port, m.SIntType) and value < 0:
+        elif isinstance(port, m.SInt) and value < 0:
             port_len = len(port)
             value = BitVector[port_len](value).as_uint()
             value = f"{port_len}'d{value}"
@@ -470,14 +470,14 @@ end
 
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
-        if isinstance(type_, m.ArrayKind):
+        if issubclass(type_, m.Array):
             for j in range(type_.N):
                 result = self.generate_port_code(
                     name + "_" + str(j), type_.T, power_args
                 )
                 port_list.extend(result)
-        elif isinstance(type_, m.TupleKind):
-            for k, t in zip(type_.Ks, type_.Ts):
+        elif issubclass(type_, m.Tuple):
+            for k, t in zip(type_.keys(), type_.types()):
                 result = self.generate_port_code(
                     name + "_" + str(k), t, power_args
                 )
@@ -485,15 +485,14 @@ end
         return port_list
 
     def generate_port_code(self, name, type_, power_args):
-        is_array_of_bits = isinstance(type_, m.ArrayKind) and \
-            not isinstance(type_.T, m.BitKind)
-        if is_array_of_bits or isinstance(type_, m.TupleKind):
+        is_array_of_bits = issubclass(type_, m.Array) and \
+            not issubclass(type_.T, m.Bit)
+        if is_array_of_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
             connect_to = f"{name}"
-            if isinstance(type_, m.ArrayKind) and \
-                    isinstance(type_.T, m.BitKind):
+            if issubclass(type_, m.Array) and issubclass(type_.T, m.Bit):
                 width_str = f"[{len(type_) - 1}:0] "
             if isinstance(type_, RealKind):
                 t = "real"
