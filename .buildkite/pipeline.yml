@@ -43,7 +43,6 @@ steps:
       source venv/bin/activate
 
       # install python dependencies
-      pip install wheel
       pip install mantle pytest
       pip install -e .
       
