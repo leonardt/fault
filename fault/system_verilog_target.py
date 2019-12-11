@@ -502,9 +502,9 @@ end
                 t = "supply1"
             elif name in power_args.get("tris", []):
                 t = "tri"
-            elif type_.isoutput():
+            elif type_.is_output():
                 t = "wire"
-            elif type_.isinout() or (type_.isinput() and self.use_input_wires):
+            elif type_.is_inout() or (type_.is_input() and self.use_input_wires):
                 # declare a reg and assign it to a wire
                 # that wire will then be connected to the
                 # DUT pin
@@ -518,7 +518,7 @@ end
                 # set the signal type to None to avoid re-declaring
                 # connect_to
                 t = None
-            elif type_.isinput():
+            elif type_.is_input():
                 t = "reg"
             else:
                 raise NotImplementedError()

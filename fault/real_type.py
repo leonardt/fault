@@ -14,6 +14,7 @@ class RealType(Type):
 
 class RealKind(Kind):
     __hash__ = Kind.__hash__
+
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
 
@@ -27,11 +28,11 @@ class RealKind(Kind):
         return cls.direction == rhs.direction
 
     def __str__(cls):
-        if cls.isinput():
+        if cls.is_input():
             return 'In(Real)'
-        elif cls.isoutput():
+        elif cls.is_output():
             return 'Out(Real)'
-        elif cls.isinout():
+        elif cls.is_inout():
             return 'InOut(Real)'
         else:
             return 'Real'

@@ -550,7 +550,7 @@ for ({loop_expr}) {{
     def add_assumptions(self, circuit, actions, i):
         main_body = ""
         for port in circuit.interface.ports.values():
-            if port.isoutput():
+            if port.is_output():
                 for assumption in self.assumptions:
                     # TODO: Chained assumptions?
                     assume_port = assumption.port
@@ -569,7 +569,7 @@ for ({loop_expr}) {{
     def add_guarantees(self, circuit, actions, i):
         main_body = ""
         for name, port in circuit.interface.ports.items():
-            if port.isinput():
+            if port.is_input():
                 for guarantee in self.guarantees:
                     guarantee_port = guarantee.port
                     if isinstance(guarantee_port, SelectPath):

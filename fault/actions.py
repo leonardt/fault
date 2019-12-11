@@ -40,9 +40,9 @@ def is_input(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return port.type_.isinput()
+        return port.type_.is_input()
     else:
-        return port.isinput()
+        return port.is_input()
 
 
 class Poke(PortAction):
@@ -76,18 +76,18 @@ def is_inout(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return port.type_.isinout()
+        return port.type_.is_inout()
     else:
-        return port.isinout()
+        return port.is_inout()
 
 
 def is_output(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return not port.type_.isoutput()
+        return not port.type_.is_output()
     else:
-        return not port.isoutput()
+        return not port.is_output()
 
 
 class Expect(PortAction):

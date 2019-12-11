@@ -1,3 +1,4 @@
+import magma as m
 from magma import Bit, Array, SInt, UInt, Bits
 from magma.simulator.python_simulator import PythonSimulator
 from hwtypes import BitVector, SIntVector, UIntVector, Bit
@@ -72,7 +73,7 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
     args = []
     for i, (name, port) in enumerate(circuit.IO.items()):
         if port.is_input():
-            if issubclass(port, Bit):
+            if issubclass(port, m.Digital):
                 args.append([Bit(0), Bit(1)])
             elif issubclass(port, Bits):
                 num_bits = port.N
@@ -119,7 +120,7 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
     args = []
     for i, (name, port) in enumerate(circuit.IO.items()):
         if port.is_input():
-            if issubclass(port, Bit):
+            if issubclass(port, m.Digital):
                 args.append([Bit(0), Bit(1)])
             elif issubclass(port, Bits):
                 num_bits = port.N
