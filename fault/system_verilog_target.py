@@ -17,7 +17,7 @@ from numbers import Number
 
 
 src_tpl = """\
-module {top_name};
+module {top_module};
 {declarations}
 
     {circuit_name} #(
@@ -167,14 +167,15 @@ class SystemVerilogTarget(VerilogTarget):
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
-        self.sim_env = sim_env
+        self.sim_env = sim_env if sim_env is not None else {}
+        self.sim_env.update(os.environ)
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module
+        self.top_module = top_module if not use_kratos else "TOP"
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
@@ -186,8 +187,6 @@ class SystemVerilogTarget(VerilogTarget):
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
-        self.top_name = "TOP" if use_kratos is not None \
-            else f"{circuit_name}_tb"
         self.use_kratos = use_kratos
         # check to see if runtime is installed
         if use_kratos:
@@ -579,7 +578,7 @@ end
             port_list=f',\n{2*tab}'.join(port_list),
             param_list=f',\n{2*tab}'.join(param_list),
             circuit_name=self.circuit_name,
-            top_name=self.top_name
+            top_module=self.top_module
         )
 
         return src
@@ -671,9 +670,12 @@ end
 
     def link_kratos_lib(self):
         from kratos_runtime import get_lib_path
-        os.symlink(get_lib_path(), os.path.join(self.directory, ))
+        lib_path = get_lib_path()
+        dst_path = os.path.join(self.directory, os.path.basename(lib_path))
+        if not os.path.isfile(dst_path):
+            os.symlink(lib_path, dst_path)
         # also add the directory to the current LD_LIBRARY_PATH
-        self.sim_env["LD_LIBRARY_PATH"] = self.directory
+        self.sim_env["LD_LIBRARY_PATH"] = os.path.abspath(self.directory)
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the simulation
