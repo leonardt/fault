@@ -11,6 +11,7 @@ import shutil
 
 
 # @pytest.mark.skipif(not shutil.which("irun"), reason="irun not available")
+@pytest.mark.skipif(True)
 def test_load_runtime():
     # define an empty circuit
     mod = kratos.Generator("mod")
@@ -19,7 +20,7 @@ def test_load_runtime():
 
         def run_test():
             # -g without the db dump
-            circuit = magma.FromKratos(mod, insert_debug_info=True)
+            circuit = kratos.util.to_magma(mod, insert_debug_info=True)
             tester = fault.Tester(circuit)
             tester.compile_and_run(target="system-verilog",
                                    simulator="ncsim",
@@ -32,7 +33,7 @@ def test_load_runtime():
         p = multiprocessing.Process(target=run_test)
         p.start()
         # wait for 1 second, which should be enough
-        time.sleep(2)
+        time.sleep(5)
         # send an CONTINUE request to the runtime to check if it's working
         from kratos_runtime import DebuggerMock
         mock = DebuggerMock()
@@ -41,7 +42,3 @@ def test_load_runtime():
         p.join(timeout=1)
         assert os.path.isfile(finish_file), "Unable to continue the simulation"
         os.remove(finish_file)
-
-
-if __name__ == "__main__":
-    test_load_runtime()
