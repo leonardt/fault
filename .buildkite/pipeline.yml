@@ -33,3 +33,26 @@ steps:
     label: "test"
     agents:
       fault: "true"
+  - command: |
+      # set up environment
+      source /etc/environment
+      echo $$PATH
+
+      # create virtual environment
+      python3.7 -m venv venv
+      source venv/bin/activate
+
+      # install python dependencies
+      pip install wheel
+      pip install mantle pytest
+      pip install -e .
+      
+      # run tests
+      pytest tests -x
+
+      # deactivate virtual environment
+      deactivate
+    label: "fpga_verif"
+    timeout_in_minutes: 60
+    agents:
+        fpga_verif: "true"

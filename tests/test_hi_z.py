@@ -5,7 +5,8 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'system-verilog')
+    # Vivado doesn't support the "tran" keyword, so it must be excluded
+    pytest_sim_params(metafunc, 'system-verilog', exclude='vivado')
 
 
 def test_hi_z(target, simulator):

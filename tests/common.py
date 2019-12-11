@@ -3,9 +3,16 @@ import magma as m
 import mantle
 
 
-def pytest_sim_params(metafunc, *args):
+def pytest_sim_params(metafunc, *args, exclude=None):
+    # set defaults
+    if exclude is None:
+        exclude = []
+    elif isinstance(exclude, str):
+        exclude = [exclude]
+    exclude = set(exclude)
+
     # simulators supported by each kind of target
-    sims_by_arg = {'system-verilog': ['vcs', 'ncsim', 'iverilog'],
+    sims_by_arg = {'system-verilog': ['vcs', 'ncsim', 'iverilog', 'vivado'],
                    'verilog-ams': ['ncsim'],
                    'verilator': [None],
                    'spice': ['ngspice', 'spectre', 'hspice']}
@@ -17,7 +24,9 @@ def pytest_sim_params(metafunc, *args):
         targets = []
         for arg in args:
             for simulator in sims_by_arg[arg]:
-                if simulator is None or shutil.which(simulator):
+                if simulator in exclude:
+                    continue
+                elif simulator is None or shutil.which(simulator):
                     targets.append((arg, simulator))
 
         metafunc.parametrize("target,simulator", targets)
