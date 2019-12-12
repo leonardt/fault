@@ -13,6 +13,7 @@ matrix:
         - libmpc-dev
         - verilator
         - iverilog
+        - ngspice
     env:
     - CC=gcc-7
     - CXX=g++-7
@@ -23,6 +24,8 @@ matrix:
         packages:
           - verilator
           - icarus-verilog
+          - ngspice
+          - fftw
 
 # python managed by conda until 3.7 available
 # python:
