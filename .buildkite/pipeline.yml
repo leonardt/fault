@@ -27,10 +27,6 @@ steps:
       # install kratos runtime
       pip install kratos-runtime
       
-      # REMOVE ME
-      # install testing branch for importing kratos circuit
-      pip install --ignore-installed git+http://github.com/Kuree/magma@from_kratos#egg=magma-lang
-      
       # run tests
       ./conda_env/bin/pytest --cov fault --pycodestyle fault --cov-report term-missing tests -v -r s
       
