@@ -485,9 +485,9 @@ end
         return port_list
 
     def generate_port_code(self, name, type_, power_args):
-        is_array_of_bits = issubclass(type_, m.Array) and \
+        is_array_of_non_bits = issubclass(type_, m.Array) and \
             not issubclass(type_.T, m.Bit)
-        if is_array_of_bits or issubclass(type_, m.Tuple):
+        if is_array_of_non_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
