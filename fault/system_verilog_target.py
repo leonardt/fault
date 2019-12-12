@@ -504,7 +504,8 @@ end
                 t = "tri"
             elif type_.is_output():
                 t = "wire"
-            elif type_.is_inout() or (type_.is_input() and self.use_input_wires):
+            elif type_.is_inout() or \
+                    (type_.is_input() and self.use_input_wires):
                 # declare a reg and assign it to a wire
                 # that wire will then be connected to the
                 # DUT pin

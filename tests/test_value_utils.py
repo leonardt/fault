@@ -43,4 +43,5 @@ def test_all():
     # Array(Array(Bit)) type.
     assert make_value(type(Foo.d), 894) == Array([BitVector[20](894)] * 16, 16)
     assert make_value(type(Foo.d), AnyValue) == Array([AnyValue] * 16, 16)
-    assert make_value(type(Foo.d), UnknownValue) == Array([UnknownValue] * 16, 16)
+    assert make_value(type(Foo.d), UnknownValue) == \
+        Array([UnknownValue] * 16, 16)
