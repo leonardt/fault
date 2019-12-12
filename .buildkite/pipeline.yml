@@ -45,6 +45,8 @@ steps:
       source venv/bin/activate
 
       # install python dependencies
+      pip install -e git+git://github.com/phanrahan/magma.git@hwtypes2#egg=magma-lang
+      pip install -e git+git://github.com/phanrahan/mantle.git@hwtypes2#egg=mantle
       pip install wheel
       pip install mantle pytest
       pip install -e .
