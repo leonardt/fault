@@ -126,7 +126,7 @@ class Tester:
         raise NotImplementedError(target)
 
     def is_recursive_type(self, T):
-        return isinstance(T, m.Tuple) or isinstance(T, m.Array) and \
+        return issubclass(T, m.Tuple) or issubclass(T, m.Array) and \
             not issubclass(T.T, m.Digital)
 
     def get_type(self, port):
@@ -164,10 +164,10 @@ class Tester:
                     self.poke(p, v, delay)
 
         # implement poke
-        if self.is_recursive_type(port):
+        if self.is_recursive_type(type(port)):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1])):
+                (self.is_recursive_type(type(port[-1]))):
             recurse(port[-1])
         else:
             if not isinstance(value, (LoopIndex, actions.FileRead,
@@ -202,10 +202,10 @@ class Tester:
             else:
                 for p, v in zip(port, value):
                     self.expect(p, v, strict, **kwargs)
-        if self.is_recursive_type(port):
+        if self.is_recursive_type(type(port)):
             recurse(port)
         elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1])):
+                (self.is_recursive_type(type(port[-1]))):
             recurse(port[-1])
         else:
             # set defaults
