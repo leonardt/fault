@@ -114,6 +114,9 @@ def test_magma_debug(target):
         def definition(io):
             io.c <= io.execute_alu(io.a, io.b, io.config_)
 
+        # turn the debug off
+        m.config.set_debug_mode(False)
+
     inst_to_defn_map = build_kratos_debug_info(SimpleALU, is_top=True)
     assert "SimpleALU.execute_alu_inst0" in inst_to_defn_map
     generators = []
