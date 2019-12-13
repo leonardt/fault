@@ -388,28 +388,39 @@ end
         value = self.process_value(action.port, action.value)
 
         # determine the condition and error body
-        err_body = f'"Failed on action={i} checking port {debug_name}.'
+        err_hdr = ''
+        err_hdr += f'Failed on action={i} checking port {debug_name}'
+        if action.traceback is not None:
+            err_hdr += f' with traceback {action.traceback}'
         if action.above is not None:
             if action.below is not None:
                 # must be in range
                 cond = f'({action.above} <= {name}) && ({name} <= {action.below})'  # noqa
-                err_body += f' Expected %0f to %0f, got %0f", {action.above}, {action.below}, {name}'  # noqa
+                err_msg = 'Expected %0f to %0f, got %0f'
+                err_args = [action.above, action.below, name]
             else:
                 # must be above
                 cond = f'{action.above} <= {name}'
-                err_body += f' Expected above %0f, got %0f", {action.above}, {name}'  # noqa
+                err_msg = 'Expected above %0f, got %0f'
+                err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
                 cond = f'{name} <= {action.below}'
-                err_body += f' Expected below %0f, got %0f", {action.below}, {name}'  # noqa
+                err_msg = 'Expected below %0f, got %0f'
+                err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
                     cond = f'{name} === {value}'
                 else:
                     cond = f'{name} == {value}'
-                err_body += f' Expected %x, got %x" , {value}, {name}'
+                err_msg = 'Expected %x, got %x'
+                err_args = [value, name]
+
+        # construct the body of the $error call
+        err_fmt_str = f'"{err_hdr}.  {err_msg}."'
+        err_body = ','.join([err_fmt_str] + err_args)
 
         # return a snippet of verilog implementing the assertion
         retval = []

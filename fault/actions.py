@@ -90,9 +90,15 @@ def is_output(port):
         return not port.isoutput()
 
 
+class GetValue(PortAction):
+    def __init__(self, port):
+        self.port = port
+        self.value = None
+
+
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None):
+                 above=None, below=None, caller=None):
         # call super constructor
         super().__init__(port, value)
 
@@ -116,6 +122,14 @@ class Expect(PortAction):
         self.strict = strict
         self.above = above
         self.below = below
+        self.caller = caller
+
+    @property
+    def traceback(self):
+        if self.caller is not None:
+            return f'{self.caller.filename}:{self.caller.lineno}'
+        else:
+            return None
 
 
 class Assume(PortAction):

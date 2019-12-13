@@ -2,8 +2,14 @@ from fault.codegen import CodeGenerator
 
 
 class SpiceNetlist(CodeGenerator):
-    def comment(self, text):
-        self.println(f'* {text}')
+    def comment(self, text=None):
+        # generate comment string
+        if text is None:
+            c = ''
+        else:
+            c = f' {text}'
+        # print the comment
+        self.println(f'*{c}')
 
     def ic(self, cond):
         line = []
@@ -12,11 +18,16 @@ class SpiceNetlist(CodeGenerator):
             line += [f'v({key})={val}']
         self.println(' '.join(line))
 
-    def probe(self, *probes):
+    def probe(self, *probes, wrap=False, antype=None):
         line = []
         line += ['.probe']
+        if antype is not None:
+            line += [f'{antype}']
         for p in probes:
-            line += [f'{p}']
+            if wrap:
+                line += [f'V({p})']
+            else:
+                line += [f'{p}']
         self.println(' '.join(line))
 
     def include(self, file_):

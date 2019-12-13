@@ -28,7 +28,8 @@ setup(
         "magma-lang",
         "pyyaml",
         "scipy",
-        "numpy"
+        "numpy",
+        "DeCiDa"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',

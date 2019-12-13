@@ -1,3 +1,4 @@
+import inspect
 import warnings
 import logging
 import magma as m
@@ -179,7 +180,7 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def expect(self, port, value, strict=None, **kwargs):
+    def expect(self, port, value, strict=None, caller=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
@@ -199,12 +200,18 @@ class Tester:
             # set defaults
             if strict is None:
                 strict = self.expect_strict_default
+            if caller is None:
+                try:
+                    caller = inspect.getframeinfo(inspect.stack()[1][0])
+                except IndexError:
+                    pass
 
             # implement expect
             if not isinstance(value, (actions.Peek, PortWrapper,
                                       LoopIndex, expression.Expression)):
                 value = make_value(port, value)
-            self.actions.append(actions.Expect(port, value, **kwargs))
+            self.actions.append(actions.Expect(port, value, caller=caller,
+                                               **kwargs))
 
     def eval(self):
         """
