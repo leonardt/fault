@@ -13,7 +13,7 @@ def test_spice_port_order():
         'e', fault.RealOut
     )
 
-    target = SpiceTarget(circ)
+    target = SpiceTarget(circ, conn_order='alpha')
 
     ports = target.get_ordered_ports()
 

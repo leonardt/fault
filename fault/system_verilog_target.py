@@ -420,7 +420,8 @@ end
 
         # construct the body of the $error call
         err_fmt_str = f'"{err_hdr}.  {err_msg}."'
-        err_body = ','.join([err_fmt_str] + err_args)
+        err_body = [err_fmt_str] + err_args
+        err_body = ','.join([str(elem) for elem in err_body])
 
         # return a snippet of verilog implementing the assertion
         retval = []

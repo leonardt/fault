@@ -90,10 +90,18 @@ def is_output(port):
         return not port.isoutput()
 
 
-class GetValue(PortAction):
+class GetValue(Action):
     def __init__(self, port):
+        super().__init__()
         self.port = port
-        self.value = None
+
+    def __str__(self):
+        return f'GetValue("{self.port}")'
+
+    def retarget(self, new_circuit, clock):
+        cls = type(self)
+        new_port = new_circuit.interface.ports[str(self.port.name)]
+        return cls(new_port)
 
 
 class Expect(PortAction):

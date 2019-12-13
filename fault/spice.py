@@ -52,6 +52,20 @@ class SpiceNetlist(CodeGenerator):
         line = ' '.join(line)
         self.println(line)
 
+    @staticmethod
+    def ordered_ports(mapping=None, order=None):
+        # set defaults
+        if mapping is None:
+            mapping = {}
+        if order is None:
+            order = []
+
+        # return ordered list of ports
+        retval = []
+        for port in order:
+            retval += [mapping[port]]
+        return retval
+
     def instantiate(self, name, *ports, inst_name=None):
         # set defaults
         if inst_name is None:
@@ -77,6 +91,20 @@ class SpiceNetlist(CodeGenerator):
         if pwl is not None:
             pwl_str = ' '.join(f'{t} {v}' for t, v in pwl)
             line += [f'PWL({pwl_str})']
+
+        # print the line
+        self.println(' '.join(line))
+
+    def capacitor(self, p, n, value, inst_name=None):
+        # set defaults
+        if inst_name is None:
+            inst_name = f'{next(self.inst_count)}'
+
+        # build up the line
+        line = []
+        line += [f'C{inst_name}']
+        line += [f'{p}', f'{n}']
+        line += [f'{value}']
 
         # print the line
         self.println(' '.join(line))
