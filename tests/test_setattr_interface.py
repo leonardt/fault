@@ -55,7 +55,7 @@ def test_tester_magma_internal_signals(target, simulator, capsys):
     elif simulator == "iverilog":
         actual = "\n".join(messages[-5:-1])
     elif simulator == "ncsim":
-        actual = "\n".join(messages[-8:-4])
+        actual = "\n".join(messages[-9:-5])
     elif simulator == "vcs":
         actual = "\n".join(messages[-11:-7])
     expected = """\
@@ -87,7 +87,7 @@ def test_tester_poke_internal_register(target, simulator, capsys):
     elif simulator == "iverilog":
         actual = "\n".join(messages[-5:-1])
     elif simulator == "ncsim":
-        actual = "\n".join(messages[-8:-4])
+        actual = "\n".join(messages[-9:-5])
     elif simulator == "vcs":
         actual = "\n".join(messages[-11:-7])
     expected = """\

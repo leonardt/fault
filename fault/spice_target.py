@@ -596,7 +596,7 @@ class SpiceTarget(Target):
 
         # figure out where the PSF results will be stored
         if self.mc_runs == 0:
-            raw_files = [raw_dir / 'transient1.tran.tran']
+            raw_files = [raw_dir / 'timeSweep.tran.tran']
         else:
             raw_files = []
             for k in range(0, self.mc_runs + 1):
