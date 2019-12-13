@@ -281,7 +281,8 @@ class SystemVerilogTarget(VerilogTarget):
         args = []
         args.append(f'"{action.format_str}"')
         for port in action.ports:
-            if isinstance(port, (Number, AbstractBit, AbstractBitVector)):
+            if isinstance(port, (Number, AbstractBit, AbstractBitVector)) and \
+                    not isinstance(port, m.Bits):
                 args.append(f'{port}')
             else:
                 args.append(f'{self.make_name(port)}')
