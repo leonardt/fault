@@ -9,11 +9,8 @@ import shutil
 import operator
 import hwtypes
 
-try:
-    import kratos_runtime
-    has_runtime = True
-except ImportError:
-    has_runtime = False
+
+has_runtime = fault.util.has_kratos_runtime()
 
 
 def mock_debugger(fn):

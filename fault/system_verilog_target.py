@@ -190,9 +190,10 @@ class SystemVerilogTarget(VerilogTarget):
         self.use_kratos = use_kratos
         # check to see if runtime is installed
         if use_kratos:
-            try:
-                import kratos_runtime
-            except ImportError:
+            import sys
+            assert sys.platform == "linux" or sys.platform == "linux2",\
+                "Currently only linux is supported"
+            if not fault.util.has_kratos_runtime():
                 raise ImportError("Cannot find kratos-runtime in the system. "
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
