@@ -123,9 +123,9 @@ def test_target_clock(capsys, target, simulator):
         assert messages[-2] == "1"
     else:
         if simulator == "ncsim":
+            assert messages[-8] == "0"
             assert messages[-7] == "0"
-            assert messages[-6] == "0"
-            assert messages[-5] == "1"
+            assert messages[-6] == "1"
         elif simulator == "vcs":
             assert messages[-10] == "0"
             assert messages[-9] == "0"
@@ -153,7 +153,7 @@ def test_print_nested_arrays(capsys, target, simulator):
         actual = "\n".join(messages[-10:-1])
     else:
         if simulator == "ncsim":
-            actual = "\n".join(messages[-13:-4])
+            actual = "\n".join(messages[-14:-5])
         elif simulator == "vcs":
             actual = "\n".join(messages[-16:-7])
         else:
@@ -191,7 +191,7 @@ def test_print_double_nested_arrays(capsys, target, simulator):
         actual = "\n".join(messages[-19:-1])
     else:
         if simulator == "ncsim":
-            actual = "\n".join(messages[-22:-4])
+            actual = "\n".join(messages[-23:-5])
         elif simulator == "vcs":
             actual = "\n".join(messages[-25:-7])
         else:
