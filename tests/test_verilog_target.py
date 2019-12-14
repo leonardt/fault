@@ -104,6 +104,7 @@ def test_target_double_nested_arrays_bulk(target, simulator):
 def test_target_clock(capsys, target, simulator):
     circ = TestBasicClkCircuit
     actions = [
+        Print(TEST_START + '\n'),
         Poke(circ.I, 0),
         Eval(),
         Print("%x\n", circ.I),
@@ -118,22 +119,12 @@ def test_target_clock(capsys, target, simulator):
     run(circ, actions, target, simulator, flags=["-Wno-lint"],
         disp_type='realtime')
     messages = outlines(capsys)
-
-    if target == fault.verilator_target.VerilatorTarget:
-        assert messages[-4] == "0"
-        assert messages[-3] == "0"
-        assert messages[-2] == "1"
-    else:
-        if simulator == "ncsim":
-            assert messages[-8] == "0"
-            assert messages[-7] == "0"
-            assert messages[-6] == "1"
-        elif simulator == "vcs":
-            assert messages[-10] == "0"
-            assert messages[-9] == "0"
-            assert messages[-8] == "1"
-        else:
-            raise NotImplementedError(f"Unsupported simulator: {simulator}")
+    idx = messages.index(TEST_START) + 1
+    actual = "\n".join(messages[idx:idx + 3])
+    assert actual == """\
+0
+0
+1"""
 
 
 def test_print_nested_arrays(capsys, target, simulator):
