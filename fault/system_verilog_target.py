@@ -12,7 +12,8 @@ from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
-from fault.real_type import RealKind
+from fault.real_type import RealKind, RealIn, RealOut, RealInOut
+from fault.elect_type import ElectIn, ElectOut, ElectInOut
 import os
 from numbers import Number
 
@@ -488,8 +489,11 @@ class SystemVerilogTarget(VerilogTarget):
         file_fd = self.value_file_var
 
         # determine string representation of the value
-        # TODO: handle non-float values
-        str_expr = '"%0f\n", {self.make_name(port)}'
+        if self.is_float_like_port(action.port):
+            fmt = '%0f'
+        else:
+            fmt = '%0d'
+        str_expr = f'"{fmt}\n", {self.make_name(action.port)}'
 
         # generate the command to write the string version of the signal to
         # the file
@@ -808,6 +812,11 @@ class SystemVerilogTarget(VerilogTarget):
         # post-process GetValue actions
         self.post_process_get_value_actions(actions)
 
+    @staticmethod
+    def is_float_like_port(port):
+        return isinstance(port, (RealIn, RealOut, RealInOut,
+                                 ElectIn, ElectOut, ElectInOut))
+
     def post_process_get_value_actions(self, actions):
         # extract the GetValue actions and return immediately
         # if there are none
@@ -821,9 +830,11 @@ class SystemVerilogTarget(VerilogTarget):
             lines = f.readlines()
 
         # write results back into the "value" property of the action
-        # TODO: handle non-float values
         for line, action in zip(lines, get_value_actions):
-            action.value = float(line.strip())
+            if self.is_float_like_port(action.port):
+                action.value = float(line.strip())
+            else:
+                action.value = int(line.strip())
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
