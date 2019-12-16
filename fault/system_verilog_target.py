@@ -458,7 +458,7 @@ class SystemVerilogTarget(VerilogTarget):
 
     @staticmethod
     def write_str_prim(file_fd, str_expr):
-        return f'$fwrite({file_fd}, "%s", {str_expr});'
+        return f'$fwrite({file_fd}, {str_expr});'
 
     def make_file_write(self, i, action):
         # declare loop variable if needed
@@ -493,7 +493,7 @@ class SystemVerilogTarget(VerilogTarget):
             fmt = '%0f'
         else:
             fmt = '%0d'
-        str_expr = f'"{fmt}\n", {self.make_name(action.port)}'
+        str_expr = f'"{fmt}\\n", {self.make_name(action.port)}'
 
         # generate the command to write the string version of the signal to
         # the file
@@ -710,8 +710,8 @@ class SystemVerilogTarget(VerilogTarget):
         # which GetValue results will be written
         if any(isinstance(action, GetValue) for action in actions):
             has_get_value = True
-            self.add_decl(self.value_file_var)
-            path = Path(self.directory) / self.value_file_name
+            self.add_decl(f'{SVTAB}integer {self.value_file_var};')
+            path = (Path(self.directory) / self.value_file_name).resolve()
             opcmd = self.open_file_prim(path=path,
                                         var=self.value_file_var,
                                         mode='w')
@@ -826,7 +826,7 @@ class SystemVerilogTarget(VerilogTarget):
             return
 
         # read lines in the GetValue file
-        with open(self.value_file_name, 'r') as f:
+        with open(Path(self.directory) / self.value_file_name, 'r') as f:
             lines = f.readlines()
 
         # write results back into the "value" property of the action
