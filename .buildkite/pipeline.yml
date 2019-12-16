@@ -30,8 +30,7 @@ steps:
       # run coverage
       # note that an older version of coverage is needed
       # for coveralls; 5.0 does not appear to work
-      pip uninstall coverage
-      pip install coverage==4.5.4 --no-cache-dir
+      pip install coverage==4.5.4 --force-reinstall
       pip install python-coveralls
       coveralls
     label: "test"
