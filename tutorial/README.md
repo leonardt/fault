@@ -27,7 +27,6 @@ interested in contributing to the fault source code.
   * [Tester Abstraction](#tester-abstraction)
     + [Tester Actions](#tester-actions)
       - [Poke](#poke)
-      - [Eval](#eval)
       - [Expect](#expect)
     + [Executing Tests](#executing-tests)
     + [Exercise 1](#exercise-1)
@@ -220,7 +219,7 @@ test (stage 2).
 
 #### Poke
 With an instance of a `fault.Tester` object, you can now perform actions to
-verify your circuit.  The first actions introduced are `poke`, `eval`, and
+verify your circuit.  The first actions introduced are `poke`, `step`, and
 `expect`.  
 
 The `poke` action is performed by setting an attribute on the `fault.Tester`
@@ -245,19 +244,17 @@ Poking internal ports for wrapped verilog modules is more involved and is
 documented here for those who need it:
 https://github.com/leonardt/fault/blob/master/doc/actions.md#wrappedveriloginternalport.
 
-#### Eval
-The `eval` action is performed by calling the `eval` method on a `fault.Tester`
-instance.  This action triggers an evaluation of the circuit when a test is run
-using cycle-accurate simulation, where multiple `poke` actions can be recorded
-before a circuit is evaluated. It has no effect for event-based simulations
-where *eval* is implicitly called after every `poke` action.  Here's an example:
+#### Step
+The `Step` action is performed by calling the `Step` method on a `fault.Tester`
+instance.  This action triggers a simulation time step, causing `poke`
+actions to be propogated.  Here's an example:
 ```python
 passthrough_tester.circuit.I = 0
-passthrough_tester.eval()
+passthrough_tester.step()
 # Passthrough.O should be 0
 passthrough_tester.circuit.I = 1
-# Passthrough.O should still be 0 because `eval` has not be called yet
-passthrough_tester.eval()
+# Passthrough.O should still be 0 because `step` has not be called yet
+passthrough_tester.step()
 # Passthrough.O should be 1
 ```
 
@@ -267,19 +264,13 @@ called as a method on attributes retrieved from the `circuit` attribute of a
 `fault.Tester` instance.  Here's an example:
 ```python
 passthrough_tester.circuit.I = 1
-passthrough_tester.eval()
+passthrough_tester.step()
 passthrough_tester.circuit.O.expect(1)
 ```
 
-#### Step
-The `step` action is used to step the `clock` port provided to the `__init__`
-function.  The semantics are equivalent to:
-```python
-tester.eval()
-for i in range(n_step):
-    tester.circuit.CLK ^=1  # invert the clock
-    tester.eval()           # evaluate the circuit
-```
+#### Step with Clock
+If a clock is provided to the step action, it will invert the value of the
+clock during the timestep.  A tester can be initialized with a default clock.
 
 ### Executing Tests
 Once you have finished recording your test actions, it is now time to run the
@@ -356,9 +347,9 @@ class ResetTester(fault.Tester):
 
     def reset(self):
         self.poke(self.reset_port, 1)
-        self.eval()
+        self.step()
         self.poke(self.reset_port, 0)
-        self.eval()
+        self.step()
 ```
 
 Notice that the `reset` method implementation uses the action method API (i.e.
@@ -583,9 +574,9 @@ For constrained random verification, assumptions are used to generate input
 stimuli for the circuit under test.  The current implementation uses
 assumptions as predicates to filter out valid values from a random number
 stream.  Guarantees are translated into code in the target language (i.e. C++
-for verilator, SystemVerilog for ncsim/vcs) that is run every time `eval` is
+for verilator, SystemVerilog for ncsim/vcs) that is run every time `step` is
 called.  For example, if you perform a guarantee action that states that an
-output must be positive, every time an `eval` action occurs, this guarantee is
+output must be positive, every time an `step` action occurs, this guarantee is
 checked by reading the output and running the code describing the guarantee.
 
 Here's an example of using the assume/guarantee interface for constrained
@@ -706,7 +697,7 @@ The source code for the `FunctionalTester` can be found in
 https://github.com/leonardt/fault/blob/master/fault/functional_tester.py
 
 This Tester provides a convenience mechanism for verifying a DUT against a
-functional model.  The basic pattern is that every time `eval` is invoked on
+functional model.  The basic pattern is that every time `step` is invoked on
 the Tester, a check is done to verify that the current outputs of the
 functional model are equivalent to the outputs of the DUT.  This pattern works
 best with a model that is fairly low-level (e.g. cycle accurate). The user has

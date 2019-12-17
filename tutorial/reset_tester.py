@@ -8,6 +8,6 @@ class ResetTester(fault.Tester):
 
     def reset(self):
         self.poke(self.reset_port, 1)
-        self.eval()
+        self.test()
         self.poke(self.reset_port, 0)
-        self.eval()
+        self.test()
