@@ -28,7 +28,7 @@ def test_include_verilog(target, simulator):
 
     tester = fault.Tester(main, main.CLK)
     tester.poke(main.I, 0)
-    tester.step()
+    tester.step(2)
     tester.poke(main.I, 1)
     tester.expect(main.O, 0)
     tester.step(2)
@@ -40,6 +40,7 @@ def test_include_verilog(target, simulator):
         kwargs["simulator"] = simulator
 
     with tempfile.TemporaryDirectory(dir=".") as tmp_dir:
+        tmp_dir = "build"
         tester.compile_and_run(target=target, directory=tmp_dir,
                                include_verilog_libraries=[sb_dff_filename],
                                **kwargs)
