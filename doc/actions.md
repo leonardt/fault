@@ -4,31 +4,20 @@ The action pattern is the fundamental abstraction of fault testers. Using action
 We provide an interface to the following actions
 
 ## Poke
-`Poke(port, value)` stages stimulating port `port` to be `value`. `port` must be an input. Note that pokes are not propagated to combinational outputs; see [Eval](#eval) semantics.
+`Poke(port, value)` stages stimulating port `port` to be `value`. `port` must be an input. Note that pokes are not propagated to combinational outputs; see [Step](#step) semantics.
 
 ## Expect
-`Expect(port, value)` issues an assertion that port `port` reads value `value`. `port` must be an output. The values read by output ports at the time of Expect are the same as those at the time of the last Eval.
-
-## Eval
-`Eval()` propagates all inputs staged by [Poke](#poke) to combinational outputs. Synchronous outputs do not change (unless the clock has been explicitly toggled with Poke).
+`Expect(port, value)` issues an assertion that port `port` reads value `value`. `port` must be an output. The values read by output ports at the time of Expect are the same as those at the time of the last Step.
 
 ## Step
-`Step(clock_port, num_steps)` toggles the clock (specified by `clock_port`) for `num_steps` half-periods, evaluating the outputs before each clock edge.
-
-One instance of `Step(clock_port, n)` is equivalent to the following sequence:
-
-```python
-# Assume starts at 0, without loss of generality.
-clk_val = 0
-
-for i in range(n):
-    Eval()
-    clk_val = ~clk_val
-    Poke(clock_port, clk_val)
-```
+`Step()` increments the simulation time step by propogating all the input
+values staged by [Poke](#poke) actions.  Step accepts optional parameters
+`clock_port` and `num_steps` for synchronous circuits.  If `clock_port` is
+provided (e.g. the `Tester` was constructed with a clock), each step will
+invert the current clock value.
 
 ## Print
-`Print(port, format_str)` prints the value read at `port` (`port` can be an input or an output). Similar to Expect, the values read by output ports at the time of Print are the same as those at the time of the last Eval.
+`Print(port, format_str)` prints the value read at `port` (`port` can be an input or an output). Similar to Expect, the values read by output ports at the time of Print are the same as those at the time of the last Step.
 
 `format_str` allows for user-specified formatting of the printed output (similar to `printf` format strings).
 
