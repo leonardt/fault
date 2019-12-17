@@ -35,7 +35,7 @@ def test_get_value_digital(target, simulator):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/myblk.v').resolve()],
+        ext_libs=[Path('tests/verilog/myblk.sv').resolve()],
         ext_model_file=True,
         tmp_dir=True
     )
