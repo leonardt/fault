@@ -296,7 +296,7 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} = {value};']
+        retval += [f'{name} <= {value};']
         if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
