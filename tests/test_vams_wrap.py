@@ -28,20 +28,13 @@ def test_vams_wrap():
 `include "disciplines.vams"
 
 module myblk_wrap (
-    input a,
-    output b,
-    input c,
-    output d,
-    input e,
-    output f
+    input wreal a,
+    output wreal b,
+    input wire c,
+    output wire [1:0] d,
+    input electrical e,
+    output electrical f
 );
-
-    wreal a;
-    wreal b;
-    wire [0:0] c;
-    wire [1:0] d;
-    electrical e;
-    electrical f;
 
     myblk myblk_inst (
         .a(a),

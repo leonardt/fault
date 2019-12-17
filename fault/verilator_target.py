@@ -493,6 +493,10 @@ for ({loop_expr}) {{
         # TODO: figure out how delay should be interpreted for VerilatorTarget
         raise NotImplementedError
 
+    def make_get_value(self, i, action):
+        # TODO: implement GetValue action
+        raise NotImplementedError
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
