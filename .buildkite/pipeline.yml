@@ -15,7 +15,9 @@ steps:
       export PATH=$$PWD/conda_env/bin:$$PATH
       echo $$PATH
       
-      # install python directories
+      # install python dependencies
+      # note that an older version of coverage is needed for coveralls
+      pip install coverage==4.5.4 --force-reinstall
       pip install pytest-cov pytest-codestyle
       pip install mantle
       pip install -e .
@@ -28,9 +30,6 @@ steps:
       ./conda_env/bin/pytest --cov fault --pycodestyle fault --cov-report term-missing tests -v -r s
       
       # run coverage
-      # note that an older version of coverage is needed
-      # for coveralls; 5.0 does not appear to work
-      pip install coverage==4.5.4 --force-reinstall
       pip install python-coveralls
       coveralls
     label: "test"
