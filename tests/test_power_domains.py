@@ -16,8 +16,6 @@ def test_simple_alu_pd():
     tester.add_ground(circ.VSS)
     tester.add_tri(circ.VDD_HIGH_TOP_VIRTUAL)
 
-    tester.circuit.CLK = 0
-
     # Enable the power switch
     tester.circuit.config_addr = 0x00080000
     tester.circuit.config_data = 0xFFFFFFF0

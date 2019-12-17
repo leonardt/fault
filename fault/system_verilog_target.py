@@ -42,7 +42,7 @@ class SystemVerilogTarget(VerilogTarget):
                  directory="build/", skip_compile=None,
                  magma_output="coreir-verilog", magma_opts=None,
                  include_verilog_libraries=None, simulator=None,
-                 timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
+                 timescale="1ns/1ns", clock_step_delay=1, num_cycles=10000,
                  dump_waveforms=True, dump_vcd=None, no_warning=False,
                  sim_env=None, ext_model_file=None, ext_libs=None,
                  defines=None, flags=None, inc_dirs=None,
@@ -584,7 +584,7 @@ end
             clock_name = verilog_name(self.clock.name)
             clock_block = f"""
     initial {clock_name} = 0;
-    always #1 {clock_name} = ~{clock_name};
+    always #{self.clock_step_delay} {clock_name} = ~{clock_name};
 """
 
         src = src_tpl.format(

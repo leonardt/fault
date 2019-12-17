@@ -122,7 +122,7 @@ def test_magma_debug(target):
         tester.circuit.config_ = i
         tester.circuit.a = a = hwtypes.BitVector.random(16)
         tester.circuit.b = b = hwtypes.BitVector.random(16)
-        tester.eval()
+        tester.step()
         if op == operator.floordiv:
             tester.circuit.c.expect(0)
         else:

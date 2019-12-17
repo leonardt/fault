@@ -49,7 +49,7 @@ def test_target_basic(target, simulator):
     Test basic workflow with a simple circuit.
     """
     circ = TestBasicCircuit
-    actions = (Poke(circ.I, 0), Eval(), Expect(circ.O, 0))
+    actions = (Poke(circ.I, 0), Step(), Expect(circ.O, 0))
     run(circ, actions, target, simulator)
 
 
@@ -59,7 +59,7 @@ def test_target_peek(target, simulator):
     for i in range(3):
         x = random_bv(3)
         actions.append(Poke(circ.I, x))
-        actions.append(Eval())
+        actions.append(Step())
         actions.append(Expect(circ.O0, Peek(circ.O1)))
     run(circ, actions, target, simulator)
 
@@ -70,7 +70,7 @@ def test_target_nested_arrays_by_element(target, simulator):
     actions = []
     for i, val in enumerate(expected):
         actions.append(Poke(circ.I[i], val))
-    actions.append(Eval())
+    actions.append(Step())
     for i, val in enumerate(expected):
         actions.append(Expect(circ.O[i], val))
     run(circ, actions, target, simulator)
@@ -82,7 +82,7 @@ def test_target_nested_arrays_bulk(target, simulator):
     actions = []
     for i in range(3):
         actions.append(Poke(circ.I[i], expected[i]))
-    actions.append(Eval())
+    actions.append(Step())
     for i in range(3):
         actions.append(Expect(circ.O[i], expected[i]))
     run(circ, actions, target, simulator)
@@ -94,7 +94,7 @@ def test_target_double_nested_arrays_bulk(target, simulator):
                 for _ in range(2)]
     actions = []
     actions.append(Poke(circ.I, expected))
-    actions.append(Eval())
+    actions.append(Step())
     actions.append(Expect(circ.O, expected))
     run(circ, actions, target, simulator)
 
@@ -103,14 +103,14 @@ def test_target_clock(capsys, target, simulator):
     circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, 0),
-        Eval(),
+        Step(),
         Print("%x\n", circ.I),
         Expect(circ.O, 0),
         Poke(circ.CLK, 0),
         Print("%x\n", circ.O),
         Step(circ.CLK, 1),
         Poke(circ.I, BitVector[1](1)),
-        Eval(),
+        Step(),
         Print("%x\n", circ.O),
     ]
     run(circ, actions, target, simulator, flags=["-Wno-lint"],
@@ -139,11 +139,11 @@ def test_print_nested_arrays(capsys, target, simulator):
     actions = [
         Poke(circ.I, [BitVector[4](i) for i in range(3)]),
     ] + [Print("%x\n", i) for i in circ.I] + [
-        Eval(),
+        Step(),
         Expect(circ.O, [BitVector[4](i) for i in range(3)]),
     ] + [Print("%x\n", i) for i in circ.O] + [
         Poke(circ.I, [BitVector[4](4 - i) for i in range(3)]),
-        Eval(),
+        Step(),
     ] + [Print("%x\n", i) for i in circ.O]
 
     run(circ, actions, target, simulator, flags=["-Wno-lint"],
@@ -176,13 +176,13 @@ def test_print_double_nested_arrays(capsys, target, simulator):
         Poke(circ.I, [[BitVector[4](i + j * 3) for i in range(3)]
                       for j in range(2)]),
     ] + [Print("%x\n", j) for i in circ.I for j in i] + [
-        Eval(),
+        Step(),
         Expect(circ.O, [[BitVector[4](i + j * 3) for i in range(3)]
                         for j in range(2)]),
     ] + [Print("%x\n", j) for i in circ.O for j in i] + [
         Poke(circ.I, [[BitVector[4](i + (j + 1) * 3) for i in range(3)]
                       for j in range(2)]),
-        Eval(),
+        Step(),
     ] + [Print("%x\n", j) for i in circ.O for j in i]
     run(circ, actions, target, simulator, flags=["-Wno-lint"],
         disp_type='realtime')
@@ -223,7 +223,7 @@ def test_target_tuple(target, simulator):
     actions = [
         Poke(circ.I.a, 5),
         Poke(circ.I.b, 11),
-        Eval(),
+        Step(),
         Expect(circ.O.a, 5),
         Expect(circ.O.b, 11),
     ]
@@ -240,7 +240,7 @@ def test_target_sint_sign_extend(width, target, simulator):
         m.SInt[width], f"test_target_sint_sign_extend_{width}")
     actions = [
         Poke(circ.I, -2),
-        Eval(),
+        Step(),
         Expect(circ.O, -2),
     ]
     run(circ, actions, target, simulator)

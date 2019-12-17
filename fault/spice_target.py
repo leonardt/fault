@@ -10,7 +10,7 @@ from fault.nutascii_parse import nutascii_parse
 from fault.psf_parse import psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay, Print, Eval
+from fault.actions import Poke, Expect, Delay, Print, Step
 from fault.select_path import SelectPath
 
 
@@ -239,7 +239,7 @@ class SpiceTarget(Target):
                     saves.add(f'{port.name}')
             elif isinstance(action, Delay):
                 t += action.time
-            elif isinstance(action, Eval):
+            elif isinstance(action, Step):
                 continue
             else:
                 raise NotImplementedError(action)
