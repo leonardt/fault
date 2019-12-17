@@ -15,7 +15,7 @@ class VerilogTarget(Target):
     """
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, include_verilog_libraries=None,
-                 magma_output="verilog", magma_opts=None):
+                 magma_output="verilog", magma_opts=None, use_kratos=False):
         super().__init__(circuit)
 
         if circuit_name is None:
@@ -35,7 +35,8 @@ class VerilogTarget(Target):
         self.magma_opts = magma_opts if magma_opts is not None else {}
 
         if hasattr(circuit, "verilog_file_name") and \
-                os.path.splitext(circuit.verilog_file_name)[-1] == ".sv":
+                os.path.splitext(circuit.verilog_file_name)[-1] == ".sv" or \
+                use_kratos:
             suffix = "sv"
         else:
             suffix = "v"
@@ -45,6 +46,11 @@ class VerilogTarget(Target):
             prefix = os.path.splitext(self.directory / self.verilog_file)[0]
             m.compile(prefix, self.circuit, output=self.magma_output,
                       **self.magma_opts)
+            if use_kratos:
+                # kratos generates SystemVerilog file
+                # Until magma/coreir can generate sv suffix, we have to move
+                # the files around
+                os.rename(prefix + ".v", prefix + ".sv")
             if not (self.directory / self.verilog_file).is_file():
                 raise Exception(f"Compiling {self.circuit} failed")
 
