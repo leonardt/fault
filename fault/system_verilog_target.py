@@ -21,7 +21,7 @@ from numbers import Number
 SVTAB = '    '
 
 src_tpl = """\
-module {circuit_name}_tb;
+module {top_module};
 {declarations}
 
     {circuit_name} #(
@@ -49,7 +49,8 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, value_file_name='get_value_file.txt',
+                 waveform_file=None, use_kratos=False,
+                 value_file_name='get_value_file.txt',
                  value_file_var='__get_value_file_fid'):
         """
         circuit: a magma circuit
@@ -128,6 +129,8 @@ class SystemVerilogTarget(VerilogTarget):
         waveform_file: name of file to dump waveforms (default is
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
 
+        use_kratos: If True, set the environment up for debugging in kratos
+
         value_file_name: name of the file to which results of "get_value"
                          commands should be dumped
 
@@ -156,7 +159,7 @@ class SystemVerilogTarget(VerilogTarget):
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
-                         magma_opts)
+                         magma_opts, use_kratos=use_kratos)
 
         # sanity check
         if simulator is None:
@@ -178,14 +181,15 @@ class SystemVerilogTarget(VerilogTarget):
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
-        self.sim_env = sim_env
+        self.sim_env = sim_env if sim_env is not None else {}
+        self.sim_env.update(os.environ)
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module
+        self.top_module = top_module if not use_kratos else "TOP"
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
@@ -199,6 +203,16 @@ class SystemVerilogTarget(VerilogTarget):
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
+        self.use_kratos = use_kratos
+        # check to see if runtime is installed
+        if use_kratos:
+            import sys
+            assert sys.platform == "linux" or sys.platform == "linux2",\
+                "Currently only linux is supported"
+            if not fault.util.has_kratos_runtime():
+                raise ImportError("Cannot find kratos-runtime in the system. "
+                                  "Please do \"pip install kratos-runtime\" "
+                                  "to install.")
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -742,7 +756,9 @@ class SystemVerilogTarget(VerilogTarget):
             initial_body=initial_body,
             port_list=f',\n{2*SVTAB}'.join(port_list),
             param_list=f',\n{2*SVTAB}'.join(param_list),
-            circuit_name=self.circuit_name
+            circuit_name=self.circuit_name,
+            top_module=self.top_module if self.top_module is not None else
+            f"{self.circuit_name}_tb"
         )
 
         # return the string representing the system-verilog testbench
@@ -799,6 +815,10 @@ class SystemVerilogTarget(VerilogTarget):
 
         # add any extra flags
         sim_cmd += self.flags
+
+        # link the library over if using kratos to debug
+        if self.use_kratos:
+            self.link_kratos_lib()
 
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
@@ -869,6 +889,19 @@ class SystemVerilogTarget(VerilogTarget):
     @staticmethod
     def input_wire(name):
         return f'__{name}_wire'
+
+    @staticmethod
+    def make_line(text, tabs=0, tab='    ', nl='\n'):
+        return f'{tabs*tab}{text}{nl}'
+
+    def link_kratos_lib(self):
+        from kratos_runtime import get_lib_path
+        lib_path = get_lib_path()
+        dst_path = os.path.join(self.directory, os.path.basename(lib_path))
+        if not os.path.isfile(dst_path):
+            os.symlink(lib_path, dst_path)
+        # also add the directory to the current LD_LIBRARY_PATH
+        self.sim_env["LD_LIBRARY_PATH"] = os.path.abspath(self.directory)
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the Incisive/Xcelium simulation
@@ -970,7 +1003,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         # determine the name of the top module
         if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
+            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
         else:
             top = self.top_module
 
@@ -1003,6 +1036,11 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
+
+        # kratos flags
+        if self.use_kratos:
+            from kratos_runtime import get_ncsim_flag
+            cmd += get_ncsim_flag().split()
 
         # return arg list
         return cmd
@@ -1055,6 +1093,13 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += ['+v2k']
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
+
+        # kratos flags
+        if self.use_kratos:
+            # +vpi -load libkratos-runtime.so:initialize_runtime_vpi -acc+=rw
+            from kratos_runtime import get_vcs_flag
+            cmd += get_vcs_flag().split()
+
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 

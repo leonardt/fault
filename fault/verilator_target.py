@@ -17,6 +17,7 @@ from fault.subprocess_run import subprocess_run
 import fault.utils as utils
 import fault.expression as expression
 import platform
+import os
 
 
 max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -56,6 +57,7 @@ void my_assert(
     tracer->dump(main_time);
     tracer->close();
 #endif
+    {kratos_exit_call}
     exit(1);
   }}
 }}
@@ -63,7 +65,7 @@ void my_assert(
 int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
-
+  {kratos_start_call}
 #if VM_TRACE
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
@@ -77,6 +79,7 @@ int main(int argc, char **argv) {{
 #if VM_TRACE
   tracer->close();
 #endif
+  {kratos_exit_call}
 }}
 """  # nopep8
 
@@ -86,7 +89,7 @@ class VerilatorTarget(VerilogTarget):
                  flags=None, skip_compile=False, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False,
-                 disp_type='on_error'):
+                 disp_type='on_error', use_kratos=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -105,6 +108,14 @@ class VerilatorTarget(VerilogTarget):
 
         # Save settings
         self.disp_type = disp_type
+        self.use_kratos = use_kratos
+        if use_kratos:
+            try:
+                import kratos_runtime
+            except ImportError:
+                raise ImportError("Cannot find kratos-runtime in the system. "
+                                  "Please do \"pip install kratos-runtime\" "
+                                  "to install.")
 
         # Call super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
@@ -120,7 +131,8 @@ class VerilatorTarget(VerilogTarget):
                 include_verilog_libraries=self.include_verilog_libraries,
                 include_directories=include_directories,
                 driver_filename=driver_file.name,
-                verilator_flags=flags
+                verilator_flags=flags,
+                use_kratos=use_kratos
             )
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
@@ -517,10 +529,21 @@ for ({loop_expr}) {{
                      self.debug_includes]
 
         includes_src = "\n".join(["#include " + i for i in includes])
+        if self.use_kratos:
+            includes_src += "\nvoid initialize_runtime();\n"
+            includes_src += "void teardown_runtime();\n"
+            kratos_start_call = "initialize_runtime();"
+            kratos_exit_call = "teardown_runtime();"
+        else:
+            kratos_start_call = ""
+            kratos_exit_call = ""
+
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
             circuit_name=self.circuit_name,
+            kratos_start_call=kratos_start_call,
+            kratos_exit_call=kratos_exit_call
         )
 
         return src
@@ -538,6 +561,19 @@ for ({loop_expr}) {{
         with open(driver_file, "w") as f:
             f.write(src)
 
+        # if use kratos, symbolic link the library to dest folder
+        if self.use_kratos:
+            from kratos_runtime import get_lib_path
+            lib_name = os.path.basename(get_lib_path())
+            dst_path = os.path.abspath(os.path.join(self.directory, "obj_dir",
+                                                    lib_name))
+            if not os.path.isfile(dst_path):
+                os.symlink(get_lib_path(), dst_path)
+            # add ld library path
+            env = {"LD_LIBRARY_PATH": os.path.dirname(dst_path)}
+        else:
+            env = None
+
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
         subprocess_run(make_cmd, cwd=self.directory, disp_type=self.disp_type)
@@ -546,7 +582,8 @@ for ({loop_expr}) {{
         # output to a logfile for later review or processing
         exe_cmd = [f'./obj_dir/V{self.circuit_name}']
         result = subprocess_run(exe_cmd, cwd=self.directory,
-                                disp_type=self.disp_type)
+                                disp_type=self.disp_type,
+                                env=env)
         log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
         with open(log, 'w') as f:
             f.write(result.stdout)

@@ -25,6 +25,9 @@ steps:
       # install SMT solvers
       mkdir ./smt_solvers
       ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
+
+      # install kratos runtime
+      pip install kratos-runtime
       
       # run tests
       ./conda_env/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
