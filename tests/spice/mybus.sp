@@ -4,7 +4,7 @@
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
 .model EEPMOS PMOS (VTO=-0.4 KP=122E-6 GAMMA=0.2 PHI=.88)
 
-.subckt mybus a<1> a<0> b<2> b<1> b<0> vdd vss
+.subckt mybus a<1> b<2> a<0> b<1> b<0> vdd vss
 
 * inverter at bit #0
 MP0 b<0> a<0> vdd vdd EEPMOS w=0.7u l=0.1u

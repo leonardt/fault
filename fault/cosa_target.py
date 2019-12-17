@@ -93,6 +93,9 @@ class CoSATarget(VerilogTarget):
     def make_delay(self, i, action):
         raise NotImplementedError()
 
+    def make_get_value(self, i, action):
+        raise NotImplementedError()
+
     def make_if(self, i, action):
         raise NotImplementedError()
 
