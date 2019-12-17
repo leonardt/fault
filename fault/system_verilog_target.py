@@ -49,7 +49,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, use_kratos=False, 
+                 waveform_file=None, use_kratos=False,
                  value_file_name='get_value_file.txt',
                  value_file_var='__get_value_file_fid'):
         """
@@ -756,7 +756,7 @@ class SystemVerilogTarget(VerilogTarget):
             initial_body=initial_body,
             port_list=f',\n{2*SVTAB}'.join(port_list),
             param_list=f',\n{2*SVTAB}'.join(param_list),
-            circuit_name=self.circuit_name
+            circuit_name=self.circuit_name,
             top_module=self.top_module if self.top_module is not None else
             f"{self.circuit_name}_tb"
         )
