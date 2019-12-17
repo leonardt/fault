@@ -39,7 +39,6 @@ def test_tester_magma_internal_signals(target, simulator, capsys):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
-    tester.circuit.CLK = 0
     tester.circuit.config_en = 1
     for i in range(0, 4):
         tester.circuit.config_data = i
@@ -71,7 +70,6 @@ def test_tester_poke_internal_register(target, simulator, capsys):
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
-    tester.circuit.CLK = 0
     tester.circuit.config_en = 0
     # Initialize
     tester.step(2)
@@ -106,7 +104,7 @@ def test_setattr_nested_arrays_by_element(target, simulator):
     for i in range(3):
         val = random.randint(0, (1 << 4) - 1)
         tester.circuit.I[i] = val
-        tester.eval()
+        tester.step()
         tester.circuit.O[i].expect(val)
     run_test(target, simulator, tester)
 
@@ -117,7 +115,7 @@ def test_setattr_nested_arrays_bulk(target, simulator):
     expected = []
     val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
     tester.circuit.I = val
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(val)
     run_test(target, simulator, tester)
 
@@ -130,7 +128,7 @@ def test_setattr_double_nested_arrays_by_element(target, simulator):
         for i in range(3):
             val = random.randint(0, (1 << 4) - 1)
             tester.circuit.I[j][i] = val
-            tester.eval()
+            tester.step()
             tester.circuit.O[j][i].expect(val)
     run_test(target, simulator, tester)
 
@@ -142,7 +140,7 @@ def test_setattr_double_nested_arrays_bulk(target, simulator):
     val = [[random.randint(0, (1 << 4) - 1) for _ in range(3)]
            for _ in range(2)]
     tester.circuit.I = val
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(val)
     run_test(target, simulator, tester)
 
@@ -152,7 +150,7 @@ def test_setattr_tuple(target, simulator):
     tester = Tester(circ)
     tester.circuit.I.a = 5
     tester.circuit.I.b = 11
-    tester.eval()
+    tester.step()
     tester.circuit.O.a.expect(5)
     tester.circuit.O.b.expect(11)
     run_test(target, simulator, tester)
@@ -165,14 +163,14 @@ def test_setattr_x(target, simulator):
     tester = Tester(circ)
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(0)
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = 1
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(0)
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = fault.UnknownValue
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(fault.UnknownValue)
     run_test(target, simulator, tester)

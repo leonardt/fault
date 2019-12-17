@@ -83,7 +83,7 @@ def test_top():
         tester.circuit.I0 = I0 = ht.BitVector.random(4)
         tester.circuit.I1 = I1 = ht.BitVector.random(4)
         tester.circuit.CIN = CIN = ht.BitVector.random(1)[0]
-        tester.eval()
+        tester.step()
         O = I0.zext(1) + I1.zext(1) + ht.BitVector[5](CIN)
         O, COUT = O[:4], O[-1]
         O = O.zext(1) + O.zext(1) + ht.BitVector[5](COUT)

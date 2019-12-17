@@ -92,7 +92,7 @@ def test_binop_two_signals_setattr(target, simulator, op):
     for _ in range(5):
         I0, I1 = gen_random_inputs(op)
         print(I0, I1)
-        tester.eval()
+        tester.step()
         tester.circuit.O.expect(getattr(operator, op)(tester.circuit.I0_out,
                                                       tester.circuit.I1_out))
         tester.circuit.O.expect(getattr(operator, op)(tester.circuit.I0,
@@ -118,7 +118,7 @@ def test_binop_two_signals_raw(target, simulator, op):
         I0, I1 = gen_random_inputs(op)
         tester.poke(tester._circuit.I0, I0)
         tester.poke(tester._circuit.I1, I1)
-        tester.eval()
+        tester.step()
         tester.expect(
             tester._circuit.O,
             getattr(operator, op)(tester.peek(tester._circuit.I0_out),
@@ -147,7 +147,7 @@ def test_op_tree(target, simulator):
     for _ in range(5):
         tester.poke(tester._circuit.I0, hwtypes.BitVector.random(5))
         tester.poke(tester._circuit.I1, hwtypes.BitVector.random(5))
-        tester.eval()
+        tester.step()
         expected = tester.peek(tester._circuit.I0_out) + \
             tester.peek(tester._circuit.I1_out)
         expected &= tester.peek(tester._circuit.I1_out) - \

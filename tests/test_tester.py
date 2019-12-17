@@ -42,7 +42,7 @@ def test_tester_basic(target, simulator):
     tester.zero_inputs()
     check(tester.actions[0], Poke(circ.I, 0))
     tester.poke(circ.I, 1)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, 1)
     tester.print("%08x", circ.O)
     check(tester.actions[1], Poke(circ.I, 1))
@@ -51,25 +51,25 @@ def test_tester_basic(target, simulator):
     print(tester.actions[4])
     print(Print("%08x", circ.O))
     check(tester.actions[4], Print("%08x", circ.O))
-    tester.eval()
+    tester.step()
     check(tester.actions[5], Step(None, 1))
     tester.poke(circ.I, 0)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, 0)
     tester.poke(circ.I, True)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, True)
     tester.poke(circ.I, False)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, False)
     tester.poke(circ.I, False)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, False)
     tester.poke(circ.I, hwtypes.Bit(1))
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, hwtypes.Bit(1))
     tester.poke(circ.I, hwtypes.Bit(0))
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, hwtypes.Bit(0))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -87,7 +87,7 @@ def test_tester_basic_fail(target, simulator):
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -130,7 +130,7 @@ def test_tester_peek_input(target, simulator):
     circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, 1)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, tester.peek(circ.I))
     check(tester.actions[0], Poke(circ.I, 1))
     check(tester.actions[1], Step(None, 1))
@@ -149,7 +149,7 @@ def test_tester_nested_arrays_by_element(target, simulator):
     for i in range(3):
         val = random.randint(0, (1 << 4) - 1)
         tester.poke(circ.I[i], val)
-        tester.eval()
+        tester.step()
         tester.expect(circ.O[i], val)
         expected.append(Poke(circ.I[i], val))
         expected.append(Step(None, 1))
@@ -169,7 +169,7 @@ def test_tester_nested_arrays_bulk(target, simulator):
     expected = []
     val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
     tester.poke(circ.I, val)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, val)
     for i in range(3):
         expected.append(Poke(circ.I[i], val[i]))
@@ -194,7 +194,7 @@ def test_tester_double_nested_arrays_broadcast(target, simulator):
     for j in range(2):
         for i in range(3):
             expected.append(Poke(circ.I[j][i], val))
-    tester.eval()
+    tester.step()
     expected.append(Step(None, 1))
     for j in range(2):
         for i in range(3):
@@ -219,7 +219,7 @@ def test_tester_nested_array_tuple_broadcast(target, simulator):
         for i in range(3):
             expected.append(Poke(circ.I[j][i].a, val[0]))
             expected.append(Poke(circ.I[j][i].b, val[1]))
-    tester.eval()
+    tester.step()
     expected.append(Step(None, 1))
     for j in range(2):
         for i in range(3):
@@ -241,7 +241,7 @@ def test_tester_big_int(target, simulator):
     expected = []
     val = random.randint(0, (1 << 64) - 1)
     tester.poke(circ.I, val)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, val)
     expected.append(Poke(circ.I, val))
     expected.append(Step(None, 1))
@@ -261,7 +261,7 @@ def test_tester_128(target, simulator):
     expected = []
     val = random.randint(0, (1 << 128) - 1)
     tester.poke(circ.I, val)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, val)
     expected.append(Poke(circ.I, val))
     expected.append(Step(None, 1))
@@ -286,7 +286,7 @@ def test_retarget_tester(target, simulator):
     ]
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, 0)
     tester.step()
     tester.print("%08x", circ.O)
@@ -324,7 +324,7 @@ def test_print_tester(capsys):
     circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, 0)
     tester.step()
     tester.print("%08x", circ.O)
@@ -344,7 +344,7 @@ def test_print_arrays(capsys):
     circ = TestDoubleNestedArraysCircuit
     tester = fault.Tester(circ)
     tester.poke(circ.I, [[0, 1, 2], [3, 4, 5]])
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, [[0, 1, 2], [3, 4, 5]])
     tester.print("%08x", circ.O)
     print(tester)
@@ -433,7 +433,7 @@ def test_tester_loop(target, simulator):
     tester.zero_inputs()
     loop = tester.loop(7)
     loop.poke(circ.I, loop.index)
-    loop.eval()
+    loop.step()
     loop.expect(circ.O, loop.index)
     assert tester.actions[1].n_iter == 7
     for actual, expected in zip(tester.actions[1].actions,
@@ -465,7 +465,7 @@ def test_tester_file_io(target, simulator):
         loop = tester.loop(8)
         value = loop.file_read(file_in)
         loop.poke(circ.I, value)
-        loop.eval()
+        loop.step()
         loop.expect(circ.O, loop.index)
         loop.file_write(file_out, circ.O)
         tester.file_close(file_in)
@@ -507,7 +507,7 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
         loop = tester.loop(8)
         value = loop.file_read(file_in)
         loop.poke(circ.I, value)
-        loop.eval()
+        loop.step()
         loop.expect(circ.O, loop.index)
         loop.file_write(file_out, circ.O)
         tester.file_close(file_in)
@@ -547,7 +547,7 @@ def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
         loop = tester.loop(8)
         value = loop.file_read(file_in)
         loop.poke(circ.I, value)
-        loop.eval()
+        loop.step()
         loop.expect(circ.O, loop.index)
         loop.file_write(file_out, circ.O)
         tester.file_close(file_in)
@@ -577,7 +577,7 @@ def test_tester_while(target, simulator):
     tester.poke(circ.I, 0)
     loop = tester._while(tester.circuit.O != 1)
     loop.poke(circ.I, 1)
-    loop.eval()
+    loop.step()
     tester.expect(circ.O, 1)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -591,10 +591,10 @@ def test_tester_while2(target, simulator):
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
-    tester.eval()
+    tester.step()
     loop = tester._while(tester.circuit.O == 0)
     loop.poke(circ.I, 1)
-    loop.eval()
+    loop.step()
     tester.expect(circ.O, 1)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -608,10 +608,10 @@ def test_tester_while3(target, simulator):
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
-    tester.eval()
+    tester.step()
     loop = tester._while(tester.peek(tester._circuit.O) == 0)
     loop.poke(circ.I, 1)
-    loop.eval()
+    loop.step()
     tester.expect(circ.O, 1)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -627,11 +627,11 @@ def test_tester_if(target, simulator):
     tester.poke(circ.I, 0)
     loop = tester._while(tester.circuit.O != 1)
     loop._if(tester.circuit.O == 0).poke(circ.I, 1)
-    loop.eval()
+    loop.step()
     if_tester = tester._if(tester.circuit.O == 0)
     if_tester.poke(circ.I, 1)
     if_tester._else().poke(circ.I, 0)
-    tester.eval()
+    tester.step()
     tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -658,10 +658,10 @@ def test_tester_file_scanf(target, simulator):
         loop = tester.loop(8)
         loop.file_scanf(file_in, "%x %x", config_addr, config_data)
         loop.poke(circ.I, config_addr + 1)
-        loop.eval()
+        loop.step()
         loop.expect(circ.O, config_addr + 1)
         loop.poke(circ.I, config_data)
-        loop.eval()
+        loop.step()
         loop.expect(circ.O, config_data)
         tester.file_close(file_in)
 
@@ -688,11 +688,11 @@ def test_sint_circuit(target, simulator):
 
     for i in range(10):
         tester.circuit.I = int(inputs[i])
-        tester.eval()
+        tester.step()
         tester.circuit.O.expect(inputs[i])
     for i in range(10):
         tester.circuit.I = inputs[i]
-        tester.eval()
+        tester.step()
         tester.circuit.O.expect(int(inputs[i]))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
@@ -706,10 +706,10 @@ def test_tuple_circuit(target, simulator):
 
     tester = fault.Tester(circ)
     tester.circuit.I = (4, 2)
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect((4, 2))
     tester.circuit.I = {"a": 4, "b": 2}
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect({"a": 4, "b": 2})
 
     with tempfile.TemporaryDirectory(dir=".") as _dir:
@@ -724,20 +724,20 @@ def test_nested_tuple_circuit(target, simulator):
 
     tester = fault.Tester(circ)
     tester.circuit.I = ((4, 2), 2)
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(((4, 2), 2))
     tester.circuit.I.a = (3, 1)
-    tester.eval()
+    tester.step()
     tester.circuit.O.a.expect((3, 1))
     tester.circuit.O.expect(((3, 1), 2))
     tester.circuit.I = {"a": {"k": 4, "v": 2}, "b": 2}
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect({"a": {"k": 4, "v": 2}, "b": 2})
     tester.circuit.I = {"a": (6, 5), "b": 3}
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect({"a": (6, 5), "b": 3})
     tester.circuit.I = ({"k": 4, "v": 2}, 2)
-    tester.eval()
+    tester.step()
     tester.circuit.O.expect(({"k": 4, "v": 2}, 2))
 
     with tempfile.TemporaryDirectory(dir=".") as _dir:

@@ -21,10 +21,10 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=76):
 
     # define test
     tester.poke(paramadd.a_val, 98)
-    tester.eval()
+    tester.step()
     tester.expect(paramadd.c_val, 174)
     tester.poke(paramadd.a_val, 54)
-    tester.eval()
+    tester.step()
     tester.expect(paramadd.c_val, 130)
 
     # run simulation

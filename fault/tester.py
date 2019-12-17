@@ -454,7 +454,6 @@ class Tester:
     def sync_reset(self, active_high=True, cycles=1):
         # assert reset and set clock to zero
         self.poke(self.reset_port, 1 if active_high else 0)
-        self.poke(self.clock, 0)
 
         # wait the desired number of clock cycles
         self.step(2 * cycles)

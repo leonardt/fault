@@ -15,7 +15,7 @@ def test_config_test_dir():
     tester = fault.Tester(circ)
     tester.circuit.I.a = 5
     tester.circuit.I.b = 11
-    tester.eval()
+    tester.step()
     tester.circuit.O.a.expect(5)
     tester.circuit.O.b.expect(11)
     tester.compile_and_run("verilator", directory="build",

@@ -21,7 +21,7 @@ def test_real_val(target, simulator):
     tester = fault.Tester(realadd)
     tester.poke(realadd.a_val, 1.125)
     tester.poke(realadd.b_val, 2.5)
-    tester.eval()
+    tester.step()
     tester.expect(realadd.c_val, 3.625, abs_tol=1e-4)
 
     # run the test

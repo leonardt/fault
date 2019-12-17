@@ -27,9 +27,9 @@ def test_include_verilog(target, simulator):
     m.EndDefine()
 
     tester = fault.Tester(main, main.CLK)
-    tester.poke(main.CLK, 0)
+    tester.poke(main.I, 0)
+    tester.step()
     tester.poke(main.I, 1)
-    tester.eval()
     tester.expect(main.O, 0)
     tester.step(2)
     tester.expect(main.O, 1)
