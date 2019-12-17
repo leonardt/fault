@@ -79,14 +79,6 @@ class Tester:
         if clock is not None and not isinstance(clock, m.ClockType):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
-        # Make sure the user has initialized the clock before stepping it
-        # While verilator initializes the clock value to 0, this assumption
-        # does not hold for system verilog, so we log a warning (as to not
-        # break existing TBs)
-        self.clock_initialized = False
-        # Only report once, in case the user calls step with an uninitialized
-        # clock many times
-        self.clock_init_warning_reported = False
         if reset is not None and not isinstance(reset, m.ResetType):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
@@ -117,7 +109,8 @@ class Tester:
             return MagmaSimulatorTarget(self._circuit, clock=self.clock,
                                         backend='python', **kwargs)
         elif target == "system-verilog":
-            return SystemVerilogTarget(self._circuit, **kwargs)
+            return SystemVerilogTarget(self._circuit, clock=self.clock,
+                                       **kwargs)
         elif target == "verilog-ams":
             return VerilogAMSTarget(self._circuit, **kwargs)
         elif target == "spice":
@@ -137,7 +130,8 @@ class Tester:
             delay = self.poke_delay_default
 
         if port is self.clock:
-            self.clock_initialized = True
+            warnings.warn("Ignoring clock poke, use step instead",
+                          DeprecationWarning)
 
         def recurse(port):
             if isinstance(value, dict):
@@ -208,9 +202,11 @@ class Tester:
 
     def eval(self):
         """
-        Evaluate the DUT given the current input port values
+        Deprecated
         """
-        self.actions.append(actions.Eval())
+        warnings.warn("eval action is deprecated, use step instead",
+                      DeprecationWarning)
+        self.step()
 
     def delay(self, time):
         """
@@ -220,17 +216,9 @@ class Tester:
 
     def step(self, steps=1):
         """
-        Step the clock `steps` times.
+        Step the simulation `steps` times.  If there is a clock, each step
+        inverts the clock value.
         """
-        if self.clock is None:
-            raise RuntimeError("Stepping tester without a clock (did you "
-                               "specify a clock during initialization?)")
-        if not self.clock_initialized and \
-                not self.clock_init_warning_reported:
-            warnings.warn("Clock has not been initialized, the initial value "
-                          "will be X for system verilog targets.  In a future "
-                          "release, this will be an error", DeprecationWarning)
-            self.clock_init_warning_reported = True
         self.actions.append(actions.Step(self.clock, steps))
 
     def serialize(self):

@@ -26,6 +26,8 @@ module {top_module};
         {port_list}
     );
 
+{clock_block}
+
     initial begin
 {initial_body}
         #20 $finish;
@@ -36,18 +38,21 @@ endmodule
 
 
 class SystemVerilogTarget(VerilogTarget):
-    def __init__(self, circuit, circuit_name=None, directory="build/",
-                 skip_compile=None, magma_output="coreir-verilog",
-                 magma_opts=None, include_verilog_libraries=None,
-                 simulator=None, timescale="1ns/1ns", clock_step_delay=5,
-                 num_cycles=10000, dump_waveforms=True, dump_vcd=None,
-                 no_warning=False, sim_env=None, ext_model_file=None,
-                 ext_libs=None, defines=None, flags=None, inc_dirs=None,
+    def __init__(self, circuit, clock=None, circuit_name=None,
+                 directory="build/", skip_compile=None,
+                 magma_output="coreir-verilog", magma_opts=None,
+                 include_verilog_libraries=None, simulator=None,
+                 timescale="1ns/1ns", clock_step_delay=5, num_cycles=10000,
+                 dump_waveforms=True, dump_vcd=None, no_warning=False,
+                 sim_env=None, ext_model_file=None, ext_libs=None,
+                 defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, use_kratos=False):
         """
         circuit: a magma circuit
+
+        clock: the clock port of circuit
 
         circuit_name: the name of the circuit (default is circuit.name)
 
@@ -146,6 +151,8 @@ class SystemVerilogTarget(VerilogTarget):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
                          magma_opts, use_kratos=use_kratos)
+
+        self.clock = clock
 
         # sanity check
         if simulator is None:
@@ -280,7 +287,7 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} = {value};']
+        retval += [f'{name} <= {value};']
         if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
@@ -435,10 +442,9 @@ end
         return ['#1;']
 
     def make_step(self, i, action):
-        name = verilog_name(action.clock.name)
         code = []
-        for step in range(action.steps):
-            code.append(f"#{self.clock_step_delay} {name} ^= 1;")
+        for _ in range(action.steps):
+            code.append("#1;")
         return code
 
     def make_while(self, i, action):
@@ -573,7 +579,16 @@ end
         param_list = [f'.{name}({value})'
                       for name, value in self.parameters.items()]
 
+        clock_block = ""
+        if self.clock is not None:
+            clock_name = verilog_name(self.clock.name)
+            clock_block = f"""
+    initial {clock_name} = 0;
+    always #1 {clock_name} = ~{clock_name};
+"""
+
         src = src_tpl.format(
+            clock_block=clock_block,
             declarations="\n".join(self.declarations),
             initial_body=initial_body,
             port_list=f',\n{2*tab}'.join(port_list),

@@ -179,7 +179,10 @@ class Step(Action):
         self.steps = steps
 
     def __str__(self):
-        return f"Step({self.clock.debug_name}, steps={self.steps})"
+        clock_str = "None"
+        if self.clock is not None:
+            clock_str = self.clock.debug_name
+        return f"Step({clock_str}, steps={self.steps})"
 
     def retarget(self, new_circuit, clock):
         return Step(clock, self.steps)

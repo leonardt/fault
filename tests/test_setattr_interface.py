@@ -24,7 +24,7 @@ def pytest_generate_tests(metafunc):
 def run_test(target, simulator, tester, disp_type='on_error'):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {
-            "directory": _dir,
+            "directory": "build",
             "magma_opts": {"verilator_debug": True},
             "disp_type": disp_type
         }

@@ -3,7 +3,7 @@ import random
 from hwtypes import BitVector
 import hwtypes
 import fault
-from fault.actions import Poke, Expect, Eval, Step, Print, Peek
+from fault.actions import Poke, Expect, Step, Print, Peek
 import fault.actions as actions
 import tempfile
 import pytest
@@ -30,10 +30,8 @@ def check(got, expected):
         assert got.format_str == expected.format_str
         assert all(p0 is p1 for p0, p1 in zip(got.ports, expected.ports))
     elif isinstance(got, Step):
-        assert got.clock == expected.clock
+        assert got.clock is expected.clock
         assert got.steps == expected.steps
-    elif isinstance(got, Eval):
-        pass
     else:
         raise NotImplementedError(type(got))
 
@@ -48,13 +46,13 @@ def test_tester_basic(target, simulator):
     tester.expect(circ.O, 1)
     tester.print("%08x", circ.O)
     check(tester.actions[1], Poke(circ.I, 1))
-    check(tester.actions[2], Eval())
+    check(tester.actions[2], Step(None, 1))
     check(tester.actions[3], Expect(circ.O, 1))
     print(tester.actions[4])
     print(Print("%08x", circ.O))
     check(tester.actions[4], Print("%08x", circ.O))
     tester.eval()
-    check(tester.actions[5], Eval())
+    check(tester.actions[5], Step(None, 1))
     tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
@@ -119,31 +117,13 @@ def test_tester_peek(target, simulator):
     tester.expect(circ.O, 0)
     check(tester.actions[0], Poke(circ.I, 0))
     check(tester.actions[1], Expect(circ.O, 0))
-    tester.poke(circ.CLK, 0)
-    check(tester.actions[2], Poke(circ.CLK, 0))
     tester.step()
-    check(tester.actions[3], Step(circ.CLK, 1))
+    check(tester.actions[2], Step(circ.CLK, 1))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
-
-
-def test_tester_no_clock_init():
-    circ = TestBasicClkCircuit
-    tester = fault.Tester(circ, circ.CLK)
-    tester.poke(circ.I, 0)
-    tester.expect(circ.O, 0)
-    with pytest.warns(DeprecationWarning,
-                      match="Clock has not been initialized, the initial "
-                            "value will be X for system verilog targets.  In "
-                            "a future release, this will be an error"):
-        tester.step()
-    # should not warn more than once
-    with pytest.warns(None) as record:
-        tester.step()
-        assert len(record) == 0
 
 
 def test_tester_peek_input(target, simulator):
@@ -153,7 +133,7 @@ def test_tester_peek_input(target, simulator):
     tester.eval()
     tester.expect(circ.O, tester.peek(circ.I))
     check(tester.actions[0], Poke(circ.I, 1))
-    check(tester.actions[1], Eval())
+    check(tester.actions[1], Step(None, 1))
     check(tester.actions[2], Expect(circ.O, Peek(circ.I)))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
@@ -172,7 +152,7 @@ def test_tester_nested_arrays_by_element(target, simulator):
         tester.eval()
         tester.expect(circ.O[i], val)
         expected.append(Poke(circ.I[i], val))
-        expected.append(Eval())
+        expected.append(Step(None, 1))
         expected.append(Expect(circ.O[i], val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
@@ -193,7 +173,7 @@ def test_tester_nested_arrays_bulk(target, simulator):
     tester.expect(circ.O, val)
     for i in range(3):
         expected.append(Poke(circ.I[i], val[i]))
-    expected.append(Eval())
+    expected.append(Step(None, 1))
     for i in range(3):
         expected.append(Expect(circ.O[i], val[i]))
     for i, exp in enumerate(expected):
@@ -215,7 +195,7 @@ def test_tester_double_nested_arrays_broadcast(target, simulator):
         for i in range(3):
             expected.append(Poke(circ.I[j][i], val))
     tester.eval()
-    expected.append(Eval())
+    expected.append(Step(None, 1))
     for j in range(2):
         for i in range(3):
             tester.expect(circ.O[j][i], val)
@@ -240,7 +220,7 @@ def test_tester_nested_array_tuple_broadcast(target, simulator):
             expected.append(Poke(circ.I[j][i].a, val[0]))
             expected.append(Poke(circ.I[j][i].b, val[1]))
     tester.eval()
-    expected.append(Eval())
+    expected.append(Step(None, 1))
     for j in range(2):
         for i in range(3):
             tester.expect(circ.O[j][i], val)
@@ -264,7 +244,7 @@ def test_tester_big_int(target, simulator):
     tester.eval()
     tester.expect(circ.O, val)
     expected.append(Poke(circ.I, val))
-    expected.append(Eval())
+    expected.append(Step(None, 1))
     expected.append(Expect(circ.O, val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
@@ -284,7 +264,7 @@ def test_tester_128(target, simulator):
     tester.eval()
     tester.expect(circ.O, val)
     expected.append(Poke(circ.I, val))
-    expected.append(Eval())
+    expected.append(Step(None, 1))
     expected.append(Expect(circ.O, val))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
@@ -299,9 +279,8 @@ def test_retarget_tester(target, simulator):
     circ = TestBasicClkCircuit
     expected = [
         Poke(circ.I, 0),
-        Eval(),
+        Step(circ.CLK, 1),
         Expect(circ.O, 0),
-        Poke(circ.CLK, 0),
         Step(circ.CLK, 1),
         Print("%08x", circ.O)
     ]
@@ -309,7 +288,6 @@ def test_retarget_tester(target, simulator):
     tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
-    tester.poke(circ.CLK, 0)
     tester.step()
     tester.print("%08x", circ.O)
     for i, exp in enumerate(expected):
@@ -319,9 +297,8 @@ def test_retarget_tester(target, simulator):
     copy = tester.retarget(circ_copy, circ_copy.CLK)
     copy_expected = [
         Poke(circ_copy.I, 0),
-        Eval(),
+        Step(circ_copy.CLK, 1),
         Expect(circ_copy.O, 0),
-        Poke(circ_copy.CLK, 0),
         Step(circ_copy.CLK, 1),
         Print("%08x", circ_copy.O)
     ]
@@ -349,7 +326,6 @@ def test_print_tester(capsys):
     tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
-    tester.poke(circ.CLK, 0)
     tester.step()
     tester.print("%08x", circ.O)
     print(tester)
@@ -357,11 +333,10 @@ def test_print_tester(capsys):
     assert "\n".join(out.splitlines()[1:]) == """\
 Actions:
     0: Poke(BasicClkCircuit.I, 0)
-    1: Eval()
+    1: Step(BasicClkCircuit.CLK, steps=1)
     2: Expect(BasicClkCircuit.O, 0)
-    3: Poke(BasicClkCircuit.CLK, 0)
-    4: Step(BasicClkCircuit.CLK, steps=1)
-    5: Print("%08x", BasicClkCircuit.O)
+    3: Step(BasicClkCircuit.CLK, steps=1)
+    4: Print("%08x", BasicClkCircuit.O)
 """
 
 
@@ -382,7 +357,7 @@ Actions:
     3: Poke(DoubleNestedArraysCircuit.I[1][0], 3)
     4: Poke(DoubleNestedArraysCircuit.I[1][1], 4)
     5: Poke(DoubleNestedArraysCircuit.I[1][2], 5)
-    6: Eval()
+    6: Step(None, steps=1)
     7: Expect(DoubleNestedArraysCircuit.O[0][0], 0)
     8: Expect(DoubleNestedArraysCircuit.O[0][1], 1)
     9: Expect(DoubleNestedArraysCircuit.O[0][2], 2)
@@ -463,7 +438,7 @@ def test_tester_loop(target, simulator):
     assert tester.actions[1].n_iter == 7
     for actual, expected in zip(tester.actions[1].actions,
                                 [Poke(circ.I, loop.index),
-                                 Eval(),
+                                 Step(None, 1),
                                  Expect(circ.O, loop.index)]):
         check(actual, expected)
     with tempfile.TemporaryDirectory(dir=".") as _dir:

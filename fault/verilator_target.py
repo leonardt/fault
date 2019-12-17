@@ -360,11 +360,13 @@ class VerilatorTarget(VerilogTarget):
                 "tracer->dump(main_time);", "#endif"]
 
     def make_step(self, i, action):
-        name = verilator_name(action.clock.name)
+        if action.clock is not None:
+            name = verilator_name(action.clock.name)
         code = []
         code.append("top->eval();")
         for step in range(action.steps):
-            code.append(f"top->{name} ^= 1;")
+            if action.clock is not None:
+                code.append(f"top->{name} ^= 1;")
             code.append("top->eval();")
             code.append("main_time++;")
             code.append("#if VM_TRACE")

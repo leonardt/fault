@@ -35,14 +35,12 @@ class SimpleALU(m.Circuit):
 def test_simple_alu():
     ops = [operator.add, operator.sub, operator.mul, operator.xor]
     tester = fault.Tester(SimpleALU, SimpleALU.CLK)
-    tester.circuit.CLK = 0
     tester.circuit.config_en = 1
     for i in range(0, 4):
         tester.circuit.config_data = i
-        tester.step(2)
         tester.circuit.a = 3
         tester.circuit.b = 2
-        tester.eval()
+        tester.step(2)
         tester.circuit.c.expect(ops[i](3, 2))
 
     tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
@@ -53,13 +51,11 @@ def test_simple_alu():
 def test_simple_alu_parametrized(opcode, op):
     op = getattr(operator, op)
     tester = fault.Tester(SimpleALU, SimpleALU.CLK)
-    tester.circuit.CLK = 0
     tester.circuit.config_en = 1
     tester.circuit.config_data = opcode
-    tester.step(4)
     tester.circuit.a = 3
     tester.circuit.b = 2
-    tester.eval()
+    tester.step(2)
     tester.circuit.c.expect(op(BitVector[16](3), BitVector[16](2)))
 
     os.system("rm -r build/*")

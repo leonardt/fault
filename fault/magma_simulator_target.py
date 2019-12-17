@@ -68,9 +68,9 @@ class MagmaSimulatorTarget(Target):
             elif isinstance(action, fault.actions.Eval):
                 simulator.evaluate()
             elif isinstance(action, fault.actions.Step):
-                if self.clock is not action.clock:
-                    raise RuntimeError(f"Using different clocks: {self.clock}, "
-                                       f"{action.clock}")
-                simulator.advance_cycle(action.steps)
+                if self.clock is not None:
+                    simulator.advance_cycle(action.steps)
+                else:
+                    simulator.evaluate()
             else:
                 raise NotImplementedError(action)
