@@ -131,6 +131,7 @@ def test_print_nested_arrays(capsys, target, simulator):
     circ = TestNestedArraysCircuit
     actions = [Print(TEST_START + '\n')] + [
         Poke(circ.I, [BitVector[4](i) for i in range(3)]),
+        Eval(),
     ] + [Print("%x\n", i) for i in circ.I] + [
         Eval(),
         Expect(circ.O, [BitVector[4](i) for i in range(3)]),
@@ -161,6 +162,7 @@ def test_print_double_nested_arrays(capsys, target, simulator):
     actions = [Print(TEST_START + '\n')] + [
         Poke(circ.I, [[BitVector[4](i + j * 3) for i in range(3)]
                       for j in range(2)]),
+        Eval(),
     ] + [Print("%x\n", j) for i in circ.I for j in i] + [
         Eval(),
         Expect(circ.O, [[BitVector[4](i + j * 3) for i in range(3)]
