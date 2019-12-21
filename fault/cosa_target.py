@@ -52,6 +52,9 @@ class CoSATarget(VerilogTarget):
         self.states = []
         self.solver = solver
 
+    def compile_expression(self, value):
+        raise NotImplementedError()
+
     def make_eval(self, i, action):
         raise NotImplementedError()
 

@@ -41,8 +41,11 @@ endmodule
 
 
 class SystemVerilogTarget(VerilogTarget):
+
+    # Language properties of SystemVerilog used in generating code blocks
     BLOCK_START = 'begin'
     BLOCK_END = 'end'
+    LOOP_VAR_TYPE = None
 
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=None, magma_output="coreir-verilog",
@@ -334,35 +337,9 @@ class SystemVerilogTarget(VerilogTarget):
         return [f'$write({args});']
 
     def make_loop(self, i, action):
-        # declare the loop variable if needed
+        # loop variable has to be declared outside of the loop
         self.add_decl('integer', action.loop_var, exist_ok=True)
-
-        # construct the "for" loop condition
-        if action.count == 'up':
-            cond = '; '.join([
-                f'{action.loop_var} = 0',
-                f'{action.loop_var} < {action.n_iter}',
-                f'{action.loop_var}++'
-            ])
-        elif action.count == 'down':
-            cond = '; '.join([
-                f'{action.loop_var} = {action.n_iter - 1}',
-                f'{action.loop_var} >= 0',
-                f'{action.loop_var}--'
-            ])
-        else:
-            raise ValueError(f'Unknown count direction: {action.count}.')
-
-        # return code representing the for loop
-        return self.make_block(i, 'for', cond, action.actions)
-
-    @staticmethod
-    def in_var(file):
-        return f'{file.name_without_ext}_in'
-
-    @staticmethod
-    def fd_var(file):
-        return f'{file.name_without_ext}_file'
+        return super().make_loop(i, action)
 
     def make_file_open(self, i, action):
         # make sure the file mode is supported
@@ -508,23 +485,6 @@ class SystemVerilogTarget(VerilogTarget):
         for step in range(action.steps):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")
         return code
-
-    def make_while(self, i, action):
-        cond = self.compile_expression(action.loop_cond)
-        return self.make_block(i, 'while', cond, action.actions)
-
-    def make_if(self, i, action):
-        # get code for if statement
-        cond = self.compile_expression(action.cond)
-        if_code = self.make_block(i, 'if', cond, action.actions)
-
-        # add code for else statement (if needed)
-        if not action.else_actions:
-            return if_code
-        else:
-            else_code = self.make_block(i, 'else', None, action.else_actions)
-            else_code[0] = f'{self.BLOCK_END} else {self.BLOCK_START}'
-            return if_code[:-1] + else_code
 
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []

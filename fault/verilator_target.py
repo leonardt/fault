@@ -87,8 +87,11 @@ int main(int argc, char **argv) {{
 
 
 class VerilatorTarget(VerilogTarget):
+
+    # Language properties of C used in generating code blocks
     BLOCK_START = '{'
     BLOCK_END = '}'
+    LOOP_VAR_TYPE = 'int'
 
     def __init__(self, circuit, directory="build/",
                  flags=None, skip_compile=False, include_verilog_libraries=None,
@@ -377,34 +380,6 @@ class VerilatorTarget(VerilogTarget):
             code.append("#endif")
         return code
 
-    def make_loop(self, i, action):
-        # construct the "for" loop condition
-        if action.count == 'up':
-            cond = '; '.join([
-                f'int {action.loop_var} = 0',
-                f'{action.loop_var} < {action.n_iter}',
-                f'{action.loop_var}++'
-            ])
-        elif action.count == 'down':
-            cond = '; '.join([
-                f'int {action.loop_var} = {action.n_iter - 1}',
-                f'{action.loop_var} >= 0',
-                f'{action.loop_var}--'
-            ])
-        else:
-            raise ValueError(f'Unknown count direction: {action.count}.')
-
-        # return code representing the for loop
-        return self.make_block(i, 'for', cond, action.actions)
-
-    @staticmethod
-    def in_var(file):
-        return f'{file.name_without_ext}_in'
-
-    @staticmethod
-    def fd_var(file):
-        return f'{file.name_without_ext}_file'
-
     def make_file_open(self, i, action):
         # make sure the file mode is supported
         if not is_valid_file_mode(action.file.mode):
@@ -480,23 +455,6 @@ class VerilatorTarget(VerilogTarget):
                      f'{in_}[{idx}] = result;'
                  ])
         ])
-
-    def make_while(self, i, action):
-        cond = self.compile_expression(action.loop_cond)
-        return self.make_block(i, 'while', cond, action.actions)
-
-    def make_if(self, i, action):
-        # get code for if statement
-        cond = self.compile_expression(action.cond)
-        if_code = self.make_block(i, 'if', cond, action.actions)
-
-        # add code for else statement (if needed)
-        if not action.else_actions:
-            return if_code
-        else:
-            else_code = self.make_block(i, 'else', None, action.else_actions)
-            else_code[0] = f'{self.BLOCK_END} else {self.BLOCK_START}'
-            return if_code[:-1] + else_code
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta) and \

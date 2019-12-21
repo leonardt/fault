@@ -17,6 +17,7 @@ class VerilogTarget(Target):
     TAB = '    '
     BLOCK_START = None
     BLOCK_END = None
+    LOOP_VAR_TYPE = None
 
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, include_verilog_libraries=None,
@@ -67,6 +68,10 @@ class VerilogTarget(Target):
         value_file_path = (Path(self.directory) / value_file_name).resolve()
         self.value_file = File(name=str(value_file_path), tester=None,
                                mode='w', chunk_size=None, endianness=None)
+
+    @abstractmethod
+    def compile_expression(self, value):
+        pass
 
     def make_assume(self, i, action):
         self.assumptions.append(action)
@@ -169,9 +174,28 @@ class VerilogTarget(Target):
     def make_step(self, i, action):
         pass
 
-    @abstractmethod
     def make_loop(self, i, action):
-        pass
+        # determine type of the loop variable (typically int or None)
+        loop_var_type = f'{self.LOOP_VAR_TYPE} ' if self.LOOP_VAR_TYPE else ''
+
+        # construct the "for" loop condition
+        if action.count == 'up':
+            cond = '; '.join([
+                f'{loop_var_type}{action.loop_var} = 0',
+                f'{action.loop_var} < {action.n_iter}',
+                f'{action.loop_var}++'
+            ])
+        elif action.count == 'down':
+            cond = '; '.join([
+                f'{loop_var_type}{action.loop_var} = {action.n_iter - 1}',
+                f'{action.loop_var} >= 0',
+                f'{action.loop_var}--'
+            ])
+        else:
+            raise ValueError(f'Unknown count direction: {action.count}.')
+
+        # return code representing the for loop
+        return self.make_block(i, 'for', cond, action.actions)
 
     @abstractmethod
     def make_file_open(self, i, action):
@@ -201,13 +225,22 @@ class VerilogTarget(Target):
     def make_delay(self, i, action):
         pass
 
-    @abstractmethod
     def make_while(self, i, action):
-        pass
+        cond = self.compile_expression(action.loop_cond)
+        return self.make_block(i, 'while', cond, action.actions)
 
-    @abstractmethod
     def make_if(self, i, action):
-        pass
+        # get code for if statement
+        cond = self.compile_expression(action.cond)
+        if_code = self.make_block(i, 'if', cond, action.actions)
+
+        # add code for else statement (if needed)
+        if not action.else_actions:
+            return if_code
+        else:
+            else_code = self.make_block(i, 'else', None, action.else_actions)
+            else_code[0] = f'{self.BLOCK_END} else {self.BLOCK_START}'
+            return if_code[:-1] + else_code
 
     @abstractmethod
     def make_get_value(self, i, action):
@@ -250,3 +283,13 @@ class VerilogTarget(Target):
                 lines = f.readlines()
             for line, action in zip(lines, get_value_actions):
                 action.update_from_line(line)
+
+    @staticmethod
+    def in_var(file):
+        '''Name of variable used to read in contents of file.'''
+        return f'{file.name_without_ext}_in'
+
+    @staticmethod
+    def fd_var(file):
+        '''Name of variable used to hold the file descriptor.'''
+        return f'{file.name_without_ext}_file'
