@@ -241,10 +241,8 @@ class Loop(Action):
     def retarget(self, new_circuit, clock):
         actions = [action.retarget(new_circuit, clock) for action in
                    self.actions]
-        return Loop(n_iter=self.n_iter,
-                    loop_var=self.loop_var,
-                    actions=actions,
-                    count=self.count)
+        return Loop(n_iter=self.n_iter, loop_var=self.loop_var,
+                    actions=actions, count=self.count)
 
 
 class FileOpen(Action):

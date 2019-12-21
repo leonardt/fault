@@ -6,8 +6,7 @@ from .util import (is_valid_file_mode, file_mode_allows_reading,
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from fault.actions import FileOpen, FileClose
-from fault.actions import GetValue, Loop, If
+from fault.actions import FileOpen, FileClose, GetValue, Loop, If
 from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
                      AbstractBitVector)
 import fault.value_utils as value_utils
@@ -212,10 +211,8 @@ class SystemVerilogTarget(VerilogTarget):
                                   "to install.")
 
     def add_decl(self, type_, name, exist_ok=False):
-        if self.has_decl(name):
+        if str(name) in self.declarations:
             if exist_ok:
-                # Variable has already been declared, but the user
-                # is saying that it's OK and should be ignored...
                 pass
             else:
                 raise Exception(f'A declaration of name {name} already exists.')  # noqa
@@ -223,18 +220,12 @@ class SystemVerilogTarget(VerilogTarget):
             # Note that order is preserved with Python 3.7 dictionary behavior
             self.declarations[str(name)] = (type_, name)
 
-    def has_decl(self, name):
-        return str(name) in self.declarations
-
     def add_assign(self, lhs, rhs):
-        if self.has_assign(lhs):
+        if str(lhs) in self.assigns:
             raise Exception(f'The LHS signal {lhs} has already been assigned.')
         else:
             # Note that order is preserved with Python 3.7 dictionary behavior
             self.assigns[str(lhs)] = (lhs, rhs)
-
-    def has_assign(self, lhs):
-        return str(lhs) in self.assigns
 
     def make_name(self, port):
         if isinstance(port, PortWrapper):
@@ -444,36 +435,36 @@ class SystemVerilogTarget(VerilogTarget):
         if action.above is not None:
             if action.below is not None:
                 # must be in range
-                err_cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
+                cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
                 err_msg = 'Expected %0f to %0f, got %0f'
                 err_args = [action.above, action.below, name]
             else:
                 # must be above
-                err_cond = f'!({action.above} <= {name})'
+                cond = f'!({action.above} <= {name})'
                 err_msg = 'Expected above %0f, got %0f'
                 err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
-                err_cond = f'!({name} <= {action.below})'
+                cond = f'!({name} <= {action.below})'
                 err_msg = 'Expected below %0f, got %0f'
                 err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
-                    err_cond = f'!({name} === {value})'
+                    cond = f'!({name} === {value})'
                 else:
-                    err_cond = f'!({name} == {value})'
+                    cond = f'!({name} == {value})'
                 err_msg = 'Expected %x, got %x'
                 err_args = [value, name]
 
-        # construct the $error call
+        # construct the body of the $error call
         err_fmt_str = f'"{err_hdr}.  {err_msg}."'
         err_body = [err_fmt_str] + err_args
         err_body = ', '.join([str(elem) for elem in err_body])
 
         # return a snippet of verilog implementing the assertion
-        return self.make_if(i, If(err_cond, [f'$error({err_body});']))
+        return self.make_if(i, If(cond, [f'$error({err_body});']))
 
     def make_eval(self, i, action):
         # Emulate eval by inserting a delay
@@ -569,8 +560,8 @@ class SystemVerilogTarget(VerilogTarget):
             initial_body += [f'$dumpfile("{self.waveform_file}");',
                              f'$dumpvars(0, dut);']
 
-        # if we're using the GetValue feature, then we need to open/close a
-        # file in which GetValue results will be written
+        # if we're using the GetValue feature, then we need to open a file to
+        # which GetValue results will be written
         if any(isinstance(action, GetValue) for action in actions):
             actions = [FileOpen(self.value_file)] + actions
             actions += [FileClose(self.value_file)]
