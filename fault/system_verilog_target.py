@@ -1,9 +1,13 @@
 import warnings
-from fault.verilog_target import VerilogTarget, verilog_name
+from fault.verilog_target import VerilogTarget
+from .verilog_utils import verilog_name
+from .util import (is_valid_file_mode, file_mode_allows_reading,
+                   file_mode_allows_writing)
 import magma as m
 from pathlib import Path
 import fault.actions as actions
-from fault.actions import GetValue
+from fault.actions import FileOpen, FileClose
+from fault.actions import GetValue, Loop, If
 from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
                      AbstractBitVector)
 import fault.value_utils as value_utils
@@ -12,18 +16,15 @@ from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
-from fault.real_type import RealKind, RealIn, RealOut, RealInOut
-from fault.elect_type import ElectIn, ElectOut, ElectInOut
+from fault.real_type import RealKind
 import os
 from numbers import Number
 
 
-SVTAB = '    '
-
 src_tpl = """\
 module {top_module};
 {declarations}
-
+{assigns}
     {circuit_name} #(
         {param_list}
     ) dut (
@@ -40,6 +41,9 @@ endmodule
 
 
 class SystemVerilogTarget(VerilogTarget):
+    BLOCK_START = 'begin'
+    BLOCK_END = 'end'
+
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
@@ -49,9 +53,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, use_kratos=False,
-                 value_file_name='get_value_file.txt',
-                 value_file_var='__get_value_file_fid'):
+                 waveform_file=None, use_kratos=False):
         """
         circuit: a magma circuit
 
@@ -130,13 +132,6 @@ class SystemVerilogTarget(VerilogTarget):
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
 
         use_kratos: If True, set the environment up for debugging in kratos
-
-        value_file_name: name of the file to which results of "get_value"
-                         commands should be dumped
-
-        value_file_var: name of the integer variable to which the FID of
-                        the value file used for "get_value" commands should
-                        be store.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -180,7 +175,8 @@ class SystemVerilogTarget(VerilogTarget):
                           DeprecationWarning)
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
-        self.declarations = []
+        self.declarations = {}  # dictionary keyed by signal name
+        self.assigns = {}  # dictionary keyed by LHS name
         self.sim_env = sim_env if sim_env is not None else {}
         self.sim_env.update(os.environ)
         self.ext_model_file = ext_model_file
@@ -194,8 +190,6 @@ class SystemVerilogTarget(VerilogTarget):
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
         self.waveform_file = waveform_file
-        self.value_file_name = value_file_name
-        self.value_file_var = value_file_var
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 self.waveform_file = "waveforms.vpd"
@@ -214,8 +208,30 @@ class SystemVerilogTarget(VerilogTarget):
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
 
-    def add_decl(self, *decls):
-        self.declarations.extend(decls)
+    def add_decl(self, type_, name, exist_ok=False):
+        if self.has_decl(name):
+            if exist_ok:
+                # Variable has already been declared, but the user
+                # is saying that it's OK and should be ignored...
+                pass
+            else:
+                raise Exception(f'A declaration of name {name} already exists.')  # noqa
+        else:
+            # Note that order is preserved with Python 3.7 dictionary behavior
+            self.declarations[str(name)] = (type_, name)
+
+    def has_decl(self, name):
+        return str(name) in self.declarations
+
+    def add_assign(self, lhs, rhs):
+        if self.has_assign(lhs):
+            raise Exception(f'The LHS signal {lhs} has already been assigned.')
+        else:
+            # Note that order is preserved with Python 3.7 dictionary behavior
+            self.assigns[str(lhs)] = (lhs, rhs)
+
+    def has_assign(self, lhs):
+        return str(lhs) in self.assigns
 
     def make_name(self, port):
         if isinstance(port, PortWrapper):
@@ -240,15 +256,14 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta):
-            self.declarations.append(
-                f"reg [{action._type.size - 1}:0] {action.name};")
+            self.add_decl(f'reg [{action._type.size - 1}:0]', action.name)
             return []
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
         var_args = ", ".join(f"{var.name}" for var in action.args)
-        return [f"$fscanf({action.file.name_without_ext}_file, "
-                f"\"{action._format}\", {var_args});"]
+        fd_var = self.fd_var(action.file)
+        return [f'$fscanf({fd_var}, "{action._format}", {var_args});']
 
     def process_value(self, port, value):
         if isinstance(value, BitVector):
@@ -313,208 +328,111 @@ class SystemVerilogTarget(VerilogTarget):
                 args.append(f'{port}')
             else:
                 args.append(f'{self.make_name(port)}')
+
+        # generate the command
         args = ', '.join(args)
         return [f'$write({args});']
 
-    @classmethod
-    def block_prim(cls, type_, hdr=None, cmds=None):
-        # set defaults
-        if cmds is None:
-            cmds = []
-
-        # build up code
-        code = []
-
-        # create the header
-        if hdr is None:
-            code += [f'{type_} begin']
-        else:
-            code += [f'{type_} ({hdr}) begin']
-
-        # create the body
-        code += [f'{SVTAB}{cmd}' for cmd in cmds]
-
-        # create the footer
-        code += [f'end']
-
-        # return the code block
-        return code
-
-    @classmethod
-    def if_prim(cls, cond, cmds):
-        return cls.block_prim(type_='if', hdr=cond, cmds=cmds)
-
-    @classmethod
-    def for_loop_prim(cls, idx, loop_range, cmds):
-        # read out parameters of the loop
-        start = loop_range.start
-        stop = loop_range.stop
-        step = loop_range.step
-
-        # build initialization part of expression
-        init_expr = f'{idx} = {start}'
-
-        # build condition part of expression
-        if start <= stop:
-            cond_expr = f'{idx} < {stop}'
-        else:
-            cond_expr = f'{idx} > {stop}'
-
-        # build update part of expression
-        if step == 1:
-            up_expr = f'{idx}++'
-        elif step == -1:
-            up_expr = f'{idx}--'
-        elif step > 0:
-            up_expr = f'{idx} += {step}'
-        else:
-            up_expr = f'{idx} -= {-step}'
-
-        # build code representing the entire loop
-        hdr = f'{init_expr}; {cond_expr}; {up_expr}'
-
-        # return code for the loop
-        return cls.block_prim(type_='for', hdr=hdr, cmds=cmds)
-
     def make_loop(self, i, action):
-        # process inner actions of the loop
-        cmds = []
-        for inner_action in action.actions:
-            cmds += self.generate_action_code(i, inner_action)
+        # declare the loop variable if needed
+        self.add_decl('integer', action.loop_var, exist_ok=True)
 
-        # declare a loop variable
-        idx = f'{action.loop_var}'
-        self.declarations.append(f"integer {idx};")
-
-        # determine the range of the for loop
-        loop_range = range(action.n_iter)
+        # construct the "for" loop condition
+        if action.count == 'up':
+            cond = '; '.join([
+                f'{action.loop_var} = 0',
+                f'{action.loop_var} < {action.n_iter}',
+                f'{action.loop_var}++'
+            ])
+        elif action.count == 'down':
+            cond = '; '.join([
+                f'{action.loop_var} = {action.n_iter - 1}',
+                f'{action.loop_var} >= 0',
+                f'{action.loop_var}--'
+            ])
+        else:
+            raise ValueError(f'Unknown count direction: {action.count}.')
 
         # return code representing the for loop
-        return self.for_loop_prim(idx=idx, loop_range=loop_range, cmds=cmds)
+        return self.make_block(i, 'for', cond, action.actions)
 
     @staticmethod
-    def open_file_prim(path, var, mode):
-        return f'{var} = $fopen("{path}", "{mode}");'
+    def in_var(file):
+        return f'{file.name_without_ext}_in'
+
+    @staticmethod
+    def fd_var(file):
+        return f'{file.name_without_ext}_file'
 
     def make_file_open(self, i, action):
         # make sure the file mode is supported
-        if action.file.mode not in {'r', 'w'}:
+        if not is_valid_file_mode(action.file.mode):
             raise NotImplementedError(action.file.mode)
 
-        # declare variable for reading file
-        name = action.file.name_without_ext
-        bit_size = action.file.chunk_size * 8 - 1
-        self.declarations.append(f'reg [{bit_size}:0] {name}_in;')
+        # declare the file read variable if the file mode allows reading
+        if file_mode_allows_reading(action.file.mode):
+            bit_size = (action.file.chunk_size * 8) - 1
+            in_ = self.in_var(action.file)
+            self.add_decl(f'reg [{bit_size}:0]', in_)
 
-        # declare variable to hold the file descriptor
-        fd_var = f'{name}_file'
-        self.declarations.append(f'integer {fd_var};')
+        # declare the file descriptor variable
+        fd = self.fd_var(action.file)
+        self.add_decl('integer', fd)
 
-        # determine path to file and read/write mode
-        path = action.file.name
-        mode = action.file.mode
-
-        # generate code to open file
-        code = []
-        code += [self.open_file_prim(path=path, var=fd_var, mode=mode)]
-
-        # check that file was opened correctly
-        err_cmd = f'$error("Could not open file {path}: %0d", {fd_var});'
-        code += self.if_prim(cond=f'!{fd_var}', cmds=[err_cmd])
-
-        # return the code to open the file as a list of lines
-        return code
-
-    @staticmethod
-    def close_file_prim(var):
-        return f'$fclose({var});'
+        # return the command
+        return [f'{fd} = $fopen("{action.file.name}", "{action.file.mode}");']
 
     def make_file_close(self, i, action):
-        fd_var = f'{action.file.name_without_ext}_file'
-        return [self.close_file_prim(var=fd_var)]
-
-    @staticmethod
-    def read_byte_prim(file_fd):
-        return f'$fgetc({file_fd})'
+        fd = self.fd_var(action.file)
+        return [f'$fclose({fd});']
 
     def make_file_read(self, i, action):
-        # declare loop variable if needed
+        assert file_mode_allows_reading(action.file.mode), \
+            f'File mode "{action.file.mode}" is not compatible with reading.'
+
         idx = '__i'
-        decl = f'integer {idx};'
-        if decl not in self.declarations:
-            self.declarations.append(decl)
+        fd = self.fd_var(action.file)
+        in_ = self.in_var(action.file)
 
-        # figure out how to loop over bytes to be written
-        chunk_size = action.file.chunk_size
-        if action.file.endianness == 'big':
-            for_range = range(chunk_size - 1, -1, -1)
-        else:
-            for_range = range(chunk_size)
+        return self.generate_action_code(i, [
+            f'{in_} = 0;',
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     f'{in_} |= $fgetc({fd}) << (8 * {idx});'
+                 ])
+        ])
 
-        # determine command for reading one byte
-        in_var = f'{action.file.name_without_ext}_in'
-        fd_var = f'{action.file.name_without_ext}_file'
-        rdcmd = f'{in_var} |= {self.read_byte_prim(fd_var)} << (8 * {idx});'
-
-        # build up the code to implement the file read
-        code = []
-        code += [f'{in_var} = 0;']
-        code += self.for_loop_prim(idx=idx, loop_range=for_range, cmds=[rdcmd])
-
-        # return the code
-        return code
-
-    def write_byte_prim(self, file_fd, byte_expr):
+    def write_byte(self, fd, expr):
         if self.simulator == 'iverilog':
-            return f'$fputc({byte_expr}, {file_fd});'
+            return f'$fputc({expr}, {fd});'
         else:
-            return f'$fwrite({file_fd}, "%c", {byte_expr});'
-
-    @staticmethod
-    def write_str_prim(file_fd, str_expr):
-        return f'$fwrite({file_fd}, {str_expr});'
+            return f'$fwrite({fd}, "%c", {expr});'
 
     def make_file_write(self, i, action):
-        # declare loop variable if needed
+        assert file_mode_allows_writing(action.file.mode), \
+            f'File mode "{action.file.mode}" is not compatible with writing.'
+
         idx = '__i'
-        decl = f'integer {idx};'
-        if decl not in self.declarations:
-            self.declarations.append(decl)
-
-        # figure out how to loop over bytes to be written
+        fd = self.fd_var(action.file)
         value = self.make_name(action.value)
-        chunk_size = action.file.chunk_size
-        mask_size = chunk_size * 8
-        if action.file.endianness == 'big':
-            loop_range = range(chunk_size - 1, -1, -1)
-        else:
-            loop_range = range(chunk_size)
+        byte_expr = f"({value} >> (8 * {idx})) & 8'hFF"
 
-        # determine command for writing one byte
-        file_fd = f'{action.file.name_without_ext}_file'
-        byte_expr = f"({value} >> (8 * {idx})) & {mask_size}'hFF"
-        wrcmd = self.write_byte_prim(file_fd=file_fd, byte_expr=byte_expr)
-
-        # return the loop code
-        return self.for_loop_prim(idx=idx, loop_range=loop_range, cmds=[wrcmd])
+        return self.generate_action_code(i, [
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     self.write_byte(fd, byte_expr)
+                 ])
+        ])
 
     def make_get_value(self, i, action):
-        # determine variable used for writing GetValue results
-        file_fd = self.value_file_var
-
-        # determine string representation of the value
-        if self.is_float_like_port(action.port):
-            fmt = '%0f'
-        else:
-            fmt = '%0d'
-        str_expr = f'"{fmt}\\n", {self.make_name(action.port)}'
-
-        # generate the command to write the string version of the signal to
-        # the file
-        wrcmd = self.write_str_prim(file_fd=file_fd, str_expr=str_expr)
-
-        # return the code
-        return [wrcmd]
+        fd_var = self.fd_var(self.value_file)
+        fmt = action.get_format()
+        value = self.make_name(action.port)
+        return [f'$fwrite({fd_var}, "{fmt}\\n", {value});']
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -549,37 +467,36 @@ class SystemVerilogTarget(VerilogTarget):
         if action.above is not None:
             if action.below is not None:
                 # must be in range
-                cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
+                err_cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
                 err_msg = 'Expected %0f to %0f, got %0f'
                 err_args = [action.above, action.below, name]
             else:
                 # must be above
-                cond = f'!({action.above} <= {name})'
+                err_cond = f'!({action.above} <= {name})'
                 err_msg = 'Expected above %0f, got %0f'
                 err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
-                cond = f'!({name} <= {action.below})'
+                err_cond = f'!({name} <= {action.below})'
                 err_msg = 'Expected below %0f, got %0f'
                 err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
-                    cond = f'!({name} === {value})'
+                    err_cond = f'!({name} === {value})'
                 else:
-                    cond = f'!({name} == {value})'
+                    err_cond = f'!({name} == {value})'
                 err_msg = 'Expected %x, got %x'
                 err_args = [value, name]
 
-        # construct the body of the $error call
+        # construct the $error call
         err_fmt_str = f'"{err_hdr}.  {err_msg}."'
         err_body = [err_fmt_str] + err_args
-        err_body = ','.join([str(elem) for elem in err_body])
+        err_body = ', '.join([str(elem) for elem in err_body])
 
         # return a snippet of verilog implementing the assertion
-        err_cmd = f'$error({err_body});'
-        return self.if_prim(cond=cond, cmds=[err_cmd])
+        return self.make_if(i, If(err_cond, [f'$error({err_body});']))
 
     def make_eval(self, i, action):
         # Emulate eval by inserting a delay
@@ -592,48 +509,22 @@ class SystemVerilogTarget(VerilogTarget):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")
         return code
 
-    @classmethod
-    def while_loop_prim(cls, cond, cmds):
-        return cls.block_prim(type_='while', hdr=cond, cmds=cmds)
-
     def make_while(self, i, action):
-        # compile the condition for the while loop
         cond = self.compile_expression(action.loop_cond)
-
-        # process inner actions of the loop
-        cmds = []
-        for inner_action in action.actions:
-            cmds += self.generate_action_code(i, inner_action)
-
-        # return code for the while loop
-        return self.while_loop_prim(cond=cond, cmds=cmds)
+        return self.make_block(i, 'while', cond, action.actions)
 
     def make_if(self, i, action):
-        # compile the condition for the if statement
-        cond = self.compile_expression(action.cond)
-
-        # process inner actions of if statement
-        if_cmds = []
-        for inner_action in action.actions:
-            if_cmds += self.generate_action_code(i, inner_action)
-
         # get code for if statement
-        if_code = self.block_prim(type_='if', hdr=cond, cmds=if_cmds)
+        cond = self.compile_expression(action.cond)
+        if_code = self.make_block(i, 'if', cond, action.actions)
 
-        # add code for else statement if needed
+        # add code for else statement (if needed)
         if not action.else_actions:
             return if_code
         else:
-            # process inner actions of else statement
-            else_cmds = []
-            for inner_action in action.else_actions:
-                else_cmds += self.generate_action_code(i, inner_action)
-
-            # get code for else statement
-            else_code = self.block_prim(type_='else', cmds=else_cmds)
-
-            # return code with with nice formatting
-            return if_code[:-1] + ['end else begin'] + else_code[1:]
+            else_code = self.make_block(i, 'else', None, action.else_actions)
+            else_code[0] = f'{self.BLOCK_END} else {self.BLOCK_START}'
+            return if_code[:-1] + else_code
 
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
@@ -661,7 +552,7 @@ class SystemVerilogTarget(VerilogTarget):
             connect_to = f"{name}"
             if isinstance(type_, m.ArrayKind) and \
                     isinstance(type_.T, m.BitKind):
-                width_str = f"[{len(type_) - 1}:0] "
+                width_str = f" [{len(type_) - 1}:0]"
             if isinstance(type_, RealKind):
                 t = "real"
             elif name in power_args.get("supply0s", []):
@@ -677,11 +568,9 @@ class SystemVerilogTarget(VerilogTarget):
                 # that wire will then be connected to the
                 # DUT pin
                 connect_to = self.input_wire(name)
-                decls = [f'reg {width_str}{name};',
-                         f'wire {width_str}{connect_to};',
-                         f'assign {connect_to}={name};']
-                decls = [f'{SVTAB}{decl}' for decl in decls]
-                self.add_decl(*decls)
+                self.add_decl(f'reg{width_str}', f'{name}')
+                self.add_decl(f'wire{width_str}', f'{connect_to}')
+                self.add_assign(f'{connect_to}', f'{name}')
 
                 # set the signal type to None to avoid re-declaring
                 # connect_to
@@ -693,19 +582,19 @@ class SystemVerilogTarget(VerilogTarget):
 
             # declare the signal that will be connected to the pin, if needed
             if t is not None:
-                decl = f'{SVTAB}{t} {width_str}{connect_to};'
-                self.add_decl(decl)
+                self.add_decl(f'{t}{width_str}', f'{connect_to}')
 
             # return the wiring statement describing how the testbench signal
             # is connected to the DUT
             return [f".{name}({connect_to})"]
 
     def generate_code(self, actions, power_args):
-        # generate port list
+        # format the port list
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
             result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
+        port_list = f',\n{2*self.TAB}'.join(port_list)
 
         # build up the body of the initial block
         initial_body = []
@@ -720,45 +609,50 @@ class SystemVerilogTarget(VerilogTarget):
             initial_body += [f'$dumpfile("{self.waveform_file}");',
                              f'$dumpvars(0, dut);']
 
-        # if we're using the GetValue feature, then we need to open a file to
-        # which GetValue results will be written
+        # if we're using the GetValue feature, then we need to open/close a
+        # file in which GetValue results will be written
         if any(isinstance(action, GetValue) for action in actions):
-            has_get_value = True
-            self.add_decl(f'{SVTAB}integer {self.value_file_var};')
-            path = (Path(self.directory) / self.value_file_name).resolve()
-            opcmd = self.open_file_prim(path=path,
-                                        var=self.value_file_var,
-                                        mode='w')
-            initial_body.append(opcmd)
-        else:
-            has_get_value = False
+            actions = [FileOpen(self.value_file)] + actions
+            actions += [FileClose(self.value_file)]
 
         # handle all of user-specified actions in the testbench
         for i, action in enumerate(actions):
             initial_body += self.generate_action_code(i, action)
 
-        # if we're using the GetValue feature, then we need to close the file
-        # used to store GetValue results at the end of the simulation.
-        if has_get_value:
-            clcmd = self.close_file_prim(var=self.value_file_var)
-            initial_body.append(clcmd)
-
+        # format the paramter list
         param_list = [f'.{name}({value})'
                       for name, value in self.parameters.items()]
+        param_list = f',\n{2*self.TAB}'.join(param_list)
 
         # add proper indentation and newlines to strings in the initial body
-        initial_body = [f'{2*SVTAB}{elem}' for elem in initial_body]
+        initial_body = [f'{2*self.TAB}{elem}' for elem in initial_body]
         initial_body = '\n'.join(initial_body)
+
+        # format declarations
+        declarations = [f'{self.TAB}{type_} {name};'
+                        for type_, name in self.declarations.values()]
+        declarations = '\n'.join(declarations)
+
+        # format assignments
+        assigns = [f'{self.TAB}assign {lhs}={rhs};'
+                   for lhs, rhs in self.assigns.values()]
+        assigns = '\n'.join(assigns)
+
+        # determine the top module name
+        if self.top_module:
+            top_module = self.top_module
+        else:
+            top_module = f'{self.circuit_name}_tb'
 
         # fill out values in the testbench template
         src = src_tpl.format(
-            declarations='\n'.join(self.declarations),
+            declarations=declarations,
+            assigns=assigns,
             initial_body=initial_body,
-            port_list=f',\n{2*SVTAB}'.join(port_list),
-            param_list=f',\n{2*SVTAB}'.join(param_list),
+            port_list=port_list,
+            param_list=param_list,
             circuit_name=self.circuit_name,
-            top_module=self.top_module if self.top_module is not None else
-            f"{self.circuit_name}_tb"
+            top_module=top_module
         )
 
         # return the string representing the system-verilog testbench
@@ -832,30 +726,6 @@ class SystemVerilogTarget(VerilogTarget):
         # post-process GetValue actions
         self.post_process_get_value_actions(actions)
 
-    @staticmethod
-    def is_float_like_port(port):
-        return isinstance(port, (RealIn, RealOut, RealInOut,
-                                 ElectIn, ElectOut, ElectInOut))
-
-    def post_process_get_value_actions(self, actions):
-        # extract the GetValue actions and return immediately
-        # if there are none
-        get_value_actions = [action for action in actions
-                             if isinstance(action, GetValue)]
-        if len(get_value_actions) == 0:
-            return
-
-        # read lines in the GetValue file
-        with open(Path(self.directory) / self.value_file_name, 'r') as f:
-            lines = f.readlines()
-
-        # write results back into the "value" property of the action
-        for line, action in zip(lines, get_value_actions):
-            if self.is_float_like_port(action.port):
-                action.value = float(line.strip())
-            else:
-                action.value = int(line.strip())
-
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
         tb_file = self.directory / Path(f'{self.circuit_name}_tb.sv')
@@ -889,10 +759,6 @@ class SystemVerilogTarget(VerilogTarget):
     @staticmethod
     def input_wire(name):
         return f'__{name}_wire'
-
-    @staticmethod
-    def make_line(text, tabs=0, tab='    ', nl='\n'):
-        return f'{tabs*tab}{text}{nl}'
 
     def link_kratos_lib(self):
         from kratos_runtime import get_lib_path

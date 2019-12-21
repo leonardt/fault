@@ -1,8 +1,10 @@
 import fault
 from pathlib import Path
 import magma as m
+from .util import (is_valid_file_mode, file_mode_allows_reading,
+                   file_mode_allows_writing)
 import fault.actions as actions
-from fault.actions import Poke, Eval
+from fault.actions import Poke, Eval, FileOpen, FileClose, GetValue, Loop, If
 from fault.verilog_target import VerilogTarget
 from fault.verilog_utils import verilator_name
 import fault.value_utils as value_utils
@@ -85,6 +87,9 @@ int main(int argc, char **argv) {{
 
 
 class VerilatorTarget(VerilogTarget):
+    BLOCK_START = '{'
+    BLOCK_END = '}'
+
     def __init__(self, circuit, directory="build/",
                  flags=None, skip_compile=False, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
@@ -373,108 +378,125 @@ class VerilatorTarget(VerilogTarget):
         return code
 
     def make_loop(self, i, action):
-        code = []
-        code.append(f"for (int {action.loop_var} = 0;"
-                    f" {action.loop_var} < {action.n_iter};"
-                    f" {action.loop_var}++) {{")
+        # construct the "for" loop condition
+        if action.count == 'up':
+            cond = '; '.join([
+                f'int {action.loop_var} = 0',
+                f'{action.loop_var} < {action.n_iter}',
+                f'{action.loop_var}++'
+            ])
+        elif action.count == 'down':
+            cond = '; '.join([
+                f'int {action.loop_var} = {action.n_iter - 1}',
+                f'{action.loop_var} >= 0',
+                f'{action.loop_var}--'
+            ])
+        else:
+            raise ValueError(f'Unknown count direction: {action.count}.')
 
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
+        # return code representing the for loop
+        return self.make_block(i, 'for', cond, action.actions)
 
-        code.append("}")
-        return code
+    @staticmethod
+    def in_var(file):
+        return f'{file.name_without_ext}_in'
+
+    @staticmethod
+    def fd_var(file):
+        return f'{file.name_without_ext}_file'
 
     def make_file_open(self, i, action):
-        name = action.file.name_without_ext
-        code = f"""\
-char {name}_in[{action.file.chunk_size}] = {{0}};
-FILE *{name}_file = fopen("{action.file.name}", \"{action.file.mode}\");
-if ({name}_file == NULL) {{
-    std::cout << "Could not open file {action.file.name}" << std::endl;
-    return 1;
-}}"""
-        return code.splitlines()
+        # make sure the file mode is supported
+        if not is_valid_file_mode(action.file.mode):
+            raise NotImplementedError(action.file.mode)
+
+        # declare the file read variable if the file mode allows reading
+        if file_mode_allows_reading(action.file.mode):
+            in_ = self.in_var(action.file)
+            decl_rd_var = [f'char {in_}[{action.file.chunk_size}] = {{0}};']
+        else:
+            decl_rd_var = []
+
+        fd = self.fd_var(action.file)
+        err_msg = f'Could not open file {action.file.name}'
+
+        return self.generate_action_code(i, decl_rd_var + [
+            f'FILE *{fd} = fopen("{action.file.name}", "{action.file.mode}");',
+            If(f'{fd} == NULL', [
+                f'std::cout << "{err_msg}" << std::endl;',
+                f'return 1;'
+            ])
+        ])
 
     def make_file_close(self, i, action):
-        return [f"fclose({action.file.name_without_ext}_file);"]
+        fd_var = self.fd_var(action.file)
+        return [f'fclose({fd_var});']
+
+    def write_byte(self, fd, expr):
+        return f'fputc({expr}, {fd})'
 
     def make_file_write(self, i, action):
-        value = f"top->{verilator_name(action.value.name)}"
-        if action.file.endianness == "big":
-            loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
-        else:
-            loop_expr = f"int i = 0; i < {action.file.chunk_size}; i++"
-        code = f"""\
-for ({loop_expr}) {{
-    int result = fputc(({value} >> (i * 8)) & 0xFF,
-                       {action.file.name_without_ext}_file);
-    if (result == EOF) {{
-        std::cout << "Error writing to {action.file.name_without_ext}"
-                  << std::endl;
-        break;
-    }}
-}}
-"""
-        return code.splitlines()
+        assert file_mode_allows_writing(action.file.mode), \
+            f'File mode {action.file.mode} is not compatible with writing.'
+
+        idx = 'i'
+        fd = self.fd_var(action.file)
+        value = f'top->{verilator_name(action.value.name)}'
+        byte_expr = f'({value} >> ({idx} * 8)) & 0xFF'
+        err_msg = f'Error writing to {action.file.name_without_ext}'
+
+        return self.generate_action_code(i, [
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     'int result = ' + self.write_byte(fd, byte_expr) + ';',
+                     If(f'result == EOF', [
+                         f'std::cout << "{err_msg}" << std::endl;',
+                         'break;'
+                     ]),
+                 ])
+        ])
 
     def make_file_read(self, i, action):
-        if action.file.endianness == "big":
-            loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
-        else:
-            loop_expr = f"int i = 0; i < {action.file.chunk_size}; i++"
-        code = f"""\
-for ({loop_expr}) {{
-    int result =  fgetc({action.file.name_without_ext}_file);
-    if (result == EOF) {{
-        std::cout << "Reached end of file {action.file.name_without_ext}"
-                  << std::endl;
-        break;
-    }}
-    {action.file.name_without_ext}_in[i] = result;
-}}
-"""
-        return code.splitlines()
+        assert file_mode_allows_reading(action.file.mode), \
+            f'File mode {action.file.mode} is not compatible with reading.'
+
+        idx = 'i'
+        fd = self.fd_var(action.file)
+        in_ = self.in_var(action.file)
+        err_msg = f'Reached end of file {action.file.name_without_ext}'
+
+        return self.generate_action_code(i, [
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     f'int result = fgetc({fd});',
+                     If(f'result == EOF', [
+                         f'std::cout << "{err_msg}" << std::endl;',
+                         'break;'
+                     ]),
+                     f'{in_}[{idx}] = result;'
+                 ])
+        ])
 
     def make_while(self, i, action):
-        code = []
         cond = self.compile_expression(action.loop_cond)
-
-        code.append(f"while ({cond}) {{")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("}")
-
-        return code
+        return self.make_block(i, 'while', cond, action.actions)
 
     def make_if(self, i, action):
-        code = []
+        # get code for if statement
         cond = self.compile_expression(action.cond)
+        if_code = self.make_block(i, 'if', cond, action.actions)
 
-        code.append(f"if ({cond}) {{")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("}")
-
-        if action.else_actions:
-            code[-1] += " else {"
-            for inner_action in action.else_actions:
-                # TODO: Handle relative offset of sub-actions
-                inner_code = self.generate_action_code(i, inner_action)
-                code += ["    " + x for x in inner_code]
-
-            code.append("}")
-
-        return code
+        # add code for else statement (if needed)
+        if not action.else_actions:
+            return if_code
+        else:
+            else_code = self.make_block(i, 'else', None, action.else_actions)
+            else_code[0] = f'{self.BLOCK_END} else {self.BLOCK_START}'
+            return if_code[:-1] + else_code
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta) and \
@@ -492,8 +514,10 @@ for ({loop_expr}) {{
         raise NotImplementedError
 
     def make_get_value(self, i, action):
-        # TODO: implement GetValue action
-        raise NotImplementedError
+        fd_var = self.fd_var(self.value_file)
+        fmt = action.get_format()
+        value = f'top->{verilator_name(action.port.name)}'
+        return [f'fprintf({fd_var}, "{fmt}\\n", {value});']
 
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
@@ -511,6 +535,12 @@ for ({loop_expr}) {{
             '<sys/types.h>',
             '<sys/stat.h>',
         ]
+
+        # if we're using the GetValue feature, then we need to open/close a
+        # file in which GetValue results will be written
+        if any(isinstance(action, GetValue) for action in actions):
+            actions = [FileOpen(self.value_file)] + actions
+            actions += [FileClose(self.value_file)]
 
         main_body = ""
         for i, action in enumerate(actions):
@@ -587,6 +617,9 @@ for ({loop_expr}) {{
         log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
         with open(log, 'w') as f:
             f.write(result.stdout)
+
+        # post-process GetValue actions
+        self.post_process_get_value_actions(actions)
 
     def add_assumptions(self, circuit, actions, i):
         main_body = ""

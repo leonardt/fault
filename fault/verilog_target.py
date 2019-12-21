@@ -1,21 +1,27 @@
 from abc import abstractmethod
 import magma as m
+from .file import File
 from fault.target import Target
 from pathlib import Path
 import fault.actions as actions
 from fault.util import flatten
 import os
 from fault.select_path import SelectPath
-from fault.verilog_utils import verilog_name
 
 
 class VerilogTarget(Target):
     """
     Provides reuseable target logic for compiling circuits into verilog files.
     """
+
+    TAB = '    '
+    BLOCK_START = None
+    BLOCK_END = None
+
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, include_verilog_libraries=None,
-                 magma_output="verilog", magma_opts=None, use_kratos=False):
+                 magma_output="verilog", magma_opts=None, use_kratos=False,
+                 value_file_name='get_value_file.txt'):
         super().__init__(circuit)
 
         if circuit_name is None:
@@ -57,6 +63,11 @@ class VerilogTarget(Target):
         self.assumptions = []
         self.guarantees = []
 
+        # set up value file for storing user-accessible resuls
+        value_file_path = (Path(self.directory) / value_file_name).resolve()
+        self.value_file = File(name=str(value_file_path), tester=None,
+                               mode='w', chunk_size=None, endianness=None)
+
     def make_assume(self, i, action):
         self.assumptions.append(action)
         return ""
@@ -82,7 +93,16 @@ class VerilogTarget(Target):
         return flatten(result)
 
     def generate_action_code(self, i, action):
-        if isinstance(action, (actions.PortAction)) and \
+        if isinstance(action, str):
+            # if "action" is a string, assume it's a line of code, and return
+            # a list containing just the string, with no further processing
+            return [action]
+        elif isinstance(action, list):
+            # if "action" is a list, generate code for each element and then
+            # concatenate the results
+            return flatten([self.generate_action_code(i, elem)
+                            for elem in action])
+        elif isinstance(action, (actions.PortAction)) and \
                 isinstance(action.port, m.ArrayType) and \
                 not isinstance(action.port.T, m.BitKind):
             return self.generate_array_action_code(i, action)
@@ -91,41 +111,41 @@ class VerilogTarget(Target):
                 isinstance(action.port[-1], m.ArrayType) and \
                 not isinstance(action.port[-1].T, m.BitKind):
             return self.generate_array_action_code(i, action)
-        if isinstance(action, actions.Poke):
+        elif isinstance(action, actions.Poke):
             return self.make_poke(i, action)
-        if isinstance(action, actions.Print):
+        elif isinstance(action, actions.Print):
             return self.make_print(i, action)
-        if isinstance(action, actions.Expect):
+        elif isinstance(action, actions.Expect):
             return self.make_expect(i, action)
-        if isinstance(action, actions.Eval):
+        elif isinstance(action, actions.Eval):
             return self.make_eval(i, action)
-        if isinstance(action, actions.Step):
+        elif isinstance(action, actions.Step):
             return self.make_step(i, action)
-        if isinstance(action, actions.Assume):
+        elif isinstance(action, actions.Assume):
             return self.make_assume(i, action)
-        if isinstance(action, actions.Guarantee):
+        elif isinstance(action, actions.Guarantee):
             return self.make_guarantee(i, action)
-        if isinstance(action, actions.Loop):
+        elif isinstance(action, actions.Loop):
             return self.make_loop(i, action)
-        if isinstance(action, actions.FileOpen):
+        elif isinstance(action, actions.FileOpen):
             return self.make_file_open(i, action)
-        if isinstance(action, actions.FileWrite):
+        elif isinstance(action, actions.FileWrite):
             return self.make_file_write(i, action)
-        if isinstance(action, actions.FileRead):
+        elif isinstance(action, actions.FileRead):
             return self.make_file_read(i, action)
-        if isinstance(action, actions.FileClose):
+        elif isinstance(action, actions.FileClose):
             return self.make_file_close(i, action)
-        if isinstance(action, actions.While):
+        elif isinstance(action, actions.While):
             return self.make_while(i, action)
-        if isinstance(action, actions.If):
+        elif isinstance(action, actions.If):
             return self.make_if(i, action)
-        if isinstance(action, actions.Var):
+        elif isinstance(action, actions.Var):
             return self.make_var(i, action)
-        if isinstance(action, actions.FileScanFormat):
+        elif isinstance(action, actions.FileScanFormat):
             return self.make_file_scan_format(i, action)
-        if isinstance(action, actions.Delay):
+        elif isinstance(action, actions.Delay):
             return self.make_delay(i, action)
-        if isinstance(action, actions.GetValue):
+        elif isinstance(action, actions.GetValue):
             return self.make_get_value(i, action)
         raise NotImplementedError(action)
 
@@ -192,3 +212,41 @@ class VerilogTarget(Target):
     @abstractmethod
     def make_get_value(self, i, action):
         pass
+
+    def make_block(self, i, name, cond, actions):
+        '''
+        Generic function that creates a properly indented code block.  This
+        is useful for constructing "if", "while", and "for" blocks
+        Format:
+        {name} ({cond}) BLOCK_START
+            actions[0]
+            actions[1]
+            ...
+        BLOCK_END
+        '''
+
+        # set defaults
+        if actions is None:
+            actions = []
+
+        # build up the code block
+        code = []
+        if cond is not None:
+            code += [f'{name} ({cond}) {self.BLOCK_START}']
+        else:
+            code += [f'{name} {self.BLOCK_START}']
+        code += [f'{self.TAB}{line}'
+                 for line in self.generate_action_code(i, actions)]
+        code += [f'{self.BLOCK_END}']
+
+        # return the code block
+        return code
+
+    def post_process_get_value_actions(self, all_actions):
+        get_value_actions = [action for action in all_actions
+                             if isinstance(action, actions.GetValue)]
+        if len(get_value_actions) > 0:
+            with open(self.value_file.name, 'r') as f:
+                lines = f.readlines()
+            for line, action in zip(lines, get_value_actions):
+                action.update_from_line(line)
