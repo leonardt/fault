@@ -676,7 +676,6 @@ def test_poke_bitwise(target, simulator):
     tester.circuit.O[0].expect(1)
     tester.circuit.O[1].expect(0)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
