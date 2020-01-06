@@ -24,14 +24,11 @@ def verilog_name(name):
 
 
 def verilator_name(name):
-    if isinstance(name, m.ref.ArrayRef):
-        array_name = verilog_name(name.array.name)
-        if isinstance(name.array.T, m._BitKind):
-            # Setting a specific bit is done using bit twiddling, see
-            # https://github.com/leonardt/fault/pull/194 for more info
-            return f"{array_name}"
-        else:
-            return f"{array_name}_{name.index}"
+    if isinstance(name, m.ref.ArrayRef) and isinstance(name.array.T, m._BitKind):
+        # Setting a specific bit is done using bit twiddling, so we return the
+        # full array see https://github.com/leonardt/fault/pull/194 for more
+        # info
+        name = verilog_name(name.array.name)
     else:
         name = verilog_name(name)
     # pg 21 of verilator 4.018 manual
