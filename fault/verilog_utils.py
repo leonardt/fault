@@ -27,6 +27,8 @@ def verilator_name(name):
     if isinstance(name, m.ref.ArrayRef):
         array_name = verilog_name(name.array.name)
         if isinstance(name.array.T, m._BitKind):
+            # Setting a specific bit is done using bit twiddling, see
+            # https://github.com/leonardt/fault/pull/194 for more info
             return f"{array_name}"
         else:
             return f"{array_name}_{name.index}"
