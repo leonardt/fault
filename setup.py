@@ -13,7 +13,7 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='2.0.19',
+    version='2.0.22',
     description=DESCRIPTION,
     scripts=[],
     packages=[
@@ -28,7 +28,8 @@ setup(
         "magma-lang",
         "pyyaml",
         "scipy",
-        "numpy"
+        "numpy",
+        "DeCiDa"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',

@@ -6,14 +6,15 @@ import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 import fault.actions as actions
 import tempfile
-import os
 import pytest
+from pathlib import Path
 from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
                      TestBasicClkCircuit, TestNestedArraysCircuit,
                      TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
                      TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
                      TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit,
-                     TestUInt64Circuit, TestUInt128Circuit)
+                     TestUInt64Circuit, TestUInt128Circuit,
+                     TestNestedArrayTupleCircuit)
 
 
 def pytest_generate_tests(metafunc):
@@ -129,6 +130,22 @@ def test_tester_peek(target, simulator):
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
 
 
+def test_tester_no_clock_init():
+    circ = TestBasicClkCircuit
+    tester = fault.Tester(circ, circ.CLK)
+    tester.poke(circ.I, 0)
+    tester.expect(circ.O, 0)
+    with pytest.warns(DeprecationWarning,
+                      match="Clock has not been initialized, the initial "
+                            "value will be X for system verilog targets.  In "
+                            "a future release, this will be an error"):
+        tester.step()
+    # should not warn more than once
+    with pytest.warns(None) as record:
+        tester.step()
+        assert len(record) == 0
+
+
 def test_tester_peek_input(target, simulator):
     circ = TestBasicCircuit
     tester = fault.Tester(circ)
@@ -179,6 +196,56 @@ def test_tester_nested_arrays_bulk(target, simulator):
     expected.append(Eval())
     for i in range(3):
         expected.append(Expect(circ.O[i], val[i]))
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_double_nested_arrays_broadcast(target, simulator):
+    circ = TestDoubleNestedArraysCircuit
+    tester = fault.Tester(circ)
+    expected = []
+    val = random.randint(0, (1 << 4) - 1)
+    tester.poke(circ.I, val)
+    for j in range(2):
+        for i in range(3):
+            expected.append(Poke(circ.I[j][i], val))
+    tester.eval()
+    expected.append(Eval())
+    for j in range(2):
+        for i in range(3):
+            tester.expect(circ.O[j][i], val)
+            expected.append(Expect(circ.O[j][i], val))
+    for i, exp in enumerate(expected):
+        check(tester.actions[i], exp)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+
+
+def test_tester_nested_array_tuple_broadcast(target, simulator):
+    circ = TestNestedArrayTupleCircuit
+    tester = fault.Tester(circ)
+    expected = []
+    val = (random.randint(0, (1 << 4) - 1), random.randint(0, (1 << 4) - 1))
+    tester.poke(circ.I, val)
+    for j in range(2):
+        for i in range(3):
+            expected.append(Poke(circ.I[j][i].a, val[0]))
+            expected.append(Poke(circ.I[j][i].b, val[1]))
+    tester.eval()
+    expected.append(Eval())
+    for j in range(2):
+        for i in range(3):
+            tester.expect(circ.O[j][i], val)
+            expected.append(Expect(circ.O[j][i].a, val[0]))
+            expected.append(Expect(circ.O[j][i].b, val[1]))
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
@@ -407,93 +474,123 @@ def test_tester_loop(target, simulator):
 
 
 def test_tester_file_io(target, simulator):
-    circ = TestByteCircuit
-    tester = fault.Tester(circ)
-    tester.zero_inputs()
-    file_in = tester.file_open("test_file_in.raw", "r")
-    out_file = "test_file_out.raw"
-    file_out = tester.file_open(out_file, "w")
-    loop = tester.loop(8)
-    value = loop.file_read(file_in)
-    loop.poke(circ.I, value)
-    loop.eval()
-    loop.expect(circ.O, loop.index)
-    loop.file_write(file_out, circ.O)
-    tester.file_close(file_in)
-    tester.file_close(file_out)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        if os.path.exists(_dir + "/" + out_file):
-            os.remove(_dir + "/" + out_file)
-        with open(_dir + "/test_file_in.raw", "wb") as file:
+        # determine absolute paths to file I/O locations
+        test_file_in = (Path(_dir) / 'test_file_in.raw').resolve()
+        test_file_out = (Path(_dir) / 'test_file_out.raw').resolve()
+        if test_file_out.exists():
+            test_file_out.unlink()
+
+        # create testbench
+        circ = TestByteCircuit
+        tester = fault.Tester(circ)
+        tester.zero_inputs()
+        file_in = tester.file_open(str(test_file_in), "r")
+        file_out = tester.file_open(str(test_file_out), "w")
+        loop = tester.loop(8)
+        value = loop.file_read(file_in)
+        loop.poke(circ.I, value)
+        loop.eval()
+        loop.expect(circ.O, loop.index)
+        loop.file_write(file_out, circ.O)
+        tester.file_close(file_in)
+        tester.file_close(file_out)
+
+        # write input
+        with open(test_file_in, "wb") as file:
             file.write(bytes([i for i in range(8)]))
+
+        # run simulation
         if target == "verilator":
-            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+            tester.compile_and_run(target, directory=_dir,
+                                   flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
-        with open(_dir + "/test_file_out.raw", "rb") as file:
+
+        # read output
+        with open(test_file_out, "rb") as file:
             expected = bytes([i for i in range(8)])
             assert file.read(8) == expected
 
 
 def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
-    circ = TestUInt32Circuit
-    tester = fault.Tester(circ)
-    tester.zero_inputs()
-    file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4,
-                               endianness="big")
-    out_file = "test_file_out.raw"
-    file_out = tester.file_open(out_file, "w", chunk_size=4, endianness="big")
-    loop = tester.loop(8)
-    value = loop.file_read(file_in)
-    loop.poke(circ.I, value)
-    loop.eval()
-    loop.expect(circ.O, loop.index)
-    loop.file_write(file_out, circ.O)
-    tester.file_close(file_in)
-    tester.file_close(file_out)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        if os.path.exists(_dir + "/" + out_file):
-            os.remove(_dir + "/" + out_file)
-        with open(_dir + "/test_file_in.raw", "wb") as file:
+        # determine absolute paths to file I/O locations
+        test_file_in = (Path(_dir) / 'test_file_in.raw').resolve()
+        test_file_out = (Path(_dir) / 'test_file_out.raw').resolve()
+        if test_file_out.exists():
+            test_file_out.unlink()
+
+        # create testbench
+        circ = TestUInt32Circuit
+        tester = fault.Tester(circ)
+        tester.zero_inputs()
+        file_in = tester.file_open(str(test_file_in), "r", chunk_size=4,
+                                   endianness="big")
+        file_out = tester.file_open(str(test_file_out), "w", chunk_size=4,
+                                    endianness="big")
+        loop = tester.loop(8)
+        value = loop.file_read(file_in)
+        loop.poke(circ.I, value)
+        loop.eval()
+        loop.expect(circ.O, loop.index)
+        loop.file_write(file_out, circ.O)
+        tester.file_close(file_in)
+        tester.file_close(file_out)
+
+        # write input
+        with open(test_file_in, "wb") as file:
             for i in range(8):
                 file.write(bytes([0, 0, 0, i]))
+
+        # run simulation
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
-        with open(_dir + "/test_file_out.raw", "rb") as file:
-            expected = bytes([i for i in range(8 * 32)])
+
+        # read output
+        with open(test_file_out, "rb") as file:
             for i in range(8):
                 assert file.read(4) == bytes([0, 0, 0, i])
 
 
 def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
-    circ = TestUInt32Circuit
-    tester = fault.Tester(circ)
-    tester.zero_inputs()
-    file_in = tester.file_open("test_file_in.raw", "r", chunk_size=4)
-    out_file = "test_file_out.raw"
-    file_out = tester.file_open(out_file, "w", chunk_size=4)
-    loop = tester.loop(8)
-    value = loop.file_read(file_in)
-    loop.poke(circ.I, value)
-    loop.eval()
-    loop.expect(circ.O, loop.index)
-    loop.file_write(file_out, circ.O)
-    tester.file_close(file_in)
-    tester.file_close(file_out)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        if os.path.exists(_dir + "/" + out_file):
-            os.remove(_dir + "/" + out_file)
-        with open(_dir + "/test_file_in.raw", "wb") as file:
+        # determine absolute paths to file I/O locations
+        test_file_in = (Path(_dir) / 'test_file_in.raw').resolve()
+        test_file_out = (Path(_dir) / 'test_file_out.raw').resolve()
+        if test_file_out.exists():
+            test_file_out.unlink()
+
+        # create testbench
+        circ = TestUInt32Circuit
+        tester = fault.Tester(circ)
+        tester.zero_inputs()
+        file_in = tester.file_open(str(test_file_in), "r", chunk_size=4)
+        file_out = tester.file_open(str(test_file_out), "w", chunk_size=4)
+        loop = tester.loop(8)
+        value = loop.file_read(file_in)
+        loop.poke(circ.I, value)
+        loop.eval()
+        loop.expect(circ.O, loop.index)
+        loop.file_write(file_out, circ.O)
+        tester.file_close(file_in)
+        tester.file_close(file_out)
+
+        # write input
+        with open(test_file_in, "wb") as file:
             for i in range(8):
                 file.write(bytes([i, 0, 0, 0]))
+
+        # run simulation
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
-        with open(_dir + "/test_file_out.raw", "rb") as file:
-            expected = bytes([i for i in range(8 * 32)])
+
+        # read output
+        with open(test_file_out, "rb") as file:
             for i in range(8):
                 assert file.read(4) == bytes([i, 0, 0, 0])
 
@@ -571,24 +668,33 @@ def test_tester_if(target, simulator):
 def test_tester_file_scanf(target, simulator):
     if simulator == "iverilog":
         pytest.skip("iverilog does not support scanf")
-    circ = TestUInt32Circuit
-    tester = fault.Tester(circ)
-    tester.zero_inputs()
-    file_in = tester.file_open("test_file_in.txt", "r")
-    config_addr = tester.Var("config_addr", BitVector[32])
-    config_data = tester.Var("config_data", BitVector[32])
-    loop = tester.loop(8)
-    loop.file_scanf(file_in, "%x %x", config_addr, config_data)
-    loop.poke(circ.I, config_addr + 1)
-    loop.eval()
-    loop.expect(circ.O, config_addr + 1)
-    loop.poke(circ.I, config_data)
-    loop.eval()
-    loop.expect(circ.O, config_data)
-    tester.file_close(file_in)
+
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        with open(_dir + "/test_file_in.txt", "w") as file:
+        # determine absolute paths to file I/O locations
+        test_file_in = (Path(_dir) / 'test_file_in.txt').resolve()
+
+        # create testbench
+        circ = TestUInt32Circuit
+        tester = fault.Tester(circ)
+        tester.zero_inputs()
+        file_in = tester.file_open(str(test_file_in), "r")
+        config_addr = tester.Var("config_addr", BitVector[32])
+        config_data = tester.Var("config_data", BitVector[32])
+        loop = tester.loop(8)
+        loop.file_scanf(file_in, "%x %x", config_addr, config_data)
+        loop.poke(circ.I, config_addr + 1)
+        loop.eval()
+        loop.expect(circ.O, config_addr + 1)
+        loop.poke(circ.I, config_data)
+        loop.eval()
+        loop.expect(circ.O, config_data)
+        tester.file_close(file_in)
+
+        # write input
+        with open(test_file_in, "w") as file:
             file.write(hex(int(BitVector.random(32)))[2:])
+
+        # run simulation
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:

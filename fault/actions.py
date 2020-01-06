@@ -90,9 +90,23 @@ def is_output(port):
         return not port.isoutput()
 
 
+class GetValue(Action):
+    def __init__(self, port):
+        super().__init__()
+        self.port = port
+
+    def __str__(self):
+        return f'GetValue("{self.port}")'
+
+    def retarget(self, new_circuit, clock):
+        cls = type(self)
+        new_port = new_circuit.interface.ports[str(self.port.name)]
+        return cls(new_port)
+
+
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None):
+                 above=None, below=None, caller=None):
         # call super constructor
         super().__init__(port, value)
 
@@ -109,13 +123,21 @@ class Expect(PortAction):
             # sanity check
             assert rel_tol >= 0 and abs_tol >= 0, 'rel_tol and abs_tol must be non-negative.'  # noqa
 
-            above = value - rel_tol * value - abs_tol
-            below = value + rel_tol * value + abs_tol
+            above = value - rel_tol * abs(value) - abs_tol
+            below = value + rel_tol * abs(value) + abs_tol
 
         # save settings
         self.strict = strict
         self.above = above
         self.below = below
+        self.caller = caller
+
+    @property
+    def traceback(self):
+        if self.caller is not None:
+            return f'{self.caller.filename}:{self.caller.lineno}'
+        else:
+            return None
 
 
 class Assume(PortAction):

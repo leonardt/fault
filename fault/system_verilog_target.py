@@ -1,7 +1,9 @@
+import warnings
 from fault.verilog_target import VerilogTarget, verilog_name
 import magma as m
 from pathlib import Path
 import fault.actions as actions
+from fault.actions import GetValue
 from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
                      AbstractBitVector)
 import fault.value_utils as value_utils
@@ -10,13 +12,16 @@ from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
-from fault.real_type import RealKind
+from fault.real_type import RealKind, RealIn, RealOut, RealInOut
+from fault.elect_type import ElectIn, ElectOut, ElectInOut
 import os
 from numbers import Number
 
 
+SVTAB = '    '
+
 src_tpl = """\
-module {circuit_name}_tb;
+module {top_module};
 {declarations}
 
     {circuit_name} #(
@@ -39,12 +44,14 @@ class SystemVerilogTarget(VerilogTarget):
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
-                 num_cycles=10000, dump_vcd=True, no_warning=False,
-                 sim_env=None, ext_model_file=None, ext_libs=None,
-                 defines=None, flags=None, inc_dirs=None,
+                 num_cycles=10000, dump_waveforms=True, dump_vcd=None,
+                 no_warning=False, sim_env=None, ext_model_file=None,
+                 ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 vcs_waveform_file=None):
+                 waveform_file=None, use_kratos=False,
+                 value_file_name='get_value_file.txt',
+                 value_file_var='__get_value_file_fid'):
         """
         circuit: a magma circuit
 
@@ -60,7 +67,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         magma_opts: Options dictionary for `magma.compile` command
 
-        simulator: "ncsim", "vcs", or "iverilog"
+        simulator: "ncsim", "vcs", "iverilog", or "vivado"
 
         timescale: Set the timescale for the verilog simulation
                    (default 1ns/1ns)
@@ -117,7 +124,19 @@ class SystemVerilogTarget(VerilogTarget):
                    is an error.  If 'realtime', print out STDOUT as lines come
                    in, then print STDERR after the process completes.
 
-        vcs_waveform_file: name of file to dump waveforms for vcs
+        dump_waveforms: Enable tracing of internal values
+
+        waveform_file: name of file to dump waveforms (default is
+                       "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
+
+        use_kratos: If True, set the environment up for debugging in kratos
+
+        value_file_name: name of the file to which results of "get_value"
+                         commands should be dumped
+
+        value_file_var: name of the integer variable to which the FID of
+                        the value file used for "get_value" commands should
+                        be store.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -140,13 +159,13 @@ class SystemVerilogTarget(VerilogTarget):
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
-                         magma_opts)
+                         magma_opts, use_kratos=use_kratos)
 
         # sanity check
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
-        if simulator not in {"vcs", "ncsim", "iverilog"}:
+        if simulator not in {"vcs", "ncsim", "iverilog", "vivado"}:
             raise ValueError(f"Unsupported simulator {simulator}")
 
         # save settings
@@ -154,21 +173,46 @@ class SystemVerilogTarget(VerilogTarget):
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
         self.num_cycles = num_cycles
-        self.dump_vcd = dump_vcd
+        self.dump_waveforms = dump_waveforms
+        if dump_vcd is not None:
+            warnings.warn("tester.compile_and_run parameter dump_vcd is "
+                          "deprecated; use dump_waveforms instead.",
+                          DeprecationWarning)
+            self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
         self.declarations = []
-        self.sim_env = sim_env
+        self.sim_env = sim_env if sim_env is not None else {}
+        self.sim_env.update(os.environ)
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module
+        self.top_module = top_module if not use_kratos else "TOP"
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
-        self.vcs_waveform_file = vcs_waveform_file
+        self.waveform_file = waveform_file
+        self.value_file_name = value_file_name
+        self.value_file_var = value_file_var
+        if self.waveform_file is None and self.dump_waveforms:
+            if self.simulator == "vcs":
+                self.waveform_file = "waveforms.vpd"
+            elif self.simulator in {"ncsim", "iverilog", "vivado"}:
+                self.waveform_file = "waveforms.vcd"
+            else:
+                raise NotImplementedError(self.simulator)
+        self.use_kratos = use_kratos
+        # check to see if runtime is installed
+        if use_kratos:
+            import sys
+            assert sys.platform == "linux" or sys.platform == "linux2",\
+                "Currently only linux is supported"
+            if not fault.util.has_kratos_runtime():
+                raise ImportError("Cannot find kratos-runtime in the system. "
+                                  "Please do \"pip install kratos-runtime\" "
+                                  "to install.")
 
     def add_decl(self, *decls):
         self.declarations.extend(decls)
@@ -252,10 +296,8 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} = {value};']
-        if action.delay is None:
-            retval += [f'#{self.clock_step_delay};']
-        else:
+        retval += [f'{name} <= {value};']
+        if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
 
@@ -274,70 +316,205 @@ class SystemVerilogTarget(VerilogTarget):
         args = ', '.join(args)
         return [f'$write({args});']
 
-    def make_loop(self, i, action):
-        self.declarations.append(f"integer {action.loop_var};")
+    @classmethod
+    def block_prim(cls, type_, hdr=None, cmds=None):
+        # set defaults
+        if cmds is None:
+            cmds = []
+
+        # build up code
         code = []
-        code.append(f"for ({action.loop_var} = 0;"
-                    f" {action.loop_var} < {action.n_iter};"
-                    f" {action.loop_var}++) begin")
 
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
+        # create the header
+        if hdr is None:
+            code += [f'{type_} begin']
+        else:
+            code += [f'{type_} ({hdr}) begin']
 
-        code.append("end")
+        # create the body
+        code += [f'{SVTAB}{cmd}' for cmd in cmds]
+
+        # create the footer
+        code += [f'end']
+
+        # return the code block
         return code
 
+    @classmethod
+    def if_prim(cls, cond, cmds):
+        return cls.block_prim(type_='if', hdr=cond, cmds=cmds)
+
+    @classmethod
+    def for_loop_prim(cls, idx, loop_range, cmds):
+        # read out parameters of the loop
+        start = loop_range.start
+        stop = loop_range.stop
+        step = loop_range.step
+
+        # build initialization part of expression
+        init_expr = f'{idx} = {start}'
+
+        # build condition part of expression
+        if start <= stop:
+            cond_expr = f'{idx} < {stop}'
+        else:
+            cond_expr = f'{idx} > {stop}'
+
+        # build update part of expression
+        if step == 1:
+            up_expr = f'{idx}++'
+        elif step == -1:
+            up_expr = f'{idx}--'
+        elif step > 0:
+            up_expr = f'{idx} += {step}'
+        else:
+            up_expr = f'{idx} -= {-step}'
+
+        # build code representing the entire loop
+        hdr = f'{init_expr}; {cond_expr}; {up_expr}'
+
+        # return code for the loop
+        return cls.block_prim(type_='for', hdr=hdr, cmds=cmds)
+
+    def make_loop(self, i, action):
+        # process inner actions of the loop
+        cmds = []
+        for inner_action in action.actions:
+            cmds += self.generate_action_code(i, inner_action)
+
+        # declare a loop variable
+        idx = f'{action.loop_var}'
+        self.declarations.append(f"integer {idx};")
+
+        # determine the range of the for loop
+        loop_range = range(action.n_iter)
+
+        # return code representing the for loop
+        return self.for_loop_prim(idx=idx, loop_range=loop_range, cmds=cmds)
+
+    @staticmethod
+    def open_file_prim(path, var, mode):
+        return f'{var} = $fopen("{path}", "{mode}");'
+
     def make_file_open(self, i, action):
-        if action.file.mode not in {"r", "w"}:
+        # make sure the file mode is supported
+        if action.file.mode not in {'r', 'w'}:
             raise NotImplementedError(action.file.mode)
+
+        # declare variable for reading file
         name = action.file.name_without_ext
         bit_size = action.file.chunk_size * 8 - 1
-        self.declarations.append(
-            f"reg [{bit_size}:0] {name}_in;")
-        self.declarations.append(f"integer {name}_file;")
-        code = f"""\
-{name}_file = $fopen(\"{action.file.name}\", \"{action.file.mode}\");
-if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_file);
-"""  # noqa
-        return code.splitlines()
+        self.declarations.append(f'reg [{bit_size}:0] {name}_in;')
+
+        # declare variable to hold the file descriptor
+        fd_var = f'{name}_file'
+        self.declarations.append(f'integer {fd_var};')
+
+        # determine path to file and read/write mode
+        path = action.file.name
+        mode = action.file.mode
+
+        # generate code to open file
+        code = []
+        code += [self.open_file_prim(path=path, var=fd_var, mode=mode)]
+
+        # check that file was opened correctly
+        err_cmd = f'$error("Could not open file {path}: %0d", {fd_var});'
+        code += self.if_prim(cond=f'!{fd_var}', cmds=[err_cmd])
+
+        # return the code to open the file as a list of lines
+        return code
+
+    @staticmethod
+    def close_file_prim(var):
+        return f'$fclose({var});'
 
     def make_file_close(self, i, action):
-        return [f"$fclose({action.file.name_without_ext}_file);"]
+        fd_var = f'{action.file.name_without_ext}_file'
+        return [self.close_file_prim(var=fd_var)]
+
+    @staticmethod
+    def read_byte_prim(file_fd):
+        return f'$fgetc({file_fd})'
 
     def make_file_read(self, i, action):
-        decl = f"integer __i;"
+        # declare loop variable if needed
+        idx = '__i'
+        decl = f'integer {idx};'
         if decl not in self.declarations:
             self.declarations.append(decl)
-        if action.file.endianness == "big":
-            loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
+
+        # figure out how to loop over bytes to be written
+        chunk_size = action.file.chunk_size
+        if action.file.endianness == 'big':
+            for_range = range(chunk_size - 1, -1, -1)
         else:
-            loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
-        code = f"""\
-{action.file.name_without_ext}_in = 0;
-for ({loop_expr}) begin
-    {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
-end
-"""  # noqa
-        return code.splitlines()
+            for_range = range(chunk_size)
+
+        # determine command for reading one byte
+        in_var = f'{action.file.name_without_ext}_in'
+        fd_var = f'{action.file.name_without_ext}_file'
+        rdcmd = f'{in_var} |= {self.read_byte_prim(fd_var)} << (8 * {idx});'
+
+        # build up the code to implement the file read
+        code = []
+        code += [f'{in_var} = 0;']
+        code += self.for_loop_prim(idx=idx, loop_range=for_range, cmds=[rdcmd])
+
+        # return the code
+        return code
+
+    def write_byte_prim(self, file_fd, byte_expr):
+        if self.simulator == 'iverilog':
+            return f'$fputc({byte_expr}, {file_fd});'
+        else:
+            return f'$fwrite({file_fd}, "%c", {byte_expr});'
+
+    @staticmethod
+    def write_str_prim(file_fd, str_expr):
+        return f'$fwrite({file_fd}, {str_expr});'
 
     def make_file_write(self, i, action):
-        value = self.make_name(action.value)
-        mask_size = action.file.chunk_size * 8
-        decl = f"integer __i;"
+        # declare loop variable if needed
+        idx = '__i'
+        decl = f'integer {idx};'
         if decl not in self.declarations:
             self.declarations.append(decl)
-        if action.file.endianness == "big":
-            loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
+
+        # figure out how to loop over bytes to be written
+        value = self.make_name(action.value)
+        chunk_size = action.file.chunk_size
+        mask_size = chunk_size * 8
+        if action.file.endianness == 'big':
+            loop_range = range(chunk_size - 1, -1, -1)
         else:
-            loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
-        code = f"""\
-for ({loop_expr}) begin
-    $fwrite({action.file.name_without_ext}_file, \"%c\", ({value} >> (8 * __i)) & {mask_size}'hFF);
-end
-"""  # noqa
-        return code.splitlines()
+            loop_range = range(chunk_size)
+
+        # determine command for writing one byte
+        file_fd = f'{action.file.name_without_ext}_file'
+        byte_expr = f"({value} >> (8 * {idx})) & {mask_size}'hFF"
+        wrcmd = self.write_byte_prim(file_fd=file_fd, byte_expr=byte_expr)
+
+        # return the loop code
+        return self.for_loop_prim(idx=idx, loop_range=loop_range, cmds=[wrcmd])
+
+    def make_get_value(self, i, action):
+        # determine variable used for writing GetValue results
+        file_fd = self.value_file_var
+
+        # determine string representation of the value
+        if self.is_float_like_port(action.port):
+            fmt = '%0f'
+        else:
+            fmt = '%0d'
+        str_expr = f'"{fmt}\\n", {self.make_name(action.port)}'
+
+        # generate the command to write the string version of the signal to
+        # the file
+        wrcmd = self.write_str_prim(file_fd=file_fd, str_expr=str_expr)
+
+        # return the code
+        return [wrcmd]
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -365,85 +542,98 @@ end
         value = self.process_value(action.port, action.value)
 
         # determine the condition and error body
-        err_body = f'"Failed on action={i} checking port {debug_name}.'
+        err_hdr = ''
+        err_hdr += f'Failed on action={i} checking port {debug_name}'
+        if action.traceback is not None:
+            err_hdr += f' with traceback {action.traceback}'
         if action.above is not None:
             if action.below is not None:
                 # must be in range
-                cond = f'({action.above} <= {name}) && ({name} <= {action.below})'  # noqa
-                err_body += f' Expected %0f to %0f, got %0f", {action.above}, {action.below}, {name}'  # noqa
+                cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
+                err_msg = 'Expected %0f to %0f, got %0f'
+                err_args = [action.above, action.below, name]
             else:
                 # must be above
-                cond = f'{action.above} <= {name}'
-                err_body += f' Expected above %0f, got %0f", {action.above}, {name}'  # noqa
+                cond = f'!({action.above} <= {name})'
+                err_msg = 'Expected above %0f, got %0f'
+                err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
-                cond = f'{name} <= {action.below}'
-                err_body += f' Expected below %0f, got %0f", {action.below}, {name}'  # noqa
+                cond = f'!({name} <= {action.below})'
+                err_msg = 'Expected below %0f, got %0f'
+                err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
-                    cond = f'{name} === {value}'
+                    cond = f'!({name} === {value})'
                 else:
-                    cond = f'{name} == {value}'
-                err_body += f' Expected %x, got %x" , {value}, {name}'
+                    cond = f'!({name} == {value})'
+                err_msg = 'Expected %x, got %x'
+                err_args = [value, name]
+
+        # construct the body of the $error call
+        err_fmt_str = f'"{err_hdr}.  {err_msg}."'
+        err_body = [err_fmt_str] + err_args
+        err_body = ','.join([str(elem) for elem in err_body])
 
         # return a snippet of verilog implementing the assertion
-        retval = []
-        retval += [f'if (!({cond})) begin']
-        retval += [self.make_line(f'$error({err_body});', tabs=1)]
-        retval += ['end']
-        return retval
+        err_cmd = f'$error({err_body});'
+        return self.if_prim(cond=cond, cmds=[err_cmd])
 
     def make_eval(self, i, action):
-        # Eval implicit in SV simulations
-        return []
+        # Emulate eval by inserting a delay
+        return ['#1;']
 
     def make_step(self, i, action):
         name = verilog_name(action.clock.name)
         code = []
         for step in range(action.steps):
-            code.append(f"#5 {name} ^= 1;")
+            code.append(f"#{self.clock_step_delay} {name} ^= 1;")
         return code
+
+    @classmethod
+    def while_loop_prim(cls, cond, cmds):
+        return cls.block_prim(type_='while', hdr=cond, cmds=cmds)
 
     def make_while(self, i, action):
-        code = []
+        # compile the condition for the while loop
         cond = self.compile_expression(action.loop_cond)
 
-        code.append(f"while ({cond}) begin")
-
+        # process inner actions of the loop
+        cmds = []
         for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
+            cmds += self.generate_action_code(i, inner_action)
 
-        code.append("end")
-
-        return code
+        # return code for the while loop
+        return self.while_loop_prim(cond=cond, cmds=cmds)
 
     def make_if(self, i, action):
-        code = []
+        # compile the condition for the if statement
         cond = self.compile_expression(action.cond)
 
-        code.append(f"if ({cond}) begin")
-
+        # process inner actions of if statement
+        if_cmds = []
         for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
+            if_cmds += self.generate_action_code(i, inner_action)
 
-        code.append("end")
+        # get code for if statement
+        if_code = self.block_prim(type_='if', hdr=cond, cmds=if_cmds)
 
-        if action.else_actions:
-            code[-1] += " else begin"
+        # add code for else statement if needed
+        if not action.else_actions:
+            return if_code
+        else:
+            # process inner actions of else statement
+            else_cmds = []
             for inner_action in action.else_actions:
-                # TODO: Handle relative offset of sub-actions
-                inner_code = self.generate_action_code(i, inner_action)
-                code += ["    " + x for x in inner_code]
+                else_cmds += self.generate_action_code(i, inner_action)
 
-            code.append("end")
+            # get code for else statement
+            else_code = self.block_prim(type_='else', cmds=else_cmds)
 
-        return code
+            # return code with with nice formatting
+            return if_code[:-1] + ['end else begin'] + else_code[1:]
 
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
@@ -490,7 +680,7 @@ end
                 decls = [f'reg {width_str}{name};',
                          f'wire {width_str}{connect_to};',
                          f'assign {connect_to}={name};']
-                decls = [self.make_line(decl, tabs=1) for decl in decls]
+                decls = [f'{SVTAB}{decl}' for decl in decls]
                 self.add_decl(*decls)
 
                 # set the signal type to None to avoid re-declaring
@@ -503,43 +693,75 @@ end
 
             # declare the signal that will be connected to the pin, if needed
             if t is not None:
-                decl = self.make_line(f'{t} {width_str}{connect_to};', tabs=1)
+                decl = f'{SVTAB}{t} {width_str}{connect_to};'
                 self.add_decl(decl)
 
             # return the wiring statement describing how the testbench signal
             # is connected to the DUT
             return [f".{name}({connect_to})"]
 
-    def generate_code(self, actions, power_args, tab='    '):
-        initial_body = ""
+    def generate_code(self, actions, power_args):
+        # generate port list
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
             result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
 
-        if self.vcs_waveform_file is not None:
-            initial_body += f"""
-        $vcdplusfile("{self.vcs_waveform_file}");
-        $vcdpluson();
-        $vcdplusmemon();
-"""
+        # build up the body of the initial block
+        initial_body = []
 
+        # set up probing
+        if self.dump_waveforms and self.simulator == "vcs":
+            initial_body += [f'$vcdplusfile("{self.waveform_file}");',
+                             f'$vcdpluson();',
+                             f'$vcdplusmemon();']
+        elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
+            # https://iverilog.fandom.com/wiki/GTKWAVE
+            initial_body += [f'$dumpfile("{self.waveform_file}");',
+                             f'$dumpvars(0, dut);']
+
+        # if we're using the GetValue feature, then we need to open a file to
+        # which GetValue results will be written
+        if any(isinstance(action, GetValue) for action in actions):
+            has_get_value = True
+            self.add_decl(f'{SVTAB}integer {self.value_file_var};')
+            path = (Path(self.directory) / self.value_file_name).resolve()
+            opcmd = self.open_file_prim(path=path,
+                                        var=self.value_file_var,
+                                        mode='w')
+            initial_body.append(opcmd)
+        else:
+            has_get_value = False
+
+        # handle all of user-specified actions in the testbench
         for i, action in enumerate(actions):
-            code = self.generate_action_code(i, action)
-            for line in code:
-                initial_body += f"        {line}\n"
+            initial_body += self.generate_action_code(i, action)
+
+        # if we're using the GetValue feature, then we need to close the file
+        # used to store GetValue results at the end of the simulation.
+        if has_get_value:
+            clcmd = self.close_file_prim(var=self.value_file_var)
+            initial_body.append(clcmd)
 
         param_list = [f'.{name}({value})'
                       for name, value in self.parameters.items()]
 
+        # add proper indentation and newlines to strings in the initial body
+        initial_body = [f'{2*SVTAB}{elem}' for elem in initial_body]
+        initial_body = '\n'.join(initial_body)
+
+        # fill out values in the testbench template
         src = src_tpl.format(
-            declarations="\n".join(self.declarations),
+            declarations='\n'.join(self.declarations),
             initial_body=initial_body,
-            port_list=f',\n{2*tab}'.join(port_list),
-            param_list=f',\n{2*tab}'.join(param_list),
-            circuit_name=self.circuit_name
+            port_list=f',\n{2*SVTAB}'.join(port_list),
+            param_list=f',\n{2*SVTAB}'.join(param_list),
+            circuit_name=self.circuit_name,
+            top_module=self.top_module if self.top_module is not None else
+            f"{self.circuit_name}_tb"
         )
 
+        # return the string representing the system-verilog testbench
         return src
 
     def run(self, actions, power_args=None):
@@ -558,32 +780,81 @@ end
 
         # generate simulator commands
         if self.simulator == 'ncsim':
-            sim_cmd = self.ncsim_cmd(sources=vlog_srcs,
-                                     cmd_file=self.write_ncsim_tcl())
-            bin_cmd = None
+            # Compile and run simulation
+            cmd_file = self.write_ncsim_tcl()
+            sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
             sim_err_str = None
+            # Skip "bin_cmd"
+            bin_cmd = None
+            bin_err_str = None
+        elif self.simulator == 'vivado':
+            # Compile and run simulation
+            cmd_file = self.write_vivado_tcl(sources=vlog_srcs)
+            sim_cmd = self.vivado_cmd(cmd_file=cmd_file)
+            sim_err_str = ['CRITICAL WARNING', 'ERROR', 'Fatal', 'Error']
+            # Skip "bin_cmd"
+            bin_cmd = None
+            bin_err_str = None
         elif self.simulator == 'vcs':
+            # Compile simulation
+            # TODO: what error strings are expected at this stage?
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            sim_err_str = None
+            # Run simulation
             bin_cmd = [bin_file]
-            sim_err_str = 'Error'
+            bin_err_str = 'Error'
         elif self.simulator == 'iverilog':
+            # Compile simulation
             sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
+            sim_err_str = ['syntax error', 'I give up.']
+            # Run simulation
             bin_cmd = ['vvp', '-N', bin_file]
-            sim_err_str = 'ERROR'
+            bin_err_str = 'ERROR'
         else:
             raise NotImplementedError(self.simulator)
 
         # add any extra flags
         sim_cmd += self.flags
 
+        # link the library over if using kratos to debug
+        if self.use_kratos:
+            self.link_kratos_lib()
+
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
-                       disp_type=self.disp_type)
+                       err_str=sim_err_str, disp_type=self.disp_type)
 
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
             subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
-                           err_str=sim_err_str, disp_type=self.disp_type)
+                           err_str=bin_err_str, disp_type=self.disp_type)
+
+        # post-process GetValue actions
+        self.post_process_get_value_actions(actions)
+
+    @staticmethod
+    def is_float_like_port(port):
+        return isinstance(port, (RealIn, RealOut, RealInOut,
+                                 ElectIn, ElectOut, ElectInOut))
+
+    def post_process_get_value_actions(self, actions):
+        # extract the GetValue actions and return immediately
+        # if there are none
+        get_value_actions = [action for action in actions
+                             if isinstance(action, GetValue)]
+        if len(get_value_actions) == 0:
+            return
+
+        # read lines in the GetValue file
+        with open(Path(self.directory) / self.value_file_name, 'r') as f:
+            lines = f.readlines()
+
+        # write results back into the "value" property of the action
+        for line, action in zip(lines, get_value_actions):
+            if self.is_float_like_port(action.port):
+                action.value = float(line.strip())
+            else:
+                action.value = int(line.strip())
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
@@ -623,14 +894,89 @@ end
     def make_line(text, tabs=0, tab='    ', nl='\n'):
         return f'{tabs*tab}{text}{nl}'
 
+    def link_kratos_lib(self):
+        from kratos_runtime import get_lib_path
+        lib_path = get_lib_path()
+        dst_path = os.path.join(self.directory, os.path.basename(lib_path))
+        if not os.path.isfile(dst_path):
+            os.symlink(lib_path, dst_path)
+        # also add the directory to the current LD_LIBRARY_PATH
+        self.sim_env["LD_LIBRARY_PATH"] = os.path.abspath(self.directory)
+
     def write_ncsim_tcl(self):
-        # construct the TCL commands to run the simulation
+        # construct the TCL commands to run the Incisive/Xcelium simulation
         tcl_cmds = []
-        if self.dump_vcd:
-            tcl_cmds += [f'database -open -vcd vcddb -into verilog.vcd -default -timescale ps']  # noqa
+        if self.dump_waveforms:
+            tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale ps']  # noqa
             tcl_cmds += [f'probe -create -all -vcd -depth all']
         tcl_cmds += [f'run {self.num_cycles}ns']
         tcl_cmds += [f'quit']
+
+        # write the command file
+        cmd_file = Path(f'{self.circuit_name}_cmd.tcl')
+        with open(self.directory / cmd_file, 'w') as f:
+            f.write('\n'.join(tcl_cmds))
+
+        # return the path to the command file
+        return cmd_file
+
+    def write_vivado_tcl(self, sources=None, proj_name='project', proj_dir=None,
+                         proj_part=None):
+        # set defaults
+        if sources is None:
+            sources = []
+        if proj_dir is None:
+            proj_dir = f'{proj_name}'
+
+        # build up a list of commands to run a simulation with Vivado
+        tcl_cmds = []
+
+        # create the project
+        create_proj = f'create_project -force {proj_name} {proj_dir}'
+        if proj_part is not None:
+            create_proj += f' -part "{proj_part}"'
+        tcl_cmds += [create_proj]
+
+        # add source files and library files
+        vlog_add_files = []
+        vlog_add_files += [f'{src}' for src in sources]
+        vlog_add_files += [f'{lib}' for lib in self.ext_libs]
+        if len(vlog_add_files) > 0:
+            vlog_add_files = ' '.join(vlog_add_files)
+            tcl_cmds += [f'add_files "{vlog_add_files}"']
+
+        # add include file search paths
+        if len(self.inc_dirs) > 0:
+            vlog_inc_dirs = ' '.join(f'{dir_}' for dir_ in self.inc_dirs)
+            tcl_cmds += [f'set_property include_dirs "{vlog_inc_dirs}" [get_fileset sim_1]']  # noqa
+
+        # add verilog `defines
+        vlog_defs = []
+        for key, val in self.defines.items():
+            if val is not None:
+                vlog_defs += [f'{key}={val}']
+            else:
+                vlog_defs += [f'{key}']
+        if len(vlog_defs) > 0:
+            vlog_defs = ' '.join(vlog_defs)
+            tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
+
+        # set the name of the top module
+        if self.top_module is None and not self.ext_test_bench:
+            top = f'{self.circuit_name}_tb'
+        else:
+            top = self.top_module
+        if top is not None:
+            tcl_cmds += [f'set_property -name top -value {top} -objects [get_fileset sim_1]']  # noqa
+        else:
+            # have Vivado pick the top module automatically if not specified
+            tcl_cmds += [f'update_compile_order -fileset sim_1']
+
+        # run until $finish (as opposed to running for a certain amount of time)
+        tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
+
+        # run the simulation
+        tcl_cmds += ['launch_simulation']
 
         # write the command file
         cmd_file = Path(f'{self.circuit_name}_cmd.tcl')
@@ -657,7 +1003,7 @@ end
 
         # determine the name of the top module
         if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
+            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
         else:
             top = self.top_module
 
@@ -691,6 +1037,30 @@ end
         if self.no_warning:
             cmd += ['-neverwarn']
 
+        # kratos flags
+        if self.use_kratos:
+            from kratos_runtime import get_ncsim_flag
+            cmd += get_ncsim_flag().split()
+
+        # return arg list
+        return cmd
+
+    def vivado_cmd(self, cmd_file):
+        cmd = []
+
+        # binary name
+        cmd += ['vivado']
+
+        # run from an external script
+        cmd += ['-mode', 'batch']
+
+        # specify path to script
+        cmd += ['-source', f'{cmd_file}']
+
+        # turn off annoying output
+        cmd += ['-nolog']
+        cmd += ['-nojournal']
+
         # return arg list
         return cmd
 
@@ -723,7 +1093,14 @@ end
         cmd += ['+v2k']
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
-        if self.dump_vcd:
+
+        # kratos flags
+        if self.use_kratos:
+            # +vpi -load libkratos-runtime.so:initialize_runtime_vpi -acc+=rw
+            from kratos_runtime import get_vcs_flag
+            cmd += get_vcs_flag().split()
+
+        if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
         # return arg list and binary file location
@@ -739,9 +1116,19 @@ end
         bin_file = f'{self.circuit_name}_tb'
         cmd += [f'-o{bin_file}']
 
-        # library files
+        # look for *.v and *.sv files, if we're using library directories
+        if len(self.ext_libs) > 0:
+            cmd += ['-Y.v', '-Y.sv']
+
+        # Icarus verilog does not have an option like "-v" that allows
+        # individual files to be included, so the best we can do is gather a
+        # list of unique library directories
+        unq_lib_dirs = {}
         for lib in self.ext_libs:
-            cmd += [f'-l{lib}']
+            parent_dir = Path(lib).parent
+            if parent_dir not in unq_lib_dirs:
+                unq_lib_dirs[parent_dir] = None
+        cmd += [f'-y{unq_lib_dir}' for unq_lib_dir in unq_lib_dirs]
 
         # include directory search path
         for dir_ in self.inc_dirs:

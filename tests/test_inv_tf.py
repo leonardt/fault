@@ -34,6 +34,7 @@ def test_inv_tf(
     for k in range(n_steps):
         in_ = k * vsup / (n_steps - 1)
         tester.poke(dut.in_, in_)
+        tester.eval()
         if in_ <= vil_rel * vsup:
             tester.expect(dut.out, vsup, above=voh_rel * vsup)
         elif in_ >= vih_rel * vsup:
