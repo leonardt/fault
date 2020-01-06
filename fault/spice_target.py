@@ -152,7 +152,10 @@ class SpiceTarget(Target):
             res = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
                            disp_type=self.disp_type)
             #print(res.stdout)
-            print(res.stderr.strip())
+            stderr = res.stderr.strip()
+            if stderr != '':
+                print('Stderr from spice simulator:')
+                print(stderr)
 
         # process the results
         if self.simulator in {'ngspice', 'spectre'}:
@@ -486,6 +489,8 @@ class SpiceTarget(Target):
             res = results[f'{read.port.name}']
             if read.style == 'single':
                 value = res(time)
+                if type(value) == np.ndarray:
+                    value = value.tolist()
                 read.value = value
             elif read.style == 'edge':
                 value = self.find_edge(res.x, res.y, time, **read.params)
