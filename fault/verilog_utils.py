@@ -6,7 +6,10 @@ def verilog_name(name):
         return str(name)
     if isinstance(name, m.ref.ArrayRef):
         array_name = verilog_name(name.array.name)
-        return f"{array_name}_{name.index}"
+        if isinstance(name.array.T, m._BitKind):
+            return f"{array_name}[{name.index}]"
+        else:
+            return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
         tuple_name = verilog_name(name.tuple.name)
         index = name.index
@@ -21,7 +24,14 @@ def verilog_name(name):
 
 
 def verilator_name(name):
-    name = verilog_name(name)
+    if isinstance(name, m.ref.ArrayRef):
+        array_name = verilog_name(name.array.name)
+        if isinstance(name.array.T, m._BitKind):
+            return f"{array_name}"
+        else:
+            return f"{array_name}_{name.index}"
+    else:
+        name = verilog_name(name)
     # pg 21 of verilator 4.018 manual
     # To avoid conicts with Verilator's internal symbols, any double
     # underscore are replaced with ___05F (5F is the hex code of an underscore.)
