@@ -1,15 +1,17 @@
 steps:
   - command: |
       # set up environment
-      export PATH=/usr/local/miniconda/bin$$PATH
+      export PATH=/usr/local/miniconda/bin:/usr/local/bin:$$PATH
       echo $$PATH
+      export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:/usr/local/lib
+      echo $$LD_LIBRARY_PATH
 
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base incisive vcs hspice spectre
 
       # create conda env
-      /usr/local/bin/conda create -p ./conda_env -m -y pip numpy python=3.7.3
+      conda create -p ./conda_env -m -y pip numpy python=3.7.3
       export PATH=$$PWD/conda_env/bin:$$PATH
       echo $$PATH
       
