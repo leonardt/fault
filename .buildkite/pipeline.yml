@@ -1,13 +1,7 @@
 steps:
   - command: |
-      cd src
-
-      wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-      chmod +x miniconda.sh
-      ./miniconda.sh -b -p $$PWD/miniconda
-
       # set up environment
-      export PATH=$$PWD/miniconda/bin:$$PATH
+      export PATH=/usr/local/miniconda/bin:$$PATH
       echo $$PATH
 
       # tool setup
@@ -39,17 +33,8 @@ steps:
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
     label: "test"
-    plugins:
-      - docker#v3.2.0:
-          image: "keyiz/garnet-flow-cad"
-          always-pull: true
-          volumes:
-            - "/cad/:/cad"
-          workdir: /src
-          propagate-environment: true
-          shell: ["/bin/bash", "-e", "-c"]
     agents:
-      docker: true
+      fault: "true"
   - command: |
       # set up environment
       source /etc/environment
