@@ -367,8 +367,8 @@ class VerilatorTarget(VerilogTarget):
             return asserts
         else:
             value = self.process_value(action.port, value)
-            actual_value = f"top->{name}"
-            actual_value = self.process_bitwise_expect(action.port, actual_value)
+            port_value = f"top->{name}"
+            port_value = self.process_bitwise_expect(action.port, port_value)
 
             port = action.port
             if isinstance(port, SelectPath):
@@ -381,7 +381,7 @@ class VerilatorTarget(VerilogTarget):
                 port_len = len(port)
             mask = (1 << port_len) - 1
 
-            return [f"my_assert({actual_value}, {value} & {mask}, "
+            return [f"my_assert({port_value}, {value} & {mask}, "
                     f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
