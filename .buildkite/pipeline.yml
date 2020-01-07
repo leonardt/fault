@@ -9,7 +9,7 @@ steps:
       module load base incisive vcs hspice spectre
 
       # create conda env
-      conda create -p ./conda_env -m -y pip numpy python=3.7.3
+      /usr/local/bin/conda create -p ./conda_env -m -y pip numpy python=3.7.3
       export PATH=$$PWD/conda_env/bin:$$PATH
       echo $$PATH
       
