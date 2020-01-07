@@ -1,10 +1,8 @@
 steps:
   - command: |
       # set up environment
-      export PATH=/usr/local/miniconda/bin:/usr/local/bin:$$PATH
+      export PATH=/usr/local/miniconda/bin:$$PATH
       echo $$PATH
-      export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:/usr/local/lib
-      echo $$LD_LIBRARY_PATH
 
       # tool setup
       source /cad/modules/tcl/init/bash
