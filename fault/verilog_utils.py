@@ -8,8 +8,7 @@ def verilog_name(name):
         array_name = verilog_name(name.array.name)
         if isinstance(name.array.T, m._BitKind):
             return f"{array_name}[{name.index}]"
-        else:
-            return f"{array_name}_{name.index}"
+        return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
         tuple_name = verilog_name(name.tuple.name)
         index = name.index
