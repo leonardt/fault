@@ -2,9 +2,23 @@ steps:
   - command: |
       cp -r /src /fault
       cd /fault
+
+      wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+      chmod +x miniconda.sh
+      ./miniconda.sh -b -p $$PWD/miniconda
+
+      # set up environment
+      export PATH=$$PWD/miniconda/bin:$$PATH
+      echo $$PATH
+
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base incisive vcs hspice spectre
+
+      # create conda env
+      conda create -p ./conda_env -m -y pip numpy python=3.7
+      export PATH=$$PWD/conda_env/bin:$$PATH
+      echo $$PATH
       
       # install python dependencies for testing
       pip install pytest-cov pytest-codestyle
@@ -15,15 +29,13 @@ steps:
       
       # install SMT solvers
       mkdir ./smt_solvers
-      pysmt-install --msat --confirm-agreement
-      export PYTHONPATH="$$HOME/.smt_solvers/python-bindings-3.7:${PYTHONPATH}"
-      export LD_LIBRARY_PATH="$$HOME/.smt_solvers/python-bindings-3.7:${LD_LIBRARY_PATH}"
+      ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
 
       # install kratos runtime
       pip install kratos-runtime
       
       # run tests
-      pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+      ./conda_env/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
 
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
