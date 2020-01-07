@@ -786,4 +786,3 @@ def test_poke_bitwise(target, simulator):
         if target == "system-verilog":
             kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
-
