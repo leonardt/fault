@@ -1,4 +1,8 @@
 from abc import ABC, abstractmethod
+
+from .real_type import RealIn, RealOut, RealInOut
+from .elect_type import ElectIn, ElectOut, ElectInOut
+
 import fault
 from fault.select_path import SelectPath
 import fault.expression as expression
@@ -90,9 +94,38 @@ def is_output(port):
         return not port.is_output()
 
 
+class GetValue(Action):
+    def __init__(self, port):
+        super().__init__()
+        self.port = port
+        self.value = None  # value to be assigned after simulation
+
+    @property
+    def real_number_port(self):
+        return isinstance(self.port, (RealIn, RealOut, RealInOut,
+                                      ElectIn, ElectOut, ElectInOut))
+
+    def get_format(self):
+        return '%0f' if self.real_number_port else '%0d'
+
+    def update_from_line(self, line):
+        if self.real_number_port:
+            self.value = float(line.strip())
+        else:
+            self.value = int(line.strip())
+
+    def __str__(self):
+        return f'GetValue("{self.port}")'
+
+    def retarget(self, new_circuit, clock):
+        cls = type(self)
+        new_port = new_circuit.interface.ports[str(self.port.name)]
+        return cls(new_port)
+
+
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None):
+                 above=None, below=None, caller=None):
         # call super constructor
         super().__init__(port, value)
 
@@ -109,13 +142,21 @@ class Expect(PortAction):
             # sanity check
             assert rel_tol >= 0 and abs_tol >= 0, 'rel_tol and abs_tol must be non-negative.'  # noqa
 
-            above = value - rel_tol * value - abs_tol
-            below = value + rel_tol * value + abs_tol
+            above = value - rel_tol * abs(value) - abs_tol
+            below = value + rel_tol * abs(value) + abs_tol
 
         # save settings
         self.strict = strict
         self.above = above
         self.below = below
+        self.caller = caller
+
+    @property
+    def traceback(self):
+        if self.caller is not None:
+            return f'{self.caller.filename}:{self.caller.lineno}'
+        else:
+            return None
 
 
 class Assume(PortAction):
@@ -186,20 +227,22 @@ class Step(Action):
 
 
 class Loop(Action):
-    def __init__(self, n_iter, loop_var, actions):
+    def __init__(self, n_iter, loop_var, actions, count='up'):
         self.n_iter = n_iter
         self.actions = actions
         self.loop_var = loop_var
+        self.count = count
 
     def __str__(self):
         # TODO: Might be nice to format this print output over multiple lines
         # for actions
-        return f"Loop({self.n_iter}, {self.loop_var}, {self.actions})"
+        return f"Loop({self.n_iter}, {self.loop_var}, {self.actions}, {self.count})"  # noqa
 
     def retarget(self, new_circuit, clock):
         actions = [action.retarget(new_circuit, clock) for action in
                    self.actions]
-        return Loop(self.n_iter, actions)
+        return Loop(n_iter=self.n_iter, loop_var=self.loop_var,
+                    actions=actions, count=self.count)
 
 
 class FileOpen(Action):
@@ -256,7 +299,7 @@ class FileClose(Action):
 
 class While(Action):
     def __init__(self, loop_cond, actions):
-        # TODO: might be nice to define loop_var to captuare condition
+        # TODO: might be nice to define loop_var to capture condition
         # and use in loop? e.g. if you're looping until you get a HALT
         # back from whatever you're expecting but want to switch on
         # the other opcodes?
@@ -273,7 +316,7 @@ class While(Action):
 
 
 class If(Action):
-    def __init__(self, cond, actions, else_actions):
+    def __init__(self, cond, actions, else_actions=None):
         self.cond = cond
         self.actions = actions
         self.else_actions = else_actions

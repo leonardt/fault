@@ -1,5 +1,6 @@
 import magma as m
-from fault.verilog_target import VerilogTarget, verilog_name
+from .verilog_utils import verilog_name
+from fault.verilog_target import VerilogTarget
 from pathlib import Path
 import fault.utils as utils
 import os
@@ -51,6 +52,9 @@ class CoSATarget(VerilogTarget):
         self.states = []
         self.solver = solver
 
+    def compile_expression(self, value):
+        raise NotImplementedError()
+
     def make_eval(self, i, action):
         raise NotImplementedError()
 
@@ -91,6 +95,9 @@ class CoSATarget(VerilogTarget):
         raise NotImplementedError()
 
     def make_delay(self, i, action):
+        raise NotImplementedError()
+
+    def make_get_value(self, i, action):
         raise NotImplementedError()
 
     def make_if(self, i, action):

@@ -771,3 +771,39 @@ def test_nested_tuple_circuit(target, simulator):
         if target == "system-verilog":
             kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
+
+
+def test_poke_bitwise(target, simulator):
+    circ = TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.circuit.I = 0
+    tester.eval()
+    tester.circuit.I[0] = 1
+    tester.eval()
+    tester.circuit.O[0].expect(1)
+    tester.circuit.O[1].expect(0)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)
+
+
+def test_poke_bitwise_nested(target, simulator):
+    circ = TestNestedArraysCircuit
+    tester = fault.Tester(circ)
+    tester.circuit.I = 0
+    tester.eval()
+    tester.circuit.I[0][0] = 1
+    tester.circuit.I[1][1] = 1
+    tester.eval()
+    tester.circuit.O[0][0].expect(1)
+    tester.circuit.O[0][1].expect(0)
+    tester.circuit.O[1][0].expect(0)
+    tester.circuit.O[1][1].expect(1)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        _dir = "build"
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)

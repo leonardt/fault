@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from copy import copy
 import magma as m
@@ -6,37 +7,84 @@ import fault
 import hwtypes
 from fault.target import Target
 from fault.spice import SpiceNetlist
-from fault.nutascii_parse import nutascii_parse
-from fault.psf_parse import psf_parse
+from fault.real_type import RealInOut
+from fault.result_parse import nut_parse, hspice_parse, psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay, Print, Eval
+from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval
 from fault.select_path import SelectPath
+from .fault_errors import A2DError, ExpectError
+from inspect import getframeinfo, stack
 
-
-# define a custom error for A2D conversion to make it easier
-# to catch this specific issue (for example, in adapting
-# tests based on the previous test result)
-class A2DError(Exception):
-    pass
+try:
+    from decida.SimulatorNetlist import SimulatorNetlist
+    import numpy as np
+except ModuleNotFoundError:
+    print('Failed to import DeCiDa or Numpy for SpiceTarget.')
 
 
 class CompiledSpiceActions:
-    def __init__(self, pwls, checks, prints, stop_time, saves):
+    def __init__(self, pwls, checks, prints, stop_time, saves, gets):
         self.pwls = pwls
         self.checks = checks
         self.prints = prints
         self.stop_time = stop_time
         self.saves = saves
+        self.gets = gets
+
+
+def DeclareFromSpice(file_name, subckt_name=None, mode='digital'):
+    # parse the netlist
+    spice_model_path = Path(file_name).resolve()
+    parser = SimulatorNetlist(f'{spice_model_path}')
+
+    # use the first subcircuit defined if none is specified
+    if subckt_name is None:
+        subckts = parser.get('subckts')
+        if len(subckts) == 0:
+            raise Exception(f'Could not find any circuit definitions in {file_name}.')  # noqa
+        else:
+            subckt_name = parser.get('subckts')[0]
+
+    # get the port list for the subcircuit
+    search_name = f'{subckt_name}'.lower()
+    ports = parser.get_subckt(search_name, detail='ports')
+
+    # declare the circuit and return it
+    args = []
+    args += [subckt_name]
+    for port in ports:
+        args += [f'{port}']
+        if mode == 'digital':
+            args += [m.BitInOut]
+        elif mode == 'analog':
+            args += [RealInOut]
+        else:
+            raise ValueError(f'Unknown mode: {mode}')
+
+    # Declare spice circuit and specify source location
+    circuit = m.DeclareCircuit(*args)
+    circuit.spice_model_path = spice_model_path
+
+    # Return the circuit
+    return circuit
+
+
+MONTE_CARLO_SPECTRE = '''\
+mc1 montecarlo variations={variations} savefamilyplots=yes numruns={numruns} {{
+    tran1 tran start=0 stop={stop}
+}}
+'''
 
 
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
                  t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
-                 vih_rel=0.6, rz=1e9, conn_order='alpha', bus_delim='<>',
-                 bus_order='descend', flags=None, ic=None,
-                 disp_type='on_error'):
+                 vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
+                 bus_order='descend', flags=None, ic=None, cap_loads=None,
+                 disp_type='on_error', mc_runs=0, mc_variations='all',
+                 vol_rel=0.1, voh_rel=0.9, no_run=False):
         """
         circuit: a magma circuit
 
@@ -84,9 +132,23 @@ class SpiceTarget(Target):
         flags: List of additional arguments that should be passed to the
                simulator.
 
+        cap_loads: Dictionary mapping device ports to capacitive loads
+                   that should be added to those ports.
+
         disp_type: 'on_error', 'realtime'.  If 'on_error', only print if there
                    is an error.  If 'realtime', print out STDOUT as lines come
                    in, then print STDERR after the process completes.
+
+        mc_runs: Number of Monte-Carlo runs for the simulation (defaults to
+                 zero, meaning that Monte-Carlo simulation will not be used.
+
+        mc_variations: 'process', 'mismatch', or 'all'.  Defaults to 'all'.
+
+        vol_rel: Falling edge threshold as a fraction of vsup
+
+        voh_rel: Rising edge threshold as a fraction of vsup
+
+        no_run: If True, don't actually run the simulation.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -94,6 +156,12 @@ class SpiceTarget(Target):
         # sanity check
         if simulator not in {'ngspice', 'spectre', 'hspice'}:
             raise ValueError(f'Unsupported simulator {simulator}')
+
+        # set model_paths
+        if model_paths is None:
+            model_paths = []
+        if hasattr(circuit, 'spice_model_path'):
+            model_paths = [f'{circuit.spice_model_path}'] + model_paths
 
         # make directory if needed
         os.makedirs(directory, exist_ok=True)
@@ -103,7 +171,7 @@ class SpiceTarget(Target):
         self.simulator = simulator
         self.vsup = vsup
         self.rout = rout
-        self.model_paths = model_paths if model_paths is not None else []
+        self.model_paths = model_paths
         self.sim_env = sim_env
         self.t_step = t_step
         self.clock_step_delay = clock_step_delay
@@ -116,7 +184,22 @@ class SpiceTarget(Target):
         self.bus_order = bus_order
         self.flags = flags if flags is not None else []
         self.ic = ic if ic is not None else {}
+        self.cap_loads = cap_loads if cap_loads is not None else {}
         self.disp_type = disp_type
+        self.mc_variations = mc_variations
+        self.mc_runs = mc_runs
+        self.vol_rel = vol_rel
+        self.voh_rel = voh_rel
+        self.no_run = no_run
+
+        # set list of signals to save
+        self.saves = set()
+        for name, port in self.circuit.interface.ports.items():
+            if isinstance(port, m.BitsType):
+                for k in range(len(port)):
+                    self.saves.add(self.bit_from_bus(name, k))
+            else:
+                self.saves.add(f'{name}')
 
     def run(self, actions):
         # compile the actions
@@ -127,32 +210,38 @@ class SpiceTarget(Target):
 
         # generate simulator commands
         if self.simulator == 'ngspice':
-            sim_cmds, raw_file = self.ngspice_cmds(tb_file)
+            cmd, raw_files = self.ngspice_cmds(tb_file)
         elif self.simulator == 'spectre':
-            sim_cmds, raw_file = self.spectre_cmds(tb_file)
+            cmd, raw_files = self.spectre_cmds(tb_file)
         elif self.simulator == 'hspice':
-            sim_cmds, raw_file = self.hspice_cmds(tb_file)
+            cmd, raw_files = self.hspice_cmds(tb_file)
         else:
             raise NotImplementedError(self.simulator)
 
         # run the simulation commands
-        for sim_cmd in sim_cmds:
-            subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
+        if not self.no_run:
+            subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
                            disp_type=self.disp_type)
 
         # process the results
-        if self.simulator in {'ngspice', 'spectre'}:
-            results = nutascii_parse(raw_file)
-        elif self.simulator in {'hspice'}:
-            results = psf_parse(raw_file)
-        else:
-            raise NotImplementedError(self.simulator)
+        for raw_file in raw_files:
+            if self.simulator in {'ngspice'}:
+                results = nut_parse(raw_file)
+            elif self.simulator in {'spectre'}:
+                results = psf_parse(raw_file)
+            elif self.simulator in {'hspice'}:
+                results = hspice_parse(raw_file)
+            else:
+                raise NotImplementedError(self.simulator)
 
-        # print results
-        self.print_results(results=results, prints=comp.prints)
+            # print results
+            self.print_results(results=results, prints=comp.prints)
 
-        # check results
-        self.check_results(results=results, checks=comp.checks)
+            # implement all of the gets
+            self.impl_all_gets(results=results, gets=comp.gets)
+
+            # check results
+            self.check_results(results=results, checks=comp.checks)
 
     def expand_bus(self, action):
         # define bit-access function for the action's value
@@ -191,7 +280,7 @@ class SpiceTarget(Target):
         pwc_dict = {}
         checks = []
         prints = []
-        saves = set()
+        gets = []
 
         # expand buses as needed
         _actions = []
@@ -232,11 +321,10 @@ class SpiceTarget(Target):
                     t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
-                saves.add(f'{action.port.name}')
             elif isinstance(action, Print):
                 prints.append((t, action))
-                for port in action.ports:
-                    saves.add(f'{port.name}')
+            elif isinstance(action, GetValue):
+                gets.append((t, action))
             elif isinstance(action, Delay):
                 t += action.time
             elif isinstance(action, Eval):
@@ -257,8 +345,9 @@ class SpiceTarget(Target):
             pwls=pwls,
             checks=checks,
             prints=prints,
+            gets=gets,
             stop_time=t,
-            saves=saves
+            saves=self.saves
         )
 
     @staticmethod
@@ -269,7 +358,7 @@ class SpiceTarget(Target):
         if self.conn_order == 'alpha':
             return self.get_alpha_ordered_ports()
         elif self.conn_order == 'parse':
-            raise Exception('Spice parsing is not implemented yet.')
+            return self.get_parse_ordered_ports()
         else:
             raise Exception(f'Unknown conn_order: {self.conn_order}.')
 
@@ -307,6 +396,15 @@ class SpiceTarget(Target):
         # return ordered list of ports
         return retval
 
+    def get_parse_ordered_ports(self):
+        for path in self.model_paths:
+            parser = SimulatorNetlist(f'{path}')
+            search_name = f'{self.circuit.name}'.lower()
+            if search_name in parser.get('subckts'):
+                return parser.get_subckt(search_name, detail='ports')
+        else:
+            raise Exception(f'Could not find subcircuit {self.circuit.name}.')
+
     def write_test_bench(self, comp, tb_file=None):
         # create a new netlist
         netlist = SpiceNetlist()
@@ -314,11 +412,15 @@ class SpiceTarget(Target):
 
         # add include files
         for file_ in self.model_paths:
-            netlist.include(file_)
+            netlist.include(Path(file_).resolve())
 
         # instantiate the DUT
         dut_name = f'{self.circuit.name}'
         netlist.instantiate(dut_name, *self.get_ordered_ports())
+
+        # add a capacitance to some ports if specified
+        for port, val in self.cap_loads.items():
+            netlist.capacitor(f'{port.name}', '0', val)
 
         # define the switch model
         inout_sw_mod = 'inout_sw_mod'
@@ -343,9 +445,6 @@ class SpiceTarget(Target):
             netlist.voltage(vnet, '0', pwl=pwl_v)
             netlist.voltage(snet, '0', pwl=pwl_s)
 
-        # save signals that need to be saved
-        netlist.probe(*comp.saves)
-
         # specify initial conditions if needed
         ic = {}
         for key, val in self.ic.items():
@@ -353,27 +452,48 @@ class SpiceTarget(Target):
                 ic[f'X0.{key.spice_path}'] = val
             else:
                 ic[f'{key}'] = val
-        netlist.ic(ic)
+        if ic != {}:
+            netlist.ic(ic)
 
         # specify the transient analysis
         t_step = (self.t_step if self.t_step is not None
                   else comp.stop_time / 1000)
-        uic = self.ic != {}
-        netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
+        if self.ic != {}:
+            uic = True
+        else:
+            uic = False
+        if self.simulator in {'hspice', 'ngspice'}:
+            netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
 
         # generate control statement
         if self.simulator == 'ngspice':
             netlist.start_control()
             netlist.println('run')
-            netlist.println('set filetype=ascii')
+            netlist.println('set filetype=binary')
             netlist.println('write')
             netlist.println('exit')
             netlist.end_control()
         elif self.simulator == 'hspice':
-            netlist.options('post')
+            netlist.options('csdf')
 
-        # end the netlist
-        netlist.end_file()
+        # write end of file
+        if self.simulator == 'spectre':
+            netlist.probe(*comp.saves, wrap=True)
+            if self.mc_runs == 0:
+                netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
+            else:
+                netlist.println('simulator lang=spectre')
+                netlist.print(MONTE_CARLO_SPECTRE.format(
+                    variations=self.mc_variations,
+                    numruns=self.mc_runs,
+                    stop=comp.stop_time
+                ))
+        elif self.simulator == 'hspice':
+            netlist.probe(*comp.saves, wrap=True, antype='TRAN')
+            netlist.end_file()
+        elif self.simulator == 'ngspice':
+            netlist.probe(*comp.saves, wrap=True)
+            netlist.end_file()
 
         # write spice file
         tb_file = (tb_file if tb_file is not None
@@ -399,17 +519,33 @@ class SpiceTarget(Target):
             else:
                 raise A2DError(f'Invalid logic level: {value}.')
 
+        # determine the condition and error body
+        err_hdr = ''
+        err_hdr += f'Failed checking port {action.port.name}'
+        err_hdr += f' at time {time:0.3e}'
+        if action.traceback is not None:
+            err_hdr += f' with traceback {action.traceback}'
+
         # implement the requested check
+        err_msg = None
         if action.above is not None:
             if action.below is not None:
-                assert action.above <= value <= action.below, f'Expected {action.above} to {action.below}, got {value}'  # noqa
+                if not (action.above <= value <= action.below):
+                    err_msg = f'Expected {action.above} to {action.below}, got {value}'  # noqa
             else:
-                assert action.above <= value, f'Expected above {action.above}, got {value}'  # noqa
+                if not (action.above <= value):
+                    err_msg = f'Expected above {action.above}, got {value}.'
         else:
             if action.below is not None:
-                assert value <= action.below, f'Expected below {action.below}, got {value}'  # noqa
+                if not (value <= action.below):
+                    err_msg = f'Expected below {action.below}, got {value}.'
             else:
-                assert value == action.value, f'Expected {action.value}, got {value}'  # noqa
+                if not (value == action.value):
+                    err_msg = f'Expected {action.value}, got {value}.'
+
+        # raise exception if there was an error
+        if err_msg is not None:
+            raise ExpectError(f'{err_hdr}.  {err_msg}.')
 
     def check_results(self, results, checks):
         for check in checks:
@@ -425,6 +561,16 @@ class SpiceTarget(Target):
         for print_ in prints:
             self.impl_print(results=results, time=print_[0], action=print_[1])
 
+    def impl_all_gets(self, results, gets):
+        for get in gets:
+            self.impl_get(results=results, time=get[0], action=get[1])
+
+    def impl_get(self, results, time, action):
+        # get port values
+        port_value = results[f'{action.port.name}'](time)
+        # write value back to action
+        action.value = port_value
+
     def ngspice_cmds(self, tb_file):
         # build up the command
         cmd = []
@@ -436,39 +582,41 @@ class SpiceTarget(Target):
         cmd += self.flags
 
         # return command and corresponding raw file
-        return [cmd], raw_file
+        return cmd, [raw_file]
 
     def spectre_cmds(self, tb_file):
         # build up the command
         cmd = []
         cmd += ['spectre']
         cmd += [f'{tb_file}']
-        cmd += ['-format', 'nutascii']
-        raw_file = (Path(self.directory) / 'out.raw').absolute()
-        cmd += ['-raw', f'{raw_file}']
+        cmd += ['-format', 'psfascii']
+        raw_dir = (Path(self.directory) / 'psf').resolve()
+        cmd += ['-raw', f'{raw_dir}']
         cmd += self.flags
 
+        # figure out where the PSF results will be stored
+        if self.mc_runs == 0:
+            raw_files = [raw_dir / 'timeSweep.tran.tran']
+        else:
+            raw_files = []
+            for k in range(0, self.mc_runs + 1):
+                raw_file = 'transient1-{:03d}_transient1.tran.tran'.format(k)
+                raw_files.append(raw_dir / raw_file)
+
         # return command and corresponding raw file
-        return [cmd], raw_file
+        return cmd, raw_files
 
     def hspice_cmds(self, tb_file):
         # build up the simulation command
-        sim_cmd = []
-        sim_cmd += ['hspice']
-        sim_cmd += ['-i', f'{tb_file}']
+        cmd = []
+        cmd += ['hspice']
+        cmd += ['-i', f'{tb_file}']
         out_file = (Path(self.directory) / 'out.raw').absolute()
-        sim_cmd += ['-o', f'{out_file}']
-        sim_cmd += self.flags
+        cmd += ['-o', f'{out_file}']
+        cmd += self.flags
 
         # build up the conversion command
-        conv_cmd = []
-        conv_cmd += ['converter']
-        conv_cmd += ['-t', 'PSF']
         tr0_file = out_file.with_suffix(out_file.suffix + '.tr0')
-        conv_cmd += ['-i', f'{tr0_file}']
-        psf_file = (Path(self.directory) / 'out.psf').absolute()
-        conv_cmd += ['-o', f'{psf_file.with_suffix("")}']
-        conv_cmd += ['-a']
 
         # return command and corresponding raw file
-        return [sim_cmd, conv_cmd], psf_file
+        return cmd, [tr0_file]

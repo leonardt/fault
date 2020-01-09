@@ -1,8 +1,12 @@
 import warnings
-from fault.verilog_target import VerilogTarget, verilog_name
+from fault.verilog_target import VerilogTarget
+from .verilog_utils import verilog_name
+from .util import (is_valid_file_mode, file_mode_allows_reading,
+                   file_mode_allows_writing)
 import magma as m
 from pathlib import Path
 import fault.actions as actions
+from fault.actions import FileOpen, FileClose, GetValue, Loop, If
 from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
                      AbstractBitVector)
 import fault.value_utils as value_utils
@@ -17,9 +21,9 @@ from numbers import Number
 
 
 src_tpl = """\
-module {circuit_name}_tb;
+module {top_module};
 {declarations}
-
+{assigns}
     {circuit_name} #(
         {param_list}
     ) dut (
@@ -36,6 +40,12 @@ endmodule
 
 
 class SystemVerilogTarget(VerilogTarget):
+
+    # Language properties of SystemVerilog used in generating code blocks
+    BLOCK_START = 'begin'
+    BLOCK_END = 'end'
+    LOOP_VAR_TYPE = None
+
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
@@ -45,7 +55,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None):
+                 waveform_file=None, use_kratos=False):
         """
         circuit: a magma circuit
 
@@ -122,6 +132,8 @@ class SystemVerilogTarget(VerilogTarget):
 
         waveform_file: name of file to dump waveforms (default is
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
+
+        use_kratos: If True, set the environment up for debugging in kratos
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -144,7 +156,7 @@ class SystemVerilogTarget(VerilogTarget):
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
-                         magma_opts)
+                         magma_opts, use_kratos=use_kratos)
 
         # sanity check
         if simulator is None:
@@ -165,15 +177,17 @@ class SystemVerilogTarget(VerilogTarget):
                           DeprecationWarning)
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
-        self.declarations = []
-        self.sim_env = sim_env
+        self.declarations = {}  # dictionary keyed by signal name
+        self.assigns = {}  # dictionary keyed by LHS name
+        self.sim_env = sim_env if sim_env is not None else {}
+        self.sim_env.update(os.environ)
         self.ext_model_file = ext_model_file
         self.ext_libs = ext_libs if ext_libs is not None else []
         self.defines = defines if defines is not None else {}
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module
+        self.top_module = top_module if not use_kratos else "TOP"
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
@@ -185,9 +199,33 @@ class SystemVerilogTarget(VerilogTarget):
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
+        self.use_kratos = use_kratos
+        # check to see if runtime is installed
+        if use_kratos:
+            import sys
+            assert sys.platform == "linux" or sys.platform == "linux2",\
+                "Currently only linux is supported"
+            if not fault.util.has_kratos_runtime():
+                raise ImportError("Cannot find kratos-runtime in the system. "
+                                  "Please do \"pip install kratos-runtime\" "
+                                  "to install.")
 
-    def add_decl(self, *decls):
-        self.declarations.extend(decls)
+    def add_decl(self, type_, name, exist_ok=False):
+        if str(name) in self.declarations:
+            if exist_ok:
+                pass
+            else:
+                raise Exception(f'A declaration of name {name} already exists.')  # noqa
+        else:
+            # Note that order is preserved with Python 3.7 dictionary behavior
+            self.declarations[str(name)] = (type_, name)
+
+    def add_assign(self, lhs, rhs):
+        if str(lhs) in self.assigns:
+            raise Exception(f'The LHS signal {lhs} has already been assigned.')
+        else:
+            # Note that order is preserved with Python 3.7 dictionary behavior
+            self.assigns[str(lhs)] = (lhs, rhs)
 
     def make_name(self, port):
         if isinstance(port, PortWrapper):
@@ -212,15 +250,14 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta):
-            self.declarations.append(
-                f"reg [{action._type.size - 1}:0] {action.name};")
+            self.add_decl(f'reg [{action._type.size - 1}:0]', action.name)
             return []
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
         var_args = ", ".join(f"{var.name}" for var in action.args)
-        return [f"$fscanf({action.file.name_without_ext}_file, "
-                f"\"{action._format}\", {var_args});"]
+        fd_var = self.fd_var(action.file)
+        return [f'$fscanf({fd_var}, "{action._format}", {var_args});']
 
     def process_value(self, port, value):
         if isinstance(value, BitVector):
@@ -268,7 +305,7 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} = {value};']
+        retval += [f'{name} <= {value};']
         if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
@@ -286,82 +323,85 @@ class SystemVerilogTarget(VerilogTarget):
                 args.append(f'{port}')
             else:
                 args.append(f'{self.make_name(port)}')
+
+        # generate the command
         args = ', '.join(args)
         return [f'$write({args});']
 
     def make_loop(self, i, action):
-        self.declarations.append(f"integer {action.loop_var};")
-        code = []
-        code.append(f"for ({action.loop_var} = 0;"
-                    f" {action.loop_var} < {action.n_iter};"
-                    f" {action.loop_var}++) begin")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("end")
-        return code
+        # loop variable has to be declared outside of the loop
+        self.add_decl('integer', action.loop_var, exist_ok=True)
+        return super().make_loop(i, action)
 
     def make_file_open(self, i, action):
-        if action.file.mode not in {"r", "w"}:
+        # make sure the file mode is supported
+        if not is_valid_file_mode(action.file.mode):
             raise NotImplementedError(action.file.mode)
-        name = action.file.name_without_ext
-        bit_size = action.file.chunk_size * 8 - 1
-        self.declarations.append(
-            f"reg [{bit_size}:0] {name}_in;")
-        self.declarations.append(f"integer {name}_file;")
-        code = f"""\
-{name}_file = $fopen(\"{action.file.name}\", \"{action.file.mode}\");
-if (!{name}_file) $error("Could not open file {action.file.name}: %0d", {name}_file);
-"""  # noqa
-        return code.splitlines()
+
+        # declare the file read variable if the file mode allows reading
+        if file_mode_allows_reading(action.file.mode):
+            bit_size = (action.file.chunk_size * 8) - 1
+            in_ = self.in_var(action.file)
+            self.add_decl(f'reg [{bit_size}:0]', in_)
+
+        # declare the file descriptor variable
+        fd = self.fd_var(action.file)
+        self.add_decl('integer', fd)
+
+        # return the command
+        return [f'{fd} = $fopen("{action.file.name}", "{action.file.mode}");']
 
     def make_file_close(self, i, action):
-        return [f"$fclose({action.file.name_without_ext}_file);"]
+        fd = self.fd_var(action.file)
+        return [f'$fclose({fd});']
 
     def make_file_read(self, i, action):
-        decl = f"integer __i;"
-        if decl not in self.declarations:
-            self.declarations.append(decl)
-        if action.file.endianness == "big":
-            loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
+        assert file_mode_allows_reading(action.file.mode), \
+            f'File mode "{action.file.mode}" is not compatible with reading.'
+
+        idx = '__i'
+        fd = self.fd_var(action.file)
+        in_ = self.in_var(action.file)
+
+        return self.generate_action_code(i, [
+            f'{in_} = 0;',
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     f'{in_} |= $fgetc({fd}) << (8 * {idx});'
+                 ])
+        ])
+
+    def write_byte(self, fd, expr):
+        if self.simulator == 'iverilog':
+            return f'$fputc({expr}, {fd});'
         else:
-            loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
-        code = f"""\
-{action.file.name_without_ext}_in = 0;
-for ({loop_expr}) begin
-    {action.file.name_without_ext}_in |= $fgetc({action.file.name_without_ext}_file) << (8 * __i);
-end
-"""  # noqa
-        return code.splitlines()
+            return f'$fwrite({fd}, "%c", {expr});'
 
     def make_file_write(self, i, action):
-        # figure out how to loop over bytes to be written
+        assert file_mode_allows_writing(action.file.mode), \
+            f'File mode "{action.file.mode}" is not compatible with writing.'
+
+        idx = '__i'
+        fd = self.fd_var(action.file)
         value = self.make_name(action.value)
-        mask_size = action.file.chunk_size * 8
-        decl = f"integer __i;"
-        if decl not in self.declarations:
-            self.declarations.append(decl)
-        if action.file.endianness == "big":
-            loop_expr = f"__i = {action.file.chunk_size - 1}; __i >= 0; __i--"
-        else:
-            loop_expr = f"__i = 0; __i < {action.file.chunk_size}; __i++"
+        byte_expr = f"({value} >> (8 * {idx})) & 8'hFF"
 
-        # build up the loop expression
-        code = []
-        code += [f'for ({loop_expr}) begin']
-        file_fd = f'{action.file.name_without_ext}_file'
-        byte_expr = f"({value} >> (8 * __i)) & {mask_size}'hFF"
-        if self.simulator == 'iverilog':
-            code += [f'    $fputc({byte_expr}, {file_fd});']
-        else:
-            code += [f'    $fwrite({file_fd}, "%c", {byte_expr});']
-        code += ['end']
+        return self.generate_action_code(i, [
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     self.write_byte(fd, byte_expr)
+                 ])
+        ])
 
-        # return the loop expression
-        return code
+    def make_get_value(self, i, action):
+        fd_var = self.fd_var(self.value_file)
+        fmt = action.get_format()
+        value = self.make_name(action.port)
+        return [f'$fwrite({fd_var}, "{fmt}\\n", {value});']
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -389,35 +429,43 @@ end
         value = self.process_value(action.port, action.value)
 
         # determine the condition and error body
-        err_body = f'"Failed on action={i} checking port {debug_name}.'
+        err_hdr = ''
+        err_hdr += f'Failed on action={i} checking port {debug_name}'
+        if action.traceback is not None:
+            err_hdr += f' with traceback {action.traceback}'
         if action.above is not None:
             if action.below is not None:
                 # must be in range
-                cond = f'({action.above} <= {name}) && ({name} <= {action.below})'  # noqa
-                err_body += f' Expected %0f to %0f, got %0f", {action.above}, {action.below}, {name}'  # noqa
+                cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
+                err_msg = 'Expected %0f to %0f, got %0f'
+                err_args = [action.above, action.below, name]
             else:
                 # must be above
-                cond = f'{action.above} <= {name}'
-                err_body += f' Expected above %0f, got %0f", {action.above}, {name}'  # noqa
+                cond = f'!({action.above} <= {name})'
+                err_msg = 'Expected above %0f, got %0f'
+                err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
-                cond = f'{name} <= {action.below}'
-                err_body += f' Expected below %0f, got %0f", {action.below}, {name}'  # noqa
+                cond = f'!({name} <= {action.below})'
+                err_msg = 'Expected below %0f, got %0f'
+                err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
-                    cond = f'{name} === {value}'
+                    cond = f'!({name} === {value})'
                 else:
-                    cond = f'{name} == {value}'
-                err_body += f' Expected %x, got %x" , {value}, {name}'
+                    cond = f'!({name} == {value})'
+                err_msg = 'Expected %x, got %x'
+                err_args = [value, name]
+
+        # construct the body of the $error call
+        err_fmt_str = f'"{err_hdr}.  {err_msg}."'
+        err_body = [err_fmt_str] + err_args
+        err_body = ', '.join([str(elem) for elem in err_body])
 
         # return a snippet of verilog implementing the assertion
-        retval = []
-        retval += [f'if (!({cond})) begin']
-        retval += [self.make_line(f'$error({err_body});', tabs=1)]
-        retval += ['end']
-        return retval
+        return self.make_if(i, If(cond, [f'$error({err_body});']))
 
     def make_eval(self, i, action):
         # Emulate eval by inserting a delay
@@ -428,45 +476,6 @@ end
         code = []
         for step in range(action.steps):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")
-        return code
-
-    def make_while(self, i, action):
-        code = []
-        cond = self.compile_expression(action.loop_cond)
-
-        code.append(f"while ({cond}) begin")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("end")
-
-        return code
-
-    def make_if(self, i, action):
-        code = []
-        cond = self.compile_expression(action.cond)
-
-        code.append(f"if ({cond}) begin")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("end")
-
-        if action.else_actions:
-            code[-1] += " else begin"
-            for inner_action in action.else_actions:
-                # TODO: Handle relative offset of sub-actions
-                inner_code = self.generate_action_code(i, inner_action)
-                code += ["    " + x for x in inner_code]
-
-            code.append("end")
-
         return code
 
     def generate_recursive_port_code(self, name, type_, power_args):
@@ -493,8 +502,9 @@ end
         else:
             width_str = ""
             connect_to = f"{name}"
-            if issubclass(type_, m.Array) and issubclass(type_.T, m.Bit):
-                width_str = f"[{len(type_) - 1}:0] "
+            if isinstance(type_, m.Array) and \
+                    issubclass(type_.T, m.Bit):
+                width_str = f" [{len(type_) - 1}:0]"
             if isinstance(type_, RealKind):
                 t = "real"
             elif name in power_args.get("supply0s", []):
@@ -511,11 +521,9 @@ end
                 # that wire will then be connected to the
                 # DUT pin
                 connect_to = self.input_wire(name)
-                decls = [f'reg {width_str}{name};',
-                         f'wire {width_str}{connect_to};',
-                         f'assign {connect_to}={name};']
-                decls = [self.make_line(decl, tabs=1) for decl in decls]
-                self.add_decl(*decls)
+                self.add_decl(f'reg{width_str}', f'{name}')
+                self.add_decl(f'wire{width_str}', f'{connect_to}')
+                self.add_assign(f'{connect_to}', f'{name}')
 
                 # set the signal type to None to avoid re-declaring
                 # connect_to
@@ -527,49 +535,80 @@ end
 
             # declare the signal that will be connected to the pin, if needed
             if t is not None:
-                decl = self.make_line(f'{t} {width_str}{connect_to};', tabs=1)
-                self.add_decl(decl)
+                self.add_decl(f'{t}{width_str}', f'{connect_to}')
 
             # return the wiring statement describing how the testbench signal
             # is connected to the DUT
             return [f".{name}({connect_to})"]
 
-    def generate_code(self, actions, power_args, tab='    '):
-        initial_body = ""
+    def generate_code(self, actions, power_args):
+        # format the port list
         port_list = []
         for name, type_ in self.circuit.IO.ports.items():
             result = self.generate_port_code(name, type_, power_args)
             port_list.extend(result)
+        port_list = f',\n{2*self.TAB}'.join(port_list)
 
+        # build up the body of the initial block
+        initial_body = []
+
+        # set up probing
         if self.dump_waveforms and self.simulator == "vcs":
-            initial_body += f"""
-        $vcdplusfile("{self.waveform_file}");
-        $vcdpluson();
-        $vcdplusmemon();
-"""
+            initial_body += [f'$vcdplusfile("{self.waveform_file}");',
+                             f'$vcdpluson();',
+                             f'$vcdplusmemon();']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
-            initial_body += f"""
-        $dumpfile("{self.waveform_file}");
-        $dumpvars(0, dut);
-"""
+            initial_body += [f'$dumpfile("{self.waveform_file}");',
+                             f'$dumpvars(0, dut);']
 
+        # if we're using the GetValue feature, then we need to open a file to
+        # which GetValue results will be written
+        if any(isinstance(action, GetValue) for action in actions):
+            actions = [FileOpen(self.value_file)] + actions
+            actions += [FileClose(self.value_file)]
+
+        # handle all of user-specified actions in the testbench
         for i, action in enumerate(actions):
-            code = self.generate_action_code(i, action)
-            for line in code:
-                initial_body += f"        {line}\n"
+            initial_body += self.generate_action_code(i, action)
 
+        # format the paramter list
         param_list = [f'.{name}({value})'
                       for name, value in self.parameters.items()]
+        param_list = f',\n{2*self.TAB}'.join(param_list)
 
+        # add proper indentation and newlines to strings in the initial body
+        initial_body = [f'{2*self.TAB}{elem}' for elem in initial_body]
+        initial_body = '\n'.join(initial_body)
+
+        # format declarations
+        declarations = [f'{self.TAB}{type_} {name};'
+                        for type_, name in self.declarations.values()]
+        declarations = '\n'.join(declarations)
+
+        # format assignments
+        assigns = [f'{self.TAB}assign {lhs}={rhs};'
+                   for lhs, rhs in self.assigns.values()]
+        assigns = '\n'.join(assigns)
+
+        # determine the top module name
+        if self.top_module:
+            top_module = self.top_module
+        else:
+            top_module = f'{self.circuit_name}_tb'
+
+        # fill out values in the testbench template
         src = src_tpl.format(
-            declarations="\n".join(self.declarations),
+            declarations=declarations,
+            assigns=assigns,
             initial_body=initial_body,
-            port_list=f',\n{2*tab}'.join(port_list),
-            param_list=f',\n{2*tab}'.join(param_list),
-            circuit_name=self.circuit_name
+            port_list=port_list,
+            param_list=param_list,
+            circuit_name=self.circuit_name,
+            top_module=top_module
         )
 
+        # return the string representing the system-verilog testbench
         return src
 
     def run(self, actions, power_args=None):
@@ -624,6 +663,10 @@ end
         # add any extra flags
         sim_cmd += self.flags
 
+        # link the library over if using kratos to debug
+        if self.use_kratos:
+            self.link_kratos_lib()
+
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
                        err_str=sim_err_str, disp_type=self.disp_type)
@@ -632,6 +675,9 @@ end
         if bin_cmd is not None:
             subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
                            err_str=bin_err_str, disp_type=self.disp_type)
+
+        # post-process GetValue actions
+        self.post_process_get_value_actions(actions)
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
@@ -667,9 +713,14 @@ end
     def input_wire(name):
         return f'__{name}_wire'
 
-    @staticmethod
-    def make_line(text, tabs=0, tab='    ', nl='\n'):
-        return f'{tabs*tab}{text}{nl}'
+    def link_kratos_lib(self):
+        from kratos_runtime import get_lib_path
+        lib_path = get_lib_path()
+        dst_path = os.path.join(self.directory, os.path.basename(lib_path))
+        if not os.path.isfile(dst_path):
+            os.symlink(lib_path, dst_path)
+        # also add the directory to the current LD_LIBRARY_PATH
+        self.sim_env["LD_LIBRARY_PATH"] = os.path.abspath(self.directory)
 
     def write_ncsim_tcl(self):
         # construct the TCL commands to run the Incisive/Xcelium simulation
@@ -771,7 +822,7 @@ end
 
         # determine the name of the top module
         if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
+            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
         else:
             top = self.top_module
 
@@ -804,6 +855,11 @@ end
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
+
+        # kratos flags
+        if self.use_kratos:
+            from kratos_runtime import get_ncsim_flag
+            cmd += get_ncsim_flag().split()
 
         # return arg list
         return cmd
@@ -856,6 +912,13 @@ end
         cmd += ['+v2k']
         cmd += ['-LDFLAGS']
         cmd += ['-Wl,--no-as-needed']
+
+        # kratos flags
+        if self.use_kratos:
+            # +vpi -load libkratos-runtime.so:initialize_runtime_vpi -acc+=rw
+            from kratos_runtime import get_vcs_flag
+            cmd += get_vcs_flag().split()
+
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 

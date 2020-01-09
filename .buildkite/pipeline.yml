@@ -1,10 +1,8 @@
 steps:
   - command: |
       # set up environment
-      export PATH=/usr/local/miniconda/bin:/usr/local/bin:$$PATH
+      export PATH=/usr/local/miniconda/bin:$$PATH
       echo $$PATH
-      export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:/usr/local/lib
-      echo $$LD_LIBRARY_PATH
 
       # tool setup
       source /cad/modules/tcl/init/bash
@@ -15,26 +13,31 @@ steps:
       export PATH=$$PWD/conda_env/bin:$$PATH
       echo $$PATH
       
-      # install python directories
       pip install -e git+git://github.com/phanrahan/magma.git@hwtypes2#egg=magma-lang
       pip install -e git+git://github.com/phanrahan/mantle.git@hwtypes2#egg=mantle
+
+      # install python dependencies for testing
       pip install pytest-cov pytest-codestyle
       pip install mantle
+
+      # install fault
       pip install -e .
       
       # install SMT solvers
       mkdir ./smt_solvers
       ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
+
+      # install kratos runtime
+      pip install kratos-runtime
       
       # run tests
-      ./conda_env/bin/pytest --cov fault --pycodestyle fault --cov-report term-missing tests -v -r s
-      
-      # run coverage
-      pip install python-coveralls
-      coveralls
+      ./conda_env/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+
+      # upload coverage results
+      bash <(curl -s https://codecov.io/bash)
     label: "test"
     agents:
-      fault: "true"
+      fault2: "true"
   - command: |
       # set up environment
       source /etc/environment
@@ -44,15 +47,22 @@ steps:
       python3.7 -m venv venv
       source venv/bin/activate
 
-      # install python dependencies
+      # install python dependencies for testing
       pip install -e git+git://github.com/phanrahan/magma.git@hwtypes2#egg=magma-lang
       pip install -e git+git://github.com/phanrahan/mantle.git@hwtypes2#egg=mantle
+
       pip install wheel
-      pip install mantle pytest
+      pip install pytest-cov pytest-codestyle
+      pip install mantle
+
+      # install fault
       pip install -e .
       
       # run tests
-      pytest tests -x
+      pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+
+      # upload coverage results
+      bash <(curl -s https://codecov.io/bash)
 
       # deactivate virtual environment
       deactivate
