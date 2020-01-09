@@ -71,7 +71,7 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
             vams_type = 'electrical'
         elif type_ is RealIn or type_ is RealOut:
             vams_type = 'wreal'
-        elif type_.size() == 1:
+        elif len(type_) == 1:
             vams_type = 'wire'
         else:
             vams_type = f'wire [{len(type_) - 1}:0]'

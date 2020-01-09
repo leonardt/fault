@@ -802,7 +802,6 @@ def test_poke_bitwise_nested(target, simulator):
     tester.circuit.O[1][0].expect(0)
     tester.circuit.O[1][1].expect(1)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
