@@ -5,45 +5,44 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'system-verilog')
+    pytest_sim_params(metafunc, 'system-verilog', 'verilator')
+
+
+class MyAdder(m.Circuit):
+    IO = ["a", m.In(m.UInt[4]),
+          "b", m.Out(m.UInt[4])]
+
+    @classmethod
+    def definition(io):
+        io.b <= io.a + 1
 
 
 def test_get_value_digital(target, simulator):
-    # declare circuit
-    myblk = m.DeclareCircuit(
-        'myblk',
-        'a', m.In(m.Bits[4]),
-        'b', m.Out(m.Bits[4]),
-        'c', fault.RealIn,
-        'd', fault.RealOut
-    )
-
     # define test
-    tester = fault.Tester(myblk)
+    tester = fault.Tester(MyAdder)
 
     # provide stimulus
-    stim = [(0, 2.34), (1, -4.56), (14, 7.89), (15, 42)]
+    stim = list(range(16))
     output = []
-    for a, c in stim:
-        tester.poke(myblk.a, a)
-        tester.poke(myblk.c, c)
+    for a in stim:
+        tester.poke(MyAdder.a, a)
         tester.eval()
-        output.append((tester.get_value(myblk.b),
-                       tester.get_value(myblk.d)))
+        output.append(tester.get_value(MyAdder.b))
 
     # run the test
-    tester.compile_and_run(
+    kwargs = dict(
         target=target,
-        simulator=simulator,
-        ext_libs=[Path('tests/verilog/myblk.sv').resolve()],
-        ext_model_file=True,
         tmp_dir=True
     )
+    if target == 'system-verilog':
+        kwargs['simulator'] = simulator
+    elif target == 'verilator':
+        kwargs['flags'] = ['-Wno-fatal']
+    tester.compile_and_run(**kwargs)
 
     # check the results
-    def model(a, c):
-        return (a + 1) % 16, 1.23 * c
-    for (a, c), (b_meas, d_meas) in zip(stim, output):
-        b_expct, d_expct = model(a, c)
+    def model(a):
+        return (a + 1) % 16
+    for a, b_meas in zip(stim, output):
+        b_expct = model(a)
         assert b_meas.value == b_expct
-        assert (d_expct - 0.01) <= d_meas.value <= (d_expct + 0.01)

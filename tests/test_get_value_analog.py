@@ -5,7 +5,7 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'verilog-ams', 'spice')
+    pytest_sim_params(metafunc, 'verilog-ams', 'spice', 'system-verilog')
 
 
 def test_get_value_analog(target, simulator):
@@ -39,11 +39,18 @@ def test_get_value_analog(target, simulator):
     kwargs = dict(
         target=target,
         simulator=simulator,
-        model_paths=[Path('tests/spice/myblend.sp').resolve()],
         tmp_dir=True
     )
+    verilog_model = Path('tests/verilog/myblend.sv').resolve()
+    spice_model = Path('tests/spice/myblend.sp').resolve()
     if target == 'verilog-ams':
+        kwargs['model_paths'] = [spice_model]
         kwargs['use_spice'] = ['myblend']
+    elif target == 'spice':
+        kwargs['model_paths'] = [spice_model]
+    elif target == 'system-verilog':
+        kwargs['ext_libs'] = [verilog_model]
+        kwargs['ext_model_file'] = True
 
     # run the simulation
     tester.compile_and_run(**kwargs)
