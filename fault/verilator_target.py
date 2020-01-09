@@ -206,7 +206,7 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(port, fault.WrappedVerilogInternalPort):
             return value
         if isinstance(port.name, m.ref.ArrayRef) and \
-                isinstance(port.name.array.T, m._BitKind):
+                issubclass(port.name.array.T, m.Digital):
             i = port.name.index
             value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
         return value
@@ -217,7 +217,7 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(port, fault.WrappedVerilogInternalPort):
             return value
         if isinstance(port.name, m.ref.ArrayRef) and \
-                isinstance(port.name.array.T, m._BitKind):
+                issubclass(port.name.array.T, m.Digital):
             # Extract bit
             i = port.name.index
             value = f"({value} >> {i}) & 1"
