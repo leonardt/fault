@@ -199,6 +199,31 @@ class VerilatorTarget(VerilogTarget):
             return value.name
         return value
 
+    def process_bitwise_assign(self, port, name, value):
+        # Bitwise assign done using masking
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, fault.WrappedVerilogInternalPort):
+            return value
+        if isinstance(port.name, m.ref.ArrayRef) and \
+                isinstance(port.name.array.T, m._BitKind):
+            i = port.name.index
+            value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
+        return value
+
+    def process_bitwise_expect(self, port, value):
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, fault.WrappedVerilogInternalPort):
+            return value
+        if isinstance(port.name, m.ref.ArrayRef) and \
+                isinstance(port.name.array.T, m._BitKind):
+            # Extract bit
+            i = port.name.index
+            value = f"({value} >> {i}) & 1"
+        return value
+
+
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
             prefix = f"{self.circuit_name}"
@@ -260,6 +285,7 @@ class VerilatorTarget(VerilogTarget):
                                    i in range(value.file.chunk_size))
                 value = f"({value}) & 0x{mask}"
             value = self.process_value(action.port, value)
+            value = self.process_bitwise_assign(action.port, name, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
@@ -349,6 +375,9 @@ class VerilatorTarget(VerilogTarget):
             return asserts
         else:
             value = self.process_value(action.port, value)
+            port_value = f"top->{name}"
+            port_value = self.process_bitwise_expect(action.port, port_value)
+
             port = action.port
             if isinstance(port, SelectPath):
                 port = port[-1]
@@ -360,7 +389,7 @@ class VerilatorTarget(VerilogTarget):
                 port_len = len(port)
             mask = (1 << port_len) - 1
 
-            return [f"my_assert(top->{name}, {value} & {mask}, "
+            return [f"my_assert({port_value}, {value} & {mask}, "
                     f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
