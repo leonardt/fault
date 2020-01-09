@@ -502,8 +502,8 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             width_str = ""
             connect_to = f"{name}"
-            if isinstance(type_, m.Array) and \
-                    issubclass(type_.T, m.Bit):
+            if issubclass(type_, m.Array) and \
+                    issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
             if isinstance(type_, RealKind):
                 t = "real"
