@@ -807,7 +807,6 @@ def test_poke_bitwise_nested(target, simulator):
         if target == "system-verilog":
             kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
-    tester.assert_((tester.circuit.O[0] | tester.circuit.O[1]) == 0b01)
 
 
 @pytest.mark.xfail(strict=True)
