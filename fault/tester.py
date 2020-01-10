@@ -127,6 +127,8 @@ class Tester:
         raise NotImplementedError(target)
 
     def is_recursive_type(self, T):
+        if isinstance(T, fault.WrappedVerilogInternalPort):
+            return False
         return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
             not isinstance(T.T, (m._BitKind, m.BitType)) or \
             isinstance(T.name, m.ref.AnonRef)
@@ -163,8 +165,7 @@ class Tester:
         if isinstance(port, SelectPath):
             if self.is_recursive_type(port[-1]):
                 return recurse(port[-1])
-        elif not isinstance(port, fault.WrappedVerilogInternalPort) and \
-                self.is_recursive_type(port):
+        elif self.is_recursive_type(port):
             return recurse(port)
 
         if not isinstance(value, (LoopIndex, actions.FileRead,
@@ -205,8 +206,7 @@ class Tester:
         if isinstance(port, SelectPath):
             if self.is_recursive_type(port[-1]):
                 return recurse(port[-1])
-        elif not isinstance(port, fault.WrappedVerilogInternalPort) and \
-                self.is_recursive_type(port):
+        elif self.is_recursive_type(port):
             return recurse(port)
 
         # set defaults
