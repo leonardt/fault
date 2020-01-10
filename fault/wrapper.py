@@ -71,19 +71,13 @@ class PortWrapper(expression.Expression):
         if not isinstance(self.port, (m.ArrayType, m.TupleType)):
             raise Exception(f"Can only use getitem with arrays and "
                             f"tuples not {type(self.port)}")
-        select_path = self.select_path
         return PortWrapper(self.port[key], self.parent)
 
     def __getattr__(self, key):
-        try:
-            object.__getattribute__(self, "init_done")
-            if not isinstance(self.port, (m.TupleType)):
-                raise Exception(f"Can only use getattr with tuples, "
-                                f"not {type(self.port)}")
-            select_path = self.select_path
-            return PortWrapper(getattr(self.port, key), self.parent)
-        except AttributeError:
-            return object.__getattribute__(self, key)
+        if isinstance(self.port, m.TupleType):
+            if key in self.port.Ks:
+                return PortWrapper(getattr(self.port, key), self.parent)
+        return object.__getattribute__(self, key)
 
     def __setattr__(self, key, value):
         try:
