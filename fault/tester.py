@@ -129,8 +129,7 @@ class Tester:
 
     def is_recursive_type(self, T):
         return issubclass(T, m.Tuple) or issubclass(T, m.Array) and \
-            not issubclass(T.T, m.Digital) or \
-            isinstance(T.name, m.ref.AnonRef)
+            not issubclass(T.T, m.Digital)
 
     def get_type(self, port):
         if isinstance(port, SelectPath):
@@ -175,6 +174,8 @@ class Tester:
             if self.is_recursive_type(type(port[-1])):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
+            return recurse(port)
+        elif isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 
         if not isinstance(value, (LoopIndex, actions.FileRead,
@@ -222,6 +223,8 @@ class Tester:
             if self.is_recursive_type(type(port[-1])):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
+            return recurse(port)
+        elif isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 
         # set defaults
