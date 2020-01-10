@@ -12,9 +12,6 @@ steps:
       conda create -p ./conda_env -m -y pip numpy python=3.7.3
       export PATH=$$PWD/conda_env/bin:$$PATH
       echo $$PATH
-      
-      pip install -e git+git://github.com/phanrahan/magma.git@hwtypes2#egg=magma-lang
-      pip install -e git+git://github.com/phanrahan/mantle.git@hwtypes2#egg=mantle
 
       # install python dependencies for testing
       pip install pytest-cov pytest-codestyle
@@ -48,9 +45,6 @@ steps:
       source venv/bin/activate
 
       # install python dependencies for testing
-      pip install -e git+git://github.com/phanrahan/magma.git@hwtypes2#egg=magma-lang
-      pip install -e git+git://github.com/phanrahan/mantle.git@hwtypes2#egg=mantle
-
       pip install wheel
       pip install pytest-cov pytest-codestyle
       pip install mantle
