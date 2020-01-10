@@ -21,16 +21,16 @@ class MagmaSimulatorTarget(Target):
 
     @staticmethod
     def check(got, port, expected):
-        if isinstance(port, m.ArrayType) and \
-                isinstance(port.T, m._BitType) and \
-                not isinstance(port, m.BitsType) and \
+        if isinstance(port, m.Array) and \
+                isinstance(port.T, m.Digital) and \
+                not isinstance(port, m.Bits) and \
                 isinstance(expected, BitVector):
             # If port is an Array(N, Bit) and **not** a Bits(N), then the
             # Python simulator will return a list of bools. So, if the user
             # provided a BitVector, we unpack it here so the equality check
             # works
             expected = expected.as_bool_list()
-        if isinstance(port, m.ArrayType):
+        if isinstance(port, m.Array):
             for i in range(port.N):
                 MagmaSimulatorTarget.check(got[i], port[i], expected[i])
             return
@@ -43,7 +43,7 @@ class MagmaSimulatorTarget(Target):
                 value = action.value
                 # Python simulator does not support setting Bit with
                 # BitVector(1), so do conversion here
-                if isinstance(action.port, m.BitType) and \
+                if isinstance(action.port, m.Bit) and \
                         isinstance(value, BitVector):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
@@ -51,10 +51,10 @@ class MagmaSimulatorTarget(Target):
                 got = [simulator.get_value(port) for port in action.ports]
                 values = ()
                 for value, port in zip(got, action.ports):
-                    if isinstance(port, m.ArrayType) and \
-                            isinstance(port.T, (m._BitType, m._BitKind)):
+                    if isinstance(port, m.Array) and \
+                            issubclass(port.T, m.Digital):
                         value = BitVector[len(port)](value).as_uint()
-                    elif isinstance(port, m.ArrayType):
+                    elif isinstance(port, m.Array):
                         raise NotImplementedError("Printing complex nested"
                                                   " arrays")
                     values += (value, )

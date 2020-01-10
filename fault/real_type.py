@@ -8,7 +8,7 @@ class RealType(Type):
         self.port = Port(self)
 
     @classmethod
-    def isoriented(cls, direction):
+    def is_oriented(cls, direction):
         return cls.direction == direction
 
 
@@ -28,11 +28,11 @@ class RealKind(Kind):
         return cls.direction == rhs.direction
 
     def __str__(cls):
-        if cls.isinput():
+        if cls.is_input():
             return 'In(Real)'
-        elif cls.isoutput():
+        elif cls.is_output():
             return 'Out(Real)'
-        elif cls.isinout():
+        elif cls.is_inout():
             return 'InOut(Real)'
         else:
             return 'Real'
@@ -49,9 +49,9 @@ class RealKind(Kind):
         return cls
 
     def flip(cls):
-        if cls.isoriented(INPUT):
+        if cls.is_oriented(INPUT):
             return RealOut
-        elif cls.isoriented(OUTPUT):
+        elif cls.is_oriented(OUTPUT):
             return RealIn
         return cls
 

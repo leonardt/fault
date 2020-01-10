@@ -6,7 +6,7 @@ from fault.common import get_renamed_port
 
 
 def get_random_arr(name, port):
-    if isinstance(port, m.BitsKind) or isinstance(port.T, m._BitKind):
+    if issubclass(port, m.Bits) or issubclass(port.T, m.Digital):
         # TODO: Hack, check the name and don't twiddle config ports, we
         # should add a config type
         if "config_" in name:
@@ -14,18 +14,18 @@ def get_random_arr(name, port):
         else:
             return random_bv(len(port))
     else:
-        if isinstance(port.T, m.ArrayKind):
+        if issubclass(port.T, m.Array):
             return fault.array.Array([get_random_arr(name + f"_{i}", port.T)
                                       for i in range(len(port))], len(port))
     raise NotImplementedError()  # pragma: nocover
 
 
 def get_random_input(name, port):
-    if isinstance(port, m.ArrayKind):
+    if issubclass(port, m.Array):
         return get_random_arr(name, port)
-    elif isinstance(port, m.AsyncResetKind):
+    elif issubclass(port, m.AsyncReset):
         return 0
-    elif isinstance(port, m._BitKind):
+    elif issubclass(port, m.Digital):
         # TODO: Hack, check the name and don't twiddle config ports, we
         # should add a config type
         if "config_" in name:

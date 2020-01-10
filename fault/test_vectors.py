@@ -1,4 +1,5 @@
-from magma import BitKind, ArrayKind, SIntKind, UIntKind, BitsKind
+from magma import Array, SInt, UInt, Bits
+import magma as m
 from magma.simulator.python_simulator import PythonSimulator
 from hwtypes import BitVector, SIntVector, UIntVector, Bit
 from inspect import signature
@@ -44,7 +45,7 @@ def check(circuit, func):
     # count circuit inputs
     ncircargs = 0
     for name, port in circuit.IO.items():
-        if port.isinput():
+        if port.is_input():
             ncircargs += 1
 
     assert nfuncargs == ncircargs
@@ -71,12 +72,12 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
 
     args = []
     for i, (name, port) in enumerate(circuit.IO.items()):
-        if port.isinput():
-            if isinstance(port, BitKind):
+        if port.is_input():
+            if issubclass(port, m.Bit):
                 args.append([Bit(0), Bit(1)])
-            elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
+            elif issubclass(port, Array) and issubclass(port.T, m.Bit):
                 num_bits = port.N
-                if isinstance(port, SIntKind):
+                if issubclass(port, SInt):
                     if input_ranges is None:
                         input_range = range(-2**(num_bits - 1),
                                             2**(num_bits - 1))
@@ -92,7 +93,7 @@ def generate_function_test_vectors(circuit, func, input_ranges=None,
                     args.append([BitVector[num_bits](x)
                                  for x in input_range])
             else:
-                raise NotImplementedError(type(port))
+                raise NotImplementedError(port, type(port))
 
     tests = []
     for test in product(*args):
@@ -118,12 +119,12 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
 
     args = []
     for i, (name, port) in enumerate(circuit.IO.items()):
-        if port.isinput():
-            if isinstance(port, BitKind):
+        if port.is_input():
+            if issubclass(port, m.Bit):
                 args.append([Bit(0), Bit(1)])
-            elif isinstance(port, ArrayKind) and isinstance(port.T, BitKind):
+            elif issubclass(port, Array) and issubclass(port.T, m.Bit):
                 num_bits = port.N
-                if isinstance(port, SIntKind):
+                if issubclass(port, SInt):
                     if input_ranges is None:
                         start = -2**(num_bits - 1)
                         # We don't subtract one because range end is exclusive
@@ -148,7 +149,7 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         testv = [list(test), []]
         j = 0
         for i, (name, port) in enumerate(circuit.IO.items()):
-            if port.isinput():
+            if port.is_input():
                 val = test[j]
                 if isinstance(val, BitVector):
                     val = test[j].as_bool_list()
@@ -158,10 +159,10 @@ def generate_simulator_test_vectors(circuit, input_ranges=None,
         simulator.evaluate()
 
         for i, (name, port) in enumerate(circuit.IO.items()):
-            if port.isoutput():
+            if port.is_output():
                 val = simulator.get_value(getattr(circuit, name))
-                if isinstance(port, ArrayKind) and \
-                        not isinstance(port, (BitsKind, SIntKind, UIntKind)):
+                if issubclass(port, Array) and \
+                        not issubclass(port, (Bits, SInt, UInt)):
                     val = BitVector[len(port)](val)
                 testv[1].append(val)
 

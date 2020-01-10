@@ -66,17 +66,21 @@ TestNestedArraysCircuit = define_simple_circuit(m.Array[3, m.Bits[4]],
 TestDoubleNestedArraysCircuit = define_simple_circuit(
     m.Array[2, m.Array[3, m.Bits[4]]], "DoubleNestedArraysCircuit")
 TestNestedArrayTupleCircuit = define_simple_circuit(
-    m.Array[2, m.Array[3, m.Tuple(a=m.Bits[4], b=m.Bits[4])]],
+    m.Array[2, m.Array[3, m.Product.from_fields("anon", dict(a=m.Bits[4],
+                                                             b=m.Bits[4]))]],
     "NestedArrayTupleCircuit")
 TestBasicClkCircuit = define_simple_circuit(m.Bit, "BasicClkCircuit", True)
 TestBasicClkCircuitCopy = define_simple_circuit(m.Bit, "BasicClkCircuitCopy",
                                                 True)
-TestTupleCircuit = define_simple_circuit(m.Tuple(a=m.Bits[4], b=m.Bits[4]),
-                                         "TupleCircuit")
-TestNestedTupleCircuit = define_simple_circuit(m.Tuple(a=m.Tuple(k=m.Bits[5],
-                                                                 v=m.Bits[2]),
-                                                       b=m.Bits[4]),
-                                               "NestedTupleCircuit")
+TestTupleCircuit = define_simple_circuit(
+    m.Product.from_fields("anon", dict(a=m.Bits[4], b=m.Bits[4])),
+    "TupleCircuit")
+TestNestedTupleCircuit = define_simple_circuit(
+    m.Product.from_fields(
+        "anon",
+        dict(a=m.Product.from_fields("anon", dict(k=m.Bits[5], v=m.Bits[2])),
+             b=m.Bits[4])),
+    "NestedTupleCircuit")
 
 T = m.Bits[3]
 

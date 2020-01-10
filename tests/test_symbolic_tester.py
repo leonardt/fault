@@ -24,6 +24,7 @@ def test_tester_magma_internal_signals_verilator(target, solver):
     circ = SimpleALU
 
     tester = SymbolicTester(circ, circ.CLK, num_tests=100)
+    tester.circuit.CLK = 0
     tester.circuit.config_en = 1
     tester.circuit.config_data = 0
     tester.step(2)

@@ -267,7 +267,7 @@ class SpiceTarget(Target):
             # "strict" for expect).  Still, it's a bit hacky and
             # there is likely a better way...
             bit_action = copy(action)
-            bit_action.port = m.BitType(name=self.bit_from_bus(action.port, k))
+            bit_action.port = m.Bit(name=self.bit_from_bus(action.port, k))
             bit_action.value = get_value_at_bit(k)
             retval.append(bit_action)
 
@@ -286,7 +286,7 @@ class SpiceTarget(Target):
         _actions = []
         for action in actions:
             if isinstance(action, (Poke, Expect)) \
-               and isinstance(action.port, m.BitsType):
+               and isinstance(action.port, m.Bits):
                 _actions += self.expand_bus(action)
             else:
                 _actions.append(action)
@@ -305,7 +305,7 @@ class SpiceTarget(Target):
                 if action.value is fault.HiZ:
                     stim_v = 0
                     stim_s = 0
-                elif isinstance(action.port, m.BitType):
+                elif isinstance(action.port, m.Bit):
                     stim_v = self.vsup if action.value else 0
                     stim_s = 1
                 else:
@@ -381,7 +381,7 @@ class SpiceTarget(Target):
         retval = []
         for port_name in port_names:
             port = self.circuit.interface.ports[port_name]
-            if isinstance(port, (m.BitType, fault.RealType, fault.ElectType)):
+            if isinstance(port, (m.Bit, fault.RealType, fault.ElectType)):
                 retval += [f'{port}']
             else:
                 if self.bus_order == 'ascend':
@@ -511,7 +511,7 @@ class SpiceTarget(Target):
         # get value, performing analog to digital conversion
         # if necessary
         value = results[name](time)
-        if isinstance(action.port, m.BitType):
+        if isinstance(action.port, m.Bit):
             if value <= self.vil_rel * self.vsup:
                 value = 0
             elif value >= self.vih_rel * self.vsup:
