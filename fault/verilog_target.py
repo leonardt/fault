@@ -152,6 +152,8 @@ class VerilogTarget(Target):
             return self.make_delay(i, action)
         elif isinstance(action, actions.GetValue):
             return self.make_get_value(i, action)
+        elif isinstance(action, actions.Assert):
+            return self.make_assert(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -244,6 +246,10 @@ class VerilogTarget(Target):
 
     @abstractmethod
     def make_get_value(self, i, action):
+        pass
+
+    @abstractmethod
+    def make_assert(self, i, action):
         pass
 
     def make_block(self, i, name, cond, actions):

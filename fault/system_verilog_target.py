@@ -286,11 +286,11 @@ class SystemVerilogTarget(VerilogTarget):
             left = self.compile_expression(value.left)
             right = self.compile_expression(value.right)
             op = value.op_str
-            return f"{left} {op} {right}"
+            return f"({left}) {op} ({right})"
         elif isinstance(value, expression.UnaryOp):
             operand = self.compile_expression(value.operand)
             op = value.op_str
-            return f"{op} {operand}"
+            return f"{op} ({operand})"
         elif isinstance(value, PortWrapper):
             return f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.Peek):
@@ -401,6 +401,10 @@ class SystemVerilogTarget(VerilogTarget):
         fmt = action.get_format()
         value = self.make_name(action.port)
         return [f'$fwrite({fd_var}, "{fmt}\\n", {value});']
+
+    def make_assert(self, i, action):
+        expr_str = self.compile_expression(action.expr)
+        return [f'if (!({expr_str})) $error("{expr_str} failed");']
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK

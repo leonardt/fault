@@ -356,3 +356,14 @@ class Var(Action, expression.Expression):
 
     def retarget(self, new_circuit, clock):
         return Var(self.name, self._type)
+
+
+class Assert(Action):
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __str__(self):
+        return f"Assert({self.expr})"
+
+    def retarget(self, new_circuit, clock):
+        return Assert(self.expr)

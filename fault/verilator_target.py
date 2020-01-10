@@ -506,6 +506,18 @@ class VerilatorTarget(VerilogTarget):
         value = f'top->{verilator_name(action.port.name)}'
         return [f'fprintf({fd_var}, "{fmt}\\n", {value});']
 
+    def make_assert(self, i, action):
+        expr_str = self.compile_expression(action.expr)
+        return f"""
+if (!({expr_str})) {{
+    std::cerr << "{expr_str} failed" << std::endl;
+    #if VM_TRACE
+      tracer->close();
+    #endif
+    exit(1);
+}}
+    """.splitlines()
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default

@@ -180,6 +180,11 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
+    def assert_(self, expr):
+        if not isinstance(expr, expression.Expression):
+            raise TypeError("Expected instance of Expression")
+        self.actions.append(actions.Assert(expr))
+
     def expect(self, port, value, strict=None, caller=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
