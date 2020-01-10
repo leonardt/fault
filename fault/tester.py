@@ -171,7 +171,8 @@ class Tester:
 
         # implement poke
         if isinstance(port, SelectPath):
-            if self.is_recursive_type(type(port[-1])):
+            if self.is_recursive_type(type(port[-1])) or \
+                    isinstance(port[-1].name, m.ref.AnonRef):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
@@ -221,7 +222,8 @@ class Tester:
                     self.expect(p, v, strict, **kwargs)
 
         if isinstance(port, SelectPath):
-            if self.is_recursive_type(type(port[-1])):
+            if self.is_recursive_type(type(port[-1])) or \
+                    isinstance(port[-1].name, m.ref.AnonRef):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
