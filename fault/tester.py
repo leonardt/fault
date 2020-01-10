@@ -175,7 +175,8 @@ class Tester:
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
-        elif isinstance(port.name, m.ref.AnonRef):
+        elif not isinstance(port, fault.WrappedVerilogInternalPort) and\
+                isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 
         if not isinstance(value, (LoopIndex, actions.FileRead,
@@ -224,7 +225,8 @@ class Tester:
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
-        elif isinstance(port.name, m.ref.AnonRef):
+        elif not isinstance(port, fault.WrappedVerilogInternalPort) and\
+                isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 
         # set defaults
