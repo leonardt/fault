@@ -262,7 +262,7 @@ class SystemVerilogTarget(VerilogTarget):
     def process_value(self, port, value):
         if isinstance(value, BitVector):
             value = f"{len(value)}'d{value.as_uint()}"
-        elif isinstance(port, m.SIntType) and value < 0:
+        elif isinstance(port, m.SInt) and value < 0:
             port_len = len(port)
             value = BitVector[port_len](value).as_uint()
             value = f"{port_len}'d{value}"
@@ -286,11 +286,11 @@ class SystemVerilogTarget(VerilogTarget):
             left = self.compile_expression(value.left)
             right = self.compile_expression(value.right)
             op = value.op_str
-            return f"{left} {op} {right}"
+            return f"({left}) {op} ({right})"
         elif isinstance(value, expression.UnaryOp):
             operand = self.compile_expression(value.operand)
             op = value.op_str
-            return f"{op} {operand}"
+            return f"{op} ({operand})"
         elif isinstance(value, PortWrapper):
             return f"dut.{value.select_path.system_verilog_path}"
         elif isinstance(value, actions.Peek):
@@ -318,7 +318,8 @@ class SystemVerilogTarget(VerilogTarget):
         args = []
         args.append(f'"{action.format_str}"')
         for port in action.ports:
-            if isinstance(port, (Number, AbstractBit, AbstractBitVector)):
+            if isinstance(port, (Number, AbstractBit, AbstractBitVector)) and \
+                    not isinstance(port, m.Bits):
                 args.append(f'{port}')
             else:
                 args.append(f'{self.make_name(port)}')
@@ -402,6 +403,10 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.make_name(action.port)
         return [f'$fwrite({fd_var}, "{fmt}\\n", {value});']
 
+    def make_assert(self, i, action):
+        expr_str = self.compile_expression(action.expr)
+        return [f'if (!({expr_str})) $error("{expr_str} failed");']
+
     def make_expect(self, i, action):
         # don't do anything if any value is OK
         if value_utils.is_any(action.value):
@@ -479,14 +484,14 @@ class SystemVerilogTarget(VerilogTarget):
 
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
-        if isinstance(type_, m.ArrayKind):
+        if issubclass(type_, m.Array):
             for j in range(type_.N):
                 result = self.generate_port_code(
                     name + "_" + str(j), type_.T, power_args
                 )
                 port_list.extend(result)
-        elif isinstance(type_, m.TupleKind):
-            for k, t in zip(type_.Ks, type_.Ts):
+        elif issubclass(type_, m.Tuple):
+            for k, t in zip(type_.keys(), type_.types()):
                 result = self.generate_port_code(
                     name + "_" + str(k), t, power_args
                 )
@@ -494,15 +499,15 @@ class SystemVerilogTarget(VerilogTarget):
         return port_list
 
     def generate_port_code(self, name, type_, power_args):
-        is_array_of_bits = isinstance(type_, m.ArrayKind) and \
-            not isinstance(type_.T, m.BitKind)
-        if is_array_of_bits or isinstance(type_, m.TupleKind):
+        is_array_of_non_bits = issubclass(type_, m.Array) and \
+            not issubclass(type_.T, m.Bit)
+        if is_array_of_non_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
             connect_to = f"{name}"
-            if isinstance(type_, m.ArrayKind) and \
-                    isinstance(type_.T, m.BitKind):
+            if issubclass(type_, m.Array) and \
+                    issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
             if isinstance(type_, RealKind):
                 t = "real"
@@ -512,9 +517,10 @@ class SystemVerilogTarget(VerilogTarget):
                 t = "supply1"
             elif name in power_args.get("tris", []):
                 t = "tri"
-            elif type_.isoutput():
+            elif type_.is_output():
                 t = "wire"
-            elif type_.isinout() or (type_.isinput() and self.use_input_wires):
+            elif type_.is_inout() or \
+                    (type_.is_input() and self.use_input_wires):
                 # declare a reg and assign it to a wire
                 # that wire will then be connected to the
                 # DUT pin
@@ -526,7 +532,7 @@ class SystemVerilogTarget(VerilogTarget):
                 # set the signal type to None to avoid re-declaring
                 # connect_to
                 t = None
-            elif type_.isinput():
+            elif type_.is_input():
                 t = "reg"
             else:
                 raise NotImplementedError()

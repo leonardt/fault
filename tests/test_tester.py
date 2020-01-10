@@ -417,6 +417,7 @@ def test_tester_verilog_wrapped(target, simulator):
     tester = fault.Tester(circ, circ.CLK)
     tester.verilator_include("SimpleALU")
     tester.verilator_include("ConfigReg")
+    tester.circuit.CLK = 0
     for i in range(0, 4):
         tester.poke(
             fault.WrappedVerilogInternalPort("SimpleALU_inst0.config_reg.Q",
@@ -805,8 +806,26 @@ def test_poke_bitwise_nested(target, simulator):
     tester.circuit.O[0][1].expect(0)
     tester.circuit.O[1][0].expect(0)
     tester.circuit.O[1][1].expect(1)
+    tester.assert_((tester.circuit.O[0] | tester.circuit.O[1]) == 0b11)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         _dir = "build"
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)
+
+
+@pytest.mark.xfail(strict=True)
+def test_generic_expect_fail(target, simulator):
+    circ = TestNestedArraysCircuit
+    tester = fault.Tester(circ)
+    tester.circuit.I = 0
+    tester.eval()
+    tester.circuit.I[0][0] = 1
+    tester.circuit.I[1][1] = 1
+    tester.eval()
+    tester.assert_((tester.circuit.O[0] | tester.circuit.O[1]) == 0b01)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator

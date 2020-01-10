@@ -69,6 +69,7 @@ def test_simple_alu_parametrized(opcode, op):
 @pytest.mark.parametrize("target", ["verilator", "cosa"])
 def test_simple_alu_assume_guarantee(target):
     tester = fault.SymbolicTester(SimpleALU, SimpleALU.CLK, num_tests=100)
+    tester.circuit.CLK = 0
     tester.circuit.config_en = 1
     tester.circuit.config_data = 0
     tester.step(2)

@@ -44,9 +44,9 @@ def is_input(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return port.type_.isinput()
+        return port.type_.is_input()
     else:
-        return port.isinput()
+        return port.is_input()
 
 
 class Poke(PortAction):
@@ -80,18 +80,18 @@ def is_inout(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return port.type_.isinout()
+        return port.type_.is_inout()
     else:
-        return port.isinout()
+        return port.is_inout()
 
 
 def is_output(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, fault.WrappedVerilogInternalPort):
-        return not port.type_.isoutput()
+        return not port.type_.is_output()
     else:
-        return not port.isoutput()
+        return not port.is_output()
 
 
 class GetValue(Action):
@@ -356,3 +356,14 @@ class Var(Action, expression.Expression):
 
     def retarget(self, new_circuit, clock):
         return Var(self.name, self._type)
+
+
+class Assert(Action):
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __str__(self):
+        return f"Assert({self.expr})"
+
+    def retarget(self, new_circuit, clock):
+        return Assert(self.expr)
