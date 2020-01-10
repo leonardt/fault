@@ -15,7 +15,7 @@ steps:
 
       # install python dependencies for testing
       pip install pytest-cov pytest-codestyle
-      pip install --upgrade mantle>=2.0.0
+      pip install --upgrade "mantle>=2.0.0"
 
       # install fault
       pip install -e .
@@ -47,7 +47,7 @@ steps:
       # install python dependencies for testing
       pip install wheel
       pip install pytest-cov pytest-codestyle
-      pip install --upgrade mantle>=2.0.0
+      pip install --upgrade "mantle>=2.0.0"
 
       # install fault
       pip install -e .
