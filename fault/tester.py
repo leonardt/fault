@@ -127,7 +127,8 @@ class Tester:
 
     def is_recursive_type(self, T):
         return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
-            not isinstance(T.T, (m._BitKind, m.BitType))
+            not isinstance(T.T, (m._BitKind, m.BitType)) or \
+            isinstance(T.name, m.ref.AnonRef)
 
     def poke(self, port, value, delay=None):
         """
@@ -145,25 +146,29 @@ class Tester:
                 for k, v in value.items():
                     self.poke(getattr(port, k), v)
             elif isinstance(port, m.ArrayType) and \
+                    not isinstance(type(port).T, m._BitKind) and \
                     isinstance(value, (int, BitVector, tuple, dict)):
                 # Broadcast value to children
                 for p in port:
                     self.poke(p, value, delay)
             else:
-                for p, v in zip(port, value):
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
                     self.poke(p, v, delay)
 
         # implement poke
-        if self.is_recursive_type(port):
-            recurse(port)
-        elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1])):
-            recurse(port[-1])
-        else:
-            if not isinstance(value, (LoopIndex, actions.FileRead,
-                                      expression.Expression)):
-                value = make_value(port, value)
-            self.actions.append(actions.Poke(port, value, delay=delay))
+        if isinstance(port, SelectPath):
+            if self.is_recursive_type(port[-1]):
+                return recurse(port[-1])
+        elif self.is_recursive_type(port):
+            return recurse(port)
+
+        if not isinstance(value, (LoopIndex, actions.FileRead,
+                                  expression.Expression)):
+            value = make_value(port, value)
+        self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
         """
@@ -189,29 +194,33 @@ class Tester:
                 for k, v in value.items():
                     self.expect(getattr(port, k), v)
             else:
-                for p, v in zip(port, value):
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
                     self.expect(p, v, strict, **kwargs)
-        if self.is_recursive_type(port):
-            recurse(port)
-        elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1])):
-            recurse(port[-1])
-        else:
-            # set defaults
-            if strict is None:
-                strict = self.expect_strict_default
-            if caller is None:
-                try:
-                    caller = inspect.getframeinfo(inspect.stack()[1][0])
-                except IndexError:
-                    pass
 
-            # implement expect
-            if not isinstance(value, (actions.Peek, PortWrapper,
-                                      LoopIndex, expression.Expression)):
-                value = make_value(port, value)
-            self.actions.append(actions.Expect(port, value, caller=caller,
-                                               **kwargs))
+        if isinstance(port, SelectPath):
+            if self.is_recursive_type(port[-1]):
+                return recurse(port[-1])
+        elif self.is_recursive_type(port):
+            return recurse(port)
+
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+        if caller is None:
+            try:
+                caller = inspect.getframeinfo(inspect.stack()[1][0])
+            except IndexError:
+                pass
+
+        # implement expect
+        if not isinstance(value, (actions.Peek, PortWrapper,
+                                  LoopIndex, expression.Expression)):
+            value = make_value(port, value)
+        self.actions.append(actions.Expect(port, value, caller=caller,
+                                           **kwargs))
 
     def eval(self):
         """

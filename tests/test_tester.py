@@ -778,9 +778,14 @@ def test_poke_bitwise(target, simulator):
     tester.circuit.I = 0
     tester.eval()
     tester.circuit.I[0] = 1
+    tester.circuit.I[2] = 1
     tester.eval()
     tester.circuit.O[0].expect(1)
     tester.circuit.O[1].expect(0)
+    tester.circuit.O[2].expect(1)
+    tester.circuit.I[1:] = 0b01
+    tester.eval()
+    tester.circuit.O[1:].expect(0b01)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
