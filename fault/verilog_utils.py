@@ -6,7 +6,7 @@ def verilog_name(name):
         return str(name)
     if isinstance(name, m.ref.ArrayRef):
         array_name = verilog_name(name.array.name)
-        if isinstance(name.array.T, m._BitKind):
+        if issubclass(name.array.T, m.Digital):
             return f"{array_name}[{name.index}]"
         return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
@@ -23,7 +23,7 @@ def verilog_name(name):
 
 
 def verilator_name(name):
-    if isinstance(name, m.ref.ArrayRef) and isinstance(name.array.T, m._BitKind):
+    if isinstance(name, m.ref.ArrayRef) and issubclass(name.array.T, m.Digital):
         # Setting a specific bit is done using bit twiddling, so we return the
         # full array see https://github.com/leonardt/fault/pull/194 for more
         # info

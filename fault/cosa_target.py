@@ -35,7 +35,7 @@ class SelfPrefixer(ast.NodeTransformer):
 
 
 def get_width(port):
-    if isinstance(port, m._BitType):
+    if isinstance(port, m.Digital):
         return 1
     return len(port)
 

@@ -8,7 +8,7 @@ class ElectType(Type):
         self.port = Port(self)
 
     @classmethod
-    def isoriented(cls, direction):
+    def is_oriented(cls, direction):
         return cls.direction == direction
 
 
@@ -28,11 +28,11 @@ class ElectKind(Kind):
         return cls.direction == rhs.direction
 
     def __str__(cls):
-        if cls.isinput():
+        if cls.is_input():
             return 'In(Elect)'
-        elif cls.isoutput():
+        elif cls.is_output():
             return 'Out(Elect)'
-        elif cls.isinout():
+        elif cls.is_inout():
             return 'InOut(Elect)'
         else:
             return 'Elect'
@@ -49,9 +49,9 @@ class ElectKind(Kind):
         return cls
 
     def flip(cls):
-        if cls.isoriented(INPUT):
+        if cls.is_oriented(INPUT):
             return ElectOut
-        elif cls.isoriented(OUTPUT):
+        elif cls.is_oriented(OUTPUT):
             return ElectIn
         return cls
 

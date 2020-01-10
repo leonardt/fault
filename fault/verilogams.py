@@ -57,11 +57,11 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     ports = []
     for name, type_ in circ.IO.ports.items():
         # determine port direction
-        if type_.isinput():
+        if type_.is_input():
             vams_dir = 'input'
-        elif type_.isoutput():
+        elif type_.is_output():
             vams_dir = 'output'
-        elif type_.isinout():
+        elif type_.is_inout():
             vams_dir = 'input'
         else:
             raise Exception(f'Unsupported port type: {type_}')
@@ -71,10 +71,10 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
             vams_type = 'electrical'
         elif type_ is RealIn or type_ is RealOut:
             vams_type = 'wreal'
-        elif type_.size() == 1:
+        elif len(type_) == 1:
             vams_type = 'wire'
         else:
-            vams_type = f'wire [{type_.size() - 1}:0]'
+            vams_type = f'wire [{len(type_) - 1}:0]'
 
         # add port to list of ports
         ports += [VAMSPort(dir_=vams_dir, type_=vams_type, name=f'{name}')]

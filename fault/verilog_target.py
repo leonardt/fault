@@ -108,13 +108,13 @@ class VerilogTarget(Target):
             return flatten([self.generate_action_code(i, elem)
                             for elem in action])
         elif isinstance(action, (actions.PortAction)) and \
-                isinstance(action.port, m.ArrayType) and \
-                not isinstance(action.port.T, m.BitKind):
+                isinstance(action.port, m.Array) and \
+                not issubclass(action.port.T, m.Digital):
             return self.generate_array_action_code(i, action)
         elif isinstance(action, (actions.PortAction)) and \
                 isinstance(action.port, SelectPath) and \
-                isinstance(action.port[-1], m.ArrayType) and \
-                not isinstance(action.port[-1].T, m.BitKind):
+                isinstance(action.port[-1], m.Array) and \
+                not issubclass(action.port[-1].T, m.Digital):
             return self.generate_array_action_code(i, action)
         elif isinstance(action, actions.Poke):
             return self.make_poke(i, action)

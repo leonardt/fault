@@ -206,7 +206,7 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(port, fault.WrappedVerilogInternalPort):
             return value
         if isinstance(port.name, m.ref.ArrayRef) and \
-                isinstance(port.name.array.T, m._BitKind):
+                issubclass(port.name.array.T, m.Digital):
             i = port.name.index
             value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
         return value
@@ -217,7 +217,7 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(port, fault.WrappedVerilogInternalPort):
             return value
         if isinstance(port.name, m.ref.ArrayRef) and \
-                isinstance(port.name.array.T, m._BitKind):
+                issubclass(port.name.array.T, m.Digital):
             # Extract bit
             i = port.name.index
             value = f"({value} >> {i}) & 1"
@@ -383,7 +383,7 @@ class VerilatorTarget(VerilogTarget):
                 port = port[-1]
             elif isinstance(port, fault.WrappedVerilogInternalPort):
                 port = port.type_
-            if isinstance(port, m._BitType):
+            if isinstance(port, m.Digital):
                 port_len = 1
             else:
                 port_len = len(port)
@@ -623,7 +623,7 @@ if (!({expr_str})) {{
     def add_assumptions(self, circuit, actions, i):
         main_body = ""
         for port in circuit.interface.ports.values():
-            if port.isoutput():
+            if port.is_output():
                 for assumption in self.assumptions:
                     # TODO: Chained assumptions?
                     assume_port = assumption.port
@@ -642,7 +642,7 @@ if (!({expr_str})) {{
     def add_guarantees(self, circuit, actions, i):
         main_body = ""
         for name, port in circuit.interface.ports.items():
-            if port.isinput():
+            if port.is_input():
                 for guarantee in self.guarantees:
                     guarantee_port = guarantee.port
                     if isinstance(guarantee_port, SelectPath):

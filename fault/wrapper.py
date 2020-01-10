@@ -60,7 +60,7 @@ class PortWrapper(expression.Expression):
         select_path.tester.expect(select_path, value)
 
     def __setitem__(self, key, value):
-        if not isinstance(self.port, (m.ArrayType, m.TupleType)):
+        if not isinstance(self.port, (m.Array, m.Tuple)):
             raise Exception(f"Can only use item assignment with arrays and "
                             f"tuples not {type(self.port)}")
         select_path = self.select_path
@@ -68,13 +68,13 @@ class PortWrapper(expression.Expression):
         select_path.tester.poke(select_path, value)
 
     def __getitem__(self, key):
-        if not isinstance(self.port, (m.ArrayType, m.TupleType)):
+        if not isinstance(self.port, (m.Array, m.Tuple)):
             raise Exception(f"Can only use getitem with arrays and "
                             f"tuples not {type(self.port)}")
         return PortWrapper(self.port[key], self.parent)
 
     def __getattr__(self, key):
-        if isinstance(self.port, m.TupleType):
+        if isinstance(self.port, m.Tuple):
             if key in self.port.Ks:
                 return PortWrapper(getattr(self.port, key), self.parent)
         return object.__getattribute__(self, key)
@@ -82,7 +82,7 @@ class PortWrapper(expression.Expression):
     def __setattr__(self, key, value):
         try:
             object.__getattribute__(self, "init_done")
-            if not isinstance(self.port, (m.TupleType)):
+            if not isinstance(self.port, m.Tuple):
                 raise Exception(f"Can only use setattr with tuples, "
                                 f"not {type(self.port)}")
             select_path = self.select_path
@@ -119,7 +119,7 @@ class InstanceWrapper(Wrapper):
                     # Support directly poking coreir reg
                     wrapper = PortWrapper(
                         fault.WrappedVerilogInternalPort(
-                            "outReg", self.instance_map[attr].O),
+                            "outReg", type(self.instance_map[attr].O)),
                         InstanceWrapper(self.instance_map[attr], self))
                     select_path = wrapper.select_path
                     select_path.tester.poke(select_path, value)

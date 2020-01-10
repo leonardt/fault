@@ -12,7 +12,7 @@ steps:
       conda create -p ./conda_env -m -y pip numpy python=3.7.3
       export PATH=$$PWD/conda_env/bin:$$PATH
       echo $$PATH
-      
+
       # install python dependencies for testing
       pip install pytest-cov pytest-codestyle
       pip install mantle
