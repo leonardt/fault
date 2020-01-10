@@ -1,4 +1,5 @@
 import inspect
+import fault
 import warnings
 import logging
 import magma as m
