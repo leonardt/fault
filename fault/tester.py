@@ -1,5 +1,6 @@
 import fault
 import inspect
+import fault
 import warnings
 import logging
 import magma as m
@@ -156,26 +157,35 @@ class Tester:
                 for k, v in value.items():
                     self.poke(getattr(port, k), v)
             elif isinstance(port, m.Array) and \
+                    not issubclass(type(port).T, m.Digital) and \
                     isinstance(value, (int, BitVector, tuple, dict)):
                 # Broadcast value to children
                 for p in port:
                     self.poke(p, value, delay)
             else:
-                for p, v in zip(port, value):
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
                     self.poke(p, v, delay)
 
         # implement poke
-        if self.is_recursive_type(type(port)):
-            recurse(port)
-        elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(type(port[-1]))):
-            recurse(port[-1])
-        else:
-            if not isinstance(value, (LoopIndex, actions.FileRead,
-                                      expression.Expression)):
-                type_ = self.get_type(port)
-                value = make_value(type_, value)
-            self.actions.append(actions.Poke(port, value, delay=delay))
+        if isinstance(port, SelectPath):
+            if self.is_recursive_type(type(port[-1])) or \
+                    (not isinstance(port[-1], fault.WrappedVerilogInternalPort) and \
+                     isinstance(port[-1].name, m.ref.AnonRef)):
+                return recurse(port[-1])
+        elif self.is_recursive_type(type(port)):
+            return recurse(port)
+        elif not isinstance(port, fault.WrappedVerilogInternalPort) and\
+                isinstance(port.name, m.ref.AnonRef):
+            return recurse(port)
+
+        if not isinstance(value, (LoopIndex, actions.FileRead,
+                                  expression.Expression)):
+            type_ = self.get_type(port)
+            value = make_value(type_, value)
+        self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
         """
@@ -206,30 +216,39 @@ class Tester:
                 for k, v in value.items():
                     self.expect(getattr(port, k), v)
             else:
-                for p, v in zip(port, value):
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
                     self.expect(p, v, strict, **kwargs)
-        if self.is_recursive_type(type(port)):
-            recurse(port)
-        elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(type(port[-1]))):
-            recurse(port[-1])
-        else:
-            # set defaults
-            if strict is None:
-                strict = self.expect_strict_default
-            if caller is None:
-                try:
-                    caller = inspect.getframeinfo(inspect.stack()[1][0])
-                except IndexError:
-                    pass
 
-            # implement expect
-            if not isinstance(value, (actions.Peek, PortWrapper,
-                                      LoopIndex, expression.Expression)):
-                type_ = self.get_type(port)
-                value = make_value(type_, value)
-            self.actions.append(actions.Expect(port, value, caller=caller,
-                                               **kwargs))
+        if isinstance(port, SelectPath):
+            if self.is_recursive_type(type(port[-1])) or \
+                    (not isinstance(port[-1], fault.WrappedVerilogInternalPort) and \
+                     isinstance(port[-1].name, m.ref.AnonRef)):
+                return recurse(port[-1])
+        elif self.is_recursive_type(type(port)):
+            return recurse(port)
+        elif not isinstance(port, fault.WrappedVerilogInternalPort) and \
+                isinstance(port.name, m.ref.AnonRef):
+            return recurse(port)
+
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+        if caller is None:
+            try:
+                caller = inspect.getframeinfo(inspect.stack()[1][0])
+            except IndexError:
+                pass
+
+        # implement expect
+        if not isinstance(value, (actions.Peek, PortWrapper,
+                                  LoopIndex, expression.Expression)):
+            type_ = self.get_type(port)
+            value = make_value(type_, value)
+        self.actions.append(actions.Expect(port, value, caller=caller,
+                                           **kwargs))
 
     def eval(self):
         """
