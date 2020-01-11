@@ -172,8 +172,8 @@ class Tester:
         # implement poke
         if isinstance(port, SelectPath):
             if self.is_recursive_type(type(port[-1])) or \
-                    not isinstance(port, fault.WrappedVerilogInternalPort) and \
-                    isinstance(port[-1].name, m.ref.AnonRef):
+                    (not isinstance(port[-1], fault.WrappedVerilogInternalPort) and \
+                     isinstance(port[-1].name, m.ref.AnonRef)):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
@@ -224,8 +224,8 @@ class Tester:
 
         if isinstance(port, SelectPath):
             if self.is_recursive_type(type(port[-1])) or \
-                    not isinstance(port, fault.WrappedVerilogInternalPort) and \
-                    isinstance(port[-1].name, m.ref.AnonRef):
+                    (not isinstance(port[-1], fault.WrappedVerilogInternalPort) and \
+                     isinstance(port[-1].name, m.ref.AnonRef)):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
