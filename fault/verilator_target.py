@@ -249,6 +249,7 @@ class VerilatorTarget(VerilogTarget):
                 # scheme
                 if circuit_name == "coreir_reg":
                     circuit_name += "_"
+                    circuit_name += f"_C1"  # Posedge clock
                     circuit_name += f"_I{circuit.coreir_configargs['init']}"
                     circuit_name += f"_W{circuit.coreir_genargs['width']}"
                 elif circuit_name == "coreir_reg_arst":
