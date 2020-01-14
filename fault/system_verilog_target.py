@@ -275,7 +275,7 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(value, actions.Peek):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
-            value = f"dut.{value.select_path.system_verilog_path}"
+            value = f"dut.{value.select_path.system_verilog_path(self.imported_verilog_circuit)}"
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
@@ -294,7 +294,7 @@ class SystemVerilogTarget(VerilogTarget):
             op = value.op_str
             return f"{op} ({operand})"
         elif isinstance(value, PortWrapper):
-            return f"dut.{value.select_path.system_verilog_path}"
+            return f"dut.{value.select_path.system_verilog_path(self.imported_verilog_circuit)}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
