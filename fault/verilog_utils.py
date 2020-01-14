@@ -20,7 +20,7 @@ def verilog_name(name, is_imported_verilog_circuit):
                 return f"{array_name}[{name.index}]"
         return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
-        tuple_name = verilog_name(name.tuple.name)
+        tuple_name = verilog_name(name.tuple.name, is_imported_verilog_circuit)
         index = name.index
         try:
             int(index)
