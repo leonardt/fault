@@ -62,7 +62,7 @@ class CoSATarget(VerilogTarget):
         raise NotImplementedError()
 
     def make_poke(self, i, action):
-        name = verilog_name(action.port.name)
+        name = verilog_name(action.port.name, self.imported_verilog_circuit)
         value = action.value
         width = get_width(action.port)
         # self.curr_state_pokes.append(
