@@ -21,7 +21,8 @@ class SelectPath:
     def __setitem__(self, index, value):
         self.path[index] = value
 
-    def make_path(self, separator, name_func=verilog_name):
+    def make_path(self, separator, is_imported_verilog_circuit=False,
+                  name_func=verilog_name):
         # Initialize empty path
         path = []
 
@@ -39,22 +40,22 @@ class SelectPath:
         elif isinstance(self.path[-1], str):
             path += [self.path[-1]]
         else:
-            path += [name_func(self.path[-1].name)]
+            path += [name_func(self.path[-1].name,
+                               is_imported_verilog_circuit)]
 
         # Return the path string constructed with the provided separator.
         return separator.join(path)
 
-    @property
-    def system_verilog_path(self):
-        return self.make_path(".")
+    def system_verilog_path(self, is_imported_verilog_circuit):
+        return self.make_path(".", is_imported_verilog_circuit)
 
     @property
     def spice_path(self):
         return self.make_path(".")
 
-    @property
-    def verilator_path(self):
-        return self.make_path("->", name_func=verilator_name)
+    def verilator_path(self, is_imported_verilog_circuit):
+        return self.make_path("->", is_imported_verilog_circuit,
+                              name_func=verilator_name)
 
     @property
     def debug_name(self):

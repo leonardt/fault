@@ -232,10 +232,12 @@ class SystemVerilogTarget(VerilogTarget):
             port = port.select_path
         if isinstance(port, SelectPath):
             if len(port) > 2:
-                name = f"dut.{port.system_verilog_path}"
+                name = port.system_verilog_path(self.imported_verilog_circuit)
+                name = f"dut.{name}"
             else:
                 # Top level ports assign to the external reg
-                name = verilog_name(port[-1].name)
+                name = verilog_name(port[-1].name,
+                                    self.imported_verilog_circuit)
         elif isinstance(port, fault.WrappedVerilogInternalPort):
             name = f"dut.{port.path}"
         else:

@@ -194,7 +194,9 @@ class VerilatorTarget(VerilogTarget):
                 op = value.op_str
             return f"({left} {op} {right})"
         elif isinstance(value, PortWrapper):
-            return f"top->{value.select_path.verilator_path}"
+            name = \
+                value.select_path.verilator_path(self.imported_verilog_circuit)
+            return f"top->{name}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
@@ -240,7 +242,9 @@ class VerilatorTarget(VerilogTarget):
                 # TODO: Find the version that they changed this, 3.874 is known
                 # to use top->v instead of top->{circuit_name}
                 name += f"{prefix}->"
-            name += action.port.verilator_path
+            name += action.port.verilator_path(
+                self.imported_verilog_circuit
+            )
             if len(action.port) > 2:
                 self.debug_includes.add(f"{action.port[0].circuit.name}")
             for item in action.port[1:-1]:
@@ -314,7 +318,9 @@ class VerilatorTarget(VerilogTarget):
                 name = f"{prefix}->{path}"
             elif isinstance(port, PortWrapper):
                 port = port.select_path
-                name = port.verilator_path
+                name = port.verilator_path(
+                    self.imported_verilog_circuit
+                )
                 if len(port) > 2:
                     name = f"{prefix}->" + name
                 if self.verilator_version >= 3.856:
@@ -324,7 +330,7 @@ class VerilatorTarget(VerilogTarget):
                     circuit_name = type(item.instance).name
                     self.debug_includes.add(f"{circuit_name}")
             else:
-                name = verilator_name(port.name)
+                name = verilator_name(port.name, self.imported_verilog_circuit)
             port_names.append(name)
         ports = ", ".join(f"top->{name}" for name in port_names)
         if ports:
@@ -342,7 +348,9 @@ class VerilatorTarget(VerilogTarget):
             name = f"{prefix}->{path}"
             debug_name = name
         elif isinstance(action.port, SelectPath):
-            name = action.port.verilator_path
+            name = action.port.verilator_path(
+                self.imported_verilog_circuit
+            )
             if len(action.port) > 2:
                 name = f"{prefix}->" + name
             if self.verilator_version >= 3.856:
@@ -353,7 +361,8 @@ class VerilatorTarget(VerilogTarget):
                 self.debug_includes.add(f"{circuit_name}")
             debug_name = action.port[-1].debug_name
         else:
-            name = verilator_name(action.port.name)
+            name = verilator_name(action.port.name,
+                                  self.imported_verilog_circuit)
             debug_name = action.port.debug_name
         value = action.value
         if isinstance(value, actions.Peek):
@@ -365,7 +374,9 @@ class VerilatorTarget(VerilogTarget):
             for item in value.select_path[1:-1]:
                 circuit_name = type(item.instance).name
                 self.debug_includes.add(f"{circuit_name}")
-            value = f"top->{prefix}->" + value.select_path.verilator_path
+            value = f"top->{prefix}->" + value.select_path.verilator_path(
+                self.imported_verilog_circuit
+            )
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
             asserts = []
@@ -401,7 +412,7 @@ class VerilatorTarget(VerilogTarget):
                 "tracer->dump(main_time);", "#endif"]
 
     def make_step(self, i, action):
-        name = verilator_name(action.clock.name)
+        name = verilator_name(action.clock.name, self.imported_verilog_circuit)
         code = []
         code.append("top->eval();")
         for step in range(action.steps):
@@ -449,7 +460,8 @@ class VerilatorTarget(VerilogTarget):
 
         idx = 'i'
         fd = self.fd_var(action.file)
-        value = f'top->{verilator_name(action.value.name)}'
+        name = verilator_name(action.value.name, self.imported_verilog_circuit)
+        value = f'top->{name}'
         byte_expr = f'({value} >> ({idx} * 8)) & 0xFF'
         err_msg = f'Error writing to {action.file.name_without_ext}'
 
