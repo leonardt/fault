@@ -161,7 +161,9 @@ class VerilatorTarget(VerilogTarget):
             path = value.port.path.replace(".", "->")
             return f"top->{self.get_verilator_prefix()}->{path}"
         else:
-            return f"top->{verilator_name(value.port.name)}"
+            name = verilator_name(value.port.name,
+                                  self.imported_verilog_circuit)
+            return f"top->{name}"
 
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
@@ -259,7 +261,8 @@ class VerilatorTarget(VerilogTarget):
                         circuit_name += f"_W{circuit.coreir_genargs['width']}"
                 self.debug_includes.add(f"{circuit_name}")
         else:
-            name = verilator_name(action.port.name)
+            name = verilator_name(action.port.name,
+                                  self.imported_verilog_circuit)
 
         # Special case poking internal registers
         is_reg_poke = isinstance(action.port, SelectPath) and \

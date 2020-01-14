@@ -239,7 +239,7 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(port, fault.WrappedVerilogInternalPort):
             name = f"dut.{port.path}"
         else:
-            name = verilog_name(port.name)
+            name = verilog_name(port.name, self.imported_verilog_circuit)
         return name
 
     def process_peek(self, value):
@@ -476,7 +476,7 @@ class SystemVerilogTarget(VerilogTarget):
         return ['#1;']
 
     def make_step(self, i, action):
-        name = verilog_name(action.clock.name)
+        name = verilog_name(action.clock.name, self.imported_verilog_circuit)
         code = []
         for step in range(action.steps):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")

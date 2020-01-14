@@ -24,6 +24,7 @@ class VerilogTarget(Target):
                  magma_output="verilog", magma_opts=None, use_kratos=False,
                  value_file_name='get_value_file.txt'):
         super().__init__(circuit)
+        self.imported_verilog_circuit = hasattr(circuit, "verilogFile")
 
         if circuit_name is None:
             circuit_name = self.circuit.name
