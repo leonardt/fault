@@ -224,7 +224,7 @@ class Tester:
             if isinstance(value, dict):
                 for k, v in value.items():
                     self.expect(port=getattr(port, k), value=v, strict=strict,
-                                caller=caller)
+                                caller=caller, **kwargs)
             else:
                 _value = value
                 if isinstance(_value, int):
