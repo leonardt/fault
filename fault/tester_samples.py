@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 class GenericCellTester(fault.Tester, metaclass=ABCMeta):
     def __init__(self, circuit, *args, n_trials=100, supply0='vss',
-                 supply1='vdd', td=100e-9, poke_delay_default=0, **kwargs):
+                 supply1='vdd', poke_delay_default=100e-9, **kwargs):
         # call super constructor
         super().__init__(circuit, *args, poke_delay_default=poke_delay_default,
                          **kwargs)
@@ -13,7 +13,6 @@ class GenericCellTester(fault.Tester, metaclass=ABCMeta):
         self.supply0 = supply0
         self.supply1 = supply1
         self.n_trials = n_trials
-        self.td = td
 
         # define the test
         self.define_test()
@@ -23,7 +22,6 @@ class GenericCellTester(fault.Tester, metaclass=ABCMeta):
 
     def poke(self, name, *args, **kwargs):
         super().poke(getattr(self._circuit, name), *args, **kwargs)
-        self.delay(self.td)
 
     def poke_optional(self, name, *args, **kwargs):
         if self.has_pin(name):
