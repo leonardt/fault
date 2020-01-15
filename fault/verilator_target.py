@@ -519,7 +519,8 @@ class VerilatorTarget(VerilogTarget):
     def make_get_value(self, i, action):
         fd_var = self.fd_var(self.value_file)
         fmt = action.get_format()
-        value = f'top->{verilator_name(action.port.name)}'
+        name = verilator_name(action.port.name, self.imported_verilog_circuit)
+        value = f'top->{name}'
         return [f'fprintf({fd_var}, "{fmt}\\n", {value});']
 
     def make_assert(self, i, action):
