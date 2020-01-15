@@ -10,7 +10,6 @@ try:
 except ModuleNotFoundError:
     MagmaSimulatorTarget = None
     pass
-
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
@@ -22,6 +21,7 @@ from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper
 from fault.file import File
 from fault.select_path import SelectPath
+from fault.wrapped_internal_port import WrappedVerilogInternalPort
 import fault.expression as expression
 import os
 import inspect
@@ -134,7 +134,7 @@ class Tester:
     def get_type(self, port):
         if isinstance(port, SelectPath):
             port = port[-1]
-        if isinstance(port, fault.WrappedVerilogInternalPort):
+        if isinstance(port, WrappedVerilogInternalPort):
             type_ = port.type_
             print(port.type_)
         else:
@@ -171,13 +171,13 @@ class Tester:
 
         # implement poke
         if isinstance(port, SelectPath):
-            if self.is_recursive_type(type(port[-1])) or \
-                    (not isinstance(port[-1], fault.WrappedVerilogInternalPort) and \
-                     isinstance(port[-1].name, m.ref.AnonRef)):
+            if (self.is_recursive_type(type(port[-1]))
+                or (not isinstance(port[-1], WrappedVerilogInternalPort) and
+                    isinstance(port[-1].name, m.ref.AnonRef))):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
-        elif not isinstance(port, fault.WrappedVerilogInternalPort) and\
+        elif not isinstance(port, WrappedVerilogInternalPort) and\
                 isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 
@@ -234,13 +234,13 @@ class Tester:
                                 **kwargs)
 
         if isinstance(port, SelectPath):
-            if self.is_recursive_type(type(port[-1])) or \
-                    (not isinstance(port[-1], fault.WrappedVerilogInternalPort) and \
-                     isinstance(port[-1].name, m.ref.AnonRef)):
+            if (self.is_recursive_type(type(port[-1]))
+                or (not isinstance(port[-1], WrappedVerilogInternalPort)
+                    and isinstance(port[-1].name, m.ref.AnonRef))):
                 return recurse(port[-1])
         elif self.is_recursive_type(type(port)):
             return recurse(port)
-        elif not isinstance(port, fault.WrappedVerilogInternalPort) and \
+        elif not isinstance(port, WrappedVerilogInternalPort) and \
                 isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 

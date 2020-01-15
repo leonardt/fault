@@ -25,5 +25,5 @@ def test_ext_vlog(target, simulator):
         simulator=simulator,
         ext_libs=[Path('tests/verilog/myinv.v').resolve()],
         ext_model_file=True,
-        tmp_dir=True
+        tmp_dir=False
     )

@@ -223,7 +223,6 @@ class VerilatorTarget(VerilogTarget):
             value = f"({value} >> {i}) & 1"
         return value
 
-
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
             prefix = f"{self.circuit_name}"

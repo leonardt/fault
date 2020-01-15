@@ -603,7 +603,7 @@ class SystemVerilogTarget(VerilogTarget):
             top_module = f'{self.circuit_name}_tb'
 
         # add timescale
-        timescale=f'`timescale {self.timescale}'
+        timescale = f'`timescale {self.timescale}'
 
         # fill out values in the testbench template
         src = src_tpl.format(
