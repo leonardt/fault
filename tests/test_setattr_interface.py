@@ -155,14 +155,17 @@ def test_setattr_x(target, simulator):
         pytest.skip("X not support with Verilator")
     circ = AndCircuit
     tester = Tester(circ)
+    # "0" & "1" -> "0"
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1
     tester.eval()
     tester.circuit.O.expect(0)
+    # "X" & "1" -> "X"
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = 1
     tester.eval()
-    tester.circuit.O.expect(0)
+    tester.circuit.O.expect(fault.UnknownValue)
+    # "X" & "X" -> "X"
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = fault.UnknownValue
     tester.eval()

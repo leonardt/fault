@@ -65,7 +65,7 @@ class Tester:
 
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
                  reset: m.Reset = None, poke_delay_default=None,
-                 expect_strict_default=False):
+                 expect_strict_default=True):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock

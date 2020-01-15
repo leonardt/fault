@@ -19,8 +19,7 @@ def test_hi_z(target, simulator):
     )
 
     # instantiate the tester
-    tester = fault.Tester(hizmod, expect_strict_default=True,
-                          poke_delay_default=0)
+    tester = fault.Tester(hizmod, poke_delay_default=0)
 
     # define common pattern for running all cases
     def run_case(a, b, c):
