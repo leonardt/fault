@@ -45,7 +45,7 @@ def generate_random_test_vectors(circuit, functional_model,
     for i in range(num_vectors):
         inputs = []
         for name, port in circuit.interface.items():
-            if port.isinput():
+            if port.is_input():
                 inputs.append(get_random_input(name, port))
                 tester.poke(getattr(circuit, name), inputs[-1])
         tester.eval()
@@ -56,7 +56,7 @@ def generate_random_test_vectors(circuit, functional_model,
             inputs = input_mapping(*inputs)
         functional_model(*inputs)
         for name, port in circuit.interface.items():
-            if port.isoutput():
+            if port.is_output():
                 # Handle renamed output ports
                 fn_model_port = get_renamed_port(circuit, name)
                 tester.expect(getattr(circuit, name),

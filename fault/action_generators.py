@@ -24,7 +24,7 @@ def generate_actions_from_streams(circuit, functional_model, streams,
             inputs = input_mapping(*inputs)
         functional_model(*inputs)
         for name, port in circuit.interface.items():
-            if port.isoutput():
+            if port.is_output():
                 # Handle renamed output ports
                 fn_model_port = get_renamed_port(circuit, name)
                 tester.expect(getattr(circuit, name),
