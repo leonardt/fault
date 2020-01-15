@@ -21,6 +21,7 @@ from numbers import Number
 
 
 src_tpl = """\
+{timescale}
 module {top_module};
 {declarations}
 {assigns}
@@ -601,8 +602,12 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             top_module = f'{self.circuit_name}_tb'
 
+        # add timescale
+        timescale=f'`timescale {self.timescale}'
+
         # fill out values in the testbench template
         src = src_tpl.format(
+            timescale=timescale,
             declarations=declarations,
             assigns=assigns,
             initial_body=initial_body,

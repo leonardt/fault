@@ -211,16 +211,27 @@ class Tester:
         """
         Expect the current value of `port` to be `value`
         """
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+        if caller is None:
+            try:
+                caller = inspect.getframeinfo(inspect.stack()[1][0])
+            except IndexError:
+                pass
+
         def recurse(port):
             if isinstance(value, dict):
                 for k, v in value.items():
-                    self.expect(getattr(port, k), v)
+                    self.expect(port=getattr(port, k), value=v, strict=strict,
+                                caller=caller)
             else:
                 _value = value
                 if isinstance(_value, int):
                     _value = BitVector[len(port)](_value)
                 for p, v in zip(port, _value):
-                    self.expect(p, v, strict, **kwargs)
+                    self.expect(port=p, value=v, strict=strict, caller=caller,
+                                **kwargs)
 
         if isinstance(port, SelectPath):
             if self.is_recursive_type(type(port[-1])) or \
@@ -233,21 +244,13 @@ class Tester:
                 isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
 
-        # set defaults
-        if strict is None:
-            strict = self.expect_strict_default
-        if caller is None:
-            try:
-                caller = inspect.getframeinfo(inspect.stack()[1][0])
-            except IndexError:
-                pass
-
         # implement expect
         if not isinstance(value, (actions.Peek, PortWrapper,
                                   LoopIndex, expression.Expression)):
             type_ = self.get_type(port)
             value = make_value(type_, value)
-        self.actions.append(actions.Expect(port, value, caller=caller,
+        self.actions.append(actions.Expect(port=port, value=value,
+                                           strict=strict, caller=caller,
                                            **kwargs))
 
     def eval(self):
