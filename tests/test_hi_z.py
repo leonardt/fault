@@ -19,13 +19,14 @@ def test_hi_z(target, simulator):
     )
 
     # instantiate the tester
-    tester = fault.Tester(hizmod)
+    tester = fault.Tester(hizmod, poke_delay_default=0)
 
     # define common pattern for running all cases
     def run_case(a, b, c):
         tester.poke(hizmod.a, a)
         tester.poke(hizmod.b, b)
-        tester.expect(hizmod.c, c, strict=True)
+        tester.delay(10e-9)
+        tester.expect(hizmod.c, c)
 
     # walk through all of the cases that produce a 0 or 1 output
     run_case(1, 1, 1)

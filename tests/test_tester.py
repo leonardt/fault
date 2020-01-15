@@ -116,13 +116,14 @@ def test_tester_peek(target, simulator):
     circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
+    tester.eval()
     tester.expect(circ.O, 0)
     check(tester.actions[0], Poke(circ.I, 0))
-    check(tester.actions[1], Expect(circ.O, 0))
+    check(tester.actions[2], Expect(circ.O, 0))
     tester.poke(circ.CLK, 0)
-    check(tester.actions[2], Poke(circ.CLK, 0))
+    check(tester.actions[3], Poke(circ.CLK, 0))
     tester.step()
-    check(tester.actions[3], Step(circ.CLK, 1))
+    check(tester.actions[4], Step(circ.CLK, 1))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
@@ -601,6 +602,7 @@ def test_tester_while(target, simulator):
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 0)
+    tester.eval()
     loop = tester._while(tester.circuit.O != 1)
     loop.poke(circ.I, 1)
     loop.eval()
