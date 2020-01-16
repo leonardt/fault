@@ -155,19 +155,19 @@ class Tester:
         def recurse(port):
             if isinstance(value, dict):
                 for k, v in value.items():
-                    self.poke(getattr(port, k), v)
+                    self.poke(port=getattr(port, k), value=v, delay=delay)
             elif isinstance(port, m.Array) and \
                     not issubclass(type(port).T, m.Digital) and \
                     isinstance(value, (int, BitVector, tuple, dict)):
                 # Broadcast value to children
                 for p in port:
-                    self.poke(p, value, delay)
+                    self.poke(port=p, value=value, delay=delay)
             else:
                 _value = value
                 if isinstance(_value, int):
                     _value = BitVector[len(port)](_value)
                 for p, v in zip(port, _value):
-                    self.poke(p, v, delay)
+                    self.poke(port=p, value=v, delay=delay)
 
         # implement poke
         if isinstance(port, SelectPath):

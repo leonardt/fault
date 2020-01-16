@@ -313,7 +313,17 @@ class SpiceTarget(Target):
                 # to analog conversion if needed and controlling
                 # the output switch as needed
                 if action.value is fault.HiZ:
-                    stim_v = 0
+                    if len(pwc_dict[action_port_name]) > 0:
+                        # if there was a previous voltage stimulus maintain
+                        # that voltage as the switch is turned off to prevent
+                        # glitches
+                        stim_v = pwc_dict[action_port_name][0][-1][1]
+                    else:
+                        # otherwise, if this is first poke action, we have to
+                        # pick a value for the voltage behind the switch, so
+                        # zero is a good choice (with the switch off, this
+                        # ends up being like a Gmin leakage to ground)
+                        stim_v = 0
                     stim_s = 0
                 elif isinstance(action.port, m.Bit):
                     stim_v = self.vsup if action.value else 0
