@@ -411,7 +411,7 @@ class SpiceTarget(Target):
 
         # specify the transient analysis
         t_step = (self.t_step if self.t_step is not None
-                  else comp.stop_time / 1000)
+                  else comp.stop_time / 100000)
         uic = self.ic != {}
         netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
 
@@ -495,6 +495,10 @@ class SpiceTarget(Target):
             elif read.style == 'edge':
                 value = self.find_edge(res.x, res.y, time, **read.params)
                 read.value = value
+            elif read.style == 'frequency':
+                edges = self.find_edge(res.x, res.y, time, count=2)
+                freq = 1 / (edges[0] - edges[1])
+                read.value = freq
             elif read.style == 'phase':
                 assert 'ref' in read.params, 'Phase read requires reference signal param'
                 res_ref = results[f'{read.params["ref"].name}']
@@ -503,6 +507,18 @@ class SpiceTarget(Target):
                 fraction = 1 + before_cycle_end[0] / (ref[0] -ref[1])
                 # TODO multiply by 2pi?
                 read.value = fraction
+            elif read.style == 'block':
+                assert 'duration' in read.params, 'Block read requires duration'
+                duration = read.params['duration']
+                # make sure to grab points surrounding requested times so user can interpolate
+                # the exact start and end.
+                start = max(0, np.argmax(res.x > time) - 1)
+                end= min(len(res.x)-1, np.argmax(res.x >= time + duration))
+
+
+                x = res.x[start:end] - time
+                y = res.y[start:end]
+                read.value = (x, y)
             else:
                 raise NotImplementedError(f'Unknown read style "{read.style}"')
 
