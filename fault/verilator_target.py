@@ -39,9 +39,12 @@ double sc_time_stamp () {{       // Called by $time in Verilog
 }}
 
 // function to write_coverage
+#ifdef _VERILATED_COV_H_
 void write_coverage() {{
      VerilatedCov::write("logs/coverage.dat");
 }}
+
+#endif
 
 #if VM_TRACE
 VerilatedVcdC* tracer;
@@ -88,9 +91,9 @@ int main(int argc, char **argv) {{
 #endif
   {kratos_exit_call}
 
-  if ({coverage}) {{
+#ifdef _VERILATED_COV_H_
     write_coverage();
-  }}
+#endif
 
 }}
 """  # nopep8
@@ -582,13 +585,10 @@ if (!({expr_str})) {{
             kratos_start_call = ""
             kratos_exit_call = ""
 
-        coverage = "true" if self.coverage else "false"
-
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
             circuit_name=self.circuit_name,
-            coverage=coverage,
             kratos_start_call=kratos_start_call,
             kratos_exit_call=kratos_exit_call
         )
