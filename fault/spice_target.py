@@ -513,11 +513,14 @@ class SpiceTarget(Target):
                 # make sure to grab points surrounding requested times so user can interpolate
                 # the exact start and end.
                 start = max(0, np.argmax(res.x > time) - 1)
-                end= min(len(res.x)-1, np.argmax(res.x >= time + duration))
+                end= (len(res.x)-1) if res.x[-1] < time + duration else np.argmax(res.x >= time + duration)
 
 
                 x = res.x[start:end] - time
                 y = res.y[start:end]
+                # if len(x) < 100 or len(y) < 100:
+                #     print('trouble with block read')
+                #     pass
                 read.value = (x, y)
             else:
                 raise NotImplementedError(f'Unknown read style "{read.style}"')
