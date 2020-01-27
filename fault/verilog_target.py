@@ -21,8 +21,8 @@ class VerilogTarget(Target):
 
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=False, include_verilog_libraries=None,
-                 magma_output="verilog", magma_opts=None, use_kratos=False,
-                 value_file_name='get_value_file.txt'):
+                 magma_output="verilog", magma_opts=None, coverage=False,
+                 use_kratos=False, value_file_name='get_value_file.txt'):
         super().__init__(circuit)
 
         if circuit_name is None:
@@ -68,6 +68,8 @@ class VerilogTarget(Target):
         value_file_path = (Path(self.directory) / value_file_name).resolve()
         self.value_file = File(name=str(value_file_path), tester=None,
                                mode='w', chunk_size=None, endianness=None)
+        # coverage
+        self.coverage = coverage
 
     @abstractmethod
     def compile_expression(self, value):

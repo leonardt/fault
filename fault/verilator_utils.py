@@ -18,7 +18,7 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
                        include_verilog_libraries=None,
                        include_directories=None,
                        driver_filename=None, verilator_flags=None,
-                       use_kratos=False):
+                       coverage=False, use_kratos=False):
     # set defaults
     if include_verilog_libraries is None:
         include_verilog_libraries = []
@@ -52,6 +52,8 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
     # vpi flag
     if use_kratos:
         retval += ["--vpi"]
+    if coverage:
+        retval += ["--coverage"]
 
     # return the command
     return retval
