@@ -3,6 +3,7 @@ from fault.tester import Tester
 from fault.wrapper import Wrapper, PortWrapper, InstanceWrapper
 from fault.cosa_target import CoSATarget
 import fault.actions as actions
+from fault.random import ConstrainedRandomGenerator
 
 
 class SymbolicWrapper(Wrapper):
@@ -58,9 +59,11 @@ class SymbolicInstanceWrapper(InstanceWrapper):
 
 
 class SymbolicTester(Tester):
-    def __init__(self, circuit, clock=None, num_tests=100):
+    def __init__(self, circuit, clock=None, num_tests=100,
+                 random_strategy="rejection"):
         super().__init__(circuit, clock)
         self.num_tests = num_tests
+        self.random_strategy = random_strategy
 
     def assume(self, port, constraint):
         """
@@ -69,7 +72,15 @@ class SymbolicTester(Tester):
 
             symbolic_tester_inst.assume(top.I, lambda x : x >= 0)
         """
-        self.actions.append(actions.Assume(port, constraint))
+        action = actions.Assume(port, constraint)
+        action.has_randvals = False
+        if self.random_strategy == "smt":
+            port = port[-1]
+            v = {str(port.name): len(port)}
+            gen = ConstrainedRandomGenerator()
+            action.randvals = iter(gen(v, constraint, self.num_tests))
+            action.has_randvals = True
+        self.actions.append(action)
 
     def guarantee(self, port, constraint):
         """
