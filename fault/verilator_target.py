@@ -38,6 +38,14 @@ double sc_time_stamp () {{       // Called by $time in Verilog
                                 // what SystemC does
 }}
 
+// function to write_coverage
+#ifdef _VERILATED_COV_H_
+void write_coverage() {{
+     VerilatedCov::write("logs/coverage.dat");
+}}
+
+#endif
+
 #if VM_TRACE
 VerilatedVcdC* tracer;
 #endif
@@ -82,6 +90,11 @@ int main(int argc, char **argv) {{
   tracer->close();
 #endif
   {kratos_exit_call}
+
+#ifdef _VERILATED_COV_H_
+    write_coverage();
+#endif
+
 }}
 """  # nopep8
 
@@ -97,7 +110,7 @@ class VerilatorTarget(VerilogTarget):
                  flags=None, skip_compile=False, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False,
-                 disp_type='on_error', use_kratos=False):
+                 disp_type='on_error', coverage=False, use_kratos=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -127,7 +140,8 @@ class VerilatorTarget(VerilogTarget):
 
         # Call super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output, magma_opts)
+                         include_verilog_libraries, magma_output, magma_opts,
+                         coverage=coverage)
 
         # Compile the design using `verilator`, if not skip
         if not skip_verilator:
@@ -140,6 +154,7 @@ class VerilatorTarget(VerilogTarget):
                 include_directories=include_directories,
                 driver_filename=driver_file.name,
                 verilator_flags=flags,
+                coverage=self.coverage,
                 use_kratos=use_kratos
             )
             # shell=True since 'verilator' is actually a shell script
@@ -557,6 +572,9 @@ if (!({expr_str})) {{
         includes += [f'"V{self.circuit_name}_{include}.h"' for include in
                      self.debug_includes]
 
+        if self.coverage:
+            includes += ["\"verilated_cov.h\""]
+
         includes_src = "\n".join(["#include " + i for i in includes])
         if self.use_kratos:
             includes_src += "\nvoid initialize_runtime();\n"
@@ -606,6 +624,11 @@ if (!({expr_str})) {{
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
         subprocess_run(make_cmd, cwd=self.directory, disp_type=self.disp_type)
+
+        # create the logs folder if necessary
+        logs = Path(self.directory) / "logs"
+        if not os.path.isdir(logs):
+            os.mkdir(logs)
 
         # Run the executable created by verilator and write the standard
         # output to a logfile for later review or processing

@@ -56,7 +56,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, use_kratos=False):
+                 waveform_file=None, coverage=False, use_kratos=False):
         """
         circuit: a magma circuit
 
@@ -157,7 +157,7 @@ class SystemVerilogTarget(VerilogTarget):
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
-                         magma_opts, use_kratos=use_kratos)
+                         magma_opts, coverage=coverage, use_kratos=use_kratos)
 
         # sanity check
         if simulator is None:
@@ -870,6 +870,10 @@ class SystemVerilogTarget(VerilogTarget):
             from kratos_runtime import get_ncsim_flag
             cmd += get_ncsim_flag().split()
 
+        # coverage flags
+        if self.coverage:
+            cmd += ["-coverage", "b", "-covoverwrite"]
+
         # return arg list
         return cmd
 
@@ -927,6 +931,10 @@ class SystemVerilogTarget(VerilogTarget):
             # +vpi -load libkratos-runtime.so:initialize_runtime_vpi -acc+=rw
             from kratos_runtime import get_vcs_flag
             cmd += get_vcs_flag().split()
+
+        # not supported yet
+        if self.coverage:
+            raise NotImplementedError("coverage in vcs is not implemented yet")
 
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
