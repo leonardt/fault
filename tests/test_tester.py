@@ -395,9 +395,10 @@ Actions:
 
 
 def test_tester_verilog_wrapped(target, simulator):
-    SimpleALU = m.DefineFromVerilogFile("tests/simple_alu.v",
-                                        type_map={"CLK": m.In(m.Clock)},
-                                        target_modules=["SimpleALU"])[0]
+    ConfigReg, SimpleALU = m.DefineFromVerilogFile(
+        "tests/simple_alu.v", type_map={"CLK": m.In(m.Clock)},
+        target_modules=["SimpleALU", "ConfigReg"])
+    SimpleALU.place(ConfigReg())
 
     circ = m.DefineCircuit("top",
                            "a", m.In(m.Bits[16]),
