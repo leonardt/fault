@@ -1,11 +1,11 @@
-from magma.t import Type, Kind, Direction
-from magma.wire import Wire
+from magma.port import Port, INPUT, OUTPUT, INOUT
+from magma.t import Type, Kind
 
 
 class RealType(Type):
     def __init__(self, *largs, **kwargs):
         super().__init__(*largs, **kwargs)
-        self._wire = Wire(self)
+        self.port = Port(self)
 
     @classmethod
     def is_oriented(cls, direction):
@@ -40,18 +40,18 @@ class RealKind(Kind):
     def qualify(cls, direction):
         if direction is None:
             return Real
-        elif direction == Direction.In:
+        elif direction == INPUT:
             return RealIn
-        elif direction == Direction.Out:
+        elif direction == OUTPUT:
             return RealOut
-        elif direction == Direction.InOut:
+        elif direction == INOUT:
             return RealInOut
         return cls
 
     def flip(cls):
-        if cls.is_oriented(Direction.In):
+        if cls.is_oriented(INPUT):
             return RealOut
-        elif cls.is_oriented(Direction.Out):
+        elif cls.is_oriented(OUTPUT):
             return RealIn
         return cls
 
@@ -61,6 +61,6 @@ def MakeReal(**kwargs):
 
 
 Real = MakeReal()
-RealIn = MakeReal(direction=Direction.In)
-RealOut = MakeReal(direction=Direction.Out)
-RealInOut = MakeReal(direction=Direction.InOut)
+RealIn = MakeReal(direction=INPUT)
+RealOut = MakeReal(direction=OUTPUT)
+RealInOut = MakeReal(direction=INOUT)

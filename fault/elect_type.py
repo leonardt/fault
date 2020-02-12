@@ -1,11 +1,11 @@
-from magma.t import Type, Kind, Direction
-from magma.wire import Wire
+from magma.port import Port, INPUT, OUTPUT, INOUT
+from magma.t import Type, Kind
 
 
 class ElectType(Type):
     def __init__(self, *largs, **kwargs):
         super().__init__(*largs, **kwargs)
-        self._wire = Wire(self)
+        self.port = Port(self)
 
     @classmethod
     def is_oriented(cls, direction):
@@ -40,18 +40,18 @@ class ElectKind(Kind):
     def qualify(cls, direction):
         if direction is None:
             return Elect
-        elif direction == Direction.In:
+        elif direction == INPUT:
             return ElectIn
-        elif direction == Direction.Out:
+        elif direction == OUTPUT:
             return ElectOut
-        elif direction == Direction.InOut:
+        elif direction == INOUT:
             return ElectInOut
         return cls
 
     def flip(cls):
-        if cls.is_oriented(Direction.In):
+        if cls.is_oriented(INPUT):
             return ElectOut
-        elif cls.is_oriented(Direction.Out):
+        elif cls.is_oriented(OUTPUT):
             return ElectIn
         return cls
 
@@ -61,6 +61,6 @@ def MakeElect(**kwargs):
 
 
 Elect = MakeElect()
-ElectIn = MakeElect(direction=Direction.In)
-ElectOut = MakeElect(direction=Direction.Out)
-ElectInOut = MakeElect(direction=Direction.InOut)
+ElectIn = MakeElect(direction=INPUT)
+ElectOut = MakeElect(direction=OUTPUT)
+ElectInOut = MakeElect(direction=INOUT)
