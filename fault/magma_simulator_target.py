@@ -4,6 +4,7 @@ from magma.simulator.python_simulator import PythonSimulator
 from magma.simulator.coreir_simulator import CoreIRSimulator
 import fault.actions
 from fault.target import Target
+from .select_path import SelectPath
 
 
 class MagmaSimulatorTarget(Target):
@@ -43,7 +44,7 @@ class MagmaSimulatorTarget(Target):
                 value = action.value
                 # Python simulator does not support setting Bit with
                 # BitVector(1), so do conversion here
-                if isinstance(action.port, m.Bit) and \
+                if isinstance(action.port, m.Digital) and \
                         isinstance(value, BitVector):
                     value = value.as_uint()
                 simulator.set_value(action.port, value)
@@ -60,7 +61,10 @@ class MagmaSimulatorTarget(Target):
                     values += (value, )
                 print(f'{action.format_str}' % values)
             elif isinstance(action, fault.actions.Expect):
-                got = simulator.get_value(action.port)
+                port = action.port
+                if isinstance(action.port, SelectPath):
+                    port = port[-1]
+                got = simulator.get_value(port)
                 expected = action.value
                 if isinstance(expected, fault.actions.Peek):
                     expected = simulator.get_value(expected.port)
