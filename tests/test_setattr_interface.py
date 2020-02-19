@@ -65,6 +65,8 @@ Q=3\
 
 
 def test_tester_poke_internal_register(target, simulator, capsys):
+    if target == "python":
+        pytest.skip("Wrapped verilog not supported by Python simulator")
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -153,6 +155,8 @@ def test_setattr_tuple(target, simulator):
 def test_setattr_x(target, simulator):
     if target == "verilator":
         pytest.skip("X not support with Verilator")
+    if target == "python":
+        pytest.skip("X not support with magma Python simulator")
     circ = AndCircuit
     tester = Tester(circ)
     # "0" & "1" -> "0"

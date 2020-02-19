@@ -18,7 +18,7 @@ from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'verilator', 'system-verilog', 'python')
+    pytest_sim_params(metafunc, 'verilator', 'system-verilog')
 
 
 def check(got, expected):
