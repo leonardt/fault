@@ -57,7 +57,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False):
+                 use_sva=False, skip_run=False):
         """
         circuit: a magma circuit
 
@@ -136,6 +136,9 @@ class SystemVerilogTarget(VerilogTarget):
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
 
         use_kratos: If True, set the environment up for debugging in kratos
+
+        skip_run: If True, generate all the files (testbench, tcl, etc.) but do
+                  not run the simulator.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -203,6 +206,7 @@ class SystemVerilogTarget(VerilogTarget):
             else:
                 raise NotImplementedError(self.simulator)
         self.use_kratos = use_kratos
+        self.skip_run = skip_run
         # check to see if runtime is installed
         if use_kratos:
             import sys
@@ -683,6 +687,9 @@ class SystemVerilogTarget(VerilogTarget):
         # link the library over if using kratos to debug
         if self.use_kratos:
             self.link_kratos_lib()
+
+        if self.skip_run:
+            return
 
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
