@@ -7,7 +7,8 @@ from .common import TestBasicClkCircuit
 
 
 @pytest.mark.parametrize("simulator", ["ncsim", "vcs"])
-def test_waves(simulator):
+@pytest.mark.parametrize("use_sva", [True, False])
+def test_waves(simulator, use_sva):
     if simulator == 'vcs' and not shutil.which("vcs"):
         pytest.skip("Skipping vcs waveform test because vcs is not available")
     if simulator == 'ncsim' and not shutil.which("irun"):
@@ -24,17 +25,19 @@ def test_waves(simulator):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         _dir = "build"
         tester.compile_and_run(target="system-verilog", simulator=simulator,
-                               directory=_dir)
+                               directory=_dir, use_sva=use_sva)
         assert os.path.exists(os.path.join(_dir, f"waveforms.{suffix}"))
 
     # Test custom
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator=simulator,
-                               directory=_dir, waveform_file=f"waves.{suffix}")
+                               directory=_dir, waveform_file=f"waves.{suffix}",
+                               use_sva=use_sva)
         assert os.path.exists(os.path.join(_dir, f"waves.{suffix}"))
 
     # Test off
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator=simulator,
-                               directory=_dir, dump_waveforms=False)
+                               directory=_dir, dump_waveforms=False,
+                               use_sva=use_sva)
         assert not os.path.exists(os.path.join(_dir, f"waveforms.{suffix}"))

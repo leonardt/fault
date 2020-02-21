@@ -56,7 +56,8 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, coverage=False, use_kratos=False):
+                 waveform_file=None, coverage=False, use_kratos=False,
+                 use_sva=False):
         """
         circuit: a magma circuit
 
@@ -193,6 +194,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
         self.waveform_file = waveform_file
+        self.use_sva = use_sva
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 self.waveform_file = "waveforms.vpd"
@@ -406,7 +408,10 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_assert(self, i, action):
         expr_str = self.compile_expression(action.expr)
-        return [f'if (!({expr_str})) $error("{expr_str} failed");']
+        if self.use_sva:
+            return [f'assert ({expr_str}) else $error("{expr_str} failed");']
+        else:
+            return [f'if (!({expr_str})) $error("{expr_str} failed");']
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -441,26 +446,26 @@ class SystemVerilogTarget(VerilogTarget):
         if action.above is not None:
             if action.below is not None:
                 # must be in range
-                cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
+                cond = f'(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
                 err_msg = 'Expected %0f to %0f, got %0f'
                 err_args = [action.above, action.below, name]
             else:
                 # must be above
-                cond = f'!({action.above} <= {name})'
+                cond = f'({action.above} <= {name})'
                 err_msg = 'Expected above %0f, got %0f'
                 err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
-                cond = f'!({name} <= {action.below})'
+                cond = f'({name} <= {action.below})'
                 err_msg = 'Expected below %0f, got %0f'
                 err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
-                    cond = f'!({name} === {value})'
+                    cond = f'({name} === {value})'
                 else:
-                    cond = f'!({name} == {value})'
+                    cond = f'({name} == {value})'
                 err_msg = 'Expected %x, got %x'
                 err_args = [value, name]
 
@@ -469,8 +474,11 @@ class SystemVerilogTarget(VerilogTarget):
         err_body = [err_fmt_str] + err_args
         err_body = ', '.join([str(elem) for elem in err_body])
 
-        # return a snippet of verilog implementing the assertion
-        return self.make_if(i, If(cond, [f'$error({err_body});']))
+        if self.use_sva:
+            return [f'assert ({cond}) else $error({err_body});']
+        else:
+            # return a snippet of verilog implementing the assertion
+            return self.make_if(i, If(f'!{cond}', [f'$error({err_body});']))
 
     def make_eval(self, i, action):
         # Emulate eval by inserting a delay
@@ -860,7 +868,6 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += self.def_args(prefix='+define+')
 
         # misc flags
-        cmd += ['-access', '+rwc']
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
@@ -920,6 +927,7 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += self.def_args(prefix='+define+')
 
         # misc flags
+        cmd += ['-access', '+rwc']
         cmd += ['-sverilog']
         cmd += ['-full64']
         cmd += ['+v2k']
