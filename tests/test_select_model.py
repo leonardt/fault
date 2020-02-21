@@ -130,7 +130,7 @@ coreir_orr #(.width(3)) orr_inst0(.in({I2,I1,I0}), .out(orr_inst0_out));
 assign O = orr_inst0_out;
 endmodule
 
-module FullAdder (input CIN, output COUT, input I0, input I1, output O);
+module FullAdder (input I0, input I1, input CIN, output O, output COUT);
 wire Or3xNone_inst0_O;
 wire and_inst0_out;
 wire and_inst1_out;
