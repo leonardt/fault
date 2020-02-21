@@ -141,47 +141,47 @@ corebit_and and_inst0(.in0(I0), .in1(I1), .out(and_inst0_out));
 corebit_and and_inst1(.in0(I1), .in1(CIN), .out(and_inst1_out));
 corebit_and and_inst2(.in0(I0), .in1(CIN), .out(and_inst2_out));
 fold_xor3None fold_xor3None_inst0(.I0(I0), .I1(I1), .I2(CIN), .O(fold_xor3None_inst0_O));
-assign COUT = Or3xNone_inst0_O;
 assign O = fold_xor3None_inst0_O;
+assign COUT = Or3xNone_inst0_O;
 endmodule
 
-module Adder_unq1 (input CIN, output COUT, input [3:0] I0, input [3:0] I1, output [3:0] O);
-wire FullAdder_inst0_COUT;
+module Adder_unq1 (input [3:0] I0, input [3:0] I1, input CIN, output [3:0] O, output COUT);
 wire FullAdder_inst0_O;
-wire FullAdder_inst1_COUT;
+wire FullAdder_inst0_COUT;
 wire FullAdder_inst1_O;
-wire FullAdder_inst2_COUT;
+wire FullAdder_inst1_COUT;
 wire FullAdder_inst2_O;
-wire FullAdder_inst3_COUT;
+wire FullAdder_inst2_COUT;
 wire FullAdder_inst3_O;
-FullAdder FullAdder_inst0(.CIN(CIN), .COUT(FullAdder_inst0_COUT), .I0(I0[0]), .I1(I1[0]), .O(FullAdder_inst0_O));
-FullAdder FullAdder_inst1(.CIN(FullAdder_inst0_COUT), .COUT(FullAdder_inst1_COUT), .I0(I0[1]), .I1(I1[1]), .O(FullAdder_inst1_O));
-FullAdder FullAdder_inst2(.CIN(FullAdder_inst1_COUT), .COUT(FullAdder_inst2_COUT), .I0(I0[2]), .I1(I1[2]), .O(FullAdder_inst2_O));
-FullAdder FullAdder_inst3(.CIN(FullAdder_inst2_COUT), .COUT(FullAdder_inst3_COUT), .I0(I0[3]), .I1(I1[3]), .O(FullAdder_inst3_O));
-assign COUT = FullAdder_inst3_COUT;
+wire FullAdder_inst3_COUT;
+FullAdder FullAdder_inst0(.I0(I0[0]), .I1(I1[0]), .CIN(CIN), .O(FullAdder_inst0_O), .COUT(FullAdder_inst0_COUT));
+FullAdder FullAdder_inst1(.I0(I0[1]), .I1(I1[1]), .CIN(FullAdder_inst0_COUT), .O(FullAdder_inst1_O), .COUT(FullAdder_inst1_COUT));
+FullAdder FullAdder_inst2(.I0(I0[2]), .I1(I1[2]), .CIN(FullAdder_inst1_COUT), .O(FullAdder_inst2_O), .COUT(FullAdder_inst2_COUT));
+FullAdder FullAdder_inst3(.I0(I0[3]), .I1(I1[3]), .CIN(FullAdder_inst2_COUT), .O(FullAdder_inst3_O), .COUT(FullAdder_inst3_COUT));
 assign O = {FullAdder_inst3_O,FullAdder_inst2_O,FullAdder_inst1_O,FullAdder_inst0_O};
+assign COUT = FullAdder_inst3_COUT;
 endmodule
 
-module Adder (input CIN, output COUT, input [3:0] I0, input [3:0] I1, output [3:0] O);
+module Adder (input [3:0] I0, input [3:0] I1, input CIN, output [3:0] O, output COUT);
 wire bit_const_0_None_out;
 wire [4:0] magma_Bits_5_add_inst0_out;
 wire [4:0] magma_Bits_5_add_inst1_out;
 corebit_const #(.value(1'b0)) bit_const_0_None(.out(bit_const_0_None_out));
 coreir_add #(.width(5)) magma_Bits_5_add_inst0(.in0({bit_const_0_None_out,I0[3],I0[2],I0[1],I0[0]}), .in1({bit_const_0_None_out,I1[3],I1[2],I1[1],I1[0]}), .out(magma_Bits_5_add_inst0_out));
 coreir_add #(.width(5)) magma_Bits_5_add_inst1(.in0(magma_Bits_5_add_inst0_out), .in1({bit_const_0_None_out,bit_const_0_None_out,bit_const_0_None_out,bit_const_0_None_out,CIN}), .out(magma_Bits_5_add_inst1_out));
-assign COUT = magma_Bits_5_add_inst1_out[4];
 assign O = {magma_Bits_5_add_inst1_out[3],magma_Bits_5_add_inst1_out[2],magma_Bits_5_add_inst1_out[1],magma_Bits_5_add_inst1_out[0]};
+assign COUT = magma_Bits_5_add_inst1_out[4];
 endmodule
 
-module DUT (input CIN, output COUT, input [3:0] I0, input [3:0] I1, output [3:0] O);
-wire adder0_COUT;
+module DUT (input [3:0] I0, input [3:0] I1, input CIN, output [3:0] O, output COUT);
 wire [3:0] adder0_O;
-wire adder1_COUT;
+wire adder0_COUT;
 wire [3:0] adder1_O;
-Adder adder0(.CIN(CIN), .COUT(adder0_COUT), .I0(I0), .I1(I1), .O(adder0_O));
-Adder_unq1 adder1(.CIN(adder0_COUT), .COUT(adder1_COUT), .I0(adder0_O), .I1(adder0_O), .O(adder1_O));
-assign COUT = adder1_COUT;
+wire adder1_COUT;
+Adder adder0(.I0(I0), .I1(I1), .CIN(CIN), .O(adder0_O), .COUT(adder0_COUT));
+Adder_unq1 adder1(.I0(adder0_O), .I1(adder0_O), .CIN(adder0_COUT), .O(adder1_O), .COUT(adder1_COUT));
 assign O = adder1_O;
+assign COUT = adder1_COUT;
 endmodule
 
 """  # noqa
