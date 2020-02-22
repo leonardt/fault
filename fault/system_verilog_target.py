@@ -927,7 +927,8 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += self.def_args(prefix='+define+')
 
         # misc flags
-        cmd += ['-access', '+rwc']
+        if self.dump_waveforms:
+            cmd += ["-access", "r"]
         cmd += ['-sverilog']
         cmd += ['-full64']
         cmd += ['+v2k']
