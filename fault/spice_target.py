@@ -124,9 +124,6 @@ class SpiceTarget(Target):
         self.ic = ic if ic is not None else {}
         self.disp_type = disp_type
 
-        # place for saving expects that were "save_for_later"
-        self.saved_for_later = []
-
     def run(self, actions):
         # expand background pokes into regular pokes
         actions = process_action_list(actions, self.clock_step_delay)
@@ -452,11 +449,6 @@ class SpiceTarget(Target):
                 value = 1
             else:
                 raise A2DError(f'Invalid logic level: {value}.')
-
-        if action.save_for_later:
-            # save the value and don't check
-            self.saved_for_later.append(value)
-            return
 
         # implement the requested check
         if action.above is not None:
