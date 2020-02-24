@@ -875,6 +875,8 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += self.def_args(prefix='+define+')
 
         # misc flags
+        if self.dump_waveforms:
+            cmd += ["-access", "r"]
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
@@ -934,7 +936,6 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += self.def_args(prefix='+define+')
 
         # misc flags
-        cmd += ['-access', '+rwc']
         cmd += ['-sverilog']
         cmd += ['-full64']
         cmd += ['+v2k']
