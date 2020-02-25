@@ -57,6 +57,7 @@ install:
     # see https://github.com/Z3Prover/z3/issues/2800
     pip install https://github.com/Z3Prover/z3/releases/download/Nightly/z3_solver-4.8.8.0-py2.py3-none-macosx_10_14_x86_64.whl
   fi
+- pip install -e git://github.com/phanrahan/magma.git@named-temporary-values#egg=fault
 - pip install pytest-cov pytest-codestyle
 - pip install mantle>=2.0.0  # for tests.common
 - pip install -e .
