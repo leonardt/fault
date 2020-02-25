@@ -57,7 +57,7 @@ class MagmaSimulatorTarget(Target):
 
     def get_value(self, simulator, port):
         port, scope = self.process_port(port)
-        if isinstance(port, (int, BitVector, Bit)):
+        if isinstance(port, (int, BitVector, Bit, list)):
             return port
         return simulator.get_value(port, scope)
 
