@@ -8,21 +8,16 @@ from fault.select_path import SelectPath
 from hwtypes.adt import Enum
 
 
-def make_value(port, value):
-    switch = port
-    if isinstance(switch, SelectPath):
-        switch = switch[-1]
-    if isinstance(switch, fault.WrappedVerilogInternalPort):
-        switch = switch.type_
-    if isinstance(switch, (RealType, RealKind)):
+def make_value(type_, value):
+    if issubclass(type_, RealType):
         return make_real(value)
-    if isinstance(switch, (magma._BitType, magma._BitKind)):
+    if issubclass(type_, magma.Digital):
         return make_bit(value)
-    if isinstance(switch, (magma.ArrayType, magma.ArrayKind)):
-        return make_array(switch.T, switch.N, value)
-    if isinstance(switch, (magma.TupleType, magma.TupleKind)):
+    if issubclass(type_, magma.Array):
+        return make_array(type_.T, type_.N, value)
+    if issubclass(type_, magma.Tuple):
         raise NotImplementedError()
-    raise NotImplementedError(switch, value)
+    raise NotImplementedError(type_, value)
 
 
 def make_real(value):
@@ -42,9 +37,9 @@ def make_bit(value):
 
 def make_array(T, N, value):
     assert isinstance(N, int)
-    if isinstance(T, magma._BitKind):
+    if issubclass(T, magma.Digital):
         return make_bit_vector(N, value)
-    if isinstance(T, magma.ArrayKind):
+    if issubclass(T, magma.Array):
         if isinstance(value, list):
             return Array([make_array(T.T, T.N, value[i]) for i in range(N)], N)
         else:

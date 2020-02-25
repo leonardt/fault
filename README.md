@@ -1,6 +1,8 @@
 # Fault
-[![Build Status](https://travis-ci.com/leonardt/fault.svg?branch=master)](https://travis-ci.com/leonardt/fault)
-[![Coverage Status](https://coveralls.io/repos/github/leonardt/fault/badge.svg?branch=master)](https://coveralls.io/github/leonardt/fault?branch=master)
+[![Travis Status](https://travis-ci.com/leonardt/fault.svg?branch=master)](https://travis-ci.com/leonardt/fault)
+[![BuildKite Status](https://badge.buildkite.com/c724929c65201c6ed5aebc027ffac02b5092d0bd8fad4341b6.svg?branch=master)](https://buildkite.com/stanford-aha/fault)
+[![Code Coverage](https://codecov.io/gh/leonardt/fault/branch/master/graph/badge.svg)](https://codecov.io/gh/leonardt/fault)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 A Python package for testing hardware (part of the magma ecosystem).
 
@@ -19,6 +21,23 @@ Check out the [fault tutorial](https://github.com/leonardt/fault/tree/master/tut
 * [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
 * [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)
 * [Integrating External Verilog](https://github.com/leonardt/fault/blob/master/doc/verilog_integration.ipynb)
+
+## Supported Simulators
+
+* Digital simulation
+  * [Verilator](https://www.veripool.org/wiki/verilator)
+  * [Icarus Verilog](http://iverilog.icarus.com)
+  * [Cadence Incisive/Xcelium](https://www.cadence.com/en_US/home/tools/system-design-and-verification/simulation-and-testbench-verification/xcelium-parallel-simulator.html)
+  * [Synopsys VCS](https://www.synopsys.com/verification/simulation/vcs.html)
+  * [Xilinx Vivado](https://www.xilinx.com/products/design-tools/vivado.html)
+* Formal verification
+  * Engines supported by [pySMT](https://github.com/pysmt/pysmt)
+* Analog simulation
+  * [ngspice](http://ngspice.sourceforge.net)
+  * [Cadence Spectre](https://www.cadence.com/en_US/home/tools/custom-ic-analog-rf-design/circuit-simulation/spectre-simulation-platform.html)
+  * [Synopsys HSPICE](https://www.synopsys.com/verification/ams-verification/hspice.html)
+* Mixed-signal simulation
+  * [Verilog-AMS](https://www.verilogams.com) via Cadence Incisive/Xcelium
 
 ## Example
 Here is a simple ALU defined in magma.
@@ -230,6 +249,14 @@ directory will be placed in the same directory as the generated harness, which
 is controlled by the `directory` keyword argument (by default this is
 `"build/"`).
 
-For the `system-verilog/ncsim` target, tracing is enabled by default. For
-`ncsim`, the trace will be placed in a file called `verilog.vcd` in the same
-directory as the generated harness.
+For the `system-verilog` target, tracing is enabled by default.  Disable this
+feature using the `compile_and_run` parameter `dump_waveform=False`.  By
+default, the waveform file will be named `waveforms.vcd` for `ncsim` and
+`waveforms.vpd` for `vcs`.  The name of the file can be changed using the
+parameter `waveform_file="<file_name>"`.
+
+### How do I pass through flags to the simulator?
+The `verilator` and `system-verilog` target support the parameter `flags` which
+accepts a list of flags (strings) that will be passed through to the simulator
+command (`verilator` for verilator, `irun` for ncsim, `vcs` for vcs, and
+`iverilog` for iverilog).

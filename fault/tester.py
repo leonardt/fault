@@ -1,3 +1,7 @@
+import fault
+import inspect
+import fault
+import warnings
 import logging
 import magma as m
 import fault.actions as actions
@@ -6,7 +10,6 @@ try:
 except ModuleNotFoundError:
     MagmaSimulatorTarget = None
     pass
-
 from fault.vector_builder import VectorBuilder
 from fault.value_utils import make_value
 from fault.verilator_target import VerilatorTarget
@@ -18,12 +21,14 @@ from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import CircuitWrapper, PortWrapper
 from fault.file import File
 from fault.select_path import SelectPath
+from fault.wrapped_internal_port import WrappedVerilogInternalPort
 import fault.expression as expression
 import os
 import inspect
 from fault.config import get_test_dir
 from typing import List
 import tempfile
+from hwtypes import BitVector
 
 
 class Tester:
@@ -58,9 +63,9 @@ class Tester:
 
     __test__ = False  # Tell pytest to skip this class for discovery
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None,
-                 reset: m.ResetType = None, poke_delay_default=None,
-                 expect_strict_default=False):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
+                 reset: m.Reset = None, poke_delay_default=None,
+                 expect_strict_default=True):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
@@ -74,10 +79,18 @@ class Tester:
         self.poke_delay_default = poke_delay_default
         self.expect_strict_default = expect_strict_default
         self.actions = []
-        if clock is not None and not isinstance(clock, m.ClockType):
+        if clock is not None and not isinstance(clock, m.Clock):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
         self.clock = clock
-        if reset is not None and not isinstance(reset, m.ResetType):
+        # Make sure the user has initialized the clock before stepping it
+        # While verilator initializes the clock value to 0, this assumption
+        # does not hold for system verilog, so we log a warning (as to not
+        # break existing TBs)
+        self.clock_initialized = False
+        # Only report once, in case the user calls step with an uninitialized
+        # clock many times
+        self.clock_init_warning_reported = False
+        if reset is not None and not isinstance(reset, m.Reset):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
         self.targets = {}
@@ -115,8 +128,18 @@ class Tester:
         raise NotImplementedError(target)
 
     def is_recursive_type(self, T):
-        return isinstance(T, m.TupleType) or isinstance(T, m.ArrayType) and \
-            not isinstance(T.T, (m._BitKind, m.BitType))
+        return issubclass(T, m.Tuple) or issubclass(T, m.Array) and \
+            not issubclass(T.T, m.Digital)
+
+    def get_type(self, port):
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, WrappedVerilogInternalPort):
+            type_ = port.type_
+            print(port.type_)
+        else:
+            type_ = type(port)
+        return type_
 
     def poke(self, port, value, delay=None):
         """
@@ -126,25 +149,43 @@ class Tester:
         if delay is None:
             delay = self.poke_delay_default
 
+        if port is self.clock:
+            self.clock_initialized = True
+
         def recurse(port):
             if isinstance(value, dict):
                 for k, v in value.items():
                     self.poke(getattr(port, k), v)
+            elif isinstance(port, m.Array) and \
+                    not issubclass(type(port).T, m.Digital) and \
+                    isinstance(value, (int, BitVector, tuple, dict)):
+                # Broadcast value to children
+                for p in port:
+                    self.poke(p, value, delay)
             else:
-                for p, v in zip(port, value):
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
                     self.poke(p, v, delay)
 
         # implement poke
-        if self.is_recursive_type(port):
-            recurse(port)
-        elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1])):
-            recurse(port[-1])
-        else:
-            if not isinstance(value, (LoopIndex, actions.FileRead,
-                                      expression.Expression)):
-                value = make_value(port, value)
-            self.actions.append(actions.Poke(port, value, delay=delay))
+        if isinstance(port, SelectPath):
+            if (self.is_recursive_type(type(port[-1]))
+                or (not isinstance(port[-1], WrappedVerilogInternalPort) and
+                    isinstance(port[-1].name, m.ref.AnonRef))):
+                return recurse(port[-1])
+        elif self.is_recursive_type(type(port)):
+            return recurse(port)
+        elif not isinstance(port, WrappedVerilogInternalPort) and\
+                isinstance(port.name, m.ref.AnonRef):
+            return recurse(port)
+
+        if not isinstance(value, (LoopIndex, actions.FileRead,
+                                  expression.Expression)):
+            type_ = self.get_type(port)
+            value = make_value(type_, value)
+        self.actions.append(actions.Poke(port, value, delay=delay))
 
     def peek(self, port):
         """
@@ -170,32 +211,56 @@ class Tester:
         self.actions.append(r)
         return r
 
-    def expect(self, port, value, strict=None, **kwargs):
+    def assert_(self, expr):
+        if not isinstance(expr, expression.Expression):
+            raise TypeError("Expected instance of Expression")
+        self.actions.append(actions.Assert(expr))
+
+    def expect(self, port, value, strict=None, caller=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+        if caller is None:
+            try:
+                caller = inspect.getframeinfo(inspect.stack()[1][0])
+            except IndexError:
+                pass
+
         def recurse(port):
             if isinstance(value, dict):
                 for k, v in value.items():
-                    self.expect(getattr(port, k), v)
+                    self.expect(port=getattr(port, k), value=v, strict=strict,
+                                caller=caller, **kwargs)
             else:
-                for p, v in zip(port, value):
-                    self.expect(p, v, strict, **kwargs)
-        if self.is_recursive_type(port):
-            recurse(port)
-        elif isinstance(port, SelectPath) and \
-                (self.is_recursive_type(port[-1])):
-            recurse(port[-1])
-        else:
-            # set defaults
-            if strict is None:
-                strict = self.expect_strict_default
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
+                    self.expect(port=p, value=v, strict=strict, caller=caller,
+                                **kwargs)
 
-            # implement expect
-            if not isinstance(value, (actions.Peek, PortWrapper,
-                                      LoopIndex, expression.Expression)):
-                value = make_value(port, value)
-            self.actions.append(actions.Expect(port, value, **kwargs))
+        if isinstance(port, SelectPath):
+            if (self.is_recursive_type(type(port[-1]))
+                or (not isinstance(port[-1], WrappedVerilogInternalPort)
+                    and isinstance(port[-1].name, m.ref.AnonRef))):
+                return recurse(port[-1])
+        elif self.is_recursive_type(type(port)):
+            return recurse(port)
+        elif not isinstance(port, WrappedVerilogInternalPort) and \
+                isinstance(port.name, m.ref.AnonRef):
+            return recurse(port)
+
+        # implement expect
+        if not isinstance(value, (actions.Peek, PortWrapper,
+                                  LoopIndex, expression.Expression)):
+            type_ = self.get_type(port)
+            value = make_value(type_, value)
+        self.actions.append(actions.Expect(port=port, value=value,
+                                           strict=strict, caller=caller,
+                                           **kwargs))
 
     def eval(self):
         """
@@ -209,6 +274,15 @@ class Tester:
         """
         self.actions.append(actions.Delay(time=time))
 
+    def get_value(self, port):
+        """
+        Returns an object with a "value" property that will
+        be filled after the simulation completes.
+        """
+        action = actions.GetValue(port=port)
+        self.actions.append(action)
+        return action
+
     def step(self, steps=1):
         """
         Step the clock `steps` times.
@@ -216,6 +290,12 @@ class Tester:
         if self.clock is None:
             raise RuntimeError("Stepping tester without a clock (did you "
                                "specify a clock during initialization?)")
+        if not self.clock_initialized and \
+                not self.clock_init_warning_reported:
+            warnings.warn("Clock has not been initialized, the initial value "
+                          "will be X for system verilog targets.  In a future "
+                          "release, this will be an error", DeprecationWarning)
+            self.clock_init_warning_reported = True
         self.actions.append(actions.Step(self.clock, steps))
 
     def serialize(self):
@@ -331,7 +411,7 @@ class Tester:
         known value
         """
         for name, port in self._circuit.IO.ports.items():
-            if port.isinput():
+            if port.is_input():
                 self.poke(self._circuit.interface.ports[name], 0)
 
     def clear(self):
@@ -397,11 +477,13 @@ class Tester:
         `actions` list.
         """
         while_tester = LoopTester(self._circuit, self.clock)
+        while_tester.clock_initialized = self.clock_initialized
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
     def _if(self, cond):
         if_tester = IfTester(self._circuit, self.clock)
+        if_tester.clock_initialized = self.clock_initialized
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester
@@ -475,7 +557,7 @@ class LoopIndex:
 class LoopTester(Tester):
     __unique_index_id = -1
 
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         LoopTester.__unique_index_id += 1
         self.index = LoopIndex(
@@ -484,13 +566,13 @@ class LoopTester(Tester):
 
 class ElseTester(Tester):
     def __init__(self, else_actions: List, circuit: m.Circuit,
-                 clock: m.ClockType = None):
+                 clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.actions = else_actions
 
 
 class IfTester(Tester):
-    def __init__(self, circuit: m.Circuit, clock: m.ClockType = None):
+    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.else_actions = []
 

@@ -2,8 +2,14 @@ from fault.codegen import CodeGenerator
 
 
 class SpiceNetlist(CodeGenerator):
-    def comment(self, text):
-        self.println(f'* {text}')
+    def comment(self, text=None):
+        # generate comment string
+        if text is None:
+            c = ''
+        else:
+            c = f' {text}'
+        # print the comment
+        self.println(f'*{c}')
 
     def ic(self, cond):
         line = []
@@ -12,11 +18,16 @@ class SpiceNetlist(CodeGenerator):
             line += [f'v({key})={val}']
         self.println(' '.join(line))
 
-    def probe(self, *probes):
+    def probe(self, *probes, wrap=False, antype=None):
         line = []
         line += ['.probe']
+        if antype is not None:
+            line += [f'{antype}']
         for p in probes:
-            line += [f'{p}']
+            if wrap:
+                line += [f'V({p})']
+            else:
+                line += [f'{p}']
         self.println(' '.join(line))
 
     def include(self, file_):
@@ -40,6 +51,20 @@ class SpiceNetlist(CodeGenerator):
             line += [f'{key}={val}']
         line = ' '.join(line)
         self.println(line)
+
+    @staticmethod
+    def ordered_ports(mapping=None, order=None):
+        # set defaults
+        if mapping is None:
+            mapping = {}
+        if order is None:
+            order = []
+
+        # return ordered list of ports
+        retval = []
+        for port in order:
+            retval += [mapping[port]]
+        return retval
 
     def instantiate(self, name, *ports, inst_name=None):
         # set defaults
@@ -66,6 +91,20 @@ class SpiceNetlist(CodeGenerator):
         if pwl is not None:
             pwl_str = ' '.join(f'{t} {v}' for t, v in pwl)
             line += [f'PWL({pwl_str})']
+
+        # print the line
+        self.println(' '.join(line))
+
+    def capacitor(self, p, n, value, inst_name=None):
+        # set defaults
+        if inst_name is None:
+            inst_name = f'{next(self.inst_count)}'
+
+        # build up the line
+        line = []
+        line += [f'C{inst_name}']
+        line += [f'{p}', f'{n}']
+        line += [f'{value}']
 
         # print the line
         self.println(' '.join(line))

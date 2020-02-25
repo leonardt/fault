@@ -31,6 +31,7 @@ def test_while_loop(target, simulator, n_cyc=3, n_bits=8):
 
     # instantiate the tester
     tester = fault.Tester(dut, clock=dut.clk, reset=dut.rst)
+    tester.circuit.clk = 0
 
     # reset
     tester.sync_reset()

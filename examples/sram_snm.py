@@ -36,8 +36,7 @@ def run(noise=0.0):
     )
 
     # instantiate the tester
-    tester = fault.Tester(dut, expect_strict_default=True,
-                          poke_delay_default=0)
+    tester = fault.Tester(dut, poke_delay_default=0)
 
     # initialize
     tester.poke(dut.lbl, fault.HiZ)

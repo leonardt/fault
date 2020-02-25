@@ -1,4 +1,5 @@
 from .subprocess_run import subprocess_run
+import os
 
 
 def verilator_version(disp_type='on_error'):
@@ -16,7 +17,8 @@ def verilator_version(disp_type='on_error'):
 def verilator_comp_cmd(top=None, verilog_filename=None,
                        include_verilog_libraries=None,
                        include_directories=None,
-                       driver_filename=None, verilator_flags=None):
+                       driver_filename=None, verilator_flags=None,
+                       coverage=False, use_kratos=False):
     # set defaults
     if include_verilog_libraries is None:
         include_verilog_libraries = []
@@ -34,6 +36,9 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
     retval += verilator_flags
     if verilog_filename is not None:
         retval += ['--cc', f'{verilog_filename}']
+        if use_kratos:
+            from kratos_runtime import get_lib_path
+            retval += [os.path.basename(get_lib_path())]
     # -v arguments
     for file_ in include_verilog_libraries:
         retval += ['-v', f'{file_}']
@@ -44,6 +49,11 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
         retval += ['--exe', f'{driver_filename}']
     if top is not None:
         retval += ['--top-module', f'{top}']
+    # vpi flag
+    if use_kratos:
+        retval += ["--vpi"]
+    if coverage:
+        retval += ["--coverage"]
 
     # return the command
     return retval

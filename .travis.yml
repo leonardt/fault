@@ -1,6 +1,7 @@
 matrix:
   include:
   - os: linux
+    dist: bionic
     addons:
       apt:
         sources:
@@ -11,6 +12,8 @@ matrix:
         - libmpfr-dev
         - libmpc-dev
         - verilator
+        - iverilog
+        - ngspice
     env:
     - CC=gcc-7
     - CXX=g++-7
@@ -20,6 +23,10 @@ matrix:
       homebrew:
         packages:
           - verilator
+          - icarus-verilog
+          - ngspice
+          - fftw
+        update: true
 
 # python managed by conda until 3.7 available
 # python:
@@ -44,18 +51,14 @@ install:
 - source activate test-env
 - conda install pip
 # End install conda
-- curl -s -L https://github.com/rdaly525/coreir/releases/latest | grep "href.*coreir-${TRAVIS_OS_NAME}.tar.gz" | cut -d \" -f 2 | xargs -I {} wget https://github.com"{}"
-- mkdir coreir_release;
-- tar -xf coreir-${TRAVIS_OS_NAME}.tar.gz -C coreir_release --strip-components 1;
-- cd coreir_release && sudo make install && cd ..
 - |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    # avoid strange libjpeg error (see https://github.com/sgrif/pq-sys/issues/1
-    # for some more info)
-    export DYLD_LIBRARY_PATH=/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/:/usr/local/lib:$DYLD_LIBRARY_PATH
+    # speed up the build process until it's fixed at z3
+    # see https://github.com/Z3Prover/z3/issues/2800
+    pip install https://github.com/Z3Prover/z3/releases/download/Nightly/z3_solver-4.8.8.0-py2.py3-none-macosx_10_14_x86_64.whl
   fi
 - pip install pytest-cov pytest-codestyle
-- pip install mantle  # for tests.common
+- pip install mantle>=2.0.0  # for tests.common
 - pip install -e .
 # Begin setup CoSA dependencies
 - |
@@ -69,7 +72,8 @@ install:
 # End setup CoSA dependencies
 
 script:
-- pytest --cov fault --codestyle fault -v --cov-report term-missing tests
+- pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+- bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: script
   script: /bin/bash .travis/deploy.sh

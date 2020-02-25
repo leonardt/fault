@@ -1,8 +1,10 @@
 import fault
 from pathlib import Path
 import magma as m
+from .util import (is_valid_file_mode, file_mode_allows_reading,
+                   file_mode_allows_writing)
 import fault.actions as actions
-from fault.actions import Poke, Eval
+from fault.actions import Poke, Eval, FileOpen, FileClose, GetValue, Loop, If
 from fault.verilog_target import VerilogTarget
 from fault.verilog_utils import verilator_name
 import fault.value_utils as value_utils
@@ -17,6 +19,7 @@ from fault.subprocess_run import subprocess_run
 import fault.utils as utils
 import fault.expression as expression
 import platform
+import os
 
 
 max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -34,6 +37,14 @@ double sc_time_stamp () {{       // Called by $time in Verilog
     return main_time;           // converts to double, to match
                                 // what SystemC does
 }}
+
+// function to write_coverage
+#ifdef _VERILATED_COV_H_
+void write_coverage() {{
+     VerilatedCov::write("logs/coverage.dat");
+}}
+
+#endif
 
 #if VM_TRACE
 VerilatedVcdC* tracer;
@@ -56,6 +67,7 @@ void my_assert(
     tracer->dump(main_time);
     tracer->close();
 #endif
+    {kratos_exit_call}
     exit(1);
   }}
 }}
@@ -63,7 +75,7 @@ void my_assert(
 int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
-
+  {kratos_start_call}
 #if VM_TRACE
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
@@ -77,16 +89,28 @@ int main(int argc, char **argv) {{
 #if VM_TRACE
   tracer->close();
 #endif
+  {kratos_exit_call}
+
+#ifdef _VERILATED_COV_H_
+    write_coverage();
+#endif
+
 }}
 """  # nopep8
 
 
 class VerilatorTarget(VerilogTarget):
+
+    # Language properties of C used in generating code blocks
+    BLOCK_START = '{'
+    BLOCK_END = '}'
+    LOOP_VAR_TYPE = 'int'
+
     def __init__(self, circuit, directory="build/",
                  flags=None, skip_compile=False, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False,
-                 disp_type='on_error'):
+                 disp_type='on_error', coverage=False, use_kratos=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -105,10 +129,19 @@ class VerilatorTarget(VerilogTarget):
 
         # Save settings
         self.disp_type = disp_type
+        self.use_kratos = use_kratos
+        if use_kratos:
+            try:
+                import kratos_runtime
+            except ImportError:
+                raise ImportError("Cannot find kratos-runtime in the system. "
+                                  "Please do \"pip install kratos-runtime\" "
+                                  "to install.")
 
         # Call super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
-                         include_verilog_libraries, magma_output, magma_opts)
+                         include_verilog_libraries, magma_output, magma_opts,
+                         coverage=coverage)
 
         # Compile the design using `verilator`, if not skip
         if not skip_verilator:
@@ -120,7 +153,9 @@ class VerilatorTarget(VerilogTarget):
                 include_verilog_libraries=self.include_verilog_libraries,
                 include_directories=include_directories,
                 driver_filename=driver_file.name,
-                verilator_flags=flags
+                verilator_flags=flags,
+                coverage=self.coverage,
+                use_kratos=use_kratos
             )
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
@@ -179,6 +214,30 @@ class VerilatorTarget(VerilogTarget):
             return value.name
         return value
 
+    def process_bitwise_assign(self, port, name, value):
+        # Bitwise assign done using masking
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, fault.WrappedVerilogInternalPort):
+            return value
+        if isinstance(port.name, m.ref.ArrayRef) and \
+                issubclass(port.name.array.T, m.Digital):
+            i = port.name.index
+            value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
+        return value
+
+    def process_bitwise_expect(self, port, value):
+        if isinstance(port, SelectPath):
+            port = port[-1]
+        if isinstance(port, fault.WrappedVerilogInternalPort):
+            return value
+        if isinstance(port.name, m.ref.ArrayRef) and \
+                issubclass(port.name.array.T, m.Digital):
+            # Extract bit
+            i = port.name.index
+            value = f"({value} >> {i}) & 1"
+        return value
+
     def make_poke(self, i, action):
         if self.verilator_version > 3.874:
             prefix = f"{self.circuit_name}"
@@ -204,6 +263,7 @@ class VerilatorTarget(VerilogTarget):
                 # scheme
                 if circuit_name == "coreir_reg":
                     circuit_name += "_"
+                    circuit_name += f"_C1"  # Posedge clock
                     circuit_name += f"_I{circuit.coreir_configargs['init']}"
                     circuit_name += f"_W{circuit.coreir_genargs['width']}"
                 elif circuit_name == "coreir_reg_arst":
@@ -240,6 +300,7 @@ class VerilatorTarget(VerilogTarget):
                                    i in range(value.file.chunk_size))
                 value = f"({value}) & 0x{mask}"
             value = self.process_value(action.port, value)
+            value = self.process_bitwise_assign(action.port, name, value)
             result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
@@ -333,18 +394,21 @@ class VerilatorTarget(VerilogTarget):
             return asserts
         else:
             value = self.process_value(action.port, value)
+            port_value = f"top->{name}"
+            port_value = self.process_bitwise_expect(action.port, port_value)
+
             port = action.port
             if isinstance(port, SelectPath):
                 port = port[-1]
             elif isinstance(port, fault.WrappedVerilogInternalPort):
                 port = port.type_
-            if isinstance(port, m._BitType):
+            if isinstance(port, m.Digital):
                 port_len = 1
             else:
                 port_len = len(port)
             mask = (1 << port_len) - 1
 
-            return [f"my_assert(top->{name}, {value} & {mask}, "
+            return [f"my_assert({port_value}, {value} & {mask}, "
                     f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
@@ -364,109 +428,81 @@ class VerilatorTarget(VerilogTarget):
             code.append("#endif")
         return code
 
-    def make_loop(self, i, action):
-        code = []
-        code.append(f"for (int {action.loop_var} = 0;"
-                    f" {action.loop_var} < {action.n_iter};"
-                    f" {action.loop_var}++) {{")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("}")
-        return code
-
     def make_file_open(self, i, action):
-        name = action.file.name_without_ext
-        code = f"""\
-char {name}_in[{action.file.chunk_size}] = {{0}};
-FILE *{name}_file = fopen("{action.file.name}", \"{action.file.mode}\");
-if ({name}_file == NULL) {{
-    std::cout << "Could not open file {action.file.name}" << std::endl;
-    return 1;
-}}"""
-        return code.splitlines()
+        # make sure the file mode is supported
+        if not is_valid_file_mode(action.file.mode):
+            raise NotImplementedError(action.file.mode)
+
+        # declare the file read variable if the file mode allows reading
+        if file_mode_allows_reading(action.file.mode):
+            in_ = self.in_var(action.file)
+            decl_rd_var = [f'char {in_}[{action.file.chunk_size}] = {{0}};']
+        else:
+            decl_rd_var = []
+
+        fd = self.fd_var(action.file)
+        err_msg = f'Could not open file {action.file.name}'
+
+        return self.generate_action_code(i, decl_rd_var + [
+            f'FILE *{fd} = fopen("{action.file.name}", "{action.file.mode}");',
+            If(f'{fd} == NULL', [
+                f'std::cout << "{err_msg}" << std::endl;',
+                f'return 1;'
+            ])
+        ])
 
     def make_file_close(self, i, action):
-        return [f"fclose({action.file.name_without_ext}_file);"]
+        fd_var = self.fd_var(action.file)
+        return [f'fclose({fd_var});']
+
+    def write_byte(self, fd, expr):
+        return f'fputc({expr}, {fd})'
 
     def make_file_write(self, i, action):
-        value = f"top->{verilator_name(action.value.name)}"
-        if action.file.endianness == "big":
-            loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
-        else:
-            loop_expr = f"int i = 0; i < {action.file.chunk_size}; i++"
-        code = f"""\
-for ({loop_expr}) {{
-    int result = fputc(({value} >> (i * 8)) & 0xFF,
-                       {action.file.name_without_ext}_file);
-    if (result == EOF) {{
-        std::cout << "Error writing to {action.file.name_without_ext}"
-                  << std::endl;
-        break;
-    }}
-}}
-"""
-        return code.splitlines()
+        assert file_mode_allows_writing(action.file.mode), \
+            f'File mode {action.file.mode} is not compatible with writing.'
+
+        idx = 'i'
+        fd = self.fd_var(action.file)
+        value = f'top->{verilator_name(action.value.name)}'
+        byte_expr = f'({value} >> ({idx} * 8)) & 0xFF'
+        err_msg = f'Error writing to {action.file.name_without_ext}'
+
+        return self.generate_action_code(i, [
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     'int result = ' + self.write_byte(fd, byte_expr) + ';',
+                     If(f'result == EOF', [
+                         f'std::cout << "{err_msg}" << std::endl;',
+                         'break;'
+                     ]),
+                 ])
+        ])
 
     def make_file_read(self, i, action):
-        if action.file.endianness == "big":
-            loop_expr = f"int i = {action.file.chunk_size - 1}; i >= 0; i--"
-        else:
-            loop_expr = f"int i = 0; i < {action.file.chunk_size}; i++"
-        code = f"""\
-for ({loop_expr}) {{
-    int result =  fgetc({action.file.name_without_ext}_file);
-    if (result == EOF) {{
-        std::cout << "Reached end of file {action.file.name_without_ext}"
-                  << std::endl;
-        break;
-    }}
-    {action.file.name_without_ext}_in[i] = result;
-}}
-"""
-        return code.splitlines()
+        assert file_mode_allows_reading(action.file.mode), \
+            f'File mode {action.file.mode} is not compatible with reading.'
 
-    def make_while(self, i, action):
-        code = []
-        cond = self.compile_expression(action.loop_cond)
+        idx = 'i'
+        fd = self.fd_var(action.file)
+        in_ = self.in_var(action.file)
+        err_msg = f'Reached end of file {action.file.name_without_ext}'
 
-        code.append(f"while ({cond}) {{")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("}")
-
-        return code
-
-    def make_if(self, i, action):
-        code = []
-        cond = self.compile_expression(action.cond)
-
-        code.append(f"if ({cond}) {{")
-
-        for inner_action in action.actions:
-            # TODO: Handle relative offset of sub-actions
-            inner_code = self.generate_action_code(i, inner_action)
-            code += ["    " + x for x in inner_code]
-
-        code.append("}")
-
-        if action.else_actions:
-            code[-1] += " else {"
-            for inner_action in action.else_actions:
-                # TODO: Handle relative offset of sub-actions
-                inner_code = self.generate_action_code(i, inner_action)
-                code += ["    " + x for x in inner_code]
-
-            code.append("}")
-
-        return code
+        return self.generate_action_code(i, [
+            Loop(loop_var=idx,
+                 n_iter=action.file.chunk_size,
+                 count='down' if action.file.endianness == 'big' else 'up',
+                 actions=[
+                     f'int result = fgetc({fd});',
+                     If(f'result == EOF', [
+                         f'std::cout << "{err_msg}" << std::endl;',
+                         'break;'
+                     ]),
+                     f'{in_}[{idx}] = result;'
+                 ])
+        ])
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta) and \
@@ -482,6 +518,24 @@ for ({loop_expr}) {{
     def make_delay(self, i, action):
         # TODO: figure out how delay should be interpreted for VerilatorTarget
         raise NotImplementedError
+
+    def make_get_value(self, i, action):
+        fd_var = self.fd_var(self.value_file)
+        fmt = action.get_format()
+        value = f'top->{verilator_name(action.port.name)}'
+        return [f'fprintf({fd_var}, "{fmt}\\n", {value});']
+
+    def make_assert(self, i, action):
+        expr_str = self.compile_expression(action.expr)
+        return f"""
+if (!({expr_str})) {{
+    std::cerr << "{expr_str} failed" << std::endl;
+    #if VM_TRACE
+      tracer->close();
+    #endif
+    exit(1);
+}}
+    """.splitlines()
 
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
@@ -500,6 +554,12 @@ for ({loop_expr}) {{
             '<sys/stat.h>',
         ]
 
+        # if we're using the GetValue feature, then we need to open/close a
+        # file in which GetValue results will be written
+        if any(isinstance(action, GetValue) for action in actions):
+            actions = [FileOpen(self.value_file)] + actions
+            actions += [FileClose(self.value_file)]
+
         main_body = ""
         for i, action in enumerate(actions):
             code = self.generate_action_code(i, action)
@@ -516,11 +576,25 @@ for ({loop_expr}) {{
         includes += [f'"V{self.circuit_name}_{include}.h"' for include in
                      self.debug_includes]
 
+        if self.coverage:
+            includes += ["\"verilated_cov.h\""]
+
         includes_src = "\n".join(["#include " + i for i in includes])
+        if self.use_kratos:
+            includes_src += "\nvoid initialize_runtime();\n"
+            includes_src += "void teardown_runtime();\n"
+            kratos_start_call = "initialize_runtime();"
+            kratos_exit_call = "teardown_runtime();"
+        else:
+            kratos_start_call = ""
+            kratos_exit_call = ""
+
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
             circuit_name=self.circuit_name,
+            kratos_start_call=kratos_start_call,
+            kratos_exit_call=kratos_exit_call
         )
 
         return src
@@ -538,23 +612,45 @@ for ({loop_expr}) {{
         with open(driver_file, "w") as f:
             f.write(src)
 
+        # if use kratos, symbolic link the library to dest folder
+        if self.use_kratos:
+            from kratos_runtime import get_lib_path
+            lib_name = os.path.basename(get_lib_path())
+            dst_path = os.path.abspath(os.path.join(self.directory, "obj_dir",
+                                                    lib_name))
+            if not os.path.isfile(dst_path):
+                os.symlink(get_lib_path(), dst_path)
+            # add ld library path
+            env = {"LD_LIBRARY_PATH": os.path.dirname(dst_path)}
+        else:
+            env = None
+
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
         subprocess_run(make_cmd, cwd=self.directory, disp_type=self.disp_type)
+
+        # create the logs folder if necessary
+        logs = Path(self.directory) / "logs"
+        if not os.path.isdir(logs):
+            os.mkdir(logs)
 
         # Run the executable created by verilator and write the standard
         # output to a logfile for later review or processing
         exe_cmd = [f'./obj_dir/V{self.circuit_name}']
         result = subprocess_run(exe_cmd, cwd=self.directory,
-                                disp_type=self.disp_type)
+                                disp_type=self.disp_type,
+                                env=env)
         log = Path(self.directory) / 'obj_dir' / f'{self.circuit_name}.log'
         with open(log, 'w') as f:
             f.write(result.stdout)
 
+        # post-process GetValue actions
+        self.post_process_get_value_actions(actions)
+
     def add_assumptions(self, circuit, actions, i):
         main_body = ""
         for port in circuit.interface.ports.values():
-            if port.isoutput():
+            if port.is_output():
                 for assumption in self.assumptions:
                     # TODO: Chained assumptions?
                     assume_port = assumption.port
@@ -562,7 +658,10 @@ for ({loop_expr}) {{
                         assume_port = assume_port[-1]
                     if assume_port is port:
                         pred = assumption.value
-                        randval = constrained_random_bv(len(assume_port), pred)
+                        if assumption.has_randvals:
+                            randval = next(assumption.randvals)[str(port.name)]
+                        else:
+                            randval = constrained_random_bv(len(assume_port), pred)
                         code = self.make_poke(
                             len(actions) + i, Poke(port, randval))
                         for line in code:
@@ -573,7 +672,7 @@ for ({loop_expr}) {{
     def add_guarantees(self, circuit, actions, i):
         main_body = ""
         for name, port in circuit.interface.ports.items():
-            if port.isinput():
+            if port.is_input():
                 for guarantee in self.guarantees:
                     guarantee_port = guarantee.port
                     if isinstance(guarantee_port, SelectPath):

@@ -16,7 +16,7 @@ def test_action_strs():
     index = f"__fault_loop_var_action_0"
     assert str(Loop(12, index, [Peek(circ.O), Poke(circ.I, 1)])) == \
         f'Loop(12, {index}, ' \
-        f'[Peek(BasicClkCircuit.O), Poke(BasicClkCircuit.I, 1)])'
+        f'[Peek(BasicClkCircuit.O), Poke(BasicClkCircuit.I, 1)], up)'
     file = File("my_file", Tester(circ), "r", 1, "little")
     assert str(FileOpen(file)) == 'FileOpen(File<"my_file">)'
     assert str(FileRead(file)) == 'FileRead(File<"my_file">)'

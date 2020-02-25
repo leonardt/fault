@@ -29,13 +29,13 @@ class FunctionalTester(fault.Tester):
     def eval(self):
         super().eval()
         for name, port in self._circuit.interface.ports.items():
-            if port.isinput():
+            if port.is_input():
                 fn_model_port = get_renamed_port(self._circuit, name)
                 super().expect(port, getattr(self.functional_model,
                                              fn_model_port))
 
     def expect_any_outputs(self):
         for name, port in self._circuit.interface.ports.items():
-            if port.isinput():
+            if port.is_input():
                 fn_model_port = get_renamed_port(self._circuit, name)
                 setattr(self.functional_model, fn_model_port, AnyValue)

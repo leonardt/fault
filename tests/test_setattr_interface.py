@@ -8,6 +8,8 @@ from .common import (SimpleALU, TestNestedArraysCircuit,
                      TestDoubleNestedArraysCircuit, TestTupleCircuit,
                      AndCircuit, outlines)
 
+TEST_START = '*** TEST START ***'
+
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
@@ -41,6 +43,7 @@ def test_tester_magma_internal_signals(target, simulator, capsys):
     tester = Tester(circ, circ.CLK)
     tester.circuit.CLK = 0
     tester.circuit.config_en = 1
+    tester.print(TEST_START + '\n')
     for i in range(0, 4):
         tester.circuit.config_data = i
         tester.step(2)
@@ -50,14 +53,8 @@ def test_tester_magma_internal_signals(target, simulator, capsys):
         tester.print("Q=%d\n", signal)
     run_test(target, simulator, tester, disp_type='realtime')
     messages = outlines(capsys)
-    if target == "verilator":
-        actual = "\n".join(messages[-5:-1])
-    elif simulator == "iverilog":
-        actual = "\n".join(messages[-5:-1])
-    elif simulator == "ncsim":
-        actual = "\n".join(messages[-8:-4])
-    elif simulator == "vcs":
-        actual = "\n".join(messages[-11:-7])
+    idx = messages.index(TEST_START) + 1
+    actual = "\n".join(messages[idx:idx + 4])
     expected = """\
 Q=0
 Q=1
@@ -75,6 +72,7 @@ def test_tester_poke_internal_register(target, simulator, capsys):
     tester.circuit.config_en = 0
     # Initialize
     tester.step(2)
+    tester.print(TEST_START + '\n')
     for i in reversed(range(4)):
         tester.circuit.config_reg.conf_reg.value = i
         tester.step(2)
@@ -82,14 +80,8 @@ def test_tester_poke_internal_register(target, simulator, capsys):
         tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
     run_test(target, simulator, tester, disp_type='realtime')
     messages = outlines(capsys)
-    if target == "verilator":
-        actual = "\n".join(messages[-5:-1])
-    elif simulator == "iverilog":
-        actual = "\n".join(messages[-5:-1])
-    elif simulator == "ncsim":
-        actual = "\n".join(messages[-8:-4])
-    elif simulator == "vcs":
-        actual = "\n".join(messages[-11:-7])
+    idx = messages.index(TEST_START) + 1
+    actual = "\n".join(messages[idx:idx + 4])
     expected = """\
 O=3
 O=2
@@ -163,14 +155,17 @@ def test_setattr_x(target, simulator):
         pytest.skip("X not support with Verilator")
     circ = AndCircuit
     tester = Tester(circ)
+    # "0" & "1" -> "0"
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1
     tester.eval()
     tester.circuit.O.expect(0)
+    # "X" & "1" -> "X"
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = 1
     tester.eval()
-    tester.circuit.O.expect(0)
+    tester.circuit.O.expect(fault.UnknownValue)
+    # "X" & "X" -> "X"
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = fault.UnknownValue
     tester.eval()

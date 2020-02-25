@@ -1,0 +1,66 @@
+steps:
+  - command: |
+      # set up environment
+      export PATH=/usr/local/miniconda/bin:$$PATH
+      echo $$PATH
+
+      # tool setup
+      source /cad/modules/tcl/init/bash
+      module load base incisive vcs hspice spectre
+
+      # create conda env
+      conda create -p ./conda_env -m -y pip numpy python=3.7.3
+      export PATH=$$PWD/conda_env/bin:$$PATH
+      echo $$PATH
+
+      # install python dependencies for testing
+      pip install pytest-cov pytest-codestyle
+      pip install --upgrade "mantle>=2.0.0"
+
+      # install fault
+      pip install -e .
+      
+      # install SMT solvers
+      mkdir ./smt_solvers
+      ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
+
+      # install kratos runtime
+      pip install kratos-runtime
+      
+      # run tests
+      ./conda_env/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+
+      # upload coverage results
+      bash <(curl -s https://codecov.io/bash)
+    label: "test"
+    agents:
+      fault2: "true"
+  - command: |
+      # set up environment
+      source /etc/environment
+      echo $$PATH
+
+      # create virtual environment
+      python3.7 -m venv venv
+      source venv/bin/activate
+
+      # install python dependencies for testing
+      pip install wheel
+      pip install pytest-cov pytest-codestyle
+      pip install --upgrade "mantle>=2.0.0"
+
+      # install fault
+      pip install -e .
+      
+      # run tests
+      pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+
+      # upload coverage results
+      bash <(curl -s https://codecov.io/bash)
+
+      # deactivate virtual environment
+      deactivate
+    label: "fpga_verif"
+    timeout_in_minutes: 60
+    agents:
+        fpga_verif: "true"
