@@ -15,7 +15,6 @@ steps:
 
       # install python dependencies for testing
       pip install pytest-cov pytest-codestyle
-      pip install -e git://github.com/phanrahan/magma.git@named-temporary-values#egg=fault
       pip install --upgrade "mantle>=2.0.0"
 
       # install fault
