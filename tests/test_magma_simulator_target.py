@@ -65,7 +65,7 @@ def test_magma_simulator_target_clock(backend, capfd):
     circ = TestBasicClkCircuit
     actions = [
         Poke(circ.I, BitVector[1](0)),
-        Print("%d", circ.I),
+        Print("%d\n", circ.I),
         Expect(circ.O, BitVector[1](0)),
         # TODO(rsetaluri): Figure out how to set clock value directly with the
         # coreir simulator. Currently it does not allow this.
@@ -73,11 +73,12 @@ def test_magma_simulator_target_clock(backend, capfd):
         Step(circ.CLK, 1),
         Poke(circ.I, BitVector[1](1)),
         Eval(),
-        Print("%d", circ.O),
+        Print("%d\n", circ.O),
     ]
     run(circ, actions, circ.CLK, backend)
     out, err = capfd.readouterr()
     lines = out.splitlines()
+    print(lines)
 
     assert lines[-2] == "0", "Print output incorrect"
     assert lines[-1] == "1", "Print output incorrect"
