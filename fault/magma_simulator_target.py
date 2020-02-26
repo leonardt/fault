@@ -95,6 +95,7 @@ class MagmaSimulatorTarget(Target):
                 if self.clock is not action.clock:
                     raise RuntimeError(f"Using different clocks: {self.clock}, "
                                        f"{action.clock}")
-                simulator.advance_cycle(action.steps)
+                simulator.evaluate()
+                simulator.advance(action.steps)
             else:
                 raise NotImplementedError(action)
