@@ -29,8 +29,8 @@ def gen_binary_op_circuit(op):
         Pass through I0 and I1 as outputs so we can assert a function
         of I0 and I1 as the result
         """
-        IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5]),
-              "I0_out", m.Out(m.UInt[5]), "I1_out", m.Out(m.UInt[5])]
+        io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]),
+              I0_out=m.Out(m.UInt[5]), I1_out=m.Out(m.UInt[5]))
         if op in {"lt", "le", "gt", "ge", "ne", "eq"}:
             IO += ["O", m.Out(m.Bit)]
         else:
@@ -133,8 +133,8 @@ def test_op_tree(target, simulator):
         Pass through I0 and I1 as outputs so we can assert a function
         of I0 and I1 as the result
         """
-        IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5]),
-              "I0_out", m.Out(m.UInt[5]), "I1_out", m.Out(m.UInt[5])]
+        io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]),
+              I0_out=m.Out(m.UInt[5]), I1_out=m.Out(m.UInt[5]))
         IO += ["O", m.Out(m.UInt[5])]
 
         @classmethod

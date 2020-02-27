@@ -4,7 +4,7 @@ import fault
 
 
 class TFF(m.Circuit):
-    IO = ["O", m.Out(m.Bit), "CLK", m.In(m.Clock)]
+    io = m.IO(O=m.Out(m.Bit), CLK=m.In(m.Clock))
 
     @classmethod
     def definition(io):

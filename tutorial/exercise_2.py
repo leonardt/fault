@@ -12,11 +12,11 @@ init = [fault.random.random_bv(data_width) for _ in range(1 << addr_width)]
 
 
 class ROM(m.Circuit):
-    IO = [
-        "RADDR", m.In(m.Bits[addr_width]),
-        "RDATA", m.Out(m.Bits[data_width]),
-        "CLK", m.In(m.Clock)
-    ]
+    io = m.IO(
+        RADDR=m.In(m.Bits[addr_width]),
+        RDATA=m.Out(m.Bits[data_width]),
+        CLK=m.In(m.Clock)
+    )
 
     @classmethod
     def definition(io):
@@ -28,15 +28,15 @@ class ROM(m.Circuit):
 
 
 class RAM(m.Circuit):
-    IO = [
-        "RADDR", m.In(m.Bits[addr_width]),
-        "RDATA", m.Out(m.Bits[data_width]),
-        "WADDR", m.In(m.Bits[addr_width]),
-        "WDATA", m.In(m.Bits[data_width]),
-        "WE", m.In(m.Bit),
-        "CLK", m.In(m.Clock),
-        "RESET", m.In(m.Reset)
-    ]
+    io = m.IO(
+        RADDR=m.In(m.Bits[addr_width]),
+        RDATA=m.Out(m.Bits[data_width]),
+        WADDR=m.In(m.Bits[addr_width]),
+        WDATA=m.In(m.Bits[data_width]),
+        WE=m.In(m.Bit),
+        CLK=m.In(m.Clock),
+        RESET=m.In(m.Reset)
+    )
 
     @classmethod
     def definition(io):

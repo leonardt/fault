@@ -19,8 +19,8 @@ def test_top():
         T = m.UInt[N]
 
         class Adder(m.Circuit):
-            IO = ["I0", m.In(T), "I1", m.In(T), "CIN", m.In(m.Bit),
-                  "O", m.Out(T), "COUT", m.Out(m.Bit)]
+            io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
+                  O=m.Out(T), COUT=m.Out(m.Bit))
         return Adder
 
     # Define generators for two different implementations of an adder, one is
@@ -59,8 +59,8 @@ def test_top():
     T = m.Bits[4]
 
     class DUT(m.Circuit):
-        IO = ["I0", m.In(T), "I1", m.In(T), "CIN", m.In(m.Bit),
-              "O", m.Out(T), "COUT", m.Out(m.Bit)]
+        io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
+              O=m.Out(T), COUT=m.Out(m.Bit))
 
         @classmethod
         def definition(io):

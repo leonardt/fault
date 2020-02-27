@@ -3,7 +3,7 @@ import fault
 
 
 class Passthrough(m.Circuit):
-    IO = ["I", m.In(m.Bit), "O", m.Out(m.Bit)]
+    io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit))
 
     @classmethod
     def definition(io):

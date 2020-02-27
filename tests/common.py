@@ -43,7 +43,7 @@ def define_simple_circuit(T, circ_name, has_clk=False):
     class _Circuit(m.Circuit):
         __test__ = False   # Disable pytest discovery
         name = circ_name
-        IO = ["I", m.In(T), "O", m.Out(T)]
+        io = m.IO(I=m.In(T), O=m.Out(T))
         if has_clk:
             IO += ["CLK", m.In(m.Clock)]
 
@@ -87,7 +87,7 @@ T = m.Bits[3]
 
 class TestPeekCircuit(m.Circuit):
     __test__ = False   # Disable pytest discovery
-    IO = ["I", m.In(T), "O0", m.Out(T), "O1", m.Out(T)]
+    io = m.IO(I=m.In(T), O0=m.Out(T), O1=m.Out(T))
 
     @classmethod
     def definition(io):
@@ -96,7 +96,7 @@ class TestPeekCircuit(m.Circuit):
 
 
 class ConfigReg(m.Circuit):
-    IO = ["D", m.In(m.Bits[2]), "Q", m.Out(m.Bits[2])] + \
+    io = m.IO(D=m.In(m.Bits[2]), Q=m.Out(m.Bits[2])) + \
         m.ClockInterface(has_ce=True)
 
     @classmethod
@@ -106,12 +106,12 @@ class ConfigReg(m.Circuit):
 
 
 class SimpleALU(m.Circuit):
-    IO = ["a", m.In(m.UInt[16]),
-          "b", m.In(m.UInt[16]),
-          "c", m.Out(m.UInt[16]),
-          "config_data", m.In(m.Bits[2]),
-          "config_en", m.In(m.Enable),
-          ] + m.ClockInterface()
+    io = m.IO(a=m.In(m.UInt[16]),
+          b=m.In(m.UInt[16]),
+          c=m.Out(m.UInt[16]),
+          config_data=m.In(m.Bits[2]),
+          config_en=m.In(m.Enable),
+          ) + m.ClockInterface()
 
     @classmethod
     def definition(io):
@@ -124,7 +124,7 @@ class SimpleALU(m.Circuit):
 
 
 class AndCircuit(m.Circuit):
-    IO = ["I0", m.In(m.Bit), "I1", m.In(m.Bit), "O", m.Out(m.Bit)]
+    io = m.IO(I0=m.In(m.Bit), I1=m.In(m.Bit), O=m.Out(m.Bit))
 
     @classmethod
     def definition(io):

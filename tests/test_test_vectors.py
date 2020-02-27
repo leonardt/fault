@@ -24,10 +24,10 @@ def test_combinational_circuit():
         return (a & b) ^ c
 
     class main(m.Circuit):
-        IO = ["a", m.In(m.Bit),
-              "b", m.In(m.Bit),
-              "c", m.In(m.Bit),
-              "d", m.Out(m.Bit)]
+        io = m.IO(a=m.In(m.Bit),
+              b=m.In(m.Bit),
+              c=m.In(m.Bit),
+              d=m.Out(m.Bit))
 
         @classmethod
         def definition(io):
