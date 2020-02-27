@@ -26,7 +26,6 @@ matrix:
           - icarus-verilog
           - ngspice
           - fftw
-        update: true
 
 # python managed by conda until 3.7 available
 # python:
