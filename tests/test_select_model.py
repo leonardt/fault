@@ -20,7 +20,7 @@ def test_top():
 
         class Adder(m.Circuit):
             io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
-                  O=m.Out(T), COUT=m.Out(m.Bit))
+                      O=m.Out(T), COUT=m.Out(m.Bit))
         return Adder
 
     # Define generators for two different implementations of an adder, one is
@@ -60,7 +60,7 @@ def test_top():
 
     class DUT(m.Circuit):
         io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
-              O=m.Out(T), COUT=m.Out(m.Bit))
+                  O=m.Out(T), COUT=m.Out(m.Bit))
 
         @classmethod
         def definition(io):

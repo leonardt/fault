@@ -10,7 +10,7 @@ def pytest_generate_tests(metafunc):
 
 class MyAdder(m.Circuit):
     io = m.IO(a=m.In(m.UInt[4]),
-          b=m.Out(m.UInt[4]))
+              b=m.Out(m.UInt[4]))
 
     @classmethod
     def definition(io):
