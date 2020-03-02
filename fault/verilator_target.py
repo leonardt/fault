@@ -181,13 +181,13 @@ class VerilatorTarget(VerilogTarget):
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
             return self.compile_expression(value)
-        elif isinstance(value, (int, BitVector)) and value < 0:
+        if isinstance(value, (int, BitVector)) and value < 0:
             return self.process_signed_values(port, value)
-        elif isinstance(value, (int, BitVector)):
+        if isinstance(value, (int, BitVector)):
             return value
-        elif isinstance(value, actions.Var):
+        if isinstance(value, actions.Var):
             return value.name
-        elif isinstance(value, actions.FileRead):
+        if isinstance(value, actions.FileRead):
             mask = "FF" * value.file.chunk_size
             value = " | ".join(f"{value.file.name_without_ext}_in[{i}]"
                                for i in range(value.file.chunk_size))
