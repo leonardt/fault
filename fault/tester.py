@@ -547,7 +547,10 @@ class Tester:
         Return the "peeked" output(s) of the circuit (tuple for multiple
         outputs)
         """
-        for arg, port in zip(args, self._circuit.interface.outputs()):
+        defn_outputs = self._circuit.interface.outputs()
+        defn_outputs = filter(lambda x: not isinstance(x, m.ClockTypes),
+                              defn_outputs)
+        for arg, port in zip(args, defn_outputs):
             self.poke(port, arg)
         for key, value in kwargs.items():
             self.poke(getattr(self._circuit, key), value)
