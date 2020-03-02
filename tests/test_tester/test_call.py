@@ -17,3 +17,15 @@ def test_call_interface_basic(target, simulator):
         else:
             tester.compile_and_run(target, directory=_dir,
                                    simulator=simulator)
+
+
+def test_call_interface_kwargs(target, simulator):
+    tester = fault.Tester(AndCircuit)
+    for i, j in zip(range(2), range(2)):
+        tester(i, j, I0=0).expect(0)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir)
+        else:
+            tester.compile_and_run(target, directory=_dir,
+                                   simulator=simulator)
