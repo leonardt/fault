@@ -1,4 +1,4 @@
-from .abstract_tester import AbstractTester
+from .abstract_tester import TesterBase
 import fault
 import inspect
 import fault
@@ -33,7 +33,7 @@ import tempfile
 from hwtypes import BitVector
 
 
-class Tester(AbstractTester):
+class Tester(TesterBase):
     """
     The fault `Tester` object provides a mechanism in Python to construct tests
     for magma circuits.  The `Tester` is instantiated with a specific magma

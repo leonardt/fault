@@ -1,7 +1,7 @@
 from .wrapped_internal_port import WrappedVerilogInternalPort
 from .real_type import RealIn, RealOut, RealKind, RealType
 from .elect_type import ElectIn, ElectOut, ElectKind, ElectType
-from .tester import Tester, SymbolicTester, PythonTester, AbstractTester
+from .tester import Tester, SymbolicTester, PythonTester, TesterBase
 from .power_tester import PowerTester
 from .value import Value, AnyValue, UnknownValue, HiZ
 import fault.random

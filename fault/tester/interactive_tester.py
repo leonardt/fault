@@ -1,7 +1,7 @@
 import magma as m
 from magma.simulator import PythonSimulator
 from magma.scope import Scope
-from .abstract_tester import AbstractTester
+from .abstract_tester import TesterBase
 from ..select_path import SelectPath
 from ..value_utils import make_value
 from hwtypes import BitVector, Bit
@@ -9,7 +9,7 @@ from ..wrapper import PortWrapper
 from ..magma_utils import is_recursive_type
 
 
-class InteractiveTester(AbstractTester):
+class InteractiveTester(TesterBase):
     pass
 
 
@@ -30,7 +30,7 @@ def check(got, port, expected):
     assert got == expected, f"Got {got}, expected {expected}"
 
 
-class PythonTester(AbstractTester):
+class PythonTester(InteractiveTester):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.simulator = PythonSimulator(self._circuit, self.clock)

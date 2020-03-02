@@ -21,7 +21,7 @@ class Wrapper:
         # exceptions only occur during object instantiation
         if hasattr(self, "circuit") and hasattr(self, "instance_map"):
             if attr in self.circuit.interface.ports.keys():
-                if isinstance(self.parent, fault.AbstractTester):
+                if isinstance(self.parent, fault.TesterBase):
                     self.parent.poke(self.circuit.interface.ports[attr], value)
                 else:
                     raise NotImplementedError()
@@ -98,7 +98,7 @@ class PortWrapper(expression.Expression):
     def select_path(self):
         select_path = SelectPath([self.port])
         parent = self.parent
-        while not isinstance(parent, fault.AbstractTester):
+        while not isinstance(parent, fault.TesterBase):
             select_path.insert(0, parent)
             parent = parent.parent
         select_path.tester = parent

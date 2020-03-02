@@ -8,7 +8,7 @@ import inspect
 from hwtypes import BitVector
 
 
-class AbstractTester:
+class TesterBase:
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
                  reset: m.Reset = None, poke_delay_default=None,
                  expect_strict_default=True):
