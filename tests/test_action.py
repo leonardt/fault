@@ -12,9 +12,10 @@ def test_action_strs():
     assert str(Eval()) == 'Eval()'
     assert str(Step(circ.CLK, 1)) == 'Step(BasicClkCircuit.CLK, steps=1)'
     assert str(Print("%08x", circ.O)) == 'Print("%08x", BasicClkCircuit.O)'
-    assert str(Peek(circ.O)) == 'Peek(BasicClkCircuit.O)'
+    assert str(Peek(circ.O, Tester(circ))) == 'Peek(BasicClkCircuit.O)'
     index = f"__fault_loop_var_action_0"
-    assert str(Loop(12, index, [Peek(circ.O), Poke(circ.I, 1)])) == \
+    loop_body = [Peek(circ.O, Tester(circ)), Poke(circ.I, 1)]
+    assert str(Loop(12, index, loop_body)) == \
         f'Loop(12, {index}, ' \
         f'[Peek(BasicClkCircuit.O), Poke(BasicClkCircuit.I, 1)], up)'
     file = File("my_file", Tester(circ), "r", 1, "little")
