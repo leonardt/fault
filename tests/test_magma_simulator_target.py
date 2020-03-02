@@ -1,4 +1,5 @@
 from hwtypes import BitVector
+from fault import Tester
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv
@@ -91,7 +92,7 @@ def test_magma_simulator_target_peek(backend):
         x = random_bv(3)
         actions.append(Poke(circ.I, x))
         actions.append(Eval())
-        actions.append(Expect(circ.O0, Peek(circ.O1)))
+        actions.append(Expect(circ.O0, Peek(circ.O1, Tester(circ))))
     run(circ, actions, None, backend)
 
 
