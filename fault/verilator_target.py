@@ -189,10 +189,9 @@ class VerilatorTarget(VerilogTarget):
             return value.name
         elif isinstance(value, actions.FileRead):
             mask = "FF" * value.file.chunk_size
-            value = " | ".join(f"{value.file.name_without_ext}_in[{i}]" for
-                               i in range(value.file.chunk_size))
-            value = f"({value}) & 0x{mask}"
-            return value
+            value = " | ".join(f"{value.file.name_without_ext}_in[{i}]"
+                               for i in range(value.file.chunk_size))
+            return f"({value}) & 0x{mask}"
         return value
 
     def process_signed_values(self, port, value):
