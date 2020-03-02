@@ -30,6 +30,17 @@ def check(got, port, expected):
     assert got == expected, f"Got {got}, expected {expected}"
 
 
+def _process_port(self, port):
+    scope = Scope()
+    if isinstance(port, PortWrapper):
+        port = port.select_path
+    if isinstance(port, SelectPath):
+        for i in port[1:-1]:
+            scope = Scope(parent=scope, instance=i.instance)
+        port = port[-1]
+    return port, scope
+
+
 class PythonTester(InteractiveTester):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,18 +49,8 @@ class PythonTester(InteractiveTester):
     def eval(self):
         self.simulator.evaluate()
 
-    def process_port(self, port):
-        scope = Scope()
-        if isinstance(port, PortWrapper):
-            port = port.select_path
-        if isinstance(port, SelectPath):
-            for i in port[1:-1]:
-                scope = Scope(parent=scope, instance=i.instance)
-            port = port[-1]
-        return port, scope
-
     def _set_value(self, port, value):
-        port, scope = self.process_port(port)
+        port, scope = _process_port(port)
         self.simulator.set_value(port, value, scope)
 
     def poke(self, port, value, delay=None):
@@ -72,7 +73,7 @@ class PythonTester(InteractiveTester):
         return result
 
     def _get_value(self, port):
-        port, scope = self.process_port(port)
+        port, scope = _process_port(port)
         if isinstance(port, (int, BitVector, Bit, list)):
             return port
         result = self.simulator.get_value(port, scope)
@@ -83,7 +84,7 @@ class PythonTester(InteractiveTester):
         if recursed:
             return
         got = self._get_value(port)
-        port, scope = self.process_port(port)
+        port, scope = _process_port(port)
         value = make_value(type(port), value)
         expected = self._get_value(value)
         check(got, port, expected)
@@ -95,12 +96,12 @@ class PythonTester(InteractiveTester):
         got = [self._get_value(port) for port in args]
         values = ()
         for value, port in zip(got, args):
-            if isinstance(port, m.Array) and \
-                    issubclass(port.T, m.Digital):
-                value = BitVector[len(port)](value).as_uint()
+            if (isinstance(port, m.Array) and
+                issubclass(port.T, m.Digital)):
+                    value = BitVector[len(port)](value).as_uint()
             elif isinstance(port, m.Array):
-                raise NotImplementedError("Printing complex nested"
-                                          " arrays")
+                raise NotImplementedError("Printing complex nested "
+                                          "arrays")
             values += (value, )
         print(format_str % values, end="")
 
