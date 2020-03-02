@@ -163,60 +163,19 @@ class AbstractTester:
         return CircuitWrapper(self._circuit, self)
 
     @abstractmethod
-    def loop(self, n_iter):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
-        """
-        mode : "r" for read, "w" for write
-        chunk_size : number of bytes per read/write
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def file_close(self, file):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def file_read(self, file):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def file_write(self, file, value):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def _while(self, cond):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def _if(self, cond):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def file_scanf(self, file, _format, *args):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def Var(self, name, _type):
-        raise NotImplementedError()
-
-    def wait_on(self, cond):
-        loop = self._while(cond)
-        loop.step()
-
     def wait_until_low(self, signal):
-        self.wait_on(self.peek(signal))
+        raise NotImplementedError
 
+    @abstractmethod
     def wait_until_high(self, signal):
-        self.wait_on(~self.peek(signal))
+        raise NotImplementedError
+
 
     def wait_until_negedge(self, signal):
         self.wait_until_high(signal)
         self.wait_until_low(signal)
 
-    def wait_until_posedge(self, signal, steps_per_iter=1):
+    def wait_until_posedge(self, signal):
         self.wait_until_low(signal)
         self.wait_until_high(signal)
 

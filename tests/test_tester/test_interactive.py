@@ -1,6 +1,7 @@
 from fault import PythonTester
 from ..common import AndCircuit, SimpleALU
 from hwtypes import BitVector
+from mantle import DefineCounter
 
 
 def test_interactive_basic(capsys):
@@ -33,3 +34,13 @@ def test_interactive_clock():
     tester.circuit.config_en = 1
     tester.step(2)
     tester.circuit.c.expect(BitVector[16](0xDEAD) - BitVector[16](0xBEEF))
+
+
+def test_counter():
+    Counter4 = DefineCounter(4)
+    tester = PythonTester(Counter4, Counter4.CLK)
+    tester.CLK = 0
+    tester.wait_until_high(Counter4.O[3])
+    tester.circuit.O.expect(1 << 3)
+    tester.wait_until_low(Counter4.O[3])
+    tester.circuit.O.expect(0)

@@ -414,6 +414,24 @@ class Tester(AbstractTester):
         self.actions.append(var)
         return var
 
+    def wait_on(self, cond):
+        loop = self._while(cond)
+        loop.step()
+
+    def wait_until_low(self, signal):
+        self.wait_on(self.peek(signal))
+
+    def wait_until_high(self, signal):
+        self.wait_on(~self.peek(signal))
+
+    def wait_until_negedge(self, signal):
+        self.wait_until_high(signal)
+        self.wait_until_low(signal)
+
+    def wait_until_posedge(self, signal, steps_per_iter=1):
+        self.wait_until_low(signal)
+        self.wait_until_high(signal)
+
 
 class LoopIndex:
     def __init__(self, name):

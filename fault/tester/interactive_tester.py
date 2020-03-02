@@ -66,7 +66,8 @@ class PythonTester(AbstractTester):
         port, scope = self.process_port(port)
         if isinstance(port, (int, BitVector, Bit, list)):
             return port
-        return self.simulator.get_value(port, scope)
+        result = self.simulator.get_value(port, scope)
+        return make_value(type(port), result)
 
     def expect(self, port, value):
         got = self._get_value(port)
@@ -104,3 +105,11 @@ class PythonTester(AbstractTester):
         """
         self.eval()
         self.simulator.advance(steps)
+
+    def wait_until_low(self, signal):
+        while self.peek(signal):
+            self.step()
+
+    def wait_until_high(self, signal):
+        while ~self.peek(signal):
+            self.step()
