@@ -12,9 +12,7 @@ class MyAdder(m.Circuit):
     io = m.IO(a=m.In(m.UInt[4]),
               b=m.Out(m.UInt[4]))
 
-    @classmethod
-    def definition(io):
-        io.b <= io.a + 1
+    io.b @= io.a + 1
 
 
 def test_get_value_digital(target, simulator):

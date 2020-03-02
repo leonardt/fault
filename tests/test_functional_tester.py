@@ -22,15 +22,13 @@ def test_configuration():
     class Configurable(m.Circuit):
         io = m.IO(config_addr=m.In(m.Bits[32]), config_data=m.In(m.Bits[32]),
                   config_en=m.In(m.Enable), O=m.Out(m.Bits[32])
-                  ) + m.ClockInterface()
+                  ) + m.ClockIO()
 
-        @classmethod
-        def definition(io):
-            reg = mantle.Register(32, has_ce=True)
+        reg = mantle.Register(32, has_ce=True)
 
-            reg(io.config_data,
-                CE=(io.config_addr == m.bits(1, 32)) & m.bit(io.config_en))
-            m.wire(reg.O, io.O)
+        reg(io.config_data,
+            CE=(io.config_addr == m.bits(1, 32)) & m.bit(io.config_en))
+        m.wire(reg.O, io.O)
 
     class ConfigurableModel:
         def __init__(self):

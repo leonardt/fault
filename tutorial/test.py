@@ -5,9 +5,7 @@ import fault
 class Passthrough(m.Circuit):
     io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit))
 
-    @classmethod
-    def definition(io):
-        io.O <= io.I
+    io.O <= io.I
 
 
 passthrough_tester = fault.Tester(Passthrough)

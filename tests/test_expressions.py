@@ -29,18 +29,17 @@ def gen_binary_op_circuit(op):
         Pass through I0 and I1 as outputs so we can assert a function
         of I0 and I1 as the result
         """
-        io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]),
-                  I0_out=m.Out(m.UInt[5]), I1_out=m.Out(m.UInt[5]))
         if op in {"lt", "le", "gt", "ge", "ne", "eq"}:
-            IO += ["O", m.Out(m.Bit)]
+            Out_T = m.Bit
         else:
-            IO += ["O", m.Out(m.UInt[5])]
+            Out_T = m.UInt[5]
+        io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]),
+                  I0_out=m.Out(m.UInt[5]), I1_out=m.Out(m.UInt[5]),
+                  O=m.Out(Out_T))
 
-        @classmethod
-        def definition(io):
-            io.I0_out <= io.I0
-            io.I1_out <= io.I1
-            m.wire(io.O, getattr(operator, op)(io.I0, io.I1))
+        io.I0_out @= io.I0
+        io.I1_out @= io.I1
+        m.wire(io.O, getattr(operator, op)(io.I0, io.I1))
     return BinaryOpCircuit
 
 
@@ -134,14 +133,12 @@ def test_op_tree(target, simulator):
         of I0 and I1 as the result
         """
         io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]),
-                  I0_out=m.Out(m.UInt[5]), I1_out=m.Out(m.UInt[5]))
-        IO += ["O", m.Out(m.UInt[5])]
+                  I0_out=m.Out(m.UInt[5]), I1_out=m.Out(m.UInt[5]),
+                  O=m.Out(m.UInt[5]))
 
-        @classmethod
-        def definition(io):
-            io.I0_out <= io.I0
-            io.I1_out <= io.I1
-            m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
+        io.I0_out @= io.I0
+        io.I1_out @= io.I1
+        m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
 
     tester = fault.Tester(BinaryOpCircuit)
     for _ in range(5):

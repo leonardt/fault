@@ -29,9 +29,7 @@ def test_combinational_circuit():
                   c=m.In(m.Bit),
                   d=m.Out(m.Bit))
 
-        @classmethod
-        def definition(io):
-            m.wire(f(io.a, io.b, io.c), io.d)
+        m.wire(f(io.a, io.b, io.c), io.d)
 
     test_vectors = generate_function_test_vectors(main, f)
     assert len(test_vectors) == 2 ** 3 + 1

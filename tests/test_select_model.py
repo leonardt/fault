@@ -29,29 +29,29 @@ def test_top():
         """
         Generate a structural adder
         """
-        class Adder(DeclareAdder(N)):
-            @classmethod
-            def definition(io):
-                adders = [mantle.FullAdder() for _ in range(N)]
-                adders = m.fold(adders, foldargs={"CIN": "COUT"})
-                COUT, O = adders(I0=io.I0, I1=io.I1, CIN=io.CIN)
-                m.wire(O, io.O)
-                m.wire(COUT, io.COUT)
+        AdderNDecl = DeclareAdder(N)
+        class Adder(AdderNDecl):
+            io = AdderNDecl.io
+            adders = [mantle.FullAdder() for _ in range(N)]
+            adders = m.fold(adders, foldargs={"CIN": "COUT"})
+            COUT, O = adders(I0=io.I0, I1=io.I1, CIN=io.CIN)
+            m.wire(O, io.O)
+            m.wire(COUT, io.COUT)
         return Adder
 
     def DefineAdderBehavioral(N):
         """
         Generate a behavioral adder
         """
-        class Adder(DeclareAdder(N)):
-            @classmethod
-            def definition(io):
-                # Swap this line with the commented code in the following line
-                # to induce a failure in the behavioral test
-                O = io.I0.zext(1) + io.I1.zext(1) + m.bits(io.CIN, 1).zext(N)
-                # O = io.I0.zext(1) - io.I1.zext(1) - m.bits(io.CIN, 1).zext(N)
-                m.wire(O[:N], io.O)
-                m.wire(O[-1], io.COUT)
+        AdderNDecl = DeclareAdder(N)
+        class Adder(AdderNDecl):
+            io = AdderNDecl.io
+            # Swap this line with the commented code in the following line
+            # to induce a failure in the behavioral test
+            O = io.I0.zext(1) + io.I1.zext(1) + m.bits(io.CIN, 1).zext(N)
+            # O = io.I0.zext(1) - io.I1.zext(1) - m.bits(io.CIN, 1).zext(N)
+            m.wire(O[:N], io.O)
+            m.wire(O[-1], io.COUT)
         return Adder
 
     # Define a simple DUT that instances an adder and passes through the
@@ -62,18 +62,16 @@ def test_top():
         io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
                   O=m.Out(T), COUT=m.Out(m.Bit))
 
-        @classmethod
-        def definition(io):
-            # Instance declaration of adder, definition will be selected
-            # later
-            Adder4 = DeclareAdder(4)
-            adder0 = Adder4(name="adder0")
-            adder1 = Adder4(name="adder1")
-            # Random logic with the two adders
-            O, COUT = adder0(io)
-            O, COUT = adder1(O, O, COUT)
-            io.O <= O
-            io.COUT <= COUT
+        # Instance declaration of adder, definition will be selected
+        # later
+        Adder4 = DeclareAdder(4)
+        adder0 = Adder4(name="adder0")
+        adder1 = Adder4(name="adder1")
+        # Random logic with the two adders
+        O, COUT = adder0(io.I0, io.I1, io.CIN)
+        O, COUT = adder1(O, O, COUT)
+        io.O <= O
+        io.COUT <= COUT
 
     # Generic adder test bench using DUT
     tester = fault.Tester(DUT)

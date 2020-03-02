@@ -18,13 +18,11 @@ class ROM(m.Circuit):
         CLK=m.In(m.Clock)
     )
 
-    @classmethod
-    def definition(io):
-        regs = [mantle.Register(data_width, init=int(init[i]))
-                for i in range(1 << addr_width)]
-        for reg in regs:
-            reg.I <= reg.O
-        io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+    regs = [mantle.Register(data_width, init=int(init[i]))
+            for i in range(1 << addr_width)]
+    for reg in regs:
+        reg.I <= reg.O
+    io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
 
 
 class RAM(m.Circuit):
@@ -38,12 +36,10 @@ class RAM(m.Circuit):
         RESET=m.In(m.Reset)
     )
 
-    @classmethod
-    def definition(io):
-        regs = [mantle.Register(data_width, init=int(init[i]), has_ce=True,
-                                has_reset=True)
-                for i in range(1 << addr_width)]
-        for i, reg in enumerate(regs):
-            reg.I <= io.WDATA
-            reg.CE <= (io.WADDR == m.bits(i, addr_width)) & io.WE
-        io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+    regs = [mantle.Register(data_width, init=int(init[i]), has_ce=True,
+                            has_reset=True)
+            for i in range(1 << addr_width)]
+    for i, reg in enumerate(regs):
+        reg.I <= io.WDATA
+        reg.CE <= (io.WADDR == m.bits(i, addr_width)) & io.WE
+    io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
