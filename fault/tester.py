@@ -245,7 +245,7 @@ class Tester:
             return recurse(port)
 
         # implement expect
-        if not isinstance(value, (actions.Peek, PortWrapper,
+        if not isinstance(value, (actions.Peek, PortWrapper, actions.FileRead,
                                   LoopIndex, expression.Expression)):
             type_ = self.get_type(port)
             value = make_value(type_, value)

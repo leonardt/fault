@@ -495,6 +495,7 @@ def test_tester_file_io(target, simulator):
         loop.poke(circ.I, value)
         loop.eval()
         loop.expect(circ.O, loop.index)
+        loop.expect(circ.O, value)
         loop.file_write(file_out, circ.O)
         tester.file_close(file_in)
         tester.file_close(file_out)
