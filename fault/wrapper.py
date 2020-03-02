@@ -77,13 +77,11 @@ class PortWrapper(expression.Expression):
     def __getattr__(self, key):
         try:
             object.__getattribute__(self, "init_done")
-            if not isinstance(self.port, m.Tuple):
-                raise Exception(f"Can only use getattr with tuples, "
-                                f"not {type(self.port)}")
-            select_path = self.select_path
-            return PortWrapper(getattr(self.port, key), self.parent)
         except AttributeError:
             return object.__getattribute__(self, key)
+        if isinstance(self.port, m.Tuple):
+            return PortWrapper(getattr(self.port, key), self.parent)
+        return object.__getattribute__(self, key)
 
     def __setattr__(self, key, value):
         try:
