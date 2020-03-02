@@ -13,7 +13,7 @@ TEST_START = '*** TEST START ***'
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
-        targets = [("verilator", None)]
+        targets = [("verilator", None), ("python", None)]
         if shutil.which("irun"):
             targets.append(("system-verilog", "ncsim"))
         if shutil.which("vcs"):
@@ -25,12 +25,12 @@ def pytest_generate_tests(metafunc):
 
 def run_test(target, simulator, tester, disp_type='on_error'):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        kwargs = {
-            "directory": _dir,
-            "magma_opts": {"verilator_debug": True},
-            "disp_type": disp_type
-        }
+        kwargs = {}
+        if target != "python":
+            kwargs["directory"] = _dir
+            kwargs["disp_type"] = disp_type
         if target == "verilator":
+            kwargs["magma_opts"] = {"verilator_debug": True}
             kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
             kwargs["simulator"] = simulator
@@ -65,6 +65,8 @@ Q=3\
 
 
 def test_tester_poke_internal_register(target, simulator, capsys):
+    if target == "python":
+        pytest.skip("Wrapped verilog not supported by Python simulator")
     circ = SimpleALU
 
     tester = Tester(circ, circ.CLK)
@@ -153,16 +155,21 @@ def test_setattr_tuple(target, simulator):
 def test_setattr_x(target, simulator):
     if target == "verilator":
         pytest.skip("X not support with Verilator")
+    if target == "python":
+        pytest.skip("X not support with magma Python simulator")
     circ = AndCircuit
     tester = Tester(circ)
+    # "0" & "1" -> "0"
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1
     tester.eval()
     tester.circuit.O.expect(0)
+    # "X" & "1" -> "X"
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = 1
     tester.eval()
-    tester.circuit.O.expect(0)
+    tester.circuit.O.expect(fault.UnknownValue)
+    # "X" & "X" -> "X"
     tester.circuit.I0 = fault.UnknownValue
     tester.circuit.I1 = fault.UnknownValue
     tester.eval()

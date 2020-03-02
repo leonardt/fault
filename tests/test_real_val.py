@@ -10,12 +10,8 @@ def pytest_generate_tests(metafunc):
 
 def test_real_val(target, simulator):
     # define the circuit
-    realadd = m.DeclareCircuit(
-        'realadd',
-        'a_val', fault.RealIn,
-        'b_val', fault.RealIn,
-        'c_val', fault.RealOut
-    )
+    class realadd(m.Circuit):
+        io = m.IO(a_val=fault.RealIn, b_val=fault.RealIn, c_val=fault.RealOut)
 
     # define test content
     tester = fault.Tester(realadd)

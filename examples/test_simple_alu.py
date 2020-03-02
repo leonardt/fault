@@ -66,9 +66,12 @@ def test_simple_alu_parametrized(opcode, op):
     tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
 
 
-@pytest.mark.parametrize("target", ["verilator", "cosa"])
-def test_simple_alu_assume_guarantee(target):
-    tester = fault.SymbolicTester(SimpleALU, SimpleALU.CLK, num_tests=100)
+@pytest.mark.parametrize("target,strategy", [("verilator", "rejection"),
+                                             ("verilator", "smt"),
+                                             ("cosa", None)])
+def test_simple_alu_assume_guarantee(target, strategy):
+    tester = fault.SymbolicTester(SimpleALU, SimpleALU.CLK, num_tests=100,
+                                  random_strategy=strategy)
     tester.circuit.CLK = 0
     tester.circuit.config_en = 1
     tester.circuit.config_data = 0

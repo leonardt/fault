@@ -116,13 +116,14 @@ def test_tester_peek(target, simulator):
     circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
     tester.poke(circ.I, 0)
+    tester.eval()
     tester.expect(circ.O, 0)
     check(tester.actions[0], Poke(circ.I, 0))
-    check(tester.actions[1], Expect(circ.O, 0))
+    check(tester.actions[2], Expect(circ.O, 0))
     tester.poke(circ.CLK, 0)
-    check(tester.actions[2], Poke(circ.CLK, 0))
+    check(tester.actions[3], Poke(circ.CLK, 0))
     tester.step()
-    check(tester.actions[3], Step(circ.CLK, 1))
+    check(tester.actions[4], Step(circ.CLK, 1))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
@@ -394,9 +395,10 @@ Actions:
 
 
 def test_tester_verilog_wrapped(target, simulator):
-    SimpleALU = m.DefineFromVerilogFile("tests/simple_alu.v",
-                                        type_map={"CLK": m.In(m.Clock)},
-                                        target_modules=["SimpleALU"])[0]
+    ConfigReg, SimpleALU = m.DefineFromVerilogFile(
+        "tests/simple_alu.v", type_map={"CLK": m.In(m.Clock)},
+        target_modules=["SimpleALU", "ConfigReg"])
+    SimpleALU.place(ConfigReg())
 
     circ = m.DefineCircuit("top",
                            "a", m.In(m.Bits[16]),
@@ -601,6 +603,7 @@ def test_tester_while(target, simulator):
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 0)
+    tester.eval()
     loop = tester._while(tester.circuit.O != 1)
     loop.poke(circ.I, 1)
     loop.eval()
@@ -779,9 +782,14 @@ def test_poke_bitwise(target, simulator):
     tester.circuit.I = 0
     tester.eval()
     tester.circuit.I[0] = 1
+    tester.circuit.I[2] = 1
     tester.eval()
     tester.circuit.O[0].expect(1)
     tester.circuit.O[1].expect(0)
+    tester.circuit.O[2].expect(1)
+    tester.circuit.I[1:] = 0b01
+    tester.eval()
+    tester.circuit.O[1:].expect(0b01)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":

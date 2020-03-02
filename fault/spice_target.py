@@ -14,7 +14,6 @@ from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval
 from fault.select_path import SelectPath
 from .fault_errors import A2DError, ExpectError
-from inspect import getframeinfo, stack
 
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
@@ -84,7 +83,7 @@ class SpiceTarget(Target):
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None, cap_loads=None,
                  disp_type='on_error', mc_runs=0, mc_variations='all',
-                 vol_rel=0.1, voh_rel=0.9, no_run=False):
+                 vol_rel=0.1, voh_rel=0.9, no_run=False, uic=None):
         """
         circuit: a magma circuit
 
@@ -149,6 +148,9 @@ class SpiceTarget(Target):
         voh_rel: Rising edge threshold as a fraction of vsup
 
         no_run: If True, don't actually run the simulation.
+
+        uic: If True, use initial conditions.  If not specified, "uic" is True
+             if any initial conditions are specified, and is false otherwise.
         """
         # call the super constructor
         super().__init__(circuit)
@@ -191,6 +193,14 @@ class SpiceTarget(Target):
         self.vol_rel = vol_rel
         self.voh_rel = voh_rel
         self.no_run = no_run
+
+        # set default for "uic"
+        if uic is None:
+            if len(self.ic) > 0:
+                uic = True
+            else:
+                uic = False
+        self.uic = uic
 
         # set list of signals to save
         self.saves = set()
@@ -458,12 +468,8 @@ class SpiceTarget(Target):
         # specify the transient analysis
         t_step = (self.t_step if self.t_step is not None
                   else comp.stop_time / 1000)
-        if self.ic != {}:
-            uic = True
-        else:
-            uic = False
         if self.simulator in {'hspice', 'ngspice'}:
-            netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
+            netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=self.uic)
 
         # generate control statement
         if self.simulator == 'ngspice':
@@ -480,7 +486,7 @@ class SpiceTarget(Target):
         if self.simulator == 'spectre':
             netlist.probe(*comp.saves, wrap=True)
             if self.mc_runs == 0:
-                netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=uic)
+                netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=self.uic)
             else:
                 netlist.println('simulator lang=spectre')
                 netlist.print(MONTE_CARLO_SPECTRE.format(

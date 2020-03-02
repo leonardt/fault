@@ -21,6 +21,7 @@ from numbers import Number
 
 
 src_tpl = """\
+{timescale}
 module {top_module};
 {declarations}
 {assigns}
@@ -55,7 +56,8 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_libs=None, defines=None, flags=None, inc_dirs=None,
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, use_kratos=False):
+                 waveform_file=None, coverage=False, use_kratos=False,
+                 use_sva=False, skip_run=False):
         """
         circuit: a magma circuit
 
@@ -134,6 +136,9 @@ class SystemVerilogTarget(VerilogTarget):
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
 
         use_kratos: If True, set the environment up for debugging in kratos
+
+        skip_run: If True, generate all the files (testbench, tcl, etc.) but do
+                  not run the simulator.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -156,7 +161,7 @@ class SystemVerilogTarget(VerilogTarget):
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
-                         magma_opts, use_kratos=use_kratos)
+                         magma_opts, coverage=coverage, use_kratos=use_kratos)
 
         # sanity check
         if simulator is None:
@@ -192,6 +197,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
         self.waveform_file = waveform_file
+        self.use_sva = use_sva
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 self.waveform_file = "waveforms.vpd"
@@ -200,6 +206,7 @@ class SystemVerilogTarget(VerilogTarget):
             else:
                 raise NotImplementedError(self.simulator)
         self.use_kratos = use_kratos
+        self.skip_run = skip_run
         # check to see if runtime is installed
         if use_kratos:
             import sys
@@ -405,7 +412,10 @@ class SystemVerilogTarget(VerilogTarget):
 
     def make_assert(self, i, action):
         expr_str = self.compile_expression(action.expr)
-        return [f'if (!({expr_str})) $error("{expr_str} failed");']
+        if self.use_sva:
+            return [f'assert ({expr_str}) else $error("{expr_str} failed");']
+        else:
+            return [f'if (!({expr_str})) $error("{expr_str} failed");']
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -440,26 +450,26 @@ class SystemVerilogTarget(VerilogTarget):
         if action.above is not None:
             if action.below is not None:
                 # must be in range
-                cond = f'!(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
+                cond = f'(({action.above} <= {name}) && ({name} <= {action.below}))'  # noqa
                 err_msg = 'Expected %0f to %0f, got %0f'
                 err_args = [action.above, action.below, name]
             else:
                 # must be above
-                cond = f'!({action.above} <= {name})'
+                cond = f'({action.above} <= {name})'
                 err_msg = 'Expected above %0f, got %0f'
                 err_args = [action.above, name]
         else:
             if action.below is not None:
                 # must be below
-                cond = f'!({name} <= {action.below})'
+                cond = f'({name} <= {action.below})'
                 err_msg = 'Expected below %0f, got %0f'
                 err_args = [action.below, name]
             else:
                 # equality comparison
                 if action.strict:
-                    cond = f'!({name} === {value})'
+                    cond = f'({name} === {value})'
                 else:
-                    cond = f'!({name} == {value})'
+                    cond = f'({name} == {value})'
                 err_msg = 'Expected %x, got %x'
                 err_args = [value, name]
 
@@ -468,8 +478,11 @@ class SystemVerilogTarget(VerilogTarget):
         err_body = [err_fmt_str] + err_args
         err_body = ', '.join([str(elem) for elem in err_body])
 
-        # return a snippet of verilog implementing the assertion
-        return self.make_if(i, If(cond, [f'$error({err_body});']))
+        if self.use_sva:
+            return [f'assert ({cond}) else $error({err_body});']
+        else:
+            # return a snippet of verilog implementing the assertion
+            return self.make_if(i, If(f'!{cond}', [f'$error({err_body});']))
 
     def make_eval(self, i, action):
         # Emulate eval by inserting a delay
@@ -601,8 +614,12 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             top_module = f'{self.circuit_name}_tb'
 
+        # add timescale
+        timescale = f'`timescale {self.timescale}'
+
         # fill out values in the testbench template
         src = src_tpl.format(
+            timescale=timescale,
             declarations=declarations,
             assigns=assigns,
             initial_body=initial_body,
@@ -670,6 +687,9 @@ class SystemVerilogTarget(VerilogTarget):
         # link the library over if using kratos to debug
         if self.use_kratos:
             self.link_kratos_lib()
+
+        if self.skip_run:
+            return
 
         # compile the simulation
         subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
@@ -855,7 +875,8 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += self.def_args(prefix='+define+')
 
         # misc flags
-        cmd += ['-access', '+rwc']
+        if self.dump_waveforms:
+            cmd += ["-access", "r"]
         cmd += ['-notimingchecks']
         if self.no_warning:
             cmd += ['-neverwarn']
@@ -864,6 +885,10 @@ class SystemVerilogTarget(VerilogTarget):
         if self.use_kratos:
             from kratos_runtime import get_ncsim_flag
             cmd += get_ncsim_flag().split()
+
+        # coverage flags
+        if self.coverage:
+            cmd += ["-coverage", "b", "-covoverwrite"]
 
         # return arg list
         return cmd
@@ -922,6 +947,10 @@ class SystemVerilogTarget(VerilogTarget):
             # +vpi -load libkratos-runtime.so:initialize_runtime_vpi -acc+=rw
             from kratos_runtime import get_vcs_flag
             cmd += get_vcs_flag().split()
+
+        # not supported yet
+        if self.coverage:
+            raise NotImplementedError("coverage in vcs is not implemented yet")
 
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
