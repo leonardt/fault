@@ -8,13 +8,13 @@ import fault.actions as actions
 import tempfile
 import pytest
 from pathlib import Path
-from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
-                     TestBasicClkCircuit, TestNestedArraysCircuit,
-                     TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
-                     TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
-                     TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit,
-                     TestUInt64Circuit, TestUInt128Circuit,
-                     TestNestedArrayTupleCircuit)
+from ..common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
+                      TestBasicClkCircuit, TestNestedArraysCircuit,
+                      TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
+                      TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
+                      TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit,
+                      TestUInt64Circuit, TestUInt128Circuit,
+                      TestNestedArrayTupleCircuit)
 
 
 def pytest_generate_tests(metafunc):

@@ -191,7 +191,7 @@ class Tester:
         """
         Returns a symbolic handle to the current value of `port`
         """
-        return actions.Peek(port)
+        return actions.Peek(port, self)
 
     def print(self, format_str, *args):
         """
@@ -535,6 +535,26 @@ class Tester:
     def internal(self, *args):
         # return a SelectPath containing the desired path
         return SelectPath([self.circuit] + list(args))
+
+    def __call__(self, *args, **kwargs):
+        """
+        Poke the inputs of the circuit using *args (ordered, anonymous input
+        reference, excluding clocks) and **kwargs.  **kwargs will overwrite any
+        inputs written by *args.
+
+        Evaluate the circuit
+
+        Return the "peeked" output(s) of the circuit (tuple for multiple
+        outputs)
+        """
+        for arg, port in zip(args, self._circuit.interface.outputs()):
+            self.poke(port, arg)
+        self.eval()
+        result = tuple(self.peek(port) for port in
+                       self._circuit.interface.inputs())
+        if len(result) == 1:
+            return result[0]
+        return result
 
 
 class LoopIndex:

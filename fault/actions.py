@@ -176,9 +176,10 @@ class Guarantee(PortAction):
 
 
 class Peek(Action, expression.Expression):
-    def __init__(self, port):
+    def __init__(self, port, tester):
         super().__init__()
         self.port = port
+        self.tester = tester
 
     def retarget(self, new_circuit, clock):
         cls = type(self)
@@ -187,6 +188,9 @@ class Peek(Action, expression.Expression):
 
     def __str__(self):
         return f"Peek({self.port.debug_name})"
+
+    def expect(self, *args, **kwargs):
+        self.tester.expect(self.port, *args, **kwargs)
 
 
 class Eval(Action):
