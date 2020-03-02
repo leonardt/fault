@@ -400,6 +400,7 @@ class Tester(AbstractTester):
         self.wait_until_low(signal)
         self.wait_until_high(signal)
 
+
 class LoopIndex:
     def __init__(self, name):
         self.name = name
