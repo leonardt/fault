@@ -43,9 +43,7 @@ class TesterBase:
             port = port[-1]
         if isinstance(port, WrappedVerilogInternalPort):
             type_ = port.type_
-        else:
-            type_ = type(port)
-        return type_
+        return type(port)
 
     def poke(self, port, value, delay=None):
         """
