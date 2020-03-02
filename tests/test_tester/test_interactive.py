@@ -8,3 +8,11 @@ def test_interactive_basic():
     tester.poke(AndCircuit.I1, 1)
     tester.eval()
     tester.expect(AndCircuit.O, 0)
+
+
+def test_interactive_setattr():
+    tester = PythonTester(AndCircuit)
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 1
+    tester.eval()
+    tester.circuit.O.expect(1)
