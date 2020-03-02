@@ -549,6 +549,8 @@ class Tester:
         """
         for arg, port in zip(args, self._circuit.interface.outputs()):
             self.poke(port, arg)
+        for key, value in kwargs.items():
+            self.poke(getattr(self._circuit, key), value)
         self.eval()
         result = tuple(self.peek(port) for port in
                        self._circuit.interface.inputs())
