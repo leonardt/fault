@@ -62,7 +62,7 @@ def test_target_peek(target, simulator):
         x = random_bv(3)
         actions.append(Poke(circ.I, x))
         actions.append(Eval())
-        actions.append(Expect(circ.O0, Peek(circ.O1)))
+        actions.append(Expect(circ.O0, Peek(circ.O1, fault.Tester(circ))))
     run(circ, actions, target, simulator)
 
 
