@@ -30,6 +30,7 @@ def test_top():
         Generate a structural adder
         """
         AdderNDecl = DeclareAdder(N)
+
         class Adder(AdderNDecl):
             io = AdderNDecl.io
             adders = [mantle.FullAdder() for _ in range(N)]
@@ -44,6 +45,7 @@ def test_top():
         Generate a behavioral adder
         """
         AdderNDecl = DeclareAdder(N)
+
         class Adder(AdderNDecl):
             io = AdderNDecl.io
             # Swap this line with the commented code in the following line

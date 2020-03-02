@@ -88,7 +88,6 @@ def test_magma_debug(target):
     if not shutil.which("irun"):
         pytest.skip("irun not available")
 
-
     @m.circuit.combinational_to_verilog(debug=True)
     def execute_alu(a: m.UInt[16], b: m.UInt[16], config_: m.Bits[2]) -> \
             m.UInt[16]:
@@ -101,7 +100,6 @@ def test_magma_debug(target):
         else:
             c = m.bits(0, 16)
         return c
-
 
     class SimpleALU(m.Circuit):
         io = m.IO(a=m.In(m.UInt[16]), b=m.In(m.UInt[16]),
