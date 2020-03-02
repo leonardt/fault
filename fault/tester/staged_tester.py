@@ -117,41 +117,9 @@ class Tester(AbstractTester):
         """
         Set `port` to be `value`
         """
-        # set defaults
-        if delay is None:
-            delay = self.poke_delay_default
-
-        if port is self.clock:
-            self.clock_initialized = True
-
-        def recurse(port):
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    self.poke(getattr(port, k), v)
-            elif isinstance(port, m.Array) and \
-                    not issubclass(type(port).T, m.Digital) and \
-                    isinstance(value, (int, BitVector, tuple, dict)):
-                # Broadcast value to children
-                for p in port:
-                    self.poke(p, value, delay)
-            else:
-                _value = value
-                if isinstance(_value, int):
-                    _value = BitVector[len(port)](_value)
-                for p, v in zip(port, _value):
-                    self.poke(p, v, delay)
-
-        # implement poke
-        if isinstance(port, SelectPath):
-            if (is_recursive_type(type(port[-1]))
-                or (not isinstance(port[-1], WrappedVerilogInternalPort) and
-                    isinstance(port[-1].name, m.ref.AnonRef))):
-                return recurse(port[-1])
-        elif is_recursive_type(type(port)):
-            return recurse(port)
-        elif not isinstance(port, WrappedVerilogInternalPort) and\
-                isinstance(port.name, m.ref.AnonRef):
-            return recurse(port)
+        recursed = super().poke(port, value, delay)
+        if recursed:
+            return
 
         if not isinstance(value, (LoopIndex, actions.FileRead,
                                   expression.Expression)):

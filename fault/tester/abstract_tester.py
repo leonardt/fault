@@ -3,6 +3,7 @@ from abc import abstractmethod
 from ..wrapper import CircuitWrapper
 from ..select_path import SelectPath
 from ..wrapped_internal_port import WrappedVerilogInternalPort
+from ..magma_utils import is_recursive_type
 
 
 class AbstractTester:
@@ -44,12 +45,49 @@ class AbstractTester:
             type_ = type(port)
         return type_
 
-    @abstractmethod
     def poke(self, port, value, delay=None):
         """
         Set `port` to be `value`
         """
-        raise NotImplementedError()
+        # set defaults
+        if delay is None:
+            delay = self.poke_delay_default
+
+        if port is self.clock:
+            self.clock_initialized = True
+
+        def recurse(port):
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    self.poke(getattr(port, k), v)
+            elif isinstance(port, m.Array) and \
+                    not issubclass(type(port).T, m.Digital) and \
+                    isinstance(value, (int, BitVector, tuple, dict)):
+                # Broadcast value to children
+                for p in port:
+                    self.poke(p, value, delay)
+            else:
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
+                    self.poke(p, v, delay)
+
+        # implement poke
+        if isinstance(port, SelectPath):
+            if (is_recursive_type(type(port[-1]))
+                or (not isinstance(port[-1], WrappedVerilogInternalPort) and
+                    isinstance(port[-1].name, m.ref.AnonRef))):
+                recurse(port[-1])
+                return True
+        elif is_recursive_type(type(port)):
+            recurse(port)
+            return True
+        elif not isinstance(port, WrappedVerilogInternalPort) and\
+                isinstance(port.name, m.ref.AnonRef):
+            recurse(port)
+            return True
+        return False
 
     @abstractmethod
     def peek(self, port):
