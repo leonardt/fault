@@ -4,6 +4,8 @@ from ..wrapper import CircuitWrapper
 from ..select_path import SelectPath
 from ..wrapped_internal_port import WrappedVerilogInternalPort
 from ..magma_utils import is_recursive_type
+import inspect
+from hwtypes import BitVector
 
 
 class AbstractTester:
@@ -113,12 +115,53 @@ class AbstractTester:
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def expect(self, port, value, strict=None, caller=None, **kwargs):
         """
         Expect the current value of `port` to be `value`
         """
-        raise NotImplementedError()
+        # set defaults
+        if strict is None:
+            strict = self.expect_strict_default
+        if caller is None:
+            try:
+                caller = inspect.getframeinfo(inspect.stack()[1][0])
+            except IndexError:
+                pass
+
+        def recurse(port):
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    self.expect(port=getattr(port, k), value=v, strict=strict,
+                                caller=caller, **kwargs)
+            elif isinstance(port, m.Array) and \
+                    not issubclass(type(port).T, m.Digital) and \
+                    isinstance(value, (int, BitVector, tuple, dict)):
+                # Broadcast value to children
+                for p in port:
+                    self.expect(port=p, value=value, strict=strict,
+                                caller=caller, **kwargs)
+            else:
+                _value = value
+                if isinstance(_value, int):
+                    _value = BitVector[len(port)](_value)
+                for p, v in zip(port, _value):
+                    self.expect(port=p, value=v, strict=strict, caller=caller,
+                                **kwargs)
+
+        if isinstance(port, SelectPath):
+            if (is_recursive_type(type(port[-1]))
+                or (not isinstance(port[-1], WrappedVerilogInternalPort)
+                    and isinstance(port[-1].name, m.ref.AnonRef))):
+                recurse(port[-1])
+                return True
+        elif is_recursive_type(type(port)):
+            recurse(port)
+            return True
+        elif not isinstance(port, WrappedVerilogInternalPort) and \
+                isinstance(port.name, m.ref.AnonRef):
+            recurse(port)
+            return True
+        return False
 
     @abstractmethod
     def eval(self):

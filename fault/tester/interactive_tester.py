@@ -6,6 +6,7 @@ from ..select_path import SelectPath
 from ..value_utils import make_value
 from hwtypes import BitVector, Bit
 from ..wrapper import PortWrapper
+from ..magma_utils import is_recursive_type
 
 
 class InteractiveTester(AbstractTester):
@@ -59,18 +60,31 @@ class PythonTester(AbstractTester):
         if recursed:
             return
         type_ = self.get_port_type(port)
-        value = make_value(type_, value)
         self._set_value(port, value)
+
+    def process_result(self, type_, result):
+        if issubclass(type_, m.Digital):
+            return Bit(result)
+        if issubclass(type_, m.Bits):
+            return BitVector[len(type_)](result)
+        if is_recursive_type(type_):
+            return BitVector[len(type_)](result)
+        return result
 
     def _get_value(self, port):
         port, scope = self.process_port(port)
         if isinstance(port, (int, BitVector, Bit, list)):
             return port
         result = self.simulator.get_value(port, scope)
-        return make_value(type(port), result)
+        return self.process_result(type(port), result)
 
-    def expect(self, port, value):
+    def expect(self, port, value, strict=None, caller=None, **kwargs):
+        recursed = super().expect(port, value, strict, caller, **kwargs)
+        if recursed:
+            return
         got = self._get_value(port)
+        port, scope = self.process_port(port)
+        value = make_value(type(port), value)
         expected = self._get_value(value)
         check(got, port, expected)
 

@@ -151,38 +151,6 @@ class Tester(AbstractTester):
         """
         Expect the current value of `port` to be `value`
         """
-        # set defaults
-        if strict is None:
-            strict = self.expect_strict_default
-        if caller is None:
-            try:
-                caller = inspect.getframeinfo(inspect.stack()[1][0])
-            except IndexError:
-                pass
-
-        def recurse(port):
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    self.expect(port=getattr(port, k), value=v, strict=strict,
-                                caller=caller, **kwargs)
-            else:
-                _value = value
-                if isinstance(_value, int):
-                    _value = BitVector[len(port)](_value)
-                for p, v in zip(port, _value):
-                    self.expect(port=p, value=v, strict=strict, caller=caller,
-                                **kwargs)
-
-        if isinstance(port, SelectPath):
-            if (is_recursive_type(type(port[-1]))
-                or (not isinstance(port[-1], WrappedVerilogInternalPort)
-                    and isinstance(port[-1].name, m.ref.AnonRef))):
-                return recurse(port[-1])
-        elif is_recursive_type(type(port)):
-            return recurse(port)
-        elif not isinstance(port, WrappedVerilogInternalPort) and \
-                isinstance(port.name, m.ref.AnonRef):
-            return recurse(port)
 
         # implement expect
         if not isinstance(value, (actions.Peek, PortWrapper, actions.FileRead,
