@@ -45,7 +45,7 @@ def test_call_interface_kwargs(target, simulator):
                                    simulator=simulator)
 
 
-def test_call_interface_clock(target, simulator):
+def test_call_interface_clock(target, simulator, caplog):
     ops = [operator.add, operator.sub, operator.mul, lambda x, y: y - x]
     tester = fault.Tester(SimpleALU, SimpleALU.CLK)
     tester.circuit.CLK = 0
@@ -62,3 +62,6 @@ def test_call_interface_clock(target, simulator):
         else:
             tester.compile_and_run(target, directory=_dir,
                                    simulator=simulator)
+    warning = "Number of arguments to __call__ did not match number of " \
+              "circuit inputs"
+    assert warning in caplog.messages
