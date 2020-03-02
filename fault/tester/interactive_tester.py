@@ -32,7 +32,7 @@ def check(got, port, expected):
 class PythonTester(AbstractTester):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.simulator = PythonSimulator(self._circuit)
+        self.simulator = PythonSimulator(self._circuit, self.clock)
 
     def eval(self):
         self.simulator.evaluate()
@@ -47,7 +47,7 @@ class PythonTester(AbstractTester):
             port = port[-1]
         return port, scope
 
-    def set_value(self, port, value):
+    def _set_value(self, port, value):
         port, scope = self.process_port(port)
         self.simulator.set_value(port, value, scope)
 
@@ -60,15 +60,47 @@ class PythonTester(AbstractTester):
             return
         type_ = self.get_port_type(port)
         value = make_value(type_, value)
-        self.set_value(port, value)
+        self._set_value(port, value)
 
-    def get_value(self, port):
+    def _get_value(self, port):
         port, scope = self.process_port(port)
         if isinstance(port, (int, BitVector, Bit, list)):
             return port
         return self.simulator.get_value(port, scope)
 
     def expect(self, port, value):
-        got = self.get_value(port)
-        expected = self.get_value(value)
+        got = self._get_value(port)
+        expected = self._get_value(value)
         check(got, port, expected)
+
+    def peek(self, port):
+        return self._get_value(port)
+
+    def print(self, format_str, *args):
+        got = [self._get_value(port) for port in args]
+        values = ()
+        for value, port in zip(got, args):
+            if isinstance(port, m.Array) and \
+                    issubclass(port.T, m.Digital):
+                value = BitVector[len(port)](value).as_uint()
+            elif isinstance(port, m.Array):
+                raise NotImplementedError("Printing complex nested"
+                                          " arrays")
+            values += (value, )
+        print(format_str % values, end="")
+
+    def assert_(self, expr, msg=""):
+        assert expr, msg
+
+    def delay(self, time):
+        raise NotImplementedError()
+
+    def get_value(self, port):
+        raise NotImplementedError()
+
+    def step(self, steps=1):
+        """
+        Step the clock `steps` times.
+        """
+        self.eval()
+        self.simulator.advance(steps)
