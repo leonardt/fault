@@ -88,26 +88,24 @@ def test_magma_debug(target):
     if not shutil.which("irun"):
         pytest.skip("irun not available")
 
+    @m.circuit.combinational_to_verilog(debug=True)
+    def execute_alu(a: m.UInt[16], b: m.UInt[16], config_: m.Bits[2]) -> \
+            m.UInt[16]:
+        if config_ == m.bits(0, 2):
+            c = a + b
+        elif config_ == m.bits(1, 2):
+            c = a - b
+        elif config_ == m.bits(2, 2):
+            c = a * b
+        else:
+            c = m.bits(0, 16)
+        return c
+
     class SimpleALU(m.Circuit):
-        IO = ["a", m.In(m.UInt[16]), "b", m.In(m.UInt[16]), "c",
-              m.Out(m.UInt[16]), "config_", m.In(m.Bits[2])]
+        io = m.IO(a=m.In(m.UInt[16]), b=m.In(m.UInt[16]),
+                  c=m.Out(m.UInt[16]), config_=m.In(m.Bits[2]))
 
-        @m.circuit.combinational_to_verilog(debug=True)
-        def execute_alu(a: m.UInt[16], b: m.UInt[16], config_: m.Bits[2]) -> \
-                m.UInt[16]:
-            if config_ == m.bits(0, 2):
-                c = a + b
-            elif config_ == m.bits(1, 2):
-                c = a - b
-            elif config_ == m.bits(2, 2):
-                c = a * b
-            else:
-                c = m.bits(0, 16)
-            return c
-
-        @classmethod
-        def definition(io):
-            io.c <= io.execute_alu(io.a, io.b, io.config_)
+        io.c <= execute_alu(io.a, io.b, io.config_)
 
     inst_to_defn_map = build_kratos_debug_info(SimpleALU, is_top=True)
     assert "SimpleALU.execute_alu_inst0" in inst_to_defn_map

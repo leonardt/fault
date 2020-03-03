@@ -7,10 +7,10 @@ from fault.value import AnyValue, UnknownValue
 
 
 class Foo(m.Circuit):
-    IO = ["a", m.In(m.Bit),
-          "b", m.In(m.Bits[8]),
-          "c", m.In(m.Array[12, m.Bit]),
-          "d", m.In(m.Array[16, m.Array[20, m.Bit]])]
+    io = m.IO(a=m.In(m.Bit),
+              b=m.In(m.Bits[8]),
+              c=m.In(m.Array[12, m.Bit]),
+              d=m.In(m.Array[16, m.Array[20, m.Bit]]))
 
 
 def test_all():

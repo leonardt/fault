@@ -4,14 +4,12 @@ import fault
 
 
 class TFF(m.Circuit):
-    IO = ["O", m.Out(m.Bit), "CLK", m.In(m.Clock)]
+    io = m.IO(O=m.Out(m.Bit), CLK=m.In(m.Clock))
 
-    @classmethod
-    def definition(io):
-        reg = mantle.Register(None, name="tff_reg")
-        reg.CLK <= io.CLK
-        reg.I <= ~reg.O
-        io.O <= reg.O
+    reg = mantle.Register(None, name="tff_reg")
+    reg.CLK <= io.CLK
+    reg.I <= ~reg.O
+    io.O <= reg.O
 
 
 tff_tester = fault.Tester(TFF, clock=TFF.CLK)
