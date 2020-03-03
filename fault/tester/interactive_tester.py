@@ -123,3 +123,9 @@ class PythonTester(InteractiveTester):
     def wait_until_high(self, signal):
         while ~self.peek(signal):
             self.step()
+
+    def __call__(self, *args, **kwargs):
+        result = super().__call__(*args, **kwargs)
+        if isinstance(result, tuple):
+            return tuple(self.peek(r.select_path) for r in result)
+        return self.peek(result.select_path)
