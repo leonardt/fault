@@ -38,13 +38,6 @@ class TesterBase:
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
 
-    def get_port_type(self, port):
-        if isinstance(port, SelectPath):
-            port = port[-1]
-        if isinstance(port, WrappedVerilogInternalPort):
-            type_ = port.type_
-        return type(port)
-
     @abstractmethod
     def _poke(self, port, value, delay=None):
         raise NotImplementedError()

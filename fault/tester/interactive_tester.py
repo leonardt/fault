@@ -1,7 +1,8 @@
 import magma as m
 from magma.simulator import PythonSimulator
 from magma.scope import Scope
-from .abstract_tester import TesterBase
+from .base import TesterBase
+from .utils import get_port_type
 from ..select_path import SelectPath
 from ..value_utils import make_value
 from hwtypes import BitVector, Bit
@@ -57,7 +58,7 @@ class PythonTester(InteractiveTester):
         if delay is not None:
             raise NotImplementedError("delay is not support in Python "
                                       "simulator")
-        type_ = self.get_port_type(port)
+        type_ = get_port_type(port)
         self._set_value(port, value)
 
     def process_result(self, type_, result):

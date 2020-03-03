@@ -1,4 +1,5 @@
 from .abstract_tester import TesterBase
+from .utils import get_port_type
 import fault
 import inspect
 import fault
@@ -116,7 +117,7 @@ class Tester(TesterBase):
     def _poke(self, port, value, delay=None):
         if not isinstance(value, (LoopIndex, actions.FileRead,
                                   expression.Expression)):
-            type_ = self.get_port_type(port)
+            type_ = get_port_type(port)
             value = make_value(type_, value)
         self.actions.append(actions.Poke(port, value, delay=delay))
 
@@ -144,7 +145,7 @@ class Tester(TesterBase):
         # implement expect
         if not isinstance(value, (actions.Peek, PortWrapper, actions.FileRead,
                                   LoopIndex, expression.Expression)):
-            type_ = self.get_port_type(port)
+            type_ = get_port_type(port)
             value = make_value(type_, value)
         self.actions.append(actions.Expect(port=port, value=value,
                                            strict=strict, caller=caller,
