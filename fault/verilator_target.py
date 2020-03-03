@@ -13,7 +13,7 @@ from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from hwtypes import BitVector, AbstractBitVectorMeta
+from hwtypes import BitVector, AbstractBitVectorMeta, Bit
 from fault.random import constrained_random_bv
 from fault.subprocess_run import subprocess_run
 import fault.utils as utils
@@ -181,6 +181,8 @@ class VerilatorTarget(VerilogTarget):
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
             return self.compile_expression(value)
+        if isinstance(value, Bit):
+            return int(value)
         if isinstance(value, (int, BitVector)) and value < 0:
             return self.process_signed_values(port, value)
         if isinstance(value, (int, BitVector)):
