@@ -262,7 +262,7 @@ class TesterBase:
         num_args = len(args) + len([value for value in kwargs.values() if not
                                     isinstance(value, m.ClockTypes)])
         defn_outputs = [port for port in self._circuit.interface.outputs()
-                        if not isinstance(x, m.ClockTypes)]
+                        if not isinstance(port, m.ClockTypes)]
         if num_args != len(defn_outputs):
             logging.warn("Number of arguments to __call__ did not match "
                          "number of circuit inputs")
