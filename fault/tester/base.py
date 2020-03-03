@@ -1,3 +1,4 @@
+import logging
 import magma as m
 from abc import abstractmethod
 from ..wrapper import CircuitWrapper
