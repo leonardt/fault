@@ -104,7 +104,7 @@ def test_tester_clock(target, simulator):
     tester.poke(circ.I, 0)
     tester.expect(circ.O0, tester.peek(circ.O1))
     check(tester.actions[0], Poke(circ.I, 0))
-    check(tester.actions[1], Expect(circ.O0, Peek(circ.O1))
+    check(tester.actions[1], Expect(circ.O0, Peek(circ.O1)))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
