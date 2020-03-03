@@ -188,9 +188,6 @@ class Peek(Action, expression.Expression):
     def __str__(self):
         return f"Peek({self.port.debug_name})"
 
-    def expect(self, *args, **kwargs):
-        self.tester.expect(self.port, *args, **kwargs)
-
 
 class Eval(Action):
     def __init__(self):
