@@ -191,7 +191,7 @@ class Tester:
         """
         Returns a symbolic handle to the current value of `port`
         """
-        return actions.Peek(port, self)
+        return actions.Peek(port)
 
     def print(self, format_str, *args):
         """
@@ -560,7 +560,7 @@ class Tester:
         for key, value in kwargs.items():
             self.poke(getattr(self._circuit, key), value)
         self.eval()
-        result = tuple(self.peek(port) for port in
+        result = tuple(getattr(self.circuit, port) for port in
                        self._circuit.interface.inputs())
         if len(result) == 1:
             return result[0]
