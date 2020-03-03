@@ -1,7 +1,7 @@
 import logging
 import magma as m
 from abc import abstractmethod
-from ..wrapper import CircuitWrapper
+from ..wrapper import CircuitWrapper, PortWrapper
 from ..select_path import SelectPath
 from ..wrapped_internal_port import WrappedVerilogInternalPort
 from ..magma_utils import is_recursive_type
@@ -71,6 +71,8 @@ class TesterBase:
                 for p, v in zip(port, _value):
                     self.poke(p, v, delay)
 
+        if isinstance(port, PortWrapper):
+            port = port.select_path
         # implement poke
         if isinstance(port, SelectPath):
             if (is_recursive_type(type(port[-1]))
@@ -146,6 +148,8 @@ class TesterBase:
                     self.expect(port=p, value=v, strict=strict, caller=caller,
                                 **kwargs)
 
+        if isinstance(port, PortWrapper):
+            port = port.select_path
         if isinstance(port, SelectPath):
             if (is_recursive_type(type(port[-1]))
                 or (not isinstance(port[-1], WrappedVerilogInternalPort)
