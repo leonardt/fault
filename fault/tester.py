@@ -561,7 +561,7 @@ class Tester:
             self.poke(getattr(self._circuit, key), value)
         self.eval()
         result = tuple(getattr(self.circuit, port) for port in
-                       self._circuit.interface.inputs())
+                       self._circuit.interface.inputs_by_name())
         if len(result) == 1:
             return result[0]
         return result
