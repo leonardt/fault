@@ -155,7 +155,7 @@ class TesterBase:
         elif not isinstance(port, WrappedVerilogInternalPort) and \
                 isinstance(port.name, m.ref.AnonRef):
             return recurse(port)
-        self._expect(self, port, value, strict=None, caller=None, **kwargs)
+        self._expect(port, value, strict, caller, **kwargs)
 
     @abstractmethod
     def eval(self):

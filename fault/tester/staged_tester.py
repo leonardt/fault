@@ -1,4 +1,4 @@
-from .abstract_tester import TesterBase
+from .base import TesterBase
 from .utils import get_port_type
 import fault
 import inspect
