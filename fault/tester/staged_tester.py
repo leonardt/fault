@@ -131,7 +131,7 @@ class Tester(TesterBase):
         """
         Returns a symbolic handle to the current value of `port`
         """
-        return actions.Peek(port, self)
+        return actions.Peek(port)
 
     def print(self, format_str, *args):
         """
