@@ -31,7 +31,7 @@ def check(got, port, expected):
     assert got == expected, f"Got {got}, expected {expected}"
 
 
-def _process_port(self, port):
+def _process_port(port):
     scope = Scope()
     if isinstance(port, PortWrapper):
         port = port.select_path
