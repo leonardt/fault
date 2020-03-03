@@ -6,5 +6,5 @@ def get_port_type(port):
     if isinstance(port, SelectPath):
         port = port[-1]
     if isinstance(port, WrappedVerilogInternalPort):
-        type_ = port.type_
+        return port.type_
     return type(port)

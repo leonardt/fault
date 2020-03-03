@@ -23,7 +23,6 @@ from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import PortWrapper
 from fault.file import File
 from fault.select_path import SelectPath
-from fault.wrapped_internal_port import WrappedVerilogInternalPort
 from ..magma_utils import is_recursive_type
 import fault.expression as expression
 import os
