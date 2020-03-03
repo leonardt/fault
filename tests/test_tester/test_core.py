@@ -155,7 +155,7 @@ def test_tester_peek_input(target, simulator):
     tester.expect(circ.O, tester.peek(circ.I))
     check(tester.actions[0], Poke(circ.I, 1))
     check(tester.actions[1], Eval())
-    check(tester.actions[2], Expect(circ.O, Peek(circ.I))
+    check(tester.actions[2], Expect(circ.O, Peek(circ.I)))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
