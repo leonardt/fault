@@ -12,7 +12,7 @@ def test_verilator_peeks():
     circ = TestBasicCircuit
     actions = [
         Poke(circ.I, 1),
-        Expect(circ.O, Peek(circ.O, Tester(circ)))
+        Expect(circ.O, Peek(circ.O))
     ]
     flags = ["-Wno-lint"]
     with tempfile.TemporaryDirectory(dir=".") as tempdir:
