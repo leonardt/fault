@@ -113,14 +113,7 @@ class Tester(TesterBase):
             return SpiceTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
-    def poke(self, port, value, delay=None):
-        """
-        Set `port` to be `value`
-        """
-        recursed = super().poke(port, value, delay)
-        if recursed:
-            return
-
+    def _poke(self, port, value, delay=None):
         if not isinstance(value, (LoopIndex, actions.FileRead,
                                   expression.Expression)):
             type_ = self.get_port_type(port)
@@ -147,11 +140,7 @@ class Tester(TesterBase):
             raise TypeError("Expected instance of Expression")
         self.actions.append(actions.Assert(expr))
 
-    def expect(self, port, value, strict=None, caller=None, **kwargs):
-        """
-        Expect the current value of `port` to be `value`
-        """
-
+    def _expect(self, port, value, strict=None, caller=None, **kwargs):
         # implement expect
         if not isinstance(value, (actions.Peek, PortWrapper, actions.FileRead,
                                   LoopIndex, expression.Expression)):

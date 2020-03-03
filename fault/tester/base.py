@@ -45,6 +45,10 @@ class TesterBase:
             type_ = port.type_
         return type(port)
 
+    @abstractmethod
+    def _poke(self, port, value, delay=None):
+        raise NotImplementedError()
+
     def poke(self, port, value, delay=None):
         """
         Set `port` to be `value`
@@ -78,16 +82,14 @@ class TesterBase:
             if (is_recursive_type(type(port[-1]))
                 or (not isinstance(port[-1], WrappedVerilogInternalPort) and
                     isinstance(port[-1].name, m.ref.AnonRef))):
-                recurse(port[-1])
-                return True
+                return recurse(port[-1])
         elif is_recursive_type(type(port)):
-            recurse(port)
-            return True
+            return recurse(port)
         elif not isinstance(port, WrappedVerilogInternalPort) and\
                 isinstance(port.name, m.ref.AnonRef):
-            recurse(port)
-            return True
-        return False
+            return recurse(port)
+
+        self._poke(port, value, delay)
 
     @abstractmethod
     def peek(self, port):
@@ -111,6 +113,10 @@ class TesterBase:
         """
         Asserts `expr` is true
         """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _expect(self, port, value, strict=None, caller=None, **kwargs):
         raise NotImplementedError()
 
     def expect(self, port, value, strict=None, caller=None, **kwargs):
@@ -150,16 +156,13 @@ class TesterBase:
             if (is_recursive_type(type(port[-1]))
                 or (not isinstance(port[-1], WrappedVerilogInternalPort)
                     and isinstance(port[-1].name, m.ref.AnonRef))):
-                recurse(port[-1])
-                return True
+                return recurse(port[-1])
         elif is_recursive_type(type(port)):
-            recurse(port)
-            return True
+            return recurse(port)
         elif not isinstance(port, WrappedVerilogInternalPort) and \
                 isinstance(port.name, m.ref.AnonRef):
-            recurse(port)
-            return True
-        return False
+            return recurse(port)
+        self._expect(self, port, value, strict=None, caller=None, **kwargs)
 
     @abstractmethod
     def eval(self):

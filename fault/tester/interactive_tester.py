@@ -53,13 +53,10 @@ class PythonTester(InteractiveTester):
         port, scope = _process_port(port)
         self.simulator.set_value(port, value, scope)
 
-    def poke(self, port, value, delay=None):
+    def _poke(self, port, value, delay=None):
         if delay is not None:
             raise NotImplementedError("delay is not support in Python "
                                       "simulator")
-        recursed = super().poke(port, value, delay)
-        if recursed:
-            return
         type_ = self.get_port_type(port)
         self._set_value(port, value)
 
@@ -79,10 +76,7 @@ class PythonTester(InteractiveTester):
         result = self.simulator.get_value(port, scope)
         return self.process_result(type(port), result)
 
-    def expect(self, port, value, strict=None, caller=None, **kwargs):
-        recursed = super().expect(port, value, strict, caller, **kwargs)
-        if recursed:
-            return
+    def _expect(self, port, value, strict=None, caller=None, **kwargs):
         got = self._get_value(port)
         port, scope = _process_port(port)
         value = make_value(type(port), value)
