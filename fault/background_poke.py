@@ -3,6 +3,7 @@ import heapq
 import math
 from functools import total_ordering
 import copy
+from fault.target import Target
 
 
 @total_ordering
@@ -215,3 +216,10 @@ def process_action_list(actions, clock_step_delay):
         delay = get_delay(a)
         new_action_list += background_pool.process(a, delay)
     return new_action_list
+
+def background_poke_target(cls):
+    class BackgroundPokeTarget(cls):
+        def run(self, actions):
+            actions = process_action_list(actions, self.clock_step_delay)
+            super().run(actions)
+    return BackgroundPokeTarget

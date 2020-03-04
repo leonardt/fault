@@ -13,7 +13,7 @@ from fault.result_parse import nut_parse, hspice_parse, psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval, Read
-from fault.background_poke import process_action_list
+from fault.background_poke import background_poke_target
 from fault.select_path import SelectPath
 from .fault_errors import A2DError, ExpectError
 
@@ -81,6 +81,7 @@ mc1 montecarlo variations={variations} savefamilyplots=yes numruns={numruns} {{
 '''
 
 
+@background_poke_target
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
@@ -217,8 +218,6 @@ class SpiceTarget(Target):
                 self.saves.add(f'{name}')
 
     def run(self, actions):
-        # expand background pokes into regular pokes
-        actions = process_action_list(actions, self.clock_step_delay)
 
         # compile the actions
         comp = self.compile_actions(actions)

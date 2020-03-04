@@ -35,15 +35,10 @@ def test_clock_verilog(target, simulator):
         # take default initial_value of 0
         })
 
-    tester.expect(circ.O, 1) # should fail
-    tester.expect(circ.O, 0) # should fail
-
-
-    tester.expect(circ.O, 0, save_for_later=True)
-
+    tester.expect(circ.O, 1)
+    #tester.expect(circ.O, 0) # should fail
 
     tester.print("%08x", circ.O)
-
     
     #with tempfile.TemporaryDirectory(dir=".") as _dir:
     #with open('build/') as _dir:
@@ -56,7 +51,7 @@ def test_clock_verilog(target, simulator):
     print('JUST FINISHED COMPILENANDRUN')
 
 
-@pytest.mark.skip(reason='Turn this back on later')
+#@pytest.mark.skip(reason='Turn this back on later')
 def test_sin_spice(vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     vol_rel=0.1, voh_rel=0.9):
     # TODO make pytest choose target/simulator
@@ -96,8 +91,9 @@ def test_sin_spice(vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     num_reads = 100
     xs = []
     dt = 1/(freq * 50)
+    gets = []
     for k in range(num_reads):
-        tester.expect(dut.in_, 0, save_for_later=True)
+        gets.append(tester.get_value(dut.in_))
         tester.delay(dt)
         xs.append(k*dt)
 
@@ -126,7 +122,7 @@ def test_sin_spice(vsup=1.5, vil_rel=0.4, vih_rel=0.6,
 
     ys = []
     for k in range(num_reads):
-        value = tester.targets[target].saved_for_later[k]
+        value = gets[k].value
         ys.append(value)
         print('%2d\t'%k, value)
 
