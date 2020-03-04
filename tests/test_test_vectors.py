@@ -24,14 +24,12 @@ def test_combinational_circuit():
         return (a & b) ^ c
 
     class main(m.Circuit):
-        IO = ["a", m.In(m.Bit),
-              "b", m.In(m.Bit),
-              "c", m.In(m.Bit),
-              "d", m.Out(m.Bit)]
+        io = m.IO(a=m.In(m.Bit),
+                  b=m.In(m.Bit),
+                  c=m.In(m.Bit),
+                  d=m.Out(m.Bit))
 
-        @classmethod
-        def definition(io):
-            m.wire(f(io.a, io.b, io.c), io.d)
+        m.wire(f(io.a, io.b, io.c), io.d)
 
     test_vectors = generate_function_test_vectors(main, f)
     assert len(test_vectors) == 2 ** 3 + 1

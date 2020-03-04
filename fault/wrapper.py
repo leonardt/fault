@@ -21,7 +21,7 @@ class Wrapper:
         # exceptions only occur during object instantiation
         if hasattr(self, "circuit") and hasattr(self, "instance_map"):
             if attr in self.circuit.interface.ports.keys():
-                if isinstance(self.parent, fault.Tester):
+                if isinstance(self.parent, fault.TesterBase):
                     self.parent.poke(self.circuit.interface.ports[attr], value)
                 else:
                     raise NotImplementedError()
@@ -77,13 +77,11 @@ class PortWrapper(expression.Expression):
     def __getattr__(self, key):
         try:
             object.__getattribute__(self, "init_done")
-            if not isinstance(self.port, m.Tuple):
-                raise Exception(f"Can only use getattr with tuples, "
-                                f"not {type(self.port)}")
-            select_path = self.select_path
-            return PortWrapper(getattr(self.port, key), self.parent)
         except AttributeError:
             return object.__getattribute__(self, key)
+        if isinstance(self.port, m.Tuple):
+            return PortWrapper(getattr(self.port, key), self.parent)
+        return object.__getattribute__(self, key)
 
     def __setattr__(self, key, value):
         try:
@@ -100,7 +98,7 @@ class PortWrapper(expression.Expression):
     def select_path(self):
         select_path = SelectPath([self.port])
         parent = self.parent
-        while not isinstance(parent, fault.Tester):
+        while not isinstance(parent, fault.TesterBase):
             select_path.insert(0, parent)
             parent = parent.parent
         select_path.tester = parent

@@ -27,9 +27,9 @@ def make_real(value):
 def make_bit(value):
     # TODO(rsetaluri): Use bit_vector.Bit when implemented.
     if isinstance(value, BitVector) and len(value) == 1:
-        return value
+        return value[0]
     if value == 0 or value == 1:
-        return BitVector[1](value)
+        return Bit(value)
     if value is AnyValue or value is UnknownValue or value is HiZ:
         return value
     raise NotImplementedError(value)

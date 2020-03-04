@@ -1,4 +1,5 @@
 from hwtypes import BitVector
+from fault import Tester
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
 from fault.magma_simulator_target import MagmaSimulatorTarget
 from fault.random import random_bv

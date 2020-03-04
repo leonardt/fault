@@ -53,6 +53,8 @@ class MagmaSimulatorTarget(Target):
 
     def set_value(self, simulator, port, value):
         port, scope = self.process_port(port)
+        if isinstance(value, Bit):
+            value = bool(value)
         simulator.set_value(port, value, scope)
 
     def get_value(self, simulator, port):
@@ -95,6 +97,7 @@ class MagmaSimulatorTarget(Target):
                 if self.clock is not action.clock:
                     raise RuntimeError(f"Using different clocks: {self.clock}, "
                                        f"{action.clock}")
-                simulator.advance_cycle(action.steps)
+                simulator.evaluate()
+                simulator.advance(action.steps)
             else:
                 raise NotImplementedError(action)

@@ -8,13 +8,13 @@ import fault.actions as actions
 import tempfile
 import pytest
 from pathlib import Path
-from .common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
-                     TestBasicClkCircuit, TestNestedArraysCircuit,
-                     TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
-                     TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
-                     TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit,
-                     TestUInt64Circuit, TestUInt128Circuit,
-                     TestNestedArrayTupleCircuit)
+from ..common import (pytest_sim_params, TestBasicCircuit, TestPeekCircuit,
+                      TestBasicClkCircuit, TestNestedArraysCircuit,
+                      TestBasicClkCircuitCopy, TestDoubleNestedArraysCircuit,
+                      TestByteCircuit, TestArrayCircuit, TestUInt32Circuit,
+                      TestSIntCircuit, TestTupleCircuit, TestNestedTupleCircuit,
+                      TestUInt64Circuit, TestUInt128Circuit,
+                      TestNestedArrayTupleCircuit)
 
 
 def pytest_generate_tests(metafunc):
@@ -357,10 +357,10 @@ def test_print_tester(capsys):
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
 Actions:
-    0: Poke(BasicClkCircuit.I, 0)
+    0: Poke(BasicClkCircuit.I, Bit(False))
     1: Eval()
-    2: Expect(BasicClkCircuit.O, 0)
-    3: Poke(BasicClkCircuit.CLK, 0)
+    2: Expect(BasicClkCircuit.O, Bit(False))
+    3: Poke(BasicClkCircuit.CLK, Bit(False))
     4: Step(BasicClkCircuit.CLK, steps=1)
     5: Print("%08x", BasicClkCircuit.O)
 """
@@ -495,6 +495,7 @@ def test_tester_file_io(target, simulator):
         loop.poke(circ.I, value)
         loop.eval()
         loop.expect(circ.O, loop.index)
+        loop.expect(circ.O, value)
         loop.file_write(file_out, circ.O)
         tester.file_close(file_in)
         tester.file_close(file_out)
