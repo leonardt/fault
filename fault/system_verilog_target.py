@@ -8,7 +8,7 @@ from pathlib import Path
 import fault.actions as actions
 from fault.actions import FileOpen, FileClose, GetValue, Loop, If
 from hwtypes import (BitVector, AbstractBitVectorMeta, AbstractBit,
-                     AbstractBitVector)
+                     AbstractBitVector, Bit)
 import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
@@ -267,7 +267,9 @@ class SystemVerilogTarget(VerilogTarget):
         return [f'$fscanf({fd_var}, "{action._format}", {var_args});']
 
     def process_value(self, port, value):
-        if isinstance(value, BitVector):
+        if isinstance(value, Bit):
+            value = f"1'b{int(value)}"
+        elif isinstance(value, BitVector):
             value = f"{len(value)}'d{value.as_uint()}"
         elif isinstance(port, m.SInt) and value < 0:
             port_len = len(port)

@@ -357,10 +357,10 @@ def test_print_tester(capsys):
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
 Actions:
-    0: Poke(BasicClkCircuit.I, 0)
+    0: Poke(BasicClkCircuit.I, Bit(False))
     1: Eval()
-    2: Expect(BasicClkCircuit.O, 0)
-    3: Poke(BasicClkCircuit.CLK, 0)
+    2: Expect(BasicClkCircuit.O, Bit(False))
+    3: Poke(BasicClkCircuit.CLK, Bit(False))
     4: Step(BasicClkCircuit.CLK, steps=1)
     5: Print("%08x", BasicClkCircuit.O)
 """

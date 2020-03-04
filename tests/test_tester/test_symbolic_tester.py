@@ -4,7 +4,7 @@ from hwtypes import BitVector
 from pysmt.shortcuts import Solver
 from pysmt.exceptions import NoSolverAvailableError
 import pytest
-from .common import SimpleALU
+from ..common import SimpleALU
 
 
 def pytest_generate_tests(metafunc):
