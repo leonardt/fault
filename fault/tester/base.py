@@ -20,6 +20,8 @@ class TesterBase:
         `expect_strict_default`: if True, use strict equality check if
         not specified by the user.
         """
+        if hasattr(circuit, "circuit_definition"):
+            circuit = circuit.circuit_definition
         self._circuit = circuit
         self.poke_delay_default = poke_delay_default
         self.expect_strict_default = expect_strict_default
