@@ -50,6 +50,8 @@ class SystemVerilogTarget(VerilogTarget):
     LOOP_VAR_TYPE = None
 
     def __init__(self, circuit, circuit_name=None, directory="build/",
+                 skip_compile=None, magma_output="coreir-verilog",
+                 magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5e-9,
                  num_cycles=10000, dump_waveforms=True, dump_vcd=None,
                  no_warning=False, sim_env=None, ext_model_file=None,
