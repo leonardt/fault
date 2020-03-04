@@ -13,7 +13,7 @@ import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
-from fault.background_poke import process_action_list
+from fault.background_poke import background_poke_target
 import fault
 import fault.expression as expression
 from fault.real_type import RealKind
@@ -41,7 +41,7 @@ module {top_module};
 endmodule
 """
 
-
+@background_poke_target
 class SystemVerilogTarget(VerilogTarget):
 
     # Language properties of SystemVerilog used in generating code blocks
@@ -686,9 +686,6 @@ class SystemVerilogTarget(VerilogTarget):
     def run(self, actions, power_args=None):
         # set defaults
         power_args = power_args if power_args is not None else {}
-
-        # expand background pokes into regular pokes
-        actions = process_action_list(actions, self.clock_step_delay)
 
         # assemble list of sources files
         vlog_srcs = []
