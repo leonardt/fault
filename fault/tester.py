@@ -536,6 +536,36 @@ class Tester:
         # return a SelectPath containing the desired path
         return SelectPath([self.circuit] + list(args))
 
+    def __call__(self, *args, **kwargs):
+        """
+        Poke the inputs of the circuit using *args (ordered, anonymous input
+        reference, excluding clocks) and **kwargs.  **kwargs will overwrite any
+        inputs written by *args.
+
+        Evaluate the circuit
+
+        Return the "peeked" output(s) of the circuit (tuple for multiple
+        outputs)
+        """
+        num_args = len(args) + len([value for value in kwargs.values() if not
+                                    isinstance(value, m.ClockTypes)])
+        defn_outputs = self._circuit.interface.outputs()
+        defn_outputs = filter(lambda x: not isinstance(x, m.ClockTypes),
+                              defn_outputs)
+        if num_args != defn_outputs:
+            logging.warn("Number of arguments to __call__ did not match "
+                         "number of circuit inputs")
+        for arg, port in zip(args, defn_outputs):
+            self.poke(port, arg)
+        for key, value in kwargs.items():
+            self.poke(getattr(self._circuit, key), value)
+        self.eval()
+        result = tuple(getattr(self.circuit, port) for port in
+                       self._circuit.interface.inputs_by_name())
+        if len(result) == 1:
+            return result[0]
+        return result
+
 
 class LoopIndex:
     def __init__(self, name):
