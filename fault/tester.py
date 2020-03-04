@@ -202,15 +202,6 @@ class Tester:
         """
         self.actions.append(actions.Print(format_str, *args))
 
-    def read(self, port, style='single', params={}):
-        """
-        Returns a Read action. After running the simulation, the value of
-        `port` will be saved in the Read object's 'value' attribute.
-        """
-        r = actions.Read(port, style, params)
-        self.actions.append(r)
-        return r
-
     def assert_(self, expr):
         if not isinstance(expr, expression.Expression):
             raise TypeError("Expected instance of Expression")
@@ -274,12 +265,12 @@ class Tester:
         """
         self.actions.append(actions.Delay(time=time))
 
-    def get_value(self, port):
+    def get_value(self, port, params=None):
         """
         Returns an object with a "value" property that will
         be filled after the simulation completes.
         """
-        action = actions.GetValue(port=port)
+        action = actions.GetValue(port=port, params=params)
         self.actions.append(action)
         return action
 

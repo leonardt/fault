@@ -78,10 +78,9 @@ class Print(Action):
 
 
 class Read(Action):
-    def __init__(self, port, style='single', params={}):
+    def __init__(self, port, params=None):
         super().__init__()
         self.port = port
-        self.style = style
         self.params = params
 
     def __getattr__(self, name):
@@ -121,9 +120,10 @@ def is_output(port):
 
 
 class GetValue(Action):
-    def __init__(self, port):
+    def __init__(self, port, params):
         super().__init__()
         self.port = port
+        self.params = params
         self.value = None  # value to be assigned after simulation
 
     @property

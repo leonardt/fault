@@ -28,11 +28,10 @@ class EdgeNotFoundError(Exception):
     pass
 
 class CompiledSpiceActions:
-    def __init__(self, pwls, checks, prints, stop_time, saves, gets, reads):
+    def __init__(self, pwls, checks, prints, stop_time, saves, gets):
         self.pwls = pwls
         self.checks = checks
         self.prints = prints
-        self.reads = reads
         self.stop_time = stop_time
         self.saves = saves
         self.gets = gets
@@ -273,8 +272,6 @@ class SpiceTarget(Target):
 
             # implement all of the gets
             self.impl_all_gets(results=results, gets=comp.gets)
-            # set values on reads
-            self.process_reads(results, comp.reads)
 
             # check results
             self.check_results(results=results, checks=comp.checks)
@@ -316,7 +313,6 @@ class SpiceTarget(Target):
         pwc_dict = {}
         checks = []
         prints = []
-        reads = []
         gets = []
 
         # TODO is this still necessary?
@@ -371,15 +367,16 @@ class SpiceTarget(Target):
                 # TODO: is this still necessary?
                 for port in action.ports:
                     saves.add(f'{port.name}')
-            elif isinstance(action, Read):
-                reads.append((t, action))
-                self.saves.add(f'{action.port.name}')
-                # phase could be relative to another signal
-                if 'ref' in action.params:
-                    if isinstance(action.params['ref'].name, m.ref.ArrayRef):
-                        ref = self.select_bit_from_bus(action.params['ref'])
-                        action.params['ref'] = ref
-                    self.saves.add(f'{action.params["ref"].name}')
+            # TODO read do we need this code about refs?
+            # elif isinstance(action, Read):
+            #     reads.append((t, action))
+            #     self.saves.add(f'{action.port.name}')
+            #     # phase could be relative to another signal
+            #     if 'ref' in action.params:
+            #         if isinstance(action.params['ref'].name, m.ref.ArrayRef):
+            #             ref = self.select_bit_from_bus(action.params['ref'])
+            #             action.params['ref'] = ref
+            #         self.saves.add(f'{action.params["ref"].name}')
             elif isinstance(action, GetValue):
                 gets.append((t, action))
             elif isinstance(action, Delay):
@@ -402,7 +399,6 @@ class SpiceTarget(Target):
             pwls=pwls,
             checks=checks,
             prints=prints,
-            reads=reads,
             gets=gets,
             stop_time=t,
             saves=self.saves
@@ -629,43 +625,6 @@ class SpiceTarget(Target):
     def process_reads(self, results, reads):
         for time, read in reads:
             res = results[f'{read.port.name}']
-            if read.style == 'single':
-                value = res(time)
-                if type(value) == np.ndarray:
-                    value = value.tolist()
-                read.value = value
-            elif read.style == 'edge':
-                value = self.find_edge(res.t, res.v, time, **read.params)
-                read.value = value
-            elif read.style == 'frequency':
-                edges = self.find_edge(res.t, res.v, time, count=2)
-                freq = 1 / (edges[0] - edges[1])
-                read.value = freq
-            elif read.style == 'phase':
-                assert 'ref' in read.params, 'Phase read requires reference signal param'
-                res_ref = results[f'{read.params["ref"].name}']
-                ref = self.find_edge(res_ref.t, res_ref.v, time, count=2)
-                before_cycle_end = self.find_edge(res.t, res.v, time + ref[0])
-                fraction = 1 + before_cycle_end[0] / (ref[0] -ref[1])
-                # TODO multiply by 2pi?
-                read.value = fraction
-            elif read.style == 'block':
-                assert 'duration' in read.params, 'Block read requires duration'
-                duration = read.params['duration']
-                # make sure to grab points surrounding requested times so user can interpolate
-                # the exact start and end.
-                start = max(0, np.argmax(res.t > time) - 1)
-                end= (len(res.t)-1) if res.t[-1] < time + duration else np.argmax(res.t >= time + duration)
-
-
-                x = res.t[start:end] - time
-                y = res.v[start:end]
-                # if len(x) < 100 or len(y) < 100:
-                #     print('trouble with block read')
-                #     pass
-                read.value = (x, y)
-            else:
-                raise NotImplementedError(f'Unknown read style "{read.style}"')
 
     def find_edge(self, x, y, t_start, height=None, forward=False, count=1, rising=True):
         '''
@@ -725,10 +684,57 @@ class SpiceTarget(Target):
             self.impl_get(results=results, time=get[0], action=get[1])
 
     def impl_get(self, results, time, action):
-        # get port values
-        port_value = results[f'{action.port.name}'](time)
-        # write value back to action
-        action.value = port_value
+        # grab the relevant info
+        res = results[f'{action.port.name}']
+        if action.params == None:
+            # straightforward read of voltage
+            # get port values
+            port_value = res(time)
+            # write value back to action
+            action.value = port_value
+        else:
+            # requires some analysis of signal
+            style = action.params['style']
+            if style == 'single':
+                # equivalent to a regular get_value
+                value = res(time)
+                if type(value) == np.ndarray:
+                    value = value.tolist()
+                action.value = value
+            elif style == 'edge':
+                # looking for a nearby rising/falling edge
+                # look at self.find_edge for possible parameters
+                value = self.find_edge(res.t, res.v, time, **action.params)
+                action.value = value
+            elif style == 'frequency':
+                # frequency based on the (previous?) two rising edges
+                edges = self.find_edge(res.t, res.v, time, count=2)
+                freq = 1 / (edges[0] - edges[1])
+                action.value = freq
+            elif style == 'phase':
+                # phase of this signal relative to another
+                assert 'ref' in action.params, 'Phase read requires reference signal param'
+                res_ref = results[f'{action.params["ref"].name}']
+                ref = self.find_edge(res_ref.t, res_ref.v, time, count=2)
+                before_cycle_end = self.find_edge(res.t, res.v, time + ref[0])
+                fraction = 1 + before_cycle_end[0] / (ref[0] -ref[1])
+                # TODO multiply by 2pi?
+                action.value = fraction
+            elif style == 'block':
+                # return a whole chunk of the waveform.
+                # returns (t, v) where t is time relative to the get_value action
+                assert 'duration' in action.params, 'Block read requires duration'
+                duration = action.params['duration']
+                # make sure to grab points surrounding requested times so user can interpolate
+                # the exact start and end.
+                start = max(0, np.argmax(res.t > time) - 1)
+                end= (len(res.t)-1) if res.t[-1] < time + duration else np.argmax(res.t >= time + duration)
+
+                t = res.t[start:end] - time
+                v = res.v[start:end]
+                action.value = (t, v)
+            else:
+                raise NotImplementedError(f'Unknown style "{style}"')
 
     def ngspice_cmds(self, tb_file):
         # build up the command
