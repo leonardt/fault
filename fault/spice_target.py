@@ -373,13 +373,13 @@ class SpiceTarget(Target):
                     saves.add(f'{port.name}')
             elif isinstance(action, Read):
                 reads.append((t, action))
-                saves.add(f'{action.port.name}')
+                self.saves.add(f'{action.port.name}')
                 # phase could be relative to another signal
                 if 'ref' in action.params:
                     if isinstance(action.params['ref'].name, m.ref.ArrayRef):
                         ref = self.select_bit_from_bus(action.params['ref'])
                         action.params['ref'] = ref
-                    saves.add(f'{action.params["ref"].name}')
+                    self.saves.add(f'{action.params["ref"].name}')
             elif isinstance(action, GetValue):
                 gets.append((t, action))
             elif isinstance(action, Delay):
@@ -437,7 +437,7 @@ class SpiceTarget(Target):
         bus_name = port.name.array.name
         bus_index = port.name.index
         bit_name = self.bit_from_bus(bus_name, bus_index)
-        new_port = m.BitType(name=bit_name)
+        new_port = m.Bit(name=bit_name)
         return new_port
 
 
@@ -635,17 +635,17 @@ class SpiceTarget(Target):
                     value = value.tolist()
                 read.value = value
             elif read.style == 'edge':
-                value = self.find_edge(res.x, res.y, time, **read.params)
+                value = self.find_edge(res.t, res.v, time, **read.params)
                 read.value = value
             elif read.style == 'frequency':
-                edges = self.find_edge(res.x, res.y, time, count=2)
+                edges = self.find_edge(res.t, res.v, time, count=2)
                 freq = 1 / (edges[0] - edges[1])
                 read.value = freq
             elif read.style == 'phase':
                 assert 'ref' in read.params, 'Phase read requires reference signal param'
                 res_ref = results[f'{read.params["ref"].name}']
-                ref = self.find_edge(res_ref.x, res_ref.y, time, count=2)
-                before_cycle_end = self.find_edge(res.x, res.y, time + ref[0])
+                ref = self.find_edge(res_ref.t, res_ref.v, time, count=2)
+                before_cycle_end = self.find_edge(res.t, res.v, time + ref[0])
                 fraction = 1 + before_cycle_end[0] / (ref[0] -ref[1])
                 # TODO multiply by 2pi?
                 read.value = fraction
@@ -654,12 +654,12 @@ class SpiceTarget(Target):
                 duration = read.params['duration']
                 # make sure to grab points surrounding requested times so user can interpolate
                 # the exact start and end.
-                start = max(0, np.argmax(res.x > time) - 1)
-                end= (len(res.x)-1) if res.x[-1] < time + duration else np.argmax(res.x >= time + duration)
+                start = max(0, np.argmax(res.t > time) - 1)
+                end= (len(res.t)-1) if res.t[-1] < time + duration else np.argmax(res.t >= time + duration)
 
 
-                x = res.x[start:end] - time
-                y = res.y[start:end]
+                x = res.t[start:end] - time
+                y = res.v[start:end]
                 # if len(x) < 100 or len(y) < 100:
                 #     print('trouble with block read')
                 #     pass

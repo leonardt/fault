@@ -5,13 +5,26 @@ from magma.t import Type, Kind, Direction
 class RealType(Type):
     def __init__(self, *largs, **kwargs):
         super().__init__(*largs, **kwargs)
-        self.wire = Wire(self)
+        self._wire = Wire(self)
 
     @classmethod
     def is_oriented(cls, direction):
         return cls.direction == direction
 
+    # TODO: dstanley - is this hash still necessary?
     __hash__ = Type.__hash__
+
+    def wired(self):
+        return self._wire.wired()
+
+    def trace(self):
+        return self._wire.trace()
+
+    def value(self):
+        return self._wire.value()
+
+    def driven(self):
+        return self._wire.driven()
 
 
 class RealKind(Kind):
