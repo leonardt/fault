@@ -13,11 +13,12 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='3.0.6',
+    version='3.0.7',
     description=DESCRIPTION,
     scripts=[],
     packages=[
         "fault",
+        "fault.tester",
     ],
     install_requires=[
         "astor",
