@@ -33,6 +33,7 @@ steps:
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
     label: "test"
+    timeout_in_minutes: 60
     agents:
       fault2: "true"
   - command: |
