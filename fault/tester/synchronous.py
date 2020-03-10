@@ -5,6 +5,8 @@ from ..system_verilog_target import SynchronousSystemVerilogTarget
 class SynchronousTester(StagedTester):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.clock is None:
+            raise ValueError("SynchronousTester requires a clock")
         # Default clock to 0
         self.poke(self.clock, 0)
 
