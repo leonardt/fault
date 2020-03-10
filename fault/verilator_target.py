@@ -696,3 +696,21 @@ if (!({expr_str})) {{
     }}
 """
         return main_body
+
+
+class SynchronousVerilatorTarget(VerilatorTarget):
+    def __init__(self, *args, clock=None, **kwargs):
+        if clock is None:
+            raise ValueError("Clock required")
+        self.clock = verilator_name(clock.name)
+
+    def make_step(self, i, action):
+        code = []
+        for _ in range(action.steps):
+            code.append(f"top->{self.clock} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time++;")
+            code.append("#if VM_TRACE")
+            code.append("tracer->dump(main_time);")
+            code.append("#endif")
+        return code
