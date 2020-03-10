@@ -8,7 +8,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_synchronous_basic(target, simulator):
-    ops =[
+    ops = [
         lambda x, y: x + y,
         lambda x, y: x - y,
         lambda x, y: x * y,
