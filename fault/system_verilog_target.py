@@ -25,6 +25,8 @@ src_tpl = """\
 module {top_module};
 {declarations}
 {assigns}
+{clock_drivers}
+
     {circuit_name} #(
         {param_list}
     ) dut (
@@ -175,6 +177,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
         self.num_cycles = num_cycles
+        self.clock_drivers = []
         self.dump_waveforms = dump_waveforms
         if dump_vcd is not None:
             warnings.warn("tester.compile_and_run parameter dump_vcd is "
@@ -619,10 +622,13 @@ class SystemVerilogTarget(VerilogTarget):
         # add timescale
         timescale = f'`timescale {self.timescale}'
 
+        clock_drivers = self.TAB + "\n{self.TAB}".join(self.clock_drivers)
+
         # fill out values in the testbench template
         src = src_tpl.format(
             timescale=timescale,
             declarations=declarations,
+            clock_drivers=clock_drivers,
             assigns=assigns,
             initial_body=initial_body,
             port_list=port_list,
@@ -999,3 +1005,18 @@ class SystemVerilogTarget(VerilogTarget):
 
         # return arg list and binary file location
         return cmd, bin_file
+
+
+class SynchronousSystemVerilogTarget(SystemVerilogTarget):
+    def __init__(self, *args, clock=None, **kwargs):
+        if clock is None:
+            raise ValueError("Clock required")
+
+        super().__init__(*args, **kwargs)
+        name = verilog_name(clock.name)
+        self.clock_drivers.append(
+            f"always #{self.clock_step_delay} {name} = ~{name};"
+        )
+
+    def make_step(self, i, action):
+        return [f"#{self.clock_step_delay * action.steps}"]
