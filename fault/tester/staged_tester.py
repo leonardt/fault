@@ -422,3 +422,6 @@ class IfTester(Tester):
 
     def _else(self):
         return ElseTester(self.else_actions, self.circuit, self.clock)
+
+
+StagedTester = Tester
