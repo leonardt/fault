@@ -21,7 +21,7 @@ class SynchronousTester(StagedTester):
         if target == "system-verilog":
             return SynchronousSystemVerilogTarget(self._circuit,
                                                   clock=self.clock, **kwargs)
-        elif target == "system-verilog":
+        if target == "system-verilog":
             return SynchronousVerilatorTarget(self._circuit, clock=self.clock,
                                               **kwargs)
         return super().make_target(target, **kwargs)
