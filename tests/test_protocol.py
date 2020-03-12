@@ -43,4 +43,4 @@ def test_proto():
     tester.circuit.val = 1
     tester.eval()
     tester.circuit.O.expect(2)
-
+    tester.compile_and_run("verilator", flags=['-Wno-unused'])
