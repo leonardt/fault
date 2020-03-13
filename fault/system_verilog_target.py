@@ -59,7 +59,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False, skip_run=False):
+                 use_sva=False, skip_run=False, no_top_module=False):
         """
         circuit: a magma circuit
 
@@ -141,6 +141,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         skip_run: If True, generate all the files (testbench, tcl, etc.) but do
                   not run the simulator.
+
+        no_top_module: If True, do not specify a top module for simulation
+                       (default is False, meaning *do* specify the top module)
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -220,6 +223,7 @@ class SystemVerilogTarget(VerilogTarget):
                 raise NotImplementedError(self.simulator)
         self.use_kratos = use_kratos
         self.skip_run = skip_run
+        self.no_top_module = no_top_module
         # check to see if runtime is installed
         if use_kratos:
             import sys
@@ -817,10 +821,10 @@ class SystemVerilogTarget(VerilogTarget):
             tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
 
         # set the name of the top module
-        # if in the future we want to run simulations without defining the top
-        # module, then this TCL command can be used instead:
-        # "update_compile_order -fileset sim_1"
-        tcl_cmds += [f'set_property -name top -value {self.top_module} -objects [get_fileset sim_1]']  # noqa
+        if not self.no_top_module:
+            tcl_cmds += [f'set_property -name top -value {self.top_module} -objects [get_fileset sim_1]']  # noqa
+        else:
+            tcl_cmds += ['update_compile_order -fileset sim_1']
 
         # run until $finish (as opposed to running for a certain amount of time)
         tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
@@ -852,7 +856,8 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += ['irun']
 
         # send name of top module to the simulator
-        cmd += ['-top', f'{self.top_module}']
+        if not self.no_top_module:
+            cmd += ['-top', f'{self.top_module}']
 
         # timescale
         cmd += ['-timescale', f'{self.timescale}']
@@ -956,7 +961,8 @@ class SystemVerilogTarget(VerilogTarget):
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
         # specify top module
-        cmd += ['-top', f'{self.top_module}']
+        if not self.no_top_module:
+            cmd += ['-top', f'{self.top_module}']
 
         # return arg list and binary file location
         return cmd, './simv'
@@ -999,7 +1005,8 @@ class SystemVerilogTarget(VerilogTarget):
         cmd += [f'{src}' for src in sources]
 
         # set the top module
-        cmd += ['-s', f'{self.top_module}']
+        if not self.no_top_module:
+            cmd += ['-s', f'{self.top_module}']
 
         # return arg list and binary file location
         return cmd, bin_file
