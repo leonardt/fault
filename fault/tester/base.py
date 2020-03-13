@@ -270,8 +270,8 @@ class TesterBase:
         defn_outputs = [port for port in self._circuit.interface.outputs()
                         if not isinstance(port, m.ClockTypes)]
         if num_args != len(defn_outputs):
-            logging.warn("Number of arguments to __call__ did not match "
-                         "number of circuit inputs")
+            logging.warning("Number of arguments to __call__ did not match "
+                            "number of circuit inputs")
         for arg, port in zip(args, defn_outputs):
             self.poke(port, arg)
         for key, value in kwargs.items():

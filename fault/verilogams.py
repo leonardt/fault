@@ -92,15 +92,18 @@ def VAMSWrap(circ, wrap_name=None, inst_name=None, tab='    ', nl='\n'):
     gen.end_module()
 
     # Create magma circuit for wrapper
-    magma_args = []
+    io_kwargs = {}
     for name, type_ in circ.IO.ports.items():
-        magma_args += [name, type_]
-    retval = m.DeclareCircuit(f'{wrap_name}', *magma_args)
+        io_kwargs[f'{name}'] = type_
 
-    # Poke the VerilogAMS code into the magma circuit
-    # (a bit hacky, probably should use a subclass instead)
-    retval.vams_code = gen.text
-    retval.vams_inst_name = inst_name
+    # declare circuit that will be returned
+    class wrap_cls(m.Circuit):
+        name = f'{wrap_name}'
+        io = m.IO(**io_kwargs)
+
+    # Poke the VerilogAMS code into the magma circuit (a bit hacky...)
+    wrap_cls.vams_code = gen.text
+    wrap_cls.vams_inst_name = inst_name
 
     # Return the magma circuit
-    return retval
+    return wrap_cls

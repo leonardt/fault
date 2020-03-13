@@ -17,15 +17,22 @@ def pytest_generate_tests(metafunc):
 
 
 def test_include_verilog(target, simulator):
-    SB_DFF = m.DeclareCircuit('SB_DFF', "D", m.In(m.Bit), "Q", m.Out(m.Bit),
-                              "C", m.In(m.Clock))
-    main = m.DefineCircuit('main', "I", m.In(m.Bit), "O", m.Out(m.Bit),
-                           *m.ClockInterface())
-    ff = SB_DFF()
-    m.wire(ff.D, main.I)
-    m.wire(ff.Q, main.O)
-    m.EndDefine()
+    # define flip-flop (external implementation)
+    class SB_DFF(m.Circuit):
+        io = m.IO(
+            D=m.In(m.Bit),
+            Q=m.Out(m.Bit),
+            C=m.In(m.Clock)
+        )
 
+    # define main circuit that instantiates external flip-flop
+    class main(m.Circuit):
+        io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
+        ff = SB_DFF()
+        ff.D @= io.I
+        io.O @= ff.Q
+
+    # define the test
     tester = fault.Tester(main, main.CLK)
     tester.poke(main.CLK, 0)
     tester.poke(main.I, 1)
@@ -33,6 +40,8 @@ def test_include_verilog(target, simulator):
     tester.expect(main.O, 0)
     tester.step(2)
     tester.expect(main.O, 1)
+
+    # define location of flip-flop implementation
     sb_dff_filename = pathlib.Path("tests/sb_dff_sim.v").resolve()
 
     kwargs = {}

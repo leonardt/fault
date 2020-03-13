@@ -395,27 +395,31 @@ Actions:
 
 
 def test_tester_verilog_wrapped(target, simulator):
-    ConfigReg, SimpleALU = m.DefineFromVerilogFile(
-        "tests/simple_alu.v", type_map={"CLK": m.In(m.Clock)},
-        target_modules=["SimpleALU", "ConfigReg"])
+    ConfigReg, SimpleALU = m.define_from_verilog_file(
+        "tests/simple_alu.v",
+        type_map={"CLK": m.In(m.Clock)},
+        target_modules=["SimpleALU", "ConfigReg"]
+    )
     with SimpleALU.open():
         ConfigReg()
 
-    circ = m.DefineCircuit("top",
-                           "a", m.In(m.Bits[16]),
-                           "b", m.In(m.Bits[16]),
-                           "c", m.Out(m.Bits[16]),
-                           "config_data", m.In(m.Bits[2]),
-                           "config_en", m.In(m.Bit),
-                           "CLK", m.In(m.Clock))
-    simple_alu = SimpleALU()
-    m.wire(simple_alu.a, circ.a)
-    m.wire(simple_alu.b, circ.b)
-    m.wire(simple_alu.c, circ.c)
-    m.wire(simple_alu.config_data, circ.config_data)
-    m.wire(simple_alu.config_en, circ.config_en)
-    m.wire(simple_alu.CLK, circ.CLK)
-    m.EndDefine()
+    class circ(m.Circuit):
+        name = 'top'
+        io = m.IO(
+            a=m.In(m.Bits[16]),
+            b=m.In(m.Bits[16]),
+            c=m.Out(m.Bits[16]),
+            config_data=m.In(m.Bits[2]),
+            config_en=m.In(m.Bit),
+            CLK=m.In(m.Clock)
+        )
+        simple_alu = SimpleALU()
+        simple_alu.a @= io.a
+        simple_alu.b @= io.b
+        io.c @= simple_alu.c
+        simple_alu.config_data @= io.config_data
+        simple_alu.config_en @= io.config_en
+        simple_alu.CLK @= io.CLK
 
     tester = fault.Tester(circ, circ.CLK)
     tester.verilator_include("SimpleALU")
