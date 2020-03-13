@@ -92,8 +92,8 @@ class PythonTester(InteractiveTester):
         values = ()
         for value, port in zip(got, args):
             if (isinstance(port, m.Array) and
-                issubclass(port.T, m.Digital)):
-                    value = BitVector[len(port)](value).as_uint()
+                    issubclass(port.T, m.Digital)):
+                value = BitVector[len(port)](value).as_uint()
             elif isinstance(port, m.Array):
                 raise NotImplementedError("Printing complex nested "
                                           "arrays")

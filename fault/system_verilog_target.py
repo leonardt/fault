@@ -59,7 +59,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False, skip_run=False):
+                 use_sva=False, skip_run=False, no_top_module=False):
         """
         circuit: a magma circuit
 
@@ -141,6 +141,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         skip_run: If True, generate all the files (testbench, tcl, etc.) but do
                   not run the simulator.
+
+        no_top_module: If True, do not specify a top module for simulation
+                       (default is False, meaning *do* specify the top module)
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -164,6 +167,16 @@ class SystemVerilogTarget(VerilogTarget):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
                          magma_opts, coverage=coverage, use_kratos=use_kratos)
+
+        # set default for top_module.  this comes after the super constructor
+        # invocation, because that is where the self.circuit_name is assigned
+        if top_module is None:
+            if use_kratos:
+                top_module = 'TOP'
+            elif ext_test_bench:
+                top_module = f'{self.circuit_name}'
+            else:
+                top_module = f'{self.circuit_name}_tb'
 
         # sanity check
         if simulator is None:
@@ -195,7 +208,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module if not use_kratos else "TOP"
+        self.top_module = top_module
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
@@ -210,6 +223,7 @@ class SystemVerilogTarget(VerilogTarget):
                 raise NotImplementedError(self.simulator)
         self.use_kratos = use_kratos
         self.skip_run = skip_run
+        self.no_top_module = no_top_module
         # check to see if runtime is installed
         if use_kratos:
             import sys
@@ -613,12 +627,6 @@ class SystemVerilogTarget(VerilogTarget):
                    for lhs, rhs in self.assigns.values()]
         assigns = '\n'.join(assigns)
 
-        # determine the top module name
-        if self.top_module:
-            top_module = self.top_module
-        else:
-            top_module = f'{self.circuit_name}_tb'
-
         # add timescale
         timescale = f'`timescale {self.timescale}'
 
@@ -634,7 +642,7 @@ class SystemVerilogTarget(VerilogTarget):
             port_list=port_list,
             param_list=param_list,
             circuit_name=self.circuit_name,
-            top_module=top_module
+            top_module=self.top_module
         )
 
         # return the string representing the system-verilog testbench
@@ -813,15 +821,10 @@ class SystemVerilogTarget(VerilogTarget):
             tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
 
         # set the name of the top module
-        if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
+        if not self.no_top_module:
+            tcl_cmds += [f'set_property -name top -value {self.top_module} -objects [get_fileset sim_1]']  # noqa
         else:
-            top = self.top_module
-        if top is not None:
-            tcl_cmds += [f'set_property -name top -value {top} -objects [get_fileset sim_1]']  # noqa
-        else:
-            # have Vivado pick the top module automatically if not specified
-            tcl_cmds += [f'update_compile_order -fileset sim_1']
+            tcl_cmds += ['update_compile_order -fileset sim_1']
 
         # run until $finish (as opposed to running for a certain amount of time)
         tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
@@ -852,15 +855,9 @@ class SystemVerilogTarget(VerilogTarget):
         # binary name
         cmd += ['irun']
 
-        # determine the name of the top module
-        if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
-        else:
-            top = self.top_module
-
         # send name of top module to the simulator
-        if top is not None:
-            cmd += ['-top', f'{top}']
+        if not self.no_top_module:
+            cmd += ['-top', f'{self.top_module}']
 
         # timescale
         cmd += ['-timescale', f'{self.timescale}']
@@ -963,6 +960,10 @@ class SystemVerilogTarget(VerilogTarget):
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
+        # specify top module
+        if not self.no_top_module:
+            cmd += ['-top', f'{self.top_module}']
+
         # return arg list and binary file location
         return cmd, './simv'
 
@@ -1002,6 +1003,10 @@ class SystemVerilogTarget(VerilogTarget):
 
         # source files
         cmd += [f'{src}' for src in sources]
+
+        # set the top module
+        if not self.no_top_module:
+            cmd += ['-s', f'{self.top_module}']
 
         # return arg list and binary file location
         return cmd, bin_file

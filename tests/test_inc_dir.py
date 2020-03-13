@@ -10,11 +10,11 @@ def pytest_generate_tests(metafunc):
 
 def test_ext_vlog(target, simulator):
     # declare circuit
-    mybuf_inc_test = m.DeclareCircuit(
-        'mybuf_inc_test',
-        'in_', m.In(m.Bit),
-        'out', m.Out(m.Bit)
-    )
+    class mybuf_inc_test(m.Circuit):
+        io = m.IO(
+            in_=m.In(m.Bit),
+            out=m.Out(m.Bit)
+        )
 
     # define the test
     tester = fault.BufTester(mybuf_inc_test)

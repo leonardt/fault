@@ -9,33 +9,40 @@ def pytest_generate_tests(metafunc):
 
 
 def test_inv(target, simulator):
-    name = 'myinv'
-    ports = ['in_', m.BitIn, 'out', m.BitOut]
-    run_generic(name=name, ports=ports, tester_cls=fault.InvTester,
-                target=target, simulator=simulator)
+    circuit_name = 'myinv'
+    ports = dict(in_=m.BitIn, out=m.BitOut)
+    run_generic(circuit_name=circuit_name, ports=ports,
+                tester_cls=fault.InvTester, target=target,
+                simulator=simulator)
 
 
 def test_nand(target, simulator):
-    name = 'mynand'
-    ports = ['a', m.BitIn, 'b', m.BitIn, 'out', m.BitOut]
-    run_generic(name=name, ports=ports, tester_cls=fault.NandTester,
-                target=target, simulator=simulator)
+    circuit_name = 'mynand'
+    ports = dict(a=m.BitIn, b=m.BitIn, out=m.BitOut)
+    run_generic(circuit_name=circuit_name, ports=ports,
+                tester_cls=fault.NandTester, target=target,
+                simulator=simulator)
 
 
 def test_sram(target, simulator):
-    name = 'mysram'
-    ports = ['wl', m.BitIn, 'lbl', m.BitInOut, 'lblb', m.BitInOut]
-    run_generic(name=name, ports=ports, tester_cls=fault.SRAMTester,
-                target=target, simulator=simulator)
+    circuit_name = 'mysram'
+    ports = dict(wl=m.BitIn, lbl=m.BitInOut, lblb=m.BitInOut)
+    run_generic(circuit_name=circuit_name, ports=ports,
+                tester_cls=fault.SRAMTester, target=target,
+                simulator=simulator)
 
 
-def run_generic(name, ports, tester_cls, target, simulator, vsup=1.5):
-    # declare the circuit, adding supply pins if needed
+def run_generic(circuit_name, ports, tester_cls, target, simulator, vsup=1.5):
+    # add supply pins if needed
     if target in ['verilog-ams', 'spice']:
         ports = ports.copy()
-        ports += ['vdd', m.BitIn]
-        ports += ['vss', m.BitIn]
-    dut = m.DeclareCircuit(name, *ports)
+        ports['vdd'] = m.BitIn
+        ports['vss'] = m.BitIn
+
+    # declare circuit
+    class dut(m.Circuit):
+        name = circuit_name
+        io = m.IO(**ports)
 
     # define the test content
     tester = tester_cls(dut)
@@ -49,12 +56,12 @@ def run_generic(name, ports, tester_cls, target, simulator, vsup=1.5):
     if target in ['verilog-ams', 'system-verilog']:
         kwargs['ext_model_file'] = True
     if target in ['verilog-ams', 'spice']:
-        kwargs['model_paths'] = [Path(f'tests/spice/{name}.sp').resolve()]
+        kwargs['model_paths'] = [Path(f'tests/spice/{circuit_name}.sp').resolve()]  # noqa
         kwargs['vsup'] = vsup
     if target == 'verilog-ams':
-        kwargs['use_spice'] = [name]
+        kwargs['use_spice'] = [circuit_name]
     if target == 'system-verilog':
-        kwargs['ext_libs'] = [Path(f'tests/verilog/{name}.v').resolve()]
+        kwargs['ext_libs'] = [Path(f'tests/verilog/{circuit_name}.v').resolve()]  # noqa
 
     # compile and run
     tester.compile_and_run(**kwargs)

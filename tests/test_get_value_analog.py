@@ -10,12 +10,12 @@ def pytest_generate_tests(metafunc):
 
 def test_get_value_analog(target, simulator):
     # declare circuit
-    myblend = m.DeclareCircuit(
-        'myblend',
-        'a', fault.RealIn,
-        'b', fault.RealIn,
-        'c', fault.RealOut,
-    )
+    class myblend(m.Circuit):
+        io = m.IO(
+            a=fault.RealIn,
+            b=fault.RealIn,
+            c=fault.RealOut
+        )
 
     # wrap if needed
     if target == 'verilog-ams':

@@ -10,13 +10,14 @@ def pytest_generate_tests(metafunc):
 
 def test_spice_bus(target, simulator, vsup=1.5):
     # declare circuit
-    dut = m.DeclareCircuit(
-        'mybus',
-        'a', m.In(m.Bits[2]),
-        'b', m.Out(m.Bits[3]),
-        'vdd', m.BitIn,
-        'vss', m.BitIn
-    )
+    class dut(m.Circuit):
+        name = 'mybus'
+        io = m.IO(
+            a=m.In(m.Bits[2]),
+            b=m.Out(m.Bits[3]),
+            vdd=m.BitIn,
+            vss=m.BitIn
+        )
 
     # define the test
     tester = fault.Tester(dut)
