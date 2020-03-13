@@ -160,19 +160,20 @@ class SystemVerilogTarget(VerilogTarget):
         # set default for magma compilation options
         magma_opts = magma_opts if magma_opts is not None else {}
 
-        # set default for top_module
-        if top_module is None:
-            if use_kratos:
-                top_module = 'TOP'
-            elif ext_test_bench:
-                top_module = f'{circuit_name}'
-            else:
-                top_module = f'{circuit_name}_tb'
-
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
                          magma_opts, coverage=coverage, use_kratos=use_kratos)
+
+        # set default for top_module.  this comes after the super constructor
+        # invocation, because that is where the self.circuit_name is assigned
+        if top_module is None:
+            if use_kratos:
+                top_module = 'TOP'
+            elif ext_test_bench:
+                top_module = f'{self.circuit_name}'
+            else:
+                top_module = f'{self.circuit_name}_tb'
 
         # sanity check
         if simulator is None:
