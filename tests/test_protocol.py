@@ -2,6 +2,7 @@
 import magma as m
 import fault
 
+
 class MWrapperMeta(m.MagmaProtocolMeta):
     def __getitem__(cls, T):
         assert cls is MWrapper
@@ -19,6 +20,7 @@ class MWrapperMeta(m.MagmaProtocolMeta):
     def _from_magma_value_(cls, value):
         return cls(value)
 
+
 class MWrapper(m.MagmaProtocol, metaclass=MWrapperMeta):
     def __init__(self, val):
         if not isinstance(val, type(self)._T_):
@@ -31,12 +33,15 @@ class MWrapper(m.MagmaProtocol, metaclass=MWrapperMeta):
     def apply(self, f):
         return f(self._value_)
 
+
 WrappedBits8 = MWrapper[m.UInt[8]]
+
 
 @m.syntax.sequential.sequential
 class Foo:
     def __call__(self, val: WrappedBits8) -> m.UInt[8]:
         return val.apply(lambda x: x + 1)
+
 
 def test_proto():
     tester = fault.Tester(Foo)
