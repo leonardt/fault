@@ -659,7 +659,8 @@ if (!({expr_str})) {{
                         if assumption.has_randvals:
                             randval = next(assumption.randvals)[str(port.name)]
                         else:
-                            randval = constrained_random_bv(len(assume_port), pred)
+                            randval = constrained_random_bv(len(assume_port),
+                                                            pred)
                         code = self.make_poke(
                             len(actions) + i, Poke(port, randval))
                         for line in code:

@@ -214,7 +214,6 @@ class TesterBase:
     def wait_until_high(self, signal):
         raise NotImplementedError
 
-
     def wait_until_negedge(self, signal):
         self.wait_until_high(signal)
         self.wait_until_low(signal)
