@@ -9,10 +9,16 @@ def pytest_generate_tests(metafunc):
 
 
 def test_env_mod(target, simulator):
-    myinv = m.DefineCircuit('myinv', 'a', m.In(m.Bit), 'y', m.Out(m.Bit))
-    m.wire(~myinv.a, myinv.y)
-    m.EndDefine()
+    class myinv(m.Circuit):
+        io = m.IO(
+            a=m.In(m.Bit),
+            y=m.Out(m.Bit)
+        )
+        io.y @= ~io.a
 
     tester = fault.InvTester(myinv, in_='a', out='y')
-
-    tester.compile_and_run(target=target, simulator=simulator, tmp_dir=True)
+    tester.compile_and_run(
+        target=target,
+        simulator=simulator,
+        tmp_dir=True
+    )
