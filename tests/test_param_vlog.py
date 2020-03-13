@@ -10,11 +10,11 @@ def pytest_generate_tests(metafunc):
 
 def test_def_vlog(target, simulator, n_bits=8, b_val=76):
     # declare circuit
-    paramadd = m.DeclareCircuit(
-        'paramadd',
-        'a_val', m.In(m.Bits[n_bits]),
-        'c_val', m.Out(m.Bits[n_bits])
-    )
+    class paramadd(m.Circuit):
+        io = m.IO(
+            a_val=m.In(m.Bits[n_bits]),
+            c_val=m.Out(m.Bits[n_bits])
+        )
 
     # instantiate tester
     tester = fault.Tester(paramadd)

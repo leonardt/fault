@@ -13,13 +13,13 @@ def test_inv_tf(
     vol_rel=0.1, voh_rel=0.9
 ):
     # declare circuit
-    myinv = m.DeclareCircuit(
-        'myinv',
-        'in_', fault.RealIn,
-        'out', fault.RealOut,
-        'vdd', fault.RealIn,
-        'vss', fault.RealIn
-    )
+    class myinv(m.Circuit):
+        io = m.IO(
+            in_=fault.RealIn,
+            out=fault.RealOut,
+            vdd=fault.RealIn,
+            vss=fault.RealIn
+        )
 
     # wrap if needed
     if target == 'verilog-ams':

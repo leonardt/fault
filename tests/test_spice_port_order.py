@@ -5,13 +5,14 @@ from fault.spice_target import SpiceTarget
 
 def test_spice_port_order():
     # declare a circuit with
-    circ = m.DeclareCircuit(
-        's',
-        'p', fault.ElectIn,
-        'i', m.BitIn,
-        'c', m.Out(m.Bits[3]),
-        'e', fault.RealOut
-    )
+    class circ(m.Circuit):
+        name = 's'
+        io = m.IO(
+            p=fault.ElectIn,
+            i=m.BitIn,
+            c=m.Out(m.Bits[3]),
+            e=fault.RealOut
+        )
 
     target = SpiceTarget(circ, conn_order='alpha')
 

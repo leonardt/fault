@@ -4,15 +4,15 @@ from fault.verilogams import VAMSWrap, RealIn, RealOut, ElectIn, ElectOut
 
 def test_vams_wrap():
     # declare the circuit
-    myblk = m.DeclareCircuit(
-        'myblk',
-        'a', RealIn,
-        'b', RealOut,
-        'c', m.In(m.Bit),
-        'd', m.Out(m.Bits[2]),
-        'e', ElectIn,
-        'f', ElectOut
-    )
+    class myblk(m.Circuit):
+        io = m.IO(
+            a=RealIn,
+            b=RealOut,
+            c=m.In(m.Bit),
+            d=m.Out(m.Bits[2]),
+            e=ElectIn,
+            f=ElectOut
+        )
     wrap_circ = VAMSWrap(myblk)
 
     # check magma representation of wrapped circuit

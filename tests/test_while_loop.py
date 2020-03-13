@@ -21,13 +21,14 @@ def debug_print(tester, dut):
 
 
 def test_while_loop(target, simulator, n_cyc=3, n_bits=8):
-    dut = m.DeclareCircuit(
-        'clkdelay',
-        'clk', m.In(m.Clock),
-        'rst', m.In(m.Reset),
-        'count', m.Out(m.Bits[n_bits]),
-        'n_done', m.Out(m.Bit)
-    )
+    class dut(m.Circuit):
+        name = 'clkdelay'
+        io = m.IO(
+            clk=m.In(m.Clock),
+            rst=m.In(m.Reset),
+            count=m.Out(m.Bits[n_bits]),
+            n_done=m.Out(m.Bit)
+        )
 
     # instantiate the tester
     tester = fault.Tester(dut, clock=dut.clk, reset=dut.rst)
