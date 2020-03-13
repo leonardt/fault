@@ -38,7 +38,7 @@ def test_spice_bus(target, simulator, vsup=1.5):
     kwargs = dict(
         target=target,
         simulator=simulator,
-        model_paths=[Path('tests/spice/mybus.sp').resolve()],
+        model_paths=[Path('tests/spice w space/mybus.sp').resolve()],
         vsup=vsup,
         tmp_dir=True
     )

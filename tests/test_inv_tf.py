@@ -44,7 +44,7 @@ def test_inv_tf(
     kwargs = dict(
         target=target,
         simulator=simulator,
-        model_paths=[Path('tests/spice/myinv.sp').resolve()],
+        model_paths=[Path('tests/spice w space/myinv.sp').resolve()],
         vsup=vsup,
         tmp_dir=True
     )

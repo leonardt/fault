@@ -56,12 +56,12 @@ def run_generic(circuit_name, ports, tester_cls, target, simulator, vsup=1.5):
     if target in ['verilog-ams', 'system-verilog']:
         kwargs['ext_model_file'] = True
     if target in ['verilog-ams', 'spice']:
-        kwargs['model_paths'] = [Path(f'tests/spice/{circuit_name}.sp').resolve()]  # noqa
+        kwargs['model_paths'] = [Path(f'tests/spice w space/{circuit_name}.sp').resolve()]  # noqa
         kwargs['vsup'] = vsup
     if target == 'verilog-ams':
         kwargs['use_spice'] = [circuit_name]
     if target == 'system-verilog':
-        kwargs['ext_libs'] = [Path(f'tests/verilog/{circuit_name}.v').resolve()]  # noqa
+        kwargs['ext_libs'] = [Path(f'tests/vlog w space/{circuit_name}.v').resolve()]  # noqa
 
     # compile and run
     tester.compile_and_run(**kwargs)

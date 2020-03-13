@@ -31,7 +31,7 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=76):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/paramadd.sv').resolve()],
+        ext_libs=[Path('tests/vlog w space/paramadd.sv').resolve()],
         parameters={'n_bits': n_bits, 'b_val': b_val},
         ext_model_file=True,
         tmp_dir=True

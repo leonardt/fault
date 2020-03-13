@@ -59,7 +59,7 @@ def test_while_loop(target, simulator, n_cyc=3, n_bits=8):
         target=target,
         simulator=simulator,
         tmp_dir=True,
-        ext_libs=[Path('tests/verilog/clkdelay.sv').resolve()],
+        ext_libs=[Path('tests/vlog w space/clkdelay.sv').resolve()],
         ext_model_file=True,
         defines={'N_CYC': n_cyc, 'N_BITS': n_bits}
     )

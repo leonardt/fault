@@ -41,8 +41,8 @@ def test_get_value_analog(target, simulator):
         simulator=simulator,
         tmp_dir=True
     )
-    verilog_model = Path('tests/verilog/myblend.sv').resolve()
-    spice_model = Path('tests/spice/myblend.sp').resolve()
+    verilog_model = Path('tests/vlog w space/myblend.sv').resolve()
+    spice_model = Path('tests/spice w space/myblend.sp').resolve()
     if target == 'verilog-ams':
         kwargs['model_paths'] = [spice_model]
         kwargs['use_spice'] = ['myblend']

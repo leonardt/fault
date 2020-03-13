@@ -31,7 +31,7 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=42):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/defadd.sv').resolve()],
+        ext_libs=[Path('tests/vlog w space/defadd.sv').resolve()],
         defines={'N_BITS': n_bits, 'B_VAL': b_val},
         ext_model_file=True,
         tmp_dir=True

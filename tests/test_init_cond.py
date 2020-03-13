@@ -41,7 +41,7 @@ def test_init_cond(target, simulator, va=1.234, vb=2.345, vc=3.456,
     kwargs = dict(
         target=target,
         simulator=simulator,
-        model_paths=[Path('tests/spice/my_init_cond.sp').resolve()],
+        model_paths=[Path('tests/spice w space/my_init_cond.sp').resolve()],
         ic=ic,
         tmp_dir=True
     )

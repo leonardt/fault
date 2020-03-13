@@ -28,7 +28,7 @@ def test_real_val(target, simulator):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/realadd.sv').resolve()],
+        ext_libs=[Path('tests/vlog w space/realadd.sv').resolve()],
         defines={f'__{simulator.upper()}__': None},
         ext_model_file=True,
         tmp_dir=True

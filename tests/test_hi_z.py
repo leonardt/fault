@@ -40,7 +40,7 @@ def test_hi_z(target, simulator):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/hizmod.v').resolve()],
+        ext_libs=[Path('tests/vlog w space/hizmod.v').resolve()],
         ext_model_file=True,
         tmp_dir=True
     )

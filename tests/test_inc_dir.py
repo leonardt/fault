@@ -23,8 +23,8 @@ def test_ext_vlog(target, simulator):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_libs=[Path('tests/verilog/mybuf_inc_test.v').resolve()],
-        inc_dirs=[Path('tests/verilog').resolve()],
+        ext_libs=[Path('tests/vlog w space/mybuf_inc_test.v').resolve()],
+        inc_dirs=[Path('tests/vlog w space').resolve()],
         ext_model_file=True,
         tmp_dir=True
     )

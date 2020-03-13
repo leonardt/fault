@@ -16,7 +16,7 @@ def test_ext_tb(target, simulator):
     tester.compile_and_run(
         target=target,
         simulator=simulator,
-        ext_srcs=[Path('tests/verilog/mytb.sv').resolve()],
+        ext_srcs=[Path('tests/vlog w space/mytb.sv').resolve()],
         ext_test_bench=True,
         tmp_dir=True
     )
