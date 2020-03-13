@@ -7,3 +7,8 @@ dist
 fault.egg-info
 pytest.ini
 vnc_logs
+.coverage
+.magma
+coverage.xml
+parser.out
+parsetab.py
