@@ -160,6 +160,15 @@ class SystemVerilogTarget(VerilogTarget):
         # set default for magma compilation options
         magma_opts = magma_opts if magma_opts is not None else {}
 
+        # set default for top_module
+        if top_module is None:
+            if use_kratos:
+                top_module = 'TOP'
+            elif ext_test_bench:
+                top_module = f'{circuit_name}'
+            else:
+                top_module = f'{circuit_name}_tb'
+
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output,
@@ -195,7 +204,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module if not use_kratos else "TOP"
+        self.top_module = top_module
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
@@ -613,12 +622,6 @@ class SystemVerilogTarget(VerilogTarget):
                    for lhs, rhs in self.assigns.values()]
         assigns = '\n'.join(assigns)
 
-        # determine the top module name
-        if self.top_module:
-            top_module = self.top_module
-        else:
-            top_module = f'{self.circuit_name}_tb'
-
         # add timescale
         timescale = f'`timescale {self.timescale}'
 
@@ -634,7 +637,7 @@ class SystemVerilogTarget(VerilogTarget):
             port_list=port_list,
             param_list=param_list,
             circuit_name=self.circuit_name,
-            top_module=top_module
+            top_module=self.top_module
         )
 
         # return the string representing the system-verilog testbench
@@ -813,15 +816,10 @@ class SystemVerilogTarget(VerilogTarget):
             tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
 
         # set the name of the top module
-        if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
-        else:
-            top = self.top_module
-        if top is not None:
-            tcl_cmds += [f'set_property -name top -value {top} -objects [get_fileset sim_1]']  # noqa
-        else:
-            # have Vivado pick the top module automatically if not specified
-            tcl_cmds += [f'update_compile_order -fileset sim_1']
+        # if in the future we want to run simulations without defining the top
+        # module, then this TCL command can be used instead:
+        # "update_compile_order -fileset sim_1"
+        tcl_cmds += [f'set_property -name top -value {self.top_module} -objects [get_fileset sim_1]']  # noqa
 
         # run until $finish (as opposed to running for a certain amount of time)
         tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
@@ -852,15 +850,8 @@ class SystemVerilogTarget(VerilogTarget):
         # binary name
         cmd += ['irun']
 
-        # determine the name of the top module
-        if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
-        else:
-            top = self.top_module
-
         # send name of top module to the simulator
-        if top is not None:
-            cmd += ['-top', f'{top}']
+        cmd += ['-top', f'{self.top_module}']
 
         # timescale
         cmd += ['-timescale', f'{self.timescale}']
@@ -963,6 +954,9 @@ class SystemVerilogTarget(VerilogTarget):
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
+        # specify top module
+        cmd += ['-top', f'{self.top_module}']
+
         # return arg list and binary file location
         return cmd, './simv'
 
@@ -1002,6 +996,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         # source files
         cmd += [f'{src}' for src in sources]
+
+        # set the top module
+        cmd += ['-s', f'{self.top_module}']
 
         # return arg list and binary file location
         return cmd, bin_file
