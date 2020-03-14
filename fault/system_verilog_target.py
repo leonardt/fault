@@ -791,43 +791,45 @@ class SystemVerilogTarget(VerilogTarget):
         tcl_cmds = []
 
         # create the project
-        create_proj = f'create_project -force {proj_name} {proj_dir}'
+        create_proj = f'create_project -force {{{proj_name}}} {{{proj_dir}}}'
         if proj_part is not None:
-            create_proj += f' -part "{proj_part}"'
+            create_proj += f' -part {{{proj_part}}}'
         tcl_cmds += [create_proj]
 
         # add source files and library files
         vlog_add_files = []
-        vlog_add_files += [f'{src}' for src in sources]
-        vlog_add_files += [f'{lib}' for lib in self.ext_libs]
+        vlog_add_files += [f'{{{src}}}' for src in sources]
+        vlog_add_files += [f'{{{lib}}}' for lib in self.ext_libs]
         if len(vlog_add_files) > 0:
             vlog_add_files = ' '.join(vlog_add_files)
-            tcl_cmds += [f'add_files "{vlog_add_files}"']
+            tcl_cmds += [f'add_files [list {vlog_add_files}]']
 
         # add include file search paths
         if len(self.inc_dirs) > 0:
-            vlog_inc_dirs = ' '.join(f'{dir_}' for dir_ in self.inc_dirs)
-            tcl_cmds += [f'set_property include_dirs "{vlog_inc_dirs}" [get_fileset sim_1]']  # noqa
+            vlog_inc_dirs = ' '.join(f'{{{dir_}}}' for dir_ in self.inc_dirs)
+            vlog_inc_dirs = f'[list {vlog_inc_dirs}]'
+            tcl_cmds += [f'set_property include_dirs {vlog_inc_dirs} [get_fileset sim_1]']  # noqa
 
         # add verilog `defines
         vlog_defs = []
         for key, val in self.defines.items():
             if val is not None:
-                vlog_defs += [f'{key}={val}']
+                vlog_defs += [f'{{{key}={val}}}']
             else:
-                vlog_defs += [f'{key}']
+                vlog_defs += [f'{{{key}}}']
         if len(vlog_defs) > 0:
             vlog_defs = ' '.join(vlog_defs)
-            tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
+            vlog_defs = f'[list {vlog_defs}]'
+            tcl_cmds += [f'set_property -name verilog_define -value {vlog_defs} -objects [get_fileset sim_1]']  # noqa
 
         # set the name of the top module
         if not self.no_top_module:
-            tcl_cmds += [f'set_property -name top -value {self.top_module} -objects [get_fileset sim_1]']  # noqa
+            tcl_cmds += [f'set_property -name top -value {{{self.top_module}}} -objects [get_fileset sim_1]']  # noqa
         else:
             tcl_cmds += ['update_compile_order -fileset sim_1']
 
         # run until $finish (as opposed to running for a certain amount of time)
-        tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
+        tcl_cmds += [f'set_property -name xsim.simulate.runtime -value -all -objects [get_fileset sim_1]']  # noqa
 
         # run the simulation
         tcl_cmds += ['launch_simulation']
