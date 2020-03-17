@@ -126,4 +126,4 @@ def test_sin_spice(vsup=1.5, vil_rel=0.4, vih_rel=0.6,
         ys.append(value)
         print('%2d\t'%k, value)
 
-    plot(xs, ys)
+    #plot(xs, ys)

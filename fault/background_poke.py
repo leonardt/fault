@@ -144,7 +144,7 @@ class ThreadPool():
     def remove(self, port):
         self.active_ports.remove(port)
         for thread in self.background_threads:
-            if thread.poke.port == port:
+            if thread.poke.port is port:
                 offender = thread
         self.background_threads.remove(offender)
         poke = offender.step(self.t)
