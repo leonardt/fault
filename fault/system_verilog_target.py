@@ -14,6 +14,7 @@ from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 from fault.background_poke import background_poke_target
+from fault.mlingua_interface import mlingua_target
 import fault
 import fault.expression as expression
 from fault.real_type import RealKind
@@ -23,6 +24,7 @@ import re
 
 
 src_tpl = """\
+{includes}
 {timescale}
 module {top_module};
 {declarations}
@@ -42,6 +44,7 @@ endmodule
 """
 
 @background_poke_target
+@mlingua_target
 class SystemVerilogTarget(VerilogTarget):
 
     # Language properties of SystemVerilog used in generating code blocks
@@ -225,6 +228,7 @@ class SystemVerilogTarget(VerilogTarget):
                 raise ImportError("Cannot find kratos-runtime in the system. "
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
+        self.includes = []
 
     def add_decl(self, type_, name, exist_ok=False):
         if str(name) in self.declarations:
@@ -574,7 +578,11 @@ class SystemVerilogTarget(VerilogTarget):
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
             if isinstance(type_, RealKind):
-                t = "real"
+                print('name,type', name, type_)
+                if getattr(getattr(self.circuit, name), 'representation', None) == 'mlingua':
+                    t = "pwl"
+                else:
+                    t = "real"
             elif name in power_args.get("supply0s", []):
                 t = "supply0"
             elif name in power_args.get("supply1s", []):
@@ -621,7 +629,9 @@ class SystemVerilogTarget(VerilogTarget):
         initial_body = []
 
         # set up probing
+        print('about to set up probing')
         if self.dump_waveforms and self.simulator == "vcs":
+            print('vcs')
             initial_body += [f'$vcdplusfile("{self.waveform_file}");',
                              f'$vcdpluson();',
                              f'$vcdplusmemon();']
@@ -629,6 +639,7 @@ class SystemVerilogTarget(VerilogTarget):
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
                              f'$dumpvars(0, dut);']
+        print('initial body is now', initial_body)
 
         # if we're using the GetValue feature, then we need to open a file to
         # which GetValue results will be written
@@ -655,7 +666,8 @@ class SystemVerilogTarget(VerilogTarget):
         declarations = '\n'.join(declarations)
 
         # format assignments
-        assigns = [f'{self.TAB}assign {lhs}={rhs};'
+        assigns = [f'{self.TAB}assign {lhs}' \
+                   f'={rhs};'
                    for lhs, rhs in self.assigns.values()]
         assigns = '\n'.join(assigns)
 
@@ -667,9 +679,13 @@ class SystemVerilogTarget(VerilogTarget):
 
         # add timescale
         timescale = f'`timescale {self.timescale}'
+        
+        # add includes
+        includes = '\n'.join(f'`include "{f}"' for f in self.includes)
 
         # fill out values in the testbench template
         src = src_tpl.format(
+            includes=includes,
             timescale=timescale,
             declarations=declarations,
             assigns=assigns,
