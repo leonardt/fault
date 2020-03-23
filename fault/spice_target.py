@@ -637,7 +637,11 @@ class SpiceTarget(Target):
             action.value = port_value
         elif type(action.params) == dict and 'style' in action.params:
             # requires some analysis of signal
-            domain_read.analyze(results, time, action)
+            print(action.params)
+            # get height of slice point based on spice config if not specified
+            if 'height' not in action.params:
+                action.params['height'] = self.vsup * (self.vih_rel + self.vil_rel) / 2
+            get_value_domain(results, action, time)
         else:
             raise NotImplementedError
 

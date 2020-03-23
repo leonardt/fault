@@ -59,10 +59,6 @@ def find_edge(x, y, t_start, height, forward=False, count=1, rising=True):
     default (frequency now is probably based on the last few edges?)
     '''
 
-    if height is None:
-        # default comes out to 0.5
-        height = self.vsup * (self.vih_rel + self.vil_rel) / 2
-
     # deal with `rising` and `forward`
     # normally a low-to-high finder
     if (rising ^ forward):
