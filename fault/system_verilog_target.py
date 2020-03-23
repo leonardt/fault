@@ -629,7 +629,6 @@ class SystemVerilogTarget(VerilogTarget):
         initial_body = []
 
         # set up probing
-        print('about to set up probing')
         if self.dump_waveforms and self.simulator == "vcs":
             print('vcs')
             initial_body += [f'$vcdplusfile("{self.waveform_file}");',
@@ -639,13 +638,24 @@ class SystemVerilogTarget(VerilogTarget):
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
                              f'$dumpvars(0, dut);']
-        print('initial body is now', initial_body)
 
         # if we're using the GetValue feature, then we need to open a file to
         # which GetValue results will be written
         if any(isinstance(action, GetValue) for action in actions):
             actions = [FileOpen(self.value_file)] + actions
             actions += [FileClose(self.value_file)]
+            
+            # check for reading in other domains
+            domain_read_ports = set()
+            for action in actions:
+                if not isinstance(action, GetValue):
+                    continue
+                if type(action.params) == dict and 'style' in action.params:
+                    domain_read_ports.add( action.port)
+            for port in domain_read_ports:
+                print('Interesting read on', port)
+                # TODO in the future, if not self.dump_waveforms, we need to dump this port anyway
+                pass
 
         # handle all of user-specified actions in the testbench
         for i, action in enumerate(actions):

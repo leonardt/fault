@@ -7,7 +7,8 @@ import fault.actions as actions
 from fault.util import flatten
 import os
 from fault.select_path import SelectPath
-
+from fault.result_parse import parse_vcd
+from fault.domain_read import get_value_domain
 
 class VerilogTarget(Target):
     """
@@ -292,11 +293,23 @@ class VerilogTarget(Target):
     def post_process_get_value_actions(self, all_actions):
         get_value_actions = [action for action in all_actions
                              if isinstance(action, actions.GetValue)]
+        
+        # sort out actions with parmams
+        get_value_actions_params   = [action for action in get_value_actions if action.params != None]
+        print(get_value_actions_params)
+
         if len(get_value_actions) > 0:
             with open(self.value_file.name, 'r') as f:
                 lines = f.readlines()
             for line, action in zip(lines, get_value_actions):
                 action.update_from_line(line)
+                
+        if len(get_value_actions_params) > 0:
+            # TODO waveform_file is technically a property of systemverilog target only, so this is weird for verilator
+            res = parse_vcd(self.waveform_file, self.circuit.io)
+            for a in get_value_actions_params:
+                # the time has already been temporarily stored in a.value
+                get_value_domain(res, a, a.value)
 
     @staticmethod
     def in_var(file):

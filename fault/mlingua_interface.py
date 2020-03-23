@@ -22,7 +22,7 @@ def mlingua_target(cls):
             pokes = defaultdict(list)
             time = 0
             for a in actions:
-                if isinstance(a, Poke):
+                if self.is_mlingua(a):
                     p = a.port
                     pokes[p].append((time, a))
                 # TODO am I missing other ways the time can advance? certainly flow control will be a problem

@@ -16,16 +16,13 @@ from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval, Read
 from fault.background_poke import background_poke_target
 from fault.select_path import SelectPath
 from .fault_errors import A2DError, ExpectError
+from fault.domain_read import get_value_domain
 
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
     import numpy as np
 except ModuleNotFoundError:
     print('Failed to import DeCiDa or Numpy for SpiceTarget.')
-
-# edge finder is used for measuring phase, freq, etc.
-class EdgeNotFoundError(Exception):
-    pass
 
 class CompiledSpiceActions:
     def __init__(self, pwls, checks, prints, stop_time, saves, gets):
@@ -625,59 +622,6 @@ class SpiceTarget(Target):
         for time, read in reads:
             res = results[f'{read.port.name}']
 
-    def find_edge(self, x, y, t_start, height=None, forward=False, count=1, rising=True):
-        '''
-        Search through data (x,y) starting at time t_start for when the
-        waveform crosses height (defaut is ???). Searches backwards by
-        default (frequency now is probably based on the last few edges?)
-        '''
-
-        if height is None:
-            # default comes out to 0.5
-            height = self.vsup * (self.vih_rel + self.vil_rel) / 2
-
-        # deal with `rising` and `forward`
-        # normally a low-to-high finder
-        if (rising ^ forward):
-            y = [(-1*z + 2*height) for z in y]
-        direction = 1 if forward else -1
-        # we want to start on the far side of the interval containing t_start
-        # to make sure we catch any edge near t_start
-        side = 'left' if forward else 'right'
-
-        start_index = np.searchsorted(x, t_start, side=side)
-        if start_index == len(x):
-            # happens when forward=False and the edge find is the end of the sim
-            start_index -= 1
-
-        i = start_index
-        edges = []
-        while len(edges) < count:
-            # move until we hit low
-            while y[i] > height:
-                i += direction
-                if i < 0 or i >= len(y):
-                    msg = f'only {len(edges)} of requested {count} edges found'
-                    raise EdgeNotFoundError(msg)
-            # now move until we hit the high
-            while y[i] <= height:
-                i += direction
-                if i < 0 or i >= len(y):
-                    msg = f'only {len(edges)} of requested {count} edges found'
-                    raise EdgeNotFoundError(msg)
-
-
-            # TODO: there's an issue because of the discrepancy between the requested
-            # start time and actually staring at the nearest edge
-
-            # the crossing happens from i to i+1
-            fraction = (height-y[i]) / (y[i-direction]-y[i])
-            t = x[i] + fraction * (x[i+1] - x[i])
-            if t==t_start:
-                print('EDGE EXACTLY AT EDGE FIND REQUEST')
-            edges.append(t-t_start)
-        return edges
-
     def impl_all_gets(self, results, gets):
         for get in gets:
             self.impl_get(results=results, time=get[0], action=get[1])
@@ -691,49 +635,11 @@ class SpiceTarget(Target):
             port_value = res(time)
             # write value back to action
             action.value = port_value
-        else:
+        elif type(action.params) == dict and 'style' in action.params:
             # requires some analysis of signal
-            style = action.params['style']
-            if style == 'single':
-                # equivalent to a regular get_value
-                value = res(time)
-                if type(value) == np.ndarray:
-                    value = value.tolist()
-                action.value = value
-            elif style == 'edge':
-                # looking for a nearby rising/falling edge
-                # look at self.find_edge for possible parameters
-                value = self.find_edge(res.t, res.v, time, **action.params)
-                action.value = value
-            elif style == 'frequency':
-                # frequency based on the (previous?) two rising edges
-                edges = self.find_edge(res.t, res.v, time, count=2)
-                freq = 1 / (edges[0] - edges[1])
-                action.value = freq
-            elif style == 'phase':
-                # phase of this signal relative to another
-                assert 'ref' in action.params, 'Phase read requires reference signal param'
-                res_ref = results[f'{action.params["ref"].name}']
-                ref = self.find_edge(res_ref.t, res_ref.v, time, count=2)
-                before_cycle_end = self.find_edge(res.t, res.v, time + ref[0])
-                fraction = 1 + before_cycle_end[0] / (ref[0] -ref[1])
-                # TODO multiply by 2pi?
-                action.value = fraction
-            elif style == 'block':
-                # return a whole chunk of the waveform.
-                # returns (t, v) where t is time relative to the get_value action
-                assert 'duration' in action.params, 'Block read requires duration'
-                duration = action.params['duration']
-                # make sure to grab points surrounding requested times so user can interpolate
-                # the exact start and end.
-                start = max(0, np.argmax(res.t > time) - 1)
-                end= (len(res.t)-1) if res.t[-1] < time + duration else np.argmax(res.t >= time + duration)
-
-                t = res.t[start:end] - time
-                v = res.v[start:end]
-                action.value = (t, v)
-            else:
-                raise NotImplementedError(f'Unknown style "{style}"')
+            domain_read.analyze(results, time, action)
+        else:
+            raise NotImplementedError
 
     def ngspice_cmds(self, tb_file):
         # build up the command

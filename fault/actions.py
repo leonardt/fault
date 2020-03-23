@@ -6,6 +6,7 @@ from .elect_type import ElectIn, ElectOut, ElectInOut
 import fault
 from fault.select_path import SelectPath
 import fault.expression as expression
+from fault.domain_read import domain_read
 
 
 class Action(ABC):
@@ -118,6 +119,7 @@ def is_output(port):
         return not port.is_output()
 
 
+@domain_read
 class GetValue(Action):
     def __init__(self, port, params):
         super().__init__()

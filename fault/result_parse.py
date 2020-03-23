@@ -1,3 +1,6 @@
+import re
+from fault.real_type import Real
+
 try:
     import numpy as np
     from scipy.interpolate import interp1d
@@ -11,6 +14,15 @@ class SpiceResult:
         self.t = t
         self.v = v
         self.func = interp1d(t, v, bounds_error=False, fill_value=(v[0], v[-1]))
+
+    def __call__(self, t):
+        return self.func(t)
+    
+class ResultInterp:
+    def __init__(self, t, v, interp='linear'):
+        self.t = t
+        self.v = v
+        self.func = interp1d(t, v, bounds_error=False, fill_value=(v[0], v[-1]), kind=interp)
 
     def __call__(self, t):
         return self.func(t)
@@ -115,4 +127,74 @@ def data_to_interp(data, time, strip_vi=True):
         retval[name] = result
 
     # return results
+    return retval
+
+
+def parse_vcd(filename, io, interp='previous'):
+    # unfortunately this vcd parser has an annoyin quirk:
+    # it throws away the format specifier for numbers so we can't tell if they're binary or real
+    # so "reg [7:0] a = 8'd4;" and "real a = 100.0;" both come back as the string '100'
+    # TODO fix this
+    filename = 'build/' + filename
+
+    # library doesn't grab timescale, so we do it manually
+    with open(filename) as f:
+        next = False
+        for line in f:
+            if next:
+                ts = line.strip().split()
+                break
+            if '$timescale' in line:
+                next = True
+        else:
+            assert False, f'Timescale not found in vcd {filename}'
+
+    scales = {
+        'fs': 1e-15,
+        'ps': 1e-12,
+        'ns': 1e-9,
+        'us': 1e-6,
+        'ms': 1e-3,
+        's': 1e0
+    }
+    if ts[1] not in scales:
+        assert False, f'Unrecognized timescale {ts[1]}'
+    timescale = float(ts[0]) * scales[ts[1]]
+
+    from vcdvcd import VCDVCD
+    obj = VCDVCD(filename)
+
+    def get_name_from_v(v):
+        name_vcd = v['references'][0].split('.')[-1]
+        name_fault = re.sub('\[[0-9]*:[0-9]*\]', '', name_vcd)
+        return name_fault
+    
+    def format(name, val_str):
+        if name not in io.ports:
+            # we don't know what the type is, so we leave it as a string
+            return val_str
+        a = io.ports[name]
+        b = isinstance(type(a), type(Real))
+        
+        if b:
+            return float(val_str)
+        else:
+            return int(val_str, 2)
+
+    data = obj.get_data()
+    data = {get_name_from_v(v): v['tv'] for v in data.values()}
+    end_time = obj.get_endtime()
+
+    retval = {}
+    for port, vs in data.items():
+        t, v = zip(*vs)
+        t, v = list(t), list(v)
+        # append an additional point at the end time
+        t.append(end_time)
+        v.append(v[-1])
+        t, v = [time * timescale for time in t], [format(port, val) for val in v]
+
+        r = ResultInterp(t, v, interp=interp)
+        retval[port] = r
+
     return retval
