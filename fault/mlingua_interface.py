@@ -15,7 +15,6 @@ def mlingua_target(cls):
                 #self.add_assign('pm', 'new')
                 self.add_decl('PWLMethod', 'pm=new')
                 self.add_decl('`get_timeunit', '')
-                # TODO this next line is kind of an awful hack
                 self.includes.append('mLingua_pwl.vh')
                 
             # sort out pokes
@@ -27,7 +26,8 @@ def mlingua_target(cls):
                     pokes[p].append((time, a))
                 # TODO am I missing other ways the time can advance? certainly flow control will be a problem
                 # Cast to float here is only to make it throw an exception earlier
-                delay = float(getattr(a, 'delay', 0))
+                delay_attr = getattr(a, 'delay', 0)
+                delay = 0 if delay_attr == None else float(delay_attr)
                 time += delay
 
             # update pokes

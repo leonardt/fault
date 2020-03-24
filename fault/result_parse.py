@@ -18,6 +18,7 @@ class SpiceResult:
     def __call__(self, t):
         return self.func(t)
     
+# TODO should probably rename this to something like "PWCResult"
 class ResultInterp:
     def __init__(self, t, v, interp='linear'):
         self.t = t
@@ -130,7 +131,7 @@ def data_to_interp(data, time, strip_vi=True):
     return retval
 
 
-def parse_vcd(filename, io, interp='previous'):
+def parse_vcd(filename, dut, interp='previous'):
     # unfortunately this vcd parser has an annoyin quirk:
     # it throws away the format specifier for numbers so we can't tell if they're binary or real
     # so "reg [7:0] a = 8'd4;" and "real a = 100.0;" both come back as the string '100'
@@ -170,15 +171,27 @@ def parse_vcd(filename, io, interp='previous'):
         return name_fault
     
     def format(name, val_str):
-        if name not in io.ports:
-            # we don't know what the type is, so we leave it as a string
-            return val_str
-        a = io.ports[name]
+        if not hasattr(dut, name):
+            # we don't know what the type is, but we know scipy will try to cast it to float
+            # we can't assume bits becasue mlingua etol stuff is in this category
+            # we can't assume real becuase bit types with value 'x' come through here too
+            try:
+                return float(val_str)
+            except ValueError:
+                return float('nan')
+            
+        a = getattr(dut, name)
         b = isinstance(type(a), type(Real))
         
         if b:
             return float(val_str)
         else:
+            # TODO deal with x and z
+            # atm it breaks if the value can't be cast to a float
+            if val_str == 'x':
+                return float('nan')
+            elif val_str == 'z':
+                return float('nan')
             return int(val_str, 2)
 
     data = obj.get_data()

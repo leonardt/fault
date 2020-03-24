@@ -306,7 +306,7 @@ class VerilogTarget(Target):
                 
         if len(get_value_actions_params) > 0:
             # TODO waveform_file is technically a property of systemverilog target only, so this is weird for verilator
-            res = parse_vcd(self.waveform_file, self.circuit.io)
+            res = parse_vcd(self.waveform_file, self.circuit)
             for a in get_value_actions_params:
                 # the time has already been temporarily stored in a.value
                 get_value_domain(res, a, a.value)
