@@ -4,6 +4,7 @@ import math
 from functools import total_ordering
 import copy
 from fault.target import Target
+from fault.actions import Delay
 
 
 @total_ordering
@@ -13,6 +14,8 @@ class Thread():
 
     # when checking clock value at time t, check time t+epsilon instead
     # this avoids ambiguity when landing exactly on the clock edge
+    # Also, used to check whether a step was supposed to have happened exactly
+    # on a scheduled update, or is too early and we should reschedule
     epsilon = 1e-18
 
     def __init__(self, time, poke):
@@ -108,13 +111,15 @@ class ThreadPool():
         #print('Thread pool is doing a delay of ', t_delay, 'at time', self.t)
         t = self.t
         t_end = self.t + t_delay
+        # note that free_time here is actually the free time until the next pool update,
+        # the actual time returned is until the next action and might be less than free_time
         free_time = self.get_next_update_time() - self.t
         if free_time > t_delay:
-            #print('pool update not needed', t)
             self.t = t_end
             return (t_delay, [])
         else:
             actions = []
+            t += free_time;
             #print('entering while loop')
             while self.get_next_update_time() <= t_end + self.epsilon:
                 thread = heapq.heappop(self.background_threads)
@@ -124,8 +129,9 @@ class ThreadPool():
                 # we had to put the thread back on the heap in order to
                 # calculate the next update
                 next_thing_time = min(self.get_next_update_time(), t_end)
-                #print('calculated next thing time', next_thing_time, 'at time', t)
+                #print('\ncalculated next thing time', next_thing_time, 'at time', t)
                 action.delay = next_thing_time - t
+                #print('also adding action', action, 'delay', action.delay)
                 t = next_thing_time
                 actions.append(action)
 
@@ -147,7 +153,9 @@ class ThreadPool():
             if thread.poke.port is port:
                 offender = thread
         self.background_threads.remove(offender)
+        heapq.heapify(self.background_threads)
         poke = offender.step(self.t)
+        poke.delay = 0
         if poke is None:
             return []
         else:
@@ -176,7 +184,10 @@ class ThreadPool():
             # the delay of an action owned by someone else. But with the new
             # Read action it's important that the object doesn't change 
             # because the user is holding a pointer to the old Read object
-            action.delay = new_delay
+            if isinstance(action, Delay):
+                action.time = new_delay
+            else:
+                action.delay = new_delay
             new_action_list.append(action)
             #new_action = copy.copy(action)
             #new_action.delay = new_delay
