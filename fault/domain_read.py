@@ -103,14 +103,15 @@ def find_edge_pwc(x, y, t_start, height, forward=False, count=1, rising=True):
                 msg = f'only {len(edges)} of requested {count} edges found'
                 raise EdgeNotFoundError(msg)
 
-        # TODO: there's an issue because of the discrepancy between the requested
-        # start time and actually staring at the nearest edge
-
         # moving forward the crossing happens eactly when we hit the high value
         # moving backward it happens at the last low one we saw (one thing ago)
         t = x[i] if direction == 1 else x[i+1]
         if t == t_start:
             print('EDGE EXACTLY AT EDGE FIND REQUEST')
+        elif (t - t_start) * direction < 0:
+            # we probably backed up to consider the point half a step before t_start
+            # don't count this one, and keep looking
+            continue
         edges.append(t - t_start)
     return edges
 
@@ -151,9 +152,6 @@ def find_edge_spice(x, y, t_start, height, forward=False, count=1, rising=True):
                 msg = f'only {len(edges)} of requested {count} edges found'
                 raise EdgeNotFoundError(msg)
 
-        # TODO: there's an issue because of the discrepancy between the requested
-        # start time and actually staring at the nearest edge
-
         # the crossing happens from i to i+1
         # fraction is how far you must go from i to (i-direction) to hit the crossing
         fraction = (height - y[i]) / (y[i - direction] - y[i])
@@ -161,6 +159,10 @@ def find_edge_spice(x, y, t_start, height, forward=False, count=1, rising=True):
         t = x[i] + fraction * (x[i-direction] - x[i])
         if t == t_start:
             print('EDGE EXACTLY AT EDGE FIND REQUEST')
+        elif (t - t_start) * direction < 0:
+            # we probably backed up to consider the point half a step before t_start
+            # don't count this one, and keep looking
+            continue
         edges.append(t - t_start)
     return edges
 
