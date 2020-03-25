@@ -111,6 +111,10 @@ def find_edge_pwc(x, y, t_start, height, forward=False, count=1, rising=True):
         t = x[i] if direction == 1 else x[i+1]
         if t == t_start:
             print('EDGE EXACTLY AT EDGE FIND REQUEST')
+        elif (t - t_start) * direction < 0:
+            # we probably backed up to consider the point half a step before t_start
+            # don't count this one, and keep looking
+            continue
         edges.append(t - t_start)
     return edges
 
@@ -161,6 +165,10 @@ def find_edge_spice(x, y, t_start, height, forward=False, count=1, rising=True):
         t = x[i] + fraction * (x[i-direction] - x[i])
         if t == t_start:
             print('EDGE EXACTLY AT EDGE FIND REQUEST')
+        elif (t - t_start) * direction < 0:
+            # we probably backed up to consider the point half a step before t_start
+            # don't count this one, and keep looking
+            continue
         edges.append(t - t_start)
     return edges
 
