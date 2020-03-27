@@ -11,7 +11,7 @@ def get_value_domain(results, action, time):
     res = results[action.port.name.name]
     if isinstance(res, ResultInterp):
         res_style = 'pwc'
-    elif isinstance(res, SpiceInterp):
+    elif isinstance(res, SpiceResult):
         res_style = 'spice'
     else:
         assert False, f'Unrecognized result class {type(res)} for result {res}'
@@ -60,7 +60,7 @@ def get_value_domain(results, action, time):
 
 def find_edge(res_style, *args, **kwargs):
     if res_style == 'spice':
-        return find_edge(*args, **kwargs)
+        return find_edge_spice(*args, **kwargs)
     elif res_style == 'pwc':
         return find_edge_pwc(*args, **kwargs)
     else:
