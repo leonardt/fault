@@ -118,33 +118,17 @@ def test_tester_peek(target, simulator):
     tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
-    check(tester.actions[0], Poke(circ.I, 0))
-    check(tester.actions[2], Expect(circ.O, 0))
+    check(tester.actions[1], Poke(circ.I, 0))
+    check(tester.actions[3], Expect(circ.O, 0))
     tester.poke(circ.CLK, 0)
-    check(tester.actions[3], Poke(circ.CLK, 0))
+    check(tester.actions[4], Poke(circ.CLK, 0))
     tester.step()
-    check(tester.actions[4], Step(circ.CLK, 1))
+    check(tester.actions[5], Step(circ.CLK, 1))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
             tester.compile_and_run(target, directory=_dir, simulator=simulator)
-
-
-def test_tester_no_clock_init():
-    circ = TestBasicClkCircuit
-    tester = fault.Tester(circ, circ.CLK)
-    tester.poke(circ.I, 0)
-    tester.expect(circ.O, 0)
-    with pytest.warns(DeprecationWarning,
-                      match="Clock has not been initialized, the initial "
-                            "value will be X for system verilog targets.  In "
-                            "a future release, this will be an error"):
-        tester.step()
-    # should not warn more than once
-    with pytest.warns(None) as record:
-        tester.step()
-        assert len(record) == 0
 
 
 def test_tester_peek_input(target, simulator):
@@ -314,7 +298,7 @@ def test_retarget_tester(target, simulator):
     tester.step()
     tester.print("%08x", circ.O)
     for i, exp in enumerate(expected):
-        check(tester.actions[i], exp)
+        check(tester.actions[i + 1], exp)
 
     circ_copy = TestBasicClkCircuitCopy
     copy = tester.retarget(circ_copy, circ_copy.CLK)
@@ -327,7 +311,7 @@ def test_retarget_tester(target, simulator):
         Print("%08x", circ_copy.O)
     ]
     for i, exp in enumerate(copy_expected):
-        check(copy.actions[i], exp)
+        check(copy.actions[i + 1], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             copy.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
@@ -357,12 +341,13 @@ def test_print_tester(capsys):
     out, err = capsys.readouterr()
     assert "\n".join(out.splitlines()[1:]) == """\
 Actions:
-    0: Poke(BasicClkCircuit.I, Bit(False))
-    1: Eval()
-    2: Expect(BasicClkCircuit.O, Bit(False))
-    3: Poke(BasicClkCircuit.CLK, Bit(False))
-    4: Step(BasicClkCircuit.CLK, steps=1)
-    5: Print("%08x", BasicClkCircuit.O)
+    0: Poke(BasicClkCircuit.CLK, Bit(False))
+    1: Poke(BasicClkCircuit.I, Bit(False))
+    2: Eval()
+    3: Expect(BasicClkCircuit.O, Bit(False))
+    4: Poke(BasicClkCircuit.CLK, Bit(False))
+    5: Step(BasicClkCircuit.CLK, steps=1)
+    6: Print("%08x", BasicClkCircuit.O)
 """
 
 
