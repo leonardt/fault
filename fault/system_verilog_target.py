@@ -697,9 +697,6 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             raise NotImplementedError(self.simulator)
 
-        # add any extra flags
-        sim_cmd += self.flags
-
         # link the library over if using kratos to debug
         if self.use_kratos:
             self.link_kratos_lib()
@@ -857,6 +854,9 @@ class SystemVerilogTarget(VerilogTarget):
         # binary name
         cmd += ['irun']
 
+        # add any extra flags
+        cmd += self.flags
+
         # send name of top module to the simulator
         if not self.no_top_module:
             cmd += ['-top', f'{self.top_module}']
@@ -906,6 +906,9 @@ class SystemVerilogTarget(VerilogTarget):
         # binary name
         cmd += ['vivado']
 
+        # add any extra flags
+        cmd += self.flags
+
         # run from an external script
         cmd += ['-mode', 'batch']
 
@@ -924,6 +927,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         # binary name
         cmd += ['vcs']
+
+        # add any extra flags
+        cmd += self.flags
 
         # timescale
         cmd += [f'-timescale={self.timescale}']
@@ -974,6 +980,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         # binary name
         cmd += ['iverilog']
+
+        # add any extra flags
+        cmd += self.flags
 
         # output file
         bin_file = f'{self.circuit_name}_tb'
