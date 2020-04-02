@@ -123,8 +123,6 @@ class VerilogTarget(Target):
             return self.make_poke(i, action)
         elif isinstance(action, actions.Print):
             return self.make_print(i, action)
-        elif isinstance(action, actions.Read):
-            return self.make_read(i, action)
         elif isinstance(action, actions.Expect):
             return self.make_expect(i, action)
         elif isinstance(action, actions.Eval):
@@ -167,10 +165,6 @@ class VerilogTarget(Target):
 
     @abstractmethod
     def make_print(self, i, action):
-        pass
-
-    @abstractmethod
-    def make_read(self, i, action):
         pass
 
     @abstractmethod
