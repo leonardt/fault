@@ -26,6 +26,9 @@ class RealType(Type):
     def driven(self):
         return self._wire.driven()
 
+    def flatten(self):
+        return [self]
+
 
 class RealKind(Kind):
     __hash__ = Kind.__hash__
