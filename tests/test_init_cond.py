@@ -11,12 +11,13 @@ def pytest_generate_tests(metafunc):
 def test_init_cond(target, simulator, va=1.234, vb=2.345, vc=3.456,
                    abs_tol=1e-3):
     # declare circuit
-    mycirc = m.DeclareCircuit(
-        'my_init_cond',
-        'va', fault.RealOut,
-        'vb', fault.RealOut,
-        'vc', fault.RealOut
-    )
+    class mycirc(m.Circuit):
+        name = 'my_init_cond'
+        io = m.IO(
+            va=fault.RealOut,
+            vb=fault.RealOut,
+            vc=fault.RealOut
+        )
 
     # wrap if needed
     if target == 'verilog-ams':

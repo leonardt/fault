@@ -29,6 +29,8 @@ src_tpl = """\
 module {top_module};
 {declarations}
 {assigns}
+{clock_drivers}
+
     {circuit_name} #(
         {param_list}
     ) dut (
@@ -62,8 +64,7 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False, skip_run=False, 
-                 read_tag='fault_read<{read_hash}><{value}>'):
+                 use_sva=False, skip_run=False, no_top_module=False):
         """
         circuit: a magma circuit
 
@@ -136,8 +137,6 @@ class SystemVerilogTarget(VerilogTarget):
                    is an error.  If 'realtime', print out STDOUT as lines come
                    in, then print STDERR after the process completes.
 
-        read_tag: Text tag for formatting read action hashes and values dumped
-                  by the simulator.
         dump_waveforms: Enable tracing of internal values
 
         waveform_file: name of file to dump waveforms (default is
@@ -147,6 +146,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         skip_run: If True, generate all the files (testbench, tcl, etc.) but do
                   not run the simulator.
+
+        no_top_module: If True, do not specify a top module for simulation
+                       (default is False, meaning *do* specify the top module)
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -171,6 +173,16 @@ class SystemVerilogTarget(VerilogTarget):
                          include_verilog_libraries, magma_output,
                          magma_opts, coverage=coverage, use_kratos=use_kratos)
 
+        # set default for top_module.  this comes after the super constructor
+        # invocation, because that is where the self.circuit_name is assigned
+        if top_module is None:
+            if use_kratos:
+                top_module = 'TOP'
+            elif ext_test_bench:
+                top_module = f'{self.circuit_name}'
+            else:
+                top_module = f'{self.circuit_name}_tb'
+
         # sanity check
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
@@ -178,14 +190,12 @@ class SystemVerilogTarget(VerilogTarget):
         if simulator not in {"vcs", "ncsim", "iverilog", "vivado"}:
             raise ValueError(f"Unsupported simulator {simulator}")
 
-        # dictionary of Read actions that will need their 'value's set
-        self.read_dict = {}
-
         # save settings
         self.simulator = simulator
         self.timescale = timescale
         self.clock_step_delay = clock_step_delay
         self.num_cycles = num_cycles
+        self.clock_drivers = []
         self.dump_waveforms = dump_waveforms
         if dump_vcd is not None:
             warnings.warn("tester.compile_and_run parameter dump_vcd is "
@@ -203,11 +213,10 @@ class SystemVerilogTarget(VerilogTarget):
         self.flags = flags if flags is not None else []
         self.inc_dirs = inc_dirs if inc_dirs is not None else []
         self.ext_test_bench = ext_test_bench
-        self.top_module = top_module if not use_kratos else "TOP"
+        self.top_module = top_module
         self.use_input_wires = use_input_wires
         self.parameters = parameters if parameters is not None else {}
         self.disp_type = disp_type
-        self.read_tag = read_tag
         self.waveform_file = waveform_file
         self.use_sva = use_sva
         if self.waveform_file is None and self.dump_waveforms:
@@ -219,6 +228,7 @@ class SystemVerilogTarget(VerilogTarget):
                 raise NotImplementedError(self.simulator)
         self.use_kratos = use_kratos
         self.skip_run = skip_run
+        self.no_top_module = no_top_module
         # check to see if runtime is installed
         if use_kratos:
             import sys
@@ -349,46 +359,6 @@ class SystemVerilogTarget(VerilogTarget):
         # generate the command
         args = ', '.join(args)
         return [f'$write({args});']
-
-    def make_read(self, i, action):
-        # yes it's weird that we are using a hash of something as its key,
-        # but we only get back the text of the hash so I think this is the
-        # best way to get the object back from that text
-        self.read_dict[hash(action)] = action
-
-        type_ = type(action.port)
-        if isinstance(type_, m.ArrayKind):
-            # TODO
-            raise NotImplementedError
-        elif isinstance(type_, RealKind):
-            format_string = '%f'
-        else:
-            format_string = '%d'
-        text = self.read_tag.format(read_hash = hash(action), 
-                value = format_string)
-        #text += '\n'
-
-        # give this the attributes of a read action
-        action.format_str = text
-        action.ports = [action.port]
-        return self.make_print(i, action)
-
-    def process_reads(self, text):
-        def unstring(s):
-            try:
-                return int(s)
-            except ValueError:
-                pass
-            try:
-                return float(s)
-            except ValueError:
-                pass
-            raise NotImplementedError(f'Cannot interpret value "{s}"')
-
-        regex = self.read_tag.format(read_hash='(.*?)', value='(.*?)')
-        for read_hash, value_str in re.findall(regex, text):
-            value = unstring(value_str)
-            self.read_dict[int(read_hash)].value = value
 
     def make_loop(self, i, action):
         # loop variable has to be declared outside of the loop
@@ -681,29 +651,26 @@ class SystemVerilogTarget(VerilogTarget):
                    for lhs, rhs in self.assigns.values()]
         assigns = '\n'.join(assigns)
 
-        # determine the top module name
-        if self.top_module:
-            top_module = self.top_module
-        else:
-            top_module = f'{self.circuit_name}_tb'
-
         # add timescale
         timescale = f'`timescale {self.timescale}'
         
         # add includes
         includes = '\n'.join(f'`include "{f}"' for f in self.includes)
 
+        clock_drivers = self.TAB + "\n{self.TAB}".join(self.clock_drivers)
+
         # fill out values in the testbench template
         src = src_tpl.format(
             includes=includes,
             timescale=timescale,
             declarations=declarations,
+            clock_drivers=clock_drivers,
             assigns=assigns,
             initial_body=initial_body,
             port_list=port_list,
             param_list=param_list,
             circuit_name=self.circuit_name,
-            top_module=top_module
+            top_module=self.top_module
         )
 
         # return the string representing the system-verilog testbench
@@ -758,9 +725,6 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             raise NotImplementedError(self.simulator)
 
-        # add any extra flags
-        sim_cmd += self.flags
-
         # link the library over if using kratos to debug
         if self.use_kratos:
             self.link_kratos_lib()
@@ -780,10 +744,6 @@ class SystemVerilogTarget(VerilogTarget):
         # post-process GetValue actions
         self.post_process_get_value_actions(actions)
 
-        # post-process Read actions
-        # TODO doesn't work with a separate simulation binary
-        result_text = completed_sim.stdout
-        self.process_reads(result_text)
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
@@ -857,48 +817,45 @@ class SystemVerilogTarget(VerilogTarget):
         tcl_cmds = []
 
         # create the project
-        create_proj = f'create_project -force {proj_name} {proj_dir}'
+        create_proj = f'create_project -force {{{proj_name}}} {{{proj_dir}}}'
         if proj_part is not None:
-            create_proj += f' -part "{proj_part}"'
+            create_proj += f' -part {{{proj_part}}}'
         tcl_cmds += [create_proj]
 
         # add source files and library files
         vlog_add_files = []
-        vlog_add_files += [f'{src}' for src in sources]
-        vlog_add_files += [f'{lib}' for lib in self.ext_libs]
+        vlog_add_files += [f'{{{src}}}' for src in sources]
+        vlog_add_files += [f'{{{lib}}}' for lib in self.ext_libs]
         if len(vlog_add_files) > 0:
             vlog_add_files = ' '.join(vlog_add_files)
-            tcl_cmds += [f'add_files "{vlog_add_files}"']
+            tcl_cmds += [f'add_files [list {vlog_add_files}]']
 
         # add include file search paths
         if len(self.inc_dirs) > 0:
-            vlog_inc_dirs = ' '.join(f'{dir_}' for dir_ in self.inc_dirs)
-            tcl_cmds += [f'set_property include_dirs "{vlog_inc_dirs}" [get_fileset sim_1]']  # noqa
+            vlog_inc_dirs = ' '.join(f'{{{dir_}}}' for dir_ in self.inc_dirs)
+            vlog_inc_dirs = f'[list {vlog_inc_dirs}]'
+            tcl_cmds += [f'set_property include_dirs {vlog_inc_dirs} [get_fileset sim_1]']  # noqa
 
         # add verilog `defines
         vlog_defs = []
         for key, val in self.defines.items():
             if val is not None:
-                vlog_defs += [f'{key}={val}']
+                vlog_defs += [f'{{{key}={val}}}']
             else:
-                vlog_defs += [f'{key}']
+                vlog_defs += [f'{{{key}}}']
         if len(vlog_defs) > 0:
             vlog_defs = ' '.join(vlog_defs)
-            tcl_cmds += [f'set_property -name "verilog_define" -value {{{vlog_defs}}} -objects [get_fileset sim_1]']  # noqa
+            vlog_defs = f'[list {vlog_defs}]'
+            tcl_cmds += [f'set_property -name verilog_define -value {vlog_defs} -objects [get_fileset sim_1]']  # noqa
 
         # set the name of the top module
-        if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb'
+        if not self.no_top_module:
+            tcl_cmds += [f'set_property -name top -value {{{self.top_module}}} -objects [get_fileset sim_1]']  # noqa
         else:
-            top = self.top_module
-        if top is not None:
-            tcl_cmds += [f'set_property -name top -value {top} -objects [get_fileset sim_1]']  # noqa
-        else:
-            # have Vivado pick the top module automatically if not specified
-            tcl_cmds += [f'update_compile_order -fileset sim_1']
+            tcl_cmds += ['update_compile_order -fileset sim_1']
 
         # run until $finish (as opposed to running for a certain amount of time)
-        tcl_cmds += [f'set_property -name "xsim.simulate.runtime" -value "-all" -objects [get_fileset sim_1]']  # noqa
+        tcl_cmds += [f'set_property -name xsim.simulate.runtime -value -all -objects [get_fileset sim_1]']  # noqa
 
         # run the simulation
         tcl_cmds += ['launch_simulation']
@@ -926,15 +883,12 @@ class SystemVerilogTarget(VerilogTarget):
         # binary name
         cmd += ['irun']
 
-        # determine the name of the top module
-        if self.top_module is None and not self.ext_test_bench:
-            top = f'{self.circuit_name}_tb' if not self.use_kratos else "TOP"
-        else:
-            top = self.top_module
+        # add any extra flags
+        cmd += self.flags
 
         # send name of top module to the simulator
-        if top is not None:
-            cmd += ['-top', f'{top}']
+        if not self.no_top_module:
+            cmd += ['-top', f'{self.top_module}']
 
         # timescale
         cmd += ['-timescale', f'{self.timescale}']
@@ -981,6 +935,9 @@ class SystemVerilogTarget(VerilogTarget):
         # binary name
         cmd += ['vivado']
 
+        # add any extra flags
+        cmd += self.flags
+
         # run from an external script
         cmd += ['-mode', 'batch']
 
@@ -999,6 +956,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         # binary name
         cmd += ['vcs']
+
+        # add any extra flags
+        cmd += self.flags
 
         # timescale
         cmd += [f'-timescale={self.timescale}']
@@ -1037,6 +997,10 @@ class SystemVerilogTarget(VerilogTarget):
         if self.dump_waveforms:
             cmd += ['+vcs+vcdpluson', '-debug_pp']
 
+        # specify top module
+        if not self.no_top_module:
+            cmd += ['-top', f'{self.top_module}']
+
         # return arg list and binary file location
         return cmd, './simv'
 
@@ -1045,6 +1009,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         # binary name
         cmd += ['iverilog']
+
+        # add any extra flags
+        cmd += self.flags
 
         # output file
         bin_file = f'{self.circuit_name}_tb'
@@ -1077,5 +1044,24 @@ class SystemVerilogTarget(VerilogTarget):
         # source files
         cmd += [f'{src}' for src in sources]
 
+        # set the top module
+        if not self.no_top_module:
+            cmd += ['-s', f'{self.top_module}']
+
         # return arg list and binary file location
         return cmd, bin_file
+
+
+class SynchronousSystemVerilogTarget(SystemVerilogTarget):
+    def __init__(self, *args, clock=None, **kwargs):
+        if clock is None:
+            raise ValueError("Clock required")
+
+        super().__init__(*args, **kwargs)
+        name = verilog_name(clock.name)
+        self.clock_drivers.append(
+            f"always #{self.clock_step_delay} {name} = ~{name};"
+        )
+
+    def make_step(self, i, action):
+        return [f"#{self.clock_step_delay * action.steps}"]

@@ -10,13 +10,13 @@ def pytest_generate_tests(metafunc):
 
 
 def test_hi_z(target, simulator):
-    # declare an external circuit that shorts together its two outputs
-    hizmod = m.DeclareCircuit(
-        'hizmod',
-        'a', m.In(m.Bit),
-        'b', m.In(m.Bit),
-        'c', m.Out(m.Bit)
-    )
+    # declare circuit
+    class hizmod(m.Circuit):
+        io = m.IO(
+            a=m.In(m.Bit),
+            b=m.In(m.Bit),
+            c=m.Out(m.Bit)
+        )
 
     # instantiate the tester
     tester = fault.Tester(hizmod, poke_delay_default=0)

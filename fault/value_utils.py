@@ -1,5 +1,6 @@
 import fault
 import magma
+import magma as m
 from hwtypes import BitVector, Bit
 from fault.value import AnyValue, UnknownValue, HiZ
 from fault.real_type import RealType, RealKind
@@ -9,6 +10,8 @@ from hwtypes.adt import Enum
 
 
 def make_value(type_, value):
+    if isinstance(type_, m.MagmaProtocolMeta):
+        type_ = type_._to_magma_()
     if issubclass(type_, RealType):
         return make_real(value)
     if issubclass(type_, magma.Digital):

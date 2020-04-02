@@ -15,8 +15,8 @@ class FaultConfig:
         try:
             import yaml
         except ModuleNotFoundError:
-            logging.warn('pyyaml not found, cannot parse config files.')
-            logging.warn('Please run "pip install pyyaml" to fix this.')
+            logging.warning('pyyaml not found, cannot parse config files.')
+            logging.warning('Please run "pip install pyyaml" to fix this.')
             return
 
         locs = [Path.home() / '.faultrc', Path('.') / 'fault.yml']
@@ -27,8 +27,8 @@ class FaultConfig:
                         new_opts = yaml.safe_load(f)
                         self.opts.update(new_opts)
                     except yaml.YAMLError as yaml_err:
-                        logging.warn(f'Skipping config file {loc} due to a parsing error.  Error message:')  # noqa
-                        logging.warn(f'{yaml_err}')
+                        logging.warning(f'Skipping config file {loc} due to a parsing error.  Error message:')  # noqa
+                        logging.warning(f'{yaml_err}')
 
     def get_sim_env(self):
         env = os.environ.copy()

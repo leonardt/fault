@@ -79,6 +79,9 @@ class Tester(TesterBase):
         """
         super().__init__(circuit, clock, reset, poke_delay_default,
                          expect_strict_default)
+        if clock is not None:
+            # Default initalize clock to zero (e.g. for SV targets)
+            self.poke(clock, 0)
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
@@ -178,12 +181,6 @@ class Tester(TesterBase):
         if self.clock is None:
             raise RuntimeError("Stepping tester without a clock (did you "
                                "specify a clock during initialization?)")
-        if not self.clock_initialized and \
-                not self.clock_init_warning_reported:
-            warnings.warn("Clock has not been initialized, the initial value "
-                          "will be X for system verilog targets.  In a future "
-                          "release, this will be an error", DeprecationWarning)
-            self.clock_init_warning_reported = True
         self.actions.append(actions.Step(self.clock, steps))
 
     def serialize(self):
@@ -352,13 +349,11 @@ class Tester(TesterBase):
         `actions` list.
         """
         while_tester = LoopTester(self._circuit, self.clock)
-        while_tester.clock_initialized = self.clock_initialized
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
     def _if(self, cond):
         if_tester = IfTester(self._circuit, self.clock)
-        if_tester.clock_initialized = self.clock_initialized
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester
@@ -422,3 +417,6 @@ class IfTester(Tester):
 
     def _else(self):
         return ElseTester(self.else_actions, self.circuit, self.clock)
+
+
+StagedTester = Tester
