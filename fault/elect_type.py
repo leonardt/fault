@@ -23,6 +23,9 @@ class ElectType(Type):
     def driven(self):
         return self._wire.driven()
 
+    def flatten(self):
+        return [self]
+
 
 class ElectKind(Kind):
     __hash__ = Kind.__hash__
