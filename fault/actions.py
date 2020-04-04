@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from .real_type import RealIn, RealOut, RealInOut
-from .elect_type import ElectIn, ElectOut, ElectInOut
+from .ms_types import (RealIn, RealOut, RealInOut,
+                       ElectIn, ElectOut, ElectInOut)
 
 import fault
 from fault.select_path import SelectPath

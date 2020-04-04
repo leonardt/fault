@@ -3,7 +3,7 @@ import magma
 import magma as m
 from hwtypes import BitVector, Bit
 from fault.value import AnyValue, UnknownValue, HiZ
-from fault.real_type import RealType, RealKind
+from fault.ms_types import RealType
 from fault.array import Array
 from fault.select_path import SelectPath
 from hwtypes.adt import Enum
