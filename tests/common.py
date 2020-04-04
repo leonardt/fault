@@ -12,7 +12,7 @@ def pytest_sim_params(metafunc, *args, exclude=None):
     exclude = set(exclude)
 
     # simulators supported by each kind of target
-    sims_by_arg = {'system-verilog': ['vcs', 'ncsim', 'iverilog'],
+    sims_by_arg = {'system-verilog': ['vcs', 'ncsim', 'iverilog', 'vivado'],
                    'verilog-ams': ['ncsim'],
                    'verilator': [None],
                    'spice': ['ngspice', 'spectre', 'hspice']}
