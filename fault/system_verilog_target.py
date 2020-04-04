@@ -15,7 +15,7 @@ from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
-from fault.real_type import RealKind
+from fault.ms_types import RealType
 import os
 from numbers import Number
 
@@ -541,7 +541,7 @@ class SystemVerilogTarget(VerilogTarget):
             if issubclass(type_, m.Array) and \
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
-            if isinstance(type_, RealKind):
+            if issubclass(type_, RealType):
                 t = "real"
             elif name in power_args.get("supply0s", []):
                 t = "supply0"

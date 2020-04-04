@@ -1,6 +1,6 @@
 from .wrapped_internal_port import WrappedVerilogInternalPort
-from .real_type import RealIn, RealOut, RealKind, RealType
-from .elect_type import ElectIn, ElectOut, ElectKind, ElectType
+from .ms_types import (RealIn, RealOut, RealType,
+                       ElectIn, ElectOut, ElectType)
 from .tester import (Tester, SymbolicTester, PythonTester, TesterBase,
                      SynchronousTester)
 from .power_tester import PowerTester
