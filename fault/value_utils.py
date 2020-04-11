@@ -1,7 +1,7 @@
 import fault
 import magma
 import magma as m
-from hwtypes import BitVector, Bit
+from hwtypes import BitVector, Bit, FPVector
 from fault.value import AnyValue, UnknownValue, HiZ
 from fault.ms_types import RealType
 from fault.array import Array
@@ -52,6 +52,8 @@ def make_array(T, N, value):
 
 def make_bit_vector(N, value):
     assert isinstance(N, int)
+    if isinstance(value, FPVector):
+        value = value.reinterpret_as_bv()
     if isinstance(value, BitVector[N]):
         return value
     if isinstance(value, BitVector) and len(value) < N or \
