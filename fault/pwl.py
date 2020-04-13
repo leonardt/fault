@@ -14,13 +14,12 @@ def pwc_to_pwl(pwc, t_stop, t_tr, init=0):
         if retval[-1][0] >= t_curr:
             assert retval[-2][0] <= t_curr, \
                     'non-increasing pwc steps at time' % t_curr
-            if retval[-2][0] == t_curr:
+            if abs(retval[-2][0] - t_curr) < 1e-19:
                 # two values at the same time, just drop the earlier
-                #print('dropping old thing')
+                #print('DROPPING old thing, diff:', retval[-2][0] - t_curr)
                 retval.pop()
                 old_t, old_v = retval.pop()
                 v_prev = old_v
-                #print('prev is now', retval[-2:])
             else:
                 # make the previous thing happen faster than t_tr
                 #print('DOING THE HALFWAY THING')
