@@ -5,10 +5,10 @@ from fault.result_parse import SpiceResult, ResultInterp
 class EdgeNotFoundError(Exception):
     pass
 
-def get_value_domain(results, action, time):
+def get_value_domain(results, action, time, get_name):
     style = action.params['style']
     # TODO is this the right way to get the name?
-    res = results[action.port.name.name]
+    res = results[get_name(action.port)]
     if isinstance(res, ResultInterp):
         res_style = 'pwc'
     elif isinstance(res, SpiceResult):
@@ -36,7 +36,7 @@ def get_value_domain(results, action, time):
     elif style == 'phase':
         # phase of this signal relative to another
         assert 'ref' in action.params, 'Phase read requires reference signal param'
-        res_ref = results[f'{action.params["ref"].name}']
+        res_ref = results[f'{get_name(action.params["ref"])}']
         ref = find_edge(res_style, res_ref.t, res_ref.v, time, height, count=2)
         before_cycle_end = find_edge(res_style, res.t, res.v, time + ref[0], height)
         fraction = 1 + before_cycle_end[0] / (ref[0] - ref[1])

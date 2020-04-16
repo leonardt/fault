@@ -208,7 +208,8 @@ class SpiceTarget(Target):
         # set list of signals to save
         self.saves = set()
         for name, port in self.circuit.interface.ports.items():
-            if isinstance(port, m.BitsType):
+            if (isinstance(port, m.BitsType)
+                or isinstance(port, m.ArrayType)):
                 for k in range(len(port)):
                     self.saves.add(self.bit_from_bus(name, k))
             else:
@@ -627,8 +628,15 @@ class SpiceTarget(Target):
             self.impl_get(results=results, time=get[0], action=get[1])
 
     def impl_get(self, results, time, action):
+        # TODO: use this same function in more places?
+        def get_spice_name(p):
+            if isinstance(p.name, m.ref.ArrayRef):
+                return str(self.select_bit_from_bus(p))
+            else:
+                return f'{p.name}'
+
         # grab the relevant info
-        res = results[f'{action.port.name}']
+        res = results[get_spice_name(action.port)]
         if action.params == None:
             # straightforward read of voltage
             # get port values
@@ -637,11 +645,13 @@ class SpiceTarget(Target):
             action.value = port_value
         elif type(action.params) == dict and 'style' in action.params:
             # requires some analysis of signal
-            print(action.params)
+            #print(action.params)
             # get height of slice point based on spice config if not specified
             if 'height' not in action.params:
                 action.params['height'] = self.vsup * (self.vih_rel + self.vil_rel) / 2
-            get_value_domain(results, action, time)
+            # some syles (e.g. phase) might need to reference another port,
+            # so passing in the name is not good enough
+            get_value_domain(results, action, time, get_spice_name)
         else:
             raise NotImplementedError
 
