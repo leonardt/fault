@@ -18,6 +18,7 @@ from fault.verilator_target import VerilatorTarget
 from fault.system_verilog_target import SystemVerilogTarget
 from fault.verilogams_target import VerilogAMSTarget
 from fault.spice_target import SpiceTarget
+from fault.cocotb_target import CocotbTarget
 from fault.actions import Loop, While, If
 from fault.circuit_utils import check_interface_is_subset
 from fault.wrapper import PortWrapper
@@ -114,6 +115,8 @@ class Tester(TesterBase):
             return VerilogAMSTarget(self._circuit, **kwargs)
         elif target == "spice":
             return SpiceTarget(self._circuit, **kwargs)
+        elif target == "cocotb":
+            return CocotbTarget(self._circuit, **kwargs)
         raise NotImplementedError(target)
 
     def _poke(self, port, value, delay=None):
