@@ -7,23 +7,15 @@ from hwtypes import BitVector
 def test_foo_type_magma_protocol():
     class FooMeta(m.MagmaProtocolMeta):
         def _to_magma_(cls):
-            # Need way to retrieve underlying magma type
             return cls.T
 
         def _qualify_magma_(cls, direction: m.Direction):
-            # Need way to create a new version (e.g. give me a Foo with the
-            # underlying type qualified to be an input)
             return cls[cls.T.qualify(direction)]
 
         def _flip_magma_(cls):
-            # Need way to create a new version (e.g. give me a Foo with the
-            # underlying type qualified to be an input)
             return cls[cls.T.flip()]
 
         def _from_magma_value_(cls, val: m.Type):
-            # Need a way to create an instance of Foo from a value, this just
-            # dispatches to the __init__ logic, but you could define any
-            # custom behavior here
             return cls(val)
 
         def __getitem__(cls, T):
@@ -36,7 +28,6 @@ def test_foo_type_magma_protocol():
             self._val = val
 
         def _get_magma_value_(self):
-            # Need way to access underlying magma value
             return self._val
 
         def non_standard_operation(self):
