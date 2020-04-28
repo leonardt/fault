@@ -35,19 +35,16 @@ def test_foo_type_magma_protocol():
             v1 = m.bits(self._val[0], len(self.T)) << 1
             return Foo(v0 | v1 | m.bits(self._val[0], len(self.T)))
 
-    @m.circuit.sequential
-    class Bar:
-        def __init__(self):
-            self.reg: m.Bits[1] = m.Bits[1](0)
 
-        def __call__(self, foo: Foo[m.Bits[8]]) -> m.Bits[8]:
-            self.reg = self.reg
-            return foo.non_standard_operation()
+    class Bar(m.Circuit):
+        io = m.IO(foo=m.In(Foo[m.Bits[8]]), O=m.Out(m.Bits[8]))
+        m.wire(io.foo.non_standard_operation(), io.O)
+
 
     tester = fault.Tester(Bar)
     tester.circuit.foo = Foo(m.Bits[8](0xDE))
     tester.eval()
-    tester.circuit.O.expect(BitVector[8](0xDE << 2) | 
-                            (BitVector[8](0xDE) << 1)[0] | 
+    tester.circuit.O.expect(BitVector[8](0xDE << 2) |
+                            (BitVector[8](0xDE) << 1)[0] |
                             BitVector[8](0xDE)[0])
     tester.compile_and_run("verilator")
