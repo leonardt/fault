@@ -35,11 +35,9 @@ def test_foo_type_magma_protocol():
             v1 = m.bits(self._val[0], len(self.T)) << 1
             return Foo(v0 | v1 | m.bits(self._val[0], len(self.T)))
 
-
     class Bar(m.Circuit):
         io = m.IO(foo=m.In(Foo[m.Bits[8]]), O=m.Out(m.Bits[8]))
         m.wire(io.foo.non_standard_operation(), io.O)
-
 
     tester = fault.Tester(Bar)
     tester.circuit.foo = Foo(m.Bits[8](0xDE))
