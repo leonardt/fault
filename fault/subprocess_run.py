@@ -31,13 +31,13 @@ class PrintDisplay:
             for line in self.lines:
                 print(line)
 
-    def process_output(self, fd, name):
+    def process_output(self, ouput_str, name):
         # generic line-processing function to display lines
         # as they are produced as output in and check for errors.
 
         retval = ''
         any_line = False
-        for line in fd:
+        for line in ouput_str.splitlines():
             # Add line to value to be returned
             retval += line
 
