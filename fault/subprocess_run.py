@@ -136,14 +136,14 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
         # print out STDOUT, then STDERR
         # threads could be used here but pytest does not detect exceptions
         # in child threads, so for now the outputs are printed sequentially
-        stdout = display.process_output(fd=p.stdout, name='STDOUT')
-        stderr = display.process_output(fd=p.stderr, name='STDERR')
+        stdout, stderr = p.communicate()
+        stdout = display.process_output(stdout, name='STDOUT')
+        stderr = display.process_output(stderr, name='STDERR')
 
         # get return code and check result if desired
-        returncode = p.wait()
 
-        if chk_ret_code and returncode:
-            err_msg += [f'Got return code {returncode}.']
+        if chk_ret_code and p.returncode:
+            err_msg += [f'Got return code {p.returncode}.']
 
         # look for errors in STDOUT or STDERR
         if err_str is not None:
@@ -163,5 +163,5 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
         raise AssertionError
 
     # if there were no errors, then return directly
-    return CompletedProcess(args=args, returncode=returncode,
+    return CompletedProcess(args=args, returncode=p.returncode,
                             stdout=stdout, stderr=stderr)
