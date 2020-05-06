@@ -1,0 +1,46 @@
+name: MacOS Test
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+    - name: Setup Env
+      uses: goanpeca/setup-miniconda@v1
+      with:
+        auto-update-conda: true
+        python-version: 3.7
+    - name: Install verilator
+      shell: bash
+      run: |
+          brew install verilator gmp mpfr libmpc
+          verilator --version
+    - name: Install Python packages
+      shell: bash -l {0}
+      run: |
+          pip install https://github.com/Z3Prover/z3/releases/download/Nightly/z3_solver-4.8.8.0-py2.py3-none-macosx_10_14_x86_64.whl
+          pip install pytest
+          pip install pytest-cov pytest-codestyle
+          pip install mantle>=2.0.0  # for tests.common
+          pip install .
+
+    - name: Pytest
+      shell: bash -l {0}
+      run: |
+        pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+    - name: Coverage
+      shell: bash -l {0}
+      run: |
+        bash <(curl -s https://codecov.io/bash)
+
