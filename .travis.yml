@@ -19,6 +19,8 @@ matrix:
     - CXX=g++-7
   - os: osx
     osx_image: xcode10.3
+    env:
+      - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
     addons:
       homebrew:
         packages:
