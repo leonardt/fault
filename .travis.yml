@@ -17,16 +17,18 @@ matrix:
     env:
     - CC=gcc-7
     - CXX=g++-7
-  - os: osx
-    osx_image: xcode10.3
-    addons:
-      homebrew:
-        packages:
-          - verilator
-          - icarus-verilog
-          - ngspice
-          - fftw
-        update: true
+  # Disable due to verilator compilation bug, see
+  # https://travis-ci.com/github/leonardt/fault/jobs/328969485 for an example
+  # - os: osx
+  #   osx_image: xcode10.3
+  #   addons:
+  #     homebrew:
+  #       packages:
+  #         - verilator
+  #         - icarus-verilog
+  #         - ngspice
+  #         - fftw
+  #       update: true
 
 # python managed by conda until 3.7 available
 # python:
