@@ -1,8 +1,9 @@
 name: Deploy to PyPI
 
 on:
-  tags:
-    - v*
+  push:
+    tags:
+      - v*
 
 jobs:
   build:
