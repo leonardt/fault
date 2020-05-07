@@ -2,8 +2,10 @@ name: Deploy to PyPI
 
 on:
   push:
+    branches:
+      - master
     tags:
-      - 'master'
+      - v*
 
 jobs:
   build:
