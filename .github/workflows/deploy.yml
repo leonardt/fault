@@ -1,9 +1,7 @@
 name: Deploy to PyPI
 
 on:
-  release:
-    types:
-      - created
+  tags:
 
 jobs:
   build:
