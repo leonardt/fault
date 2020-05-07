@@ -1,5 +1,6 @@
 # Fault
-[![Travis Status](https://travis-ci.com/leonardt/fault.svg?branch=master)](https://travis-ci.com/leonardt/fault)
+![Linux Test](https://github.com/leonardt/fault/workflows/Linux%20Test/badge.svg)
+![MacOS Test](https://github.com/leonardt/fault/workflows/MacOS%20Test/badge.svg)
 [![BuildKite Status](https://badge.buildkite.com/c724929c65201c6ed5aebc027ffac02b5092d0bd8fad4341b6.svg?branch=master)](https://buildkite.com/stanford-aha/fault)
 [![Code Coverage](https://codecov.io/gh/leonardt/fault/branch/master/graph/badge.svg)](https://codecov.io/gh/leonardt/fault)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
