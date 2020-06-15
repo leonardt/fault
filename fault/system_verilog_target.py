@@ -17,7 +17,7 @@ from fault.background_poke import background_poke_target
 from fault.mlingua_interface import mlingua_target
 import fault
 import fault.expression as expression
-from fault.real_type import RealKind
+from fault.ms_types import RealType
 import os
 from numbers import Number
 import re
@@ -64,7 +64,8 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_test_bench=False, top_module=None, ext_srcs=None,
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False, skip_run=False, no_top_module=False):
+                 use_sva=False, skip_run=False, no_top_module=False,
+                 vivado_use_system_verilog=True):
         """
         circuit: a magma circuit
 
@@ -149,6 +150,10 @@ class SystemVerilogTarget(VerilogTarget):
 
         no_top_module: If True, do not specify a top module for simulation
                        (default is False, meaning *do* specify the top module)
+
+        vivado_use_system_verilog: If True (default), mark Vivado source files
+                                   as SystemVerilog so that more modern syntax
+                                   is supported.
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -229,6 +234,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.use_kratos = use_kratos
         self.skip_run = skip_run
         self.no_top_module = no_top_module
+        self.vivado_use_system_verilog = vivado_use_system_verilog
         # check to see if runtime is installed
         if use_kratos:
             import sys
@@ -547,7 +553,7 @@ class SystemVerilogTarget(VerilogTarget):
             if issubclass(type_, m.Array) and \
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
-            if isinstance(type_, RealKind):
+            if issubclass(type_, RealType):
                 print('name,type', name, type_)
                 if getattr(getattr(self.circuit, name), 'representation', None) == 'mlingua':
                     t = "pwl"
@@ -829,6 +835,11 @@ class SystemVerilogTarget(VerilogTarget):
         if len(vlog_add_files) > 0:
             vlog_add_files = ' '.join(vlog_add_files)
             tcl_cmds += [f'add_files [list {vlog_add_files}]']
+
+        # mark Verilog files as SystemVerilog so that more modern
+        # syntax is supported
+        if self.vivado_use_system_verilog:
+            tcl_cmds += [f'set_property file_type SystemVerilog [get_files [list {vlog_add_files}]]']  # noqa
 
         # add include file search paths
         if len(self.inc_dirs) > 0:
