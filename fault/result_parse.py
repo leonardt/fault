@@ -1,5 +1,5 @@
 import re
-from fault.real_type import Real
+from fault.ms_types import RealType
 
 try:
     import numpy as np
@@ -181,7 +181,7 @@ def parse_vcd(filename, dut, interp='previous'):
                 return float('nan')
             
         a = getattr(dut, name)
-        b = isinstance(type(a), type(Real))
+        b = isinstance(a, RealType)
         
         if b:
             return float(val_str)
