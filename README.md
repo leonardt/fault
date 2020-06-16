@@ -143,12 +143,9 @@ on "peeked" values, if statements, and while loops.
 Suppose we had a circuit as follows:
 ```python
 class BinaryOpCircuit(m.Circuit):
-    IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5])]
-    IO += ["O", m.Out(m.UInt[5])]
+    io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]), O=m.Out(m.UInt[5]))
 
-    @classmethod
-    def definition(io):
-        m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
+    io.O @= io.I0 + io.I1 & (io.I1 - io.I0)
 ```
 We can write a generic test that expects the output `O` in terms
 of the inputs `I0` and `I1` (rather than computing the expected value in
