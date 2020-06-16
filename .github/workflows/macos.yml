@@ -26,6 +26,10 @@ jobs:
       run: |
           brew install verilator gmp mpfr libmpc
           verilator --version
+    - name: Install xcode tools
+      shell: bash
+      run: |
+          xcode-select --install
     - name: Install Python packages
       shell: bash -l {0}
       run: |
