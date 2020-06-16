@@ -24,7 +24,7 @@ jobs:
     - name: Install verilator
       shell: bash
       run: |
-          brew upgrade
+          brew update
           brew install verilator gmp mpfr libmpc
           verilator --version
     - name: Install Python packages
