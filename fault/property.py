@@ -97,9 +97,9 @@ class _Compiler:
         return compiled, self.format_args
 
 
-def assert_(prop, name, on):
+def assert_(prop, on):
     prop, format_args = _Compiler().compile(prop)
     event_str = on.compile(format_args)
     m.inline_verilog(
-        f"{name}: assert property ({event_str} {prop});", **format_args
+        f"assert property ({event_str} {prop});", **format_args
     )
