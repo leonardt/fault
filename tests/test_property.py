@@ -1,7 +1,8 @@
+import shutil
+
 import pytest
 import fault as f
 import magma as m
-import shutil
 
 
 def test_basic_assert():
