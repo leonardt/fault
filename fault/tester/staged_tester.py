@@ -79,12 +79,15 @@ class Tester(TesterBase):
         """
         super().__init__(circuit, clock, reset, poke_delay_default,
                          expect_strict_default)
-        if clock is not None:
-            # Default initalize clock to zero (e.g. for SV targets)
-            self.poke(clock, 0)
+        self.init_clock()
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
+
+    def init_clock(self):
+        if self.clock is not None:
+            # Default initalize clock to zero (e.g. for SV targets)
+            self.poke(self.clock, 0)
 
     def make_target(self, target: str, **kwargs):
         """
@@ -393,7 +396,16 @@ class LoopIndex:
         return self.name
 
 
-class LoopTester(Tester):
+class NoClockInit:
+    """
+    Sub testers should not initialize the clock
+    """
+
+    def init_clock(self):
+        pass
+
+
+class LoopTester(Tester, NoClockInit):
     __unique_index_id = -1
 
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
@@ -403,14 +415,14 @@ class LoopTester(Tester):
             f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
 
 
-class ElseTester(Tester):
+class ElseTester(Tester, NoClockInit):
     def __init__(self, else_actions: List, circuit: m.Circuit,
                  clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.actions = else_actions
 
 
-class IfTester(Tester):
+class IfTester(Tester, NoClockInit):
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.else_actions = []
