@@ -29,6 +29,5 @@ def test_init_clock():
                                directory=tempdir)
         vcd_file = os.path.join(tempdir, "waveforms.vcd")
         vcd = VCDVCD(vcd_file, signals=["SimpleALU_tb.dut.CLK"])
-        # One elem dict, we can grab the first element
         tvs = next(iter(vcd.get_data().values()))["tv"]
         assert tvs == [(0, '0'), (5, '1'), (10, '0')]
