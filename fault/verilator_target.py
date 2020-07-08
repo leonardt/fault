@@ -63,7 +63,6 @@ void my_assert(
     std::cerr << \"Port     : \" << port << std::endl;
 #if VM_TRACE
     // Dump one more timestep so we see the current values
-    main_time += 5;
     tracer->dump(main_time);
     tracer->close();
 #endif
@@ -411,8 +410,8 @@ class VerilatorTarget(VerilogTarget):
                     f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
-        return ["top->eval();", "main_time++;", "#if VM_TRACE",
-                "tracer->dump(main_time);", "#endif"]
+        return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
+                "main_time++;", "#endif"]
 
     def make_step(self, i, action):
         name = verilator_name(action.clock.name)
