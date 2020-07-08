@@ -8,8 +8,6 @@ class SynchronousTester(StagedTester):
         super().__init__(*args, **kwargs)
         if self.clock is None:
             raise ValueError("SynchronousTester requires a clock")
-        # Default clock to 0
-        self.poke(self.clock, 0)
 
     def eval(self):
         raise TypeError("Cannot eval with synchronous tester")

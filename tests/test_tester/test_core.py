@@ -630,6 +630,7 @@ def test_tester_while3(target, simulator):
     tester.poke(circ.I, 1)
     tester.eval()
     loop = tester._while(tester.peek(tester._circuit.O) == 0)
+    assert not loop.actions, "Should not default clock init"
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)
@@ -649,8 +650,11 @@ def test_tester_if(target, simulator):
     loop._if(tester.circuit.O == 0).poke(circ.I, 1)
     loop.eval()
     if_tester = tester._if(tester.circuit.O == 0)
+    assert not if_tester.actions, "Should not default clock init"
     if_tester.poke(circ.I, 1)
-    if_tester._else().poke(circ.I, 0)
+    else_tester = if_tester._else()
+    assert not else_tester.actions, "Should not default clock init"
+    else_tester.poke(circ.I, 0)
     tester.eval()
     tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory(dir=".") as _dir:

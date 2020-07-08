@@ -12,7 +12,7 @@ class ConfigReg(m.Circuit):
         m.ClockIO(has_ce=True)
 
     reg = mantle.Register(2, has_ce=True, name="conf_reg")
-    io.Q <= reg(io.D, CE=io.CE)
+    io.Q @= reg(io.D, CE=io.CE)
 
 
 class SimpleALU(m.Circuit):
@@ -24,7 +24,7 @@ class SimpleALU(m.Circuit):
               ) + m.ClockIO()
 
     opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
-    io.c <= mantle.mux(
+    io.c @= mantle.mux(
         [io.a + io.b, io.a - io.b, io.a * io.b, io.a ^ io.b], opcode)
 
 

@@ -20,6 +20,7 @@ import fault.utils as utils
 import fault.expression as expression
 import platform
 import os
+import glob
 
 
 max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -162,7 +163,6 @@ class VerilatorTarget(VerilogTarget):
                            disp_type=self.disp_type)
 
         # Initialize variables
-        self.debug_includes = set()
         self.verilator_version = verilator_version(disp_type=self.disp_type)
 
     def get_verilator_prefix(self):
@@ -260,25 +260,6 @@ class VerilatorTarget(VerilogTarget):
                 # to use top->v instead of top->{circuit_name}
                 name += f"{prefix}->"
             name += action.port.verilator_path
-            if len(action.port) > 2:
-                self.debug_includes.add(f"{action.port[0].circuit.name}")
-            for item in action.port[1:-1]:
-                circuit = type(item.instance)
-                circuit_name = circuit.verilog_name
-                # Verilator specializes each parametrization into a separate
-                # mdoule, this is an attempt to reverse engineer the naming
-                # scheme
-                if circuit_name == "coreir_reg":
-                    circuit_name += "_"
-                    circuit_name += f"_C1"  # Posedge clock
-                    circuit_name += f"_I{circuit.coreir_configargs['init']}"
-                    circuit_name += f"_W{circuit.coreir_genargs['width']}"
-                elif circuit_name == "coreir_reg_arst":
-                    circuit_name += "_"
-                    circuit_name += f"_I{circuit.coreir_configargs['init']}"
-                    if circuit.coreir_genargs['width'] != 1:
-                        circuit_name += f"_W{circuit.coreir_genargs['width']}"
-                self.debug_includes.add(f"{circuit_name}")
         else:
             name = verilator_name(action.port.name)
 
@@ -330,12 +311,6 @@ class VerilatorTarget(VerilogTarget):
                 name = port.verilator_path
                 if len(port) > 2:
                     name = f"{prefix}->" + name
-                if self.verilator_version >= 3.856:
-                    if len(port) > 2:
-                        self.debug_includes.add(f"{port[0].circuit.name}")
-                for item in port[1:-1]:
-                    circuit_name = type(item.instance).name
-                    self.debug_includes.add(f"{circuit_name}")
             else:
                 name = verilator_name(port.name)
             port_names.append(name)
@@ -358,12 +333,6 @@ class VerilatorTarget(VerilogTarget):
             name = action.port.verilator_path
             if len(action.port) > 2:
                 name = f"{prefix}->" + name
-            if self.verilator_version >= 3.856:
-                if len(action.port) > 2:
-                    self.debug_includes.add(f"{action.port[0].circuit.name}")
-            for item in action.port[1:-1]:
-                circuit_name = type(item.instance).name
-                self.debug_includes.add(f"{circuit_name}")
             debug_name = action.port[-1].debug_name
         else:
             name = verilator_name(action.port.name)
@@ -372,12 +341,6 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(value, actions.Peek):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
-            if self.verilator_version >= 3.856:
-                if len(action.port) > 2:
-                    self.debug_includes.add(f"{action.port[0].circuit.name}")
-            for item in value.select_path[1:-1]:
-                circuit_name = type(item.instance).name
-                self.debug_includes.add(f"{circuit_name}")
             value = f"top->{prefix}->" + value.select_path.verilator_path
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
@@ -571,8 +534,10 @@ if (!({expr_str})) {{
                 main_body += f"  {line}\n"
             main_body += self.add_guarantees(circuit, actions, i)
 
-        includes += [f'"V{self.circuit_name}_{include}.h"' for include in
-                     self.debug_includes]
+        # Add includes from sub-modules (for internal wire selects).
+        headers = glob.glob(os.path.join(self.directory, "obj_dir") + "/V*.h")
+        headers = list(map(os.path.basename, headers))
+        includes += [f'"{header}"' for header in headers]
 
         if self.coverage:
             includes += ["\"verilated_cov.h\""]

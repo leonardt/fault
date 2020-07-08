@@ -1,5 +1,6 @@
 # Fault
-[![Travis Status](https://travis-ci.com/leonardt/fault.svg?branch=master)](https://travis-ci.com/leonardt/fault)
+![Linux Test](https://github.com/leonardt/fault/workflows/Linux%20Test/badge.svg)
+![MacOS Test](https://github.com/leonardt/fault/workflows/MacOS%20Test/badge.svg)
 [![BuildKite Status](https://badge.buildkite.com/c724929c65201c6ed5aebc027ffac02b5092d0bd8fad4341b6.svg?branch=master)](https://buildkite.com/stanford-aha/fault)
 [![Code Coverage](https://codecov.io/gh/leonardt/fault/branch/master/graph/badge.svg)](https://codecov.io/gh/leonardt/fault)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
@@ -47,28 +48,24 @@ import mantle
 
 
 class ConfigReg(m.Circuit):
-    IO = ["D", m.In(m.Bits(2)), "Q", m.Out(m.Bits(2))] + \
-        m.ClockInterface(has_ce=True)
+    io = m.IO(D=m.In(m.Bits[2]), Q=m.Out(m.Bits[2])) + \
+        m.ClockIO(has_ce=True)
 
-    @classmethod
-    def definition(io):
-        reg = mantle.Register(2, has_ce=True, name="conf_reg")
-        io.Q <= reg(io.D, CE=io.CE)
+    reg = mantle.Register(2, has_ce=True, name="conf_reg")
+    io.Q @= reg(io.D, CE=io.CE)
 
 
 class SimpleALU(m.Circuit):
-    IO = ["a", m.In(m.UInt(16)),
-          "b", m.In(m.UInt(16)),
-          "c", m.Out(m.UInt(16)),
-          "config_data", m.In(m.Bits(2)),
-          "config_en", m.In(m.Enable),
-          ] + m.ClockInterface()
+    io = m.IO(a=m.In(m.UInt[16]),
+              b=m.In(m.UInt[16]),
+              c=m.Out(m.UInt[16]),
+              config_data=m.In(m.Bits[2]),
+              config_en=m.In(m.Enable),
+              ) + m.ClockIO()
 
-    @classmethod
-    def definition(io):
-        opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
-        io.c <= mantle.mux(
-            [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
+    opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
+    io.c @= mantle.mux(
+        [io.a + io.b, io.a - io.b, io.a * io.b, io.a ^ io.b], opcode)
 ```
 
 Here's an example test in fault that uses the configuration interface, expects
@@ -146,12 +143,9 @@ on "peeked" values, if statements, and while loops.
 Suppose we had a circuit as follows:
 ```python
 class BinaryOpCircuit(m.Circuit):
-    IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5])]
-    IO += ["O", m.Out(m.UInt[5])]
+    io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]), O=m.Out(m.UInt[5]))
 
-    @classmethod
-    def definition(io):
-        m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
+    io.O @= io.I0 + io.I1 & (io.I1 - io.I0)
 ```
 We can write a generic test that expects the output `O` in terms
 of the inputs `I0` and `I1` (rather than computing the expected value in

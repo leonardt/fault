@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 from copy import copy
 import magma as m
@@ -7,7 +6,7 @@ import fault
 import hwtypes
 from fault.target import Target
 from fault.spice import SpiceNetlist
-from fault.real_type import RealInOut
+from fault.ms_types import RealInOut
 from fault.result_parse import nut_parse, hspice_parse, psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
