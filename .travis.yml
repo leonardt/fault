@@ -59,6 +59,7 @@ install:
     pip install kratos==0.0.25
   fi
 - pip install pytest-cov pytest-codestyle
+- pip install vcdvcd
 - pip install mantle>=2.0.0  # for tests.common
 - pip install -e .
 # Begin setup CoSA dependencies

@@ -63,7 +63,7 @@ void my_assert(
     std::cerr << \"Port     : \" << port << std::endl;
 #if VM_TRACE
     // Dump one more timestep so we see the current values
-    main_time++;
+    main_time += 5;
     tracer->dump(main_time);
     tracer->close();
 #endif
@@ -87,6 +87,7 @@ int main(int argc, char **argv) {{
 {main_body}
 
 #if VM_TRACE
+  tracer->dump(main_time);
   tracer->close();
 #endif
   {kratos_exit_call}
@@ -418,12 +419,12 @@ class VerilatorTarget(VerilogTarget):
         code = []
         code.append("top->eval();")
         for step in range(action.steps):
-            code.append(f"top->{name} ^= 1;")
-            code.append("top->eval();")
-            code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
+            code.append(f"top->{name} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time += 5;")
         return code
 
     def make_file_open(self, i, action):
@@ -708,10 +709,10 @@ class SynchronousVerilatorTarget(VerilatorTarget):
     def make_step(self, i, action):
         code = []
         for _ in range(action.steps):
-            code.append(f"top->{self.clock} ^= 1;")
-            code.append("top->eval();")
-            code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
+            code.append(f"top->{self.clock} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time += 5;")
         return code
