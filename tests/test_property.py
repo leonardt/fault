@@ -27,7 +27,8 @@ def test_basic_assert():
         tester.circuit.O.expect(1)
         tester.advance_cycle()
         tester.circuit.O.expect(0)
-        tester.compile_and_run("system-verilog", simulator="ncsim", flags=["-sv"])
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"])
 
 
 @pytest.mark.xfail
@@ -44,4 +45,5 @@ def test_basic_assert_fail():
         tester.circuit.I = 0
         tester.advance_cycle()
         tester.advance_cycle()
-        tester.compile_and_run("system-verilog", simulator="ncsim", flags=["-sv"])
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"])
