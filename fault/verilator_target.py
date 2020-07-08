@@ -158,7 +158,6 @@ class VerilatorTarget(VerilogTarget):
                 coverage=self.coverage,
                 use_kratos=use_kratos
             )
-            print(comp_cmd)
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
                            disp_type=self.disp_type)
