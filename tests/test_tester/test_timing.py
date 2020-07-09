@@ -1,6 +1,6 @@
 import tempfile
 import os
-from pprint import PrettyPrinter
+import shutil
 
 from vcdvcd import VCDVCD
 
@@ -25,7 +25,13 @@ def test_init_clock():
         tvs = next(iter(vcd.get_data().values()))["tv"]
         assert tvs == [(0, '0'), (5, '1'), (10, '0')]
 
-        tester.compile_and_run("system-verilog", simulator="iverilog",
+        if shutil.which("iverilog"):
+            simulator = "iverilog"
+        elif shutil.which("irun"):
+            simulator = "ncsim"
+        else:
+            return
+        tester.compile_and_run("system-verilog", simulator=simulator,
                                directory=tempdir)
         vcd_file = os.path.join(tempdir, "waveforms.vcd")
         vcd = VCDVCD(vcd_file, signals=["SimpleALU_tb.dut.CLK"])

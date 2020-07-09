@@ -25,7 +25,7 @@ jobs:
       shell: bash
       run: |
           brew update
-          brew install verilator gmp mpfr libmpc
+          brew install verilator gmp mpfr libmpc icarus-verilog
           verilator --version
     - name: Install Python packages
       shell: bash -l {0}
