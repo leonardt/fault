@@ -25,7 +25,7 @@ jobs:
       shell: bash
       run: |
           brew update
-          brew install verilator gmp mpfr libmpc
+          brew install verilator gmp mpfr libmpc icarus-verilog
           verilator --version
     - name: Install Python packages
       shell: bash -l {0}
@@ -33,6 +33,7 @@ jobs:
           pip install pytest
           pip install pytest-cov pytest-codestyle
           pip install mantle>=2.0.0  # for tests.common
+          pip install vcdvcd
           pip install .
     - name: Pytest
       shell: bash -l {0}
