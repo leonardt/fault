@@ -828,3 +828,29 @@ def test_generic_expect_fail(target, simulator):
         if target == "system-verilog":
             kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
+
+
+def test_wait_until_tuple(target, simulator):
+    class ClocksT(m.Product):
+        clk0 = m.In(m.Clock)
+        clk1 = m.Out(m.Clock)
+
+    class Main(m.Circuit):
+        io = m.IO(clocks=ClocksT, count=m.Out(m.UInt[3]))
+        count = m.Register(m.UInt[3])()
+        count.CLK @= io.clocks.clk0
+        io.count @= count(count.O + 1)
+
+        tff = m.Register(m.Bit, has_enable=True)()
+        tff.CLK @= io.clocks.clk0
+        tff.CE @= count.O == 3
+        io.clocks.clk1 @= tff(tff.O ^ 1)
+
+    tester = fault.Tester(Main, Main.clocks.clk0)
+    tester.wait_until_posedge(tester.circuit.clocks.clk1)
+    tester.circuit.count.expect(4)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)

@@ -275,8 +275,9 @@ class SystemVerilogTarget(VerilogTarget):
     def process_peek(self, value):
         if isinstance(value.port, fault.WrappedVerilogInternalPort):
             return f"dut.{value.port.path}"
-        else:
-            return f"{value.port.name}"
+        elif isinstance(value.port, PortWrapper):
+            return f"dut.{value.port.select_path.system_verilog_path}"
+        return f"{value.port.name}"
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta):

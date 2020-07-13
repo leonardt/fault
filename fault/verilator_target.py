@@ -175,8 +175,9 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(value.port, fault.WrappedVerilogInternalPort):
             path = value.port.path.replace(".", "->")
             return f"top->{self.get_verilator_prefix()}->{path}"
-        else:
-            return f"top->{verilator_name(value.port.name)}"
+        elif isinstance(value.port, PortWrapper):
+            return f"top->{value.port.select_path.verilator_path}"
+        return f"top->{verilator_name(value.port.name)}"
 
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
@@ -213,6 +214,10 @@ class VerilatorTarget(VerilogTarget):
             else:
                 op = value.op_str
             return f"({left} {op} {right})"
+        elif isinstance(value, expression.UnaryOp):
+            operand = self.compile_expression(value.operand)
+            op = value.op_str
+            return f"{op} ({operand})"
         elif isinstance(value, PortWrapper):
             return f"top->{value.select_path.verilator_path}"
         elif isinstance(value, actions.Peek):
