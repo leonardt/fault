@@ -319,6 +319,9 @@ class SystemVerilogTarget(VerilogTarget):
             left = self.compile_expression(value.left)
             right = self.compile_expression(value.right)
             op = value.op_str
+            if op == "==":
+                # Use strict eq
+                op = "==="
             return f"({left}) {op} ({right})"
         elif isinstance(value, expression.UnaryOp):
             operand = self.compile_expression(value.operand)
