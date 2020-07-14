@@ -88,3 +88,13 @@ def test_variable_delay(sva, capsys):
         tester.advance_cycle()
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
+        tester.circuit.write = 1
+        tester.circuit.read = 0
+        tester.advance_cycle()
+        tester.advance_cycle()
+        tester.advance_cycle()
+        with pytest.raises(AssertionError):
+            tester.compile_and_run("system-verilog", simulator="ncsim",
+                                   flags=["-sv"], magma_opts={"inline": True})
+        out, _ = capsys.readouterr()
+        assert "Assertion Main_tb.dut.__assert_1 has failed" in out
