@@ -37,6 +37,11 @@ def implies(antecedent, consequent):
 
 class Delay(Property):
     def __init__(self, num_cycles):
+        if isinstance(num_cycles, slice):
+            if num_cycles.start is None:
+                raise ValueError("Delay slice needs a start value")
+            if num_cycles.step is not None:
+                raise ValueError("Delay slice cannot have a step")
         self.num_cycles = num_cycles
         self.lhs = None
         self.rhs = None
@@ -87,7 +92,10 @@ class _Compiler:
             result = ""
             if value.lhs:
                 result += self._compile(value.lhs) + " "
-            return result + f"##{value.num_cycles} {self._compile(value.rhs)}"
+            num_cycles = value.num_cycles
+            if isinstance(num_cycles, slice):
+                num_cycles = f"[{num_cycles.start}:{num_cycles.stop}]"
+            return result + f"##{num_cycles} {self._compile(value.rhs)}"
         if isinstance(value, m.Type):
             key = f"x{len(self.format_args)}"
             self.format_args[key] = value
