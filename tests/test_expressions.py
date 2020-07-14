@@ -90,7 +90,8 @@ def test_binop_two_signals_setattr(target, simulator, op):
     tester = fault.Tester(BinaryOpCircuit)
     for _ in range(5):
         I0, I1 = gen_random_inputs(op)
-        print(I0, I1)
+        tester.circuit.I0 = I0
+        tester.circuit.I1 = I1
         tester.eval()
         tester.circuit.O.expect(getattr(operator, op)(tester.circuit.I0_out,
                                                       tester.circuit.I1_out))

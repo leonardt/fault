@@ -374,10 +374,10 @@ class Tester(TesterBase):
         loop.step()
 
     def wait_until_low(self, signal):
-        self.wait_on(self.peek(signal))
+        self.wait_on(self.peek(signal) != 0)
 
     def wait_until_high(self, signal):
-        self.wait_on(~self.peek(signal))
+        self.wait_on(self.peek(signal) == 0)
 
     def wait_until_negedge(self, signal):
         self.wait_until_high(signal)
