@@ -405,7 +405,7 @@ class NoClockInit:
         pass
 
 
-class LoopTester(Tester, NoClockInit):
+class LoopTester(NoClockInit, Tester):
     __unique_index_id = -1
 
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
@@ -415,14 +415,14 @@ class LoopTester(Tester, NoClockInit):
             f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
 
 
-class ElseTester(Tester, NoClockInit):
+class ElseTester(NoClockInit, Tester):
     def __init__(self, else_actions: List, circuit: m.Circuit,
                  clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.actions = else_actions
 
 
-class IfTester(Tester, NoClockInit):
+class IfTester(NoClockInit, Tester):
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
         super().__init__(circuit, clock)
         self.else_actions = []
