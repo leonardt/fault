@@ -2,6 +2,8 @@ from functools import partial
 
 import magma as m
 
+from fault.sva import SVAProperty
+
 
 class Property:
     pass
@@ -90,6 +92,16 @@ class _Compiler:
             key = f"x{len(self.format_args)}"
             self.format_args[key] = value
             return f"{{{key}}}"
+        if isinstance(value, SVAProperty):
+            property_str = ""
+            for arg in value.args:
+                if isinstance(arg, str):
+                    property_str += f" {arg} "
+                else:
+                    key = f"x{len(self.format_args)}"
+                    self.format_args[key] = arg
+                    property_str += f" {{{key}}} "
+            return property_str
         raise NotImplementedError(type(value))
 
     def compile(self, prop):
