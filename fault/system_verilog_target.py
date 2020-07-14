@@ -322,6 +322,9 @@ class SystemVerilogTarget(VerilogTarget):
             if op == "==":
                 # Use strict eq
                 op = "==="
+            elif op == "!=":
+                # Use strict neq
+                op = "!=="
             return f"({left}) {op} ({right})"
         elif isinstance(value, expression.UnaryOp):
             operand = self.compile_expression(value.operand)
