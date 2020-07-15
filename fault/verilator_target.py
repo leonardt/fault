@@ -64,7 +64,6 @@ void my_assert(
     std::cerr << \"Port     : \" << port << std::endl;
 #if VM_TRACE
     // Dump one more timestep so we see the current values
-    main_time++;
     tracer->dump(main_time);
     tracer->close();
 #endif
@@ -88,6 +87,7 @@ int main(int argc, char **argv) {{
 {main_body}
 
 #if VM_TRACE
+  tracer->dump(main_time);
   tracer->close();
 #endif
   {kratos_exit_call}
@@ -175,8 +175,9 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(value.port, fault.WrappedVerilogInternalPort):
             path = value.port.path.replace(".", "->")
             return f"top->{self.get_verilator_prefix()}->{path}"
-        else:
-            return f"top->{verilator_name(value.port.name)}"
+        elif isinstance(value.port, PortWrapper):
+            return f"top->{value.port.select_path.verilator_path}"
+        return f"top->{verilator_name(value.port.name)}"
 
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
@@ -213,6 +214,10 @@ class VerilatorTarget(VerilogTarget):
             else:
                 op = value.op_str
             return f"({left} {op} {right})"
+        elif isinstance(value, expression.UnaryOp):
+            operand = self.compile_expression(value.operand)
+            op = value.op_str
+            return f"{op} ({operand})"
         elif isinstance(value, PortWrapper):
             return f"top->{value.select_path.verilator_path}"
         elif isinstance(value, actions.Peek):
@@ -373,20 +378,20 @@ class VerilatorTarget(VerilogTarget):
                     f"{i}, \"{debug_name}\");"]
 
     def make_eval(self, i, action):
-        return ["top->eval();", "main_time++;", "#if VM_TRACE",
-                "tracer->dump(main_time);", "#endif"]
+        return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
+                "main_time++;", "#endif"]
 
     def make_step(self, i, action):
         name = verilator_name(action.clock.name)
         code = []
         code.append("top->eval();")
         for step in range(action.steps):
-            code.append(f"top->{name} ^= 1;")
-            code.append("top->eval();")
-            code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
+            code.append(f"top->{name} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time += 5;")
         return code
 
     def make_file_open(self, i, action):
@@ -673,10 +678,10 @@ class SynchronousVerilatorTarget(VerilatorTarget):
     def make_step(self, i, action):
         code = []
         for _ in range(action.steps):
-            code.append(f"top->{self.clock} ^= 1;")
-            code.append("top->eval();")
-            code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
+            code.append(f"top->{self.clock} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time += 5;")
         return code
