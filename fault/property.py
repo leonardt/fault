@@ -35,13 +35,13 @@ def implies(antecedent, consequent):
     return Implies(antecedent, consequent)
 
 
-class Delay(Property):
+class GetItemProperty(Property):
     def __init__(self, num_cycles):
         if isinstance(num_cycles, slice):
             if num_cycles.start is None:
-                raise ValueError("Delay slice needs a start value")
+                raise ValueError(f"{type(self)} slice needs a start value")
             if num_cycles.step is not None:
-                raise ValueError("Delay slice cannot have a step")
+                raise ValueError(f"{type(self)} slice cannot have a step")
         self.num_cycles = num_cycles
         self.lhs = None
         self.rhs = None
@@ -58,12 +58,23 @@ class Delay(Property):
         return self
 
 
-class DelayOp:
-    def __getitem__(self, val):
-        return Delay(val)
+class Delay(GetItemProperty):
+    pass
 
 
-delay = DelayOp()
+class Repeat(GetItemProperty):
+    pass
+
+
+def make_GetItemOp(cls):
+    class GetItemOp:
+        def __getitem__(self, val):
+            return cls(val)
+    return GetItemOp
+
+
+delay = make_GetItemOp(Delay)()
+repeat = make_GetItemOp(Repeat)()
 
 
 class Posedge:
@@ -84,27 +95,39 @@ class _Compiler:
     def __init__(self):
         self.format_args = {}
 
+    def _codegen_slice(self, value):
+        start = value.start
+        stop = value.stop
+        if stop is None:
+            if start not in {0, 1}:
+                raise ValueError("Variable length delay only supports "
+                                 "zero or more ([0:]) or one or more "
+                                 "([1:]) cycles")
+            return {0: "[*]", 1: "[+]"}[start]
+        return f"[{start}:{stop}]"
+
     def _compile(self, value):
         if isinstance(value, Implies):
             return (f"{self._compile(value.antecedent)} |-> "
                     f"{self._compile(value.consequent)}")
         if isinstance(value, Delay):
             result = ""
-            if value.lhs:
+            if value.lhs is not None:
                 result += self._compile(value.lhs) + " "
             num_cycles = value.num_cycles
             if isinstance(num_cycles, slice):
-                start = num_cycles.start
-                stop = num_cycles.stop
-                if stop is None:
-                    if start not in {0, 1}:
-                        raise ValueError("Variable length delay only supports "
-                                         "zero or more ([0:]) or one or more "
-                                         "([1:]) cycles")
-                    num_cycles = {0: "[*]", 1: "[+]"}[start]
-                else:
-                    num_cycles = f"[{start}:{stop}]"
+                num_cycles = self._codegen_slice(num_cycles)
             return result + f"##{num_cycles} {self._compile(value.rhs)}"
+        if isinstance(value, Repeat):
+            result = ""
+            if value.lhs is not None:
+                result += self._compile(value.lhs) + " "
+            num_cycles = value.num_cycles
+            if isinstance(num_cycles, slice):
+                num_cycles = self._codegen_slice(num_cycles)
+            else:
+                num_cycles = f"[*{num_cycles}]"
+            return result + f"{num_cycles} {self._compile(value.rhs)}"
         if isinstance(value, m.Type):
             key = f"x{len(self.format_args)}"
             self.format_args[key] = value
@@ -114,6 +137,8 @@ class _Compiler:
             for arg in value.args:
                 if isinstance(arg, str):
                     property_str += f" {arg} "
+                elif isinstance(arg, SVAProperty):
+                    property_str += f" {self._compile(arg)} "
                 else:
                     key = f"x{len(self.format_args)}"
                     self.format_args[key] = arg

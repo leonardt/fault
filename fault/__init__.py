@@ -13,5 +13,5 @@ from .random import random_bit, random_bv
 from .util import clog2
 from .spice_target import A2DError
 
-from fault.property import assert_, implies, delay, posedge
+from fault.property import assert_, implies, delay, posedge, repeat
 from fault.sva import sva

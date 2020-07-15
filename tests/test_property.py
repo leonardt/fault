@@ -30,6 +30,8 @@ def test_basic_assert():
         tester.circuit.O.expect(0)
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
+    else:
+        pytest.skip("need ncsim for SVA test")
 
 
 @pytest.mark.parametrize("sva", [True, False])
@@ -59,6 +61,8 @@ def test_basic_assert_fail(sva, capsys):
                                    flags=["-sv"], magma_opts={"inline": True})
         out, _ = capsys.readouterr()
         assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+    else:
+        pytest.skip("need ncsim for SVA test")
 
 
 @pytest.mark.parametrize("sva", [True, False])
@@ -122,3 +126,47 @@ def test_variable_delay(sva, capsys):
                                    flags=["-sv"], magma_opts={"inline": True})
         out, _ = capsys.readouterr()
         assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+    else:
+        pytest.skip("need ncsim for SVA test")
+
+
+@pytest.mark.parametrize("sva", [True, False])
+def test_repetition(sva, capsys):
+    # TODO: Parens/precedence with nested sequences (could wrap in seq object?)
+    class Main(m.Circuit):
+        io = m.IO(write=m.In(m.Bit), read=m.In(m.Bit)) + m.ClockIO()
+        N = 2
+        if sva:
+            seq0 = f.sva(~io.read, "##1", io.write)
+            seq1 = f.sva(io.read, "##1", io.write)
+            f.assert_(f.sva(seq0, "|-> ##1", io.read, f"[*{N}] ##1", seq1),
+                      on=f.posedge(io.CLK))
+        else:
+            seq0 = ~io.read | f.delay[1] | io.write
+            seq1 = io.read | f.delay[1] | io.write
+            f.assert_(seq0 | f.implies | f.delay[1] | io.read | f.repeat[N] |
+                      f.delay[1] | seq1, on=f.posedge(io.CLK))
+
+    if shutil.which("ncsim"):
+        tester = f.SynchronousTester(Main, Main.CLK)
+        tester.circuit.write = 0
+        tester.circuit.read = 0
+        tester.advance_cycle()
+        tester.circuit.write = 1
+        tester.advance_cycle()
+        for _ in range(2):
+            tester.circuit.write = 0
+            tester.circuit.read = 1
+            tester.advance_cycle()
+        tester.circuit.write = 0
+        tester.circuit.read = 1
+        tester.advance_cycle()
+        tester.circuit.write = 1
+        tester.circuit.read = 0
+        tester.advance_cycle()
+        tester.circuit.write = 0
+        tester.advance_cycle()
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    else:
+        pytest.skip("need ncsim for SVA test")
