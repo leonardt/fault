@@ -196,7 +196,6 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
                       f.repeat[zero_or_one:] | f.delay[1] | seq1,
                       on=f.posedge(io.CLK))
 
-
     if not shutil.which("ncsim"):
         return pytest.skip("need ncsim for SVA test")
 
@@ -228,7 +227,8 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
             # Should fail on first try (0 times)
             with pytest.raises(AssertionError):
                 tester.compile_and_run("system-verilog", simulator="ncsim",
-                                       flags=["-sv"], magma_opts={"inline": True})
+                                       flags=["-sv"],
+                                       magma_opts={"inline": True})
         else:
             tester.compile_and_run("system-verilog", simulator="ncsim",
                                    flags=["-sv"], magma_opts={"inline": True})
