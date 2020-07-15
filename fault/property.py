@@ -94,7 +94,16 @@ class _Compiler:
                 result += self._compile(value.lhs) + " "
             num_cycles = value.num_cycles
             if isinstance(num_cycles, slice):
-                num_cycles = f"[{num_cycles.start}:{num_cycles.stop}]"
+                start = num_cycles.start
+                stop = num_cycles.stop
+                if stop is None:
+                    if start not in {0, 1}:
+                        raise ValueError("Variable length delay only supports "
+                                         "zero or more ([0:]) or one or more "
+                                         "([1:]) cycles")
+                    num_cycles = {0: "[*]", 1: "[+]"}[start]
+                else:
+                    num_cycles = f"[{start}:{stop}]"
             return result + f"##{num_cycles} {self._compile(value.rhs)}"
         if isinstance(value, m.Type):
             key = f"x{len(self.format_args)}"
