@@ -12,26 +12,25 @@ def test_basic_assert():
         f.assert_(io.I | f.implies | f.delay[1] | io.O, on=f.posedge(io.CLK))
         f.assert_(f.sva(io.I, "|-> ##1", io.O), on=f.posedge(io.CLK))
 
-    if shutil.which("ncsim"):
-        tester = f.SynchronousTester(Main, Main.CLK)
-        tester.circuit.I = 1
-        tester.advance_cycle()
-        tester.circuit.O.expect(1)
-        tester.circuit.I = 0
-        tester.advance_cycle()
-        tester.circuit.O.expect(0)
-        tester.advance_cycle()
-        tester.circuit.I = 1
-        tester.circuit.O.expect(0)
-        tester.advance_cycle()
-        tester.circuit.I = 0
-        tester.circuit.O.expect(1)
-        tester.advance_cycle()
-        tester.circuit.O.expect(0)
-        tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
-    else:
-        pytest.skip("need ncsim for SVA test")
+    if not shutil.which("ncsim"):
+        return pytest.skip("need ncsim for SVA test")
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.O.expect(1)
+    tester.circuit.I = 0
+    tester.advance_cycle()
+    tester.circuit.O.expect(0)
+    tester.advance_cycle()
+    tester.circuit.I = 1
+    tester.circuit.O.expect(0)
+    tester.advance_cycle()
+    tester.circuit.I = 0
+    tester.circuit.O.expect(1)
+    tester.advance_cycle()
+    tester.circuit.O.expect(0)
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
 
 
 @pytest.mark.parametrize("sva", [True, False])
@@ -46,23 +45,23 @@ def test_basic_assert_fail(sva, capsys):
             f.assert_(io.I | f.implies | f.delay[1] | (io.O.value() == 0),
                       on=f.posedge(io.CLK))
 
-    if shutil.which("ncsim"):
-        tester = f.SynchronousTester(Main, Main.CLK)
-        tester.circuit.I = 1
-        tester.advance_cycle()
-        tester.circuit.I = 0
-        tester.advance_cycle()
-        tester.advance_cycle()
-        tester.circuit.I = 1
-        tester.advance_cycle()
-        tester.advance_cycle()
-        with pytest.raises(AssertionError):
-            tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   flags=["-sv"], magma_opts={"inline": True})
-        out, _ = capsys.readouterr()
-        assert "Assertion Main_tb.dut.__assert_1 has failed" in out
-    else:
-        pytest.skip("need ncsim for SVA test")
+    if not shutil.which("ncsim"):
+        return pytest.skip("need ncsim for SVA test")
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.advance_cycle()
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
 
 @pytest.mark.parametrize("sva", [True, False])
@@ -84,50 +83,50 @@ def test_variable_delay(sva, capsys):
             f.assert_(io.write | f.implies | f.delay[1:] | io.read,
                       on=f.posedge(io.CLK))
 
-    if shutil.which("ncsim"):
-        tester = f.SynchronousTester(Main, Main.CLK)
-        tester.circuit.write = 1
-        tester.advance_cycle()
-        tester.circuit.write = 0
-        tester.circuit.read = 1
-        tester.advance_cycle()
-        tester.circuit.write = 1
-        tester.circuit.read = 0
-        tester.advance_cycle()
-        tester.circuit.write = 0
-        tester.advance_cycle()
-        tester.circuit.read = 1
-        tester.advance_cycle()
+    if not shutil.which("ncsim"):
+        return pytest.skip("need ncsim for SVA test")
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.write = 1
+    tester.advance_cycle()
+    tester.circuit.write = 0
+    tester.circuit.read = 1
+    tester.advance_cycle()
+    tester.circuit.write = 1
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.circuit.write = 0
+    tester.advance_cycle()
+    tester.circuit.read = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.write = 1
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    tester.advance_cycle()
+    with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
-        tester = f.SynchronousTester(Main, Main.CLK)
-        tester.circuit.write = 1
-        tester.circuit.read = 0
-        tester.advance_cycle()
-        tester.advance_cycle()
-        tester.advance_cycle()
-        with pytest.raises(AssertionError):
-            tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   flags=["-sv"], magma_opts={"inline": True})
-        out, _ = capsys.readouterr()
-        assert "Assertion Main_tb.dut.__assert_1 has failed" in out
-
-        tester = f.SynchronousTester(Main, Main.CLK)
-        tester.circuit.write = 1
-        tester.circuit.read = 1
-        tester.advance_cycle()
-        # Does not pass 1 or more cycles
-        tester.circuit.read = 0
-        tester.advance_cycle()
-        tester.advance_cycle()
-        with pytest.raises(AssertionError):
-            tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   flags=["-sv"], magma_opts={"inline": True})
-        out, _ = capsys.readouterr()
-        assert "Assertion Main_tb.dut.__assert_1 has failed" in out
-    else:
-        pytest.skip("need ncsim for SVA test")
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.write = 1
+    tester.circuit.read = 1
+    tester.advance_cycle()
+    # Does not pass 1 or more cycles
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
 
 @pytest.mark.parametrize("sva", [True, False])
@@ -147,35 +146,35 @@ def test_repetition(sva, capsys):
             f.assert_(seq0 | f.implies | f.delay[1] | io.read | f.repeat[N] |
                       f.delay[1] | seq1, on=f.posedge(io.CLK))
 
-    if shutil.which("ncsim"):
-        tester = f.SynchronousTester(Main, Main.CLK)
-        tester.circuit.write = 0
-        tester.circuit.read = 0
-        tester.advance_cycle()
-        tester.circuit.write = 1
-        tester.advance_cycle()
-        for _ in range(2):
-            tester.circuit.write = 0
-            tester.circuit.read = 1
-            tester.advance_cycle()
-        # Should fail if we don't see seq2
-        with pytest.raises(AssertionError):
-            tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   flags=["-sv"], magma_opts={"inline": True})
-        out, _ = capsys.readouterr()
-        assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+    if not shutil.which("ncsim"):
+        return pytest.skip("need ncsim for SVA test")
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.write = 0
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.circuit.write = 1
+    tester.advance_cycle()
+    for _ in range(2):
         tester.circuit.write = 0
         tester.circuit.read = 1
         tester.advance_cycle()
-        tester.circuit.write = 1
-        tester.circuit.read = 0
-        tester.advance_cycle()
-        tester.circuit.write = 0
-        tester.advance_cycle()
+    # Should fail if we don't see seq2
+    with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
-    else:
-        pytest.skip("need ncsim for SVA test")
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+    tester.circuit.write = 0
+    tester.circuit.read = 1
+    tester.advance_cycle()
+    tester.circuit.write = 1
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.circuit.write = 0
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
 
 
 @pytest.mark.parametrize("sva", [True, False])
@@ -197,38 +196,39 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
                       f.repeat[zero_or_one:] | f.delay[1] | seq1,
                       on=f.posedge(io.CLK))
 
-    if shutil.which("ncsim"):
-        for i in range(0, 3):
-            tester = f.SynchronousTester(Main, Main.CLK)
-            tester.circuit.write = 0
-            tester.circuit.read = 0
-            tester.advance_cycle()
-            tester.circuit.write = 1
-            tester.advance_cycle()
-            # Should fail if we don't see seq2
-            with pytest.raises(AssertionError):
-                tester.compile_and_run("system-verilog", simulator="ncsim",
-                                       flags=["-sv"], magma_opts={"inline": True})
-            # do repeated sequence i times
-            for _ in range(i):
-                tester.circuit.write = 0
-                tester.circuit.read = 1
-                tester.advance_cycle()
+
+    if not shutil.which("ncsim"):
+        return pytest.skip("need ncsim for SVA test")
+
+    for i in range(0, 3):
+        tester = f.SynchronousTester(Main, Main.CLK)
+        tester.circuit.write = 0
+        tester.circuit.read = 0
+        tester.advance_cycle()
+        tester.circuit.write = 1
+        tester.advance_cycle()
+        # Should fail if we don't see seq2
+        with pytest.raises(AssertionError):
+            tester.compile_and_run("system-verilog", simulator="ncsim",
+                                   flags=["-sv"], magma_opts={"inline": True})
+        # do repeated sequence i times
+        for _ in range(i):
             tester.circuit.write = 0
             tester.circuit.read = 1
             tester.advance_cycle()
-            tester.circuit.write = 1
-            tester.circuit.read = 0
-            tester.advance_cycle()
-            tester.circuit.write = 0
-            tester.advance_cycle()
-            if i == 0 and zero_or_one == 1:
-                # Should fail on first try (0 times)
-                with pytest.raises(AssertionError):
-                    tester.compile_and_run("system-verilog", simulator="ncsim",
-                                           flags=["-sv"], magma_opts={"inline": True})
-            else:
+        tester.circuit.write = 0
+        tester.circuit.read = 1
+        tester.advance_cycle()
+        tester.circuit.write = 1
+        tester.circuit.read = 0
+        tester.advance_cycle()
+        tester.circuit.write = 0
+        tester.advance_cycle()
+        if i == 0 and zero_or_one == 1:
+            # Should fail on first try (0 times)
+            with pytest.raises(AssertionError):
                 tester.compile_and_run("system-verilog", simulator="ncsim",
                                        flags=["-sv"], magma_opts={"inline": True})
-    else:
-        pytest.skip("need ncsim for SVA test")
+        else:
+            tester.compile_and_run("system-verilog", simulator="ncsim",
+                                   flags=["-sv"], magma_opts={"inline": True})
