@@ -208,7 +208,8 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
             # Should fail if we don't see seq2
             with pytest.raises(AssertionError):
                 tester.compile_and_run("system-verilog", simulator="ncsim",
-                                       flags=["-sv"], magma_opts={"inline": True})
+                                       flags=["-sv"],
+                                       magma_opts={"inline": True})
             # do repeated sequence i times
             for _ in range(i):
                 tester.circuit.write = 0
@@ -226,9 +227,11 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
                 # Should fail on first try (0 times)
                 with pytest.raises(AssertionError):
                     tester.compile_and_run("system-verilog", simulator="ncsim",
-                                           flags=["-sv"], magma_opts={"inline": True})
+                                           flags=["-sv"],
+                                           magma_opts={"inline": True})
             else:
                 tester.compile_and_run("system-verilog", simulator="ncsim",
-                                       flags=["-sv"], magma_opts={"inline": True})
+                                       flags=["-sv"],
+                                       magma_opts={"inline": True})
     else:
         pytest.skip("need ncsim for SVA test")
