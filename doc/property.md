@@ -27,8 +27,11 @@ f.assert_(f.sva(io.I, "|-> ##1", io.O.value() == 0),
 ```
 
 # Examples
+Here are some representative examples, for a complete set of examples and
+corresponding test cases, see
+[tests/test_property.py](../tests/test_property.py).
 ## Basic assertion
-
+Here's an example of a basic implication/delay assertion on a register.
 ```python
 class Main(m.Circuit):
     io = m.IO(I=m.In(m.Bits[8]), O=m.Out(m.Bits[8])) + m.ClockIO()
@@ -39,4 +42,47 @@ class Main(m.Circuit):
     # Infix
     f.assert_(io.I | f.implies | f.delay[1] | (io.O.value() == 0),
               on=f.posedge(io.CLK))
+```
+
+## Variable Delay
+Here's an example of three properties using variable delay.
+```python
+class Main(m.Circuit):
+    io = m.IO(write=m.In(m.Bit), read=m.In(m.Bit)) + m.ClockIO()
+    # SVA
+    f.assert_(f.sva(io.write, "|-> ##[1:2]", io.read),
+              on=f.posedge(io.CLK))
+    f.assert_(f.sva(io.write, "|-> ##[*]", io.read),
+              on=f.posedge(io.CLK))
+    f.assert_(f.sva(io.write, "|-> ##[+]", io.read),
+              on=f.posedge(io.CLK))
+    # Infix
+    f.assert_(io.write | f.implies | f.delay[1:2] | io.read,
+              on=f.posedge(io.CLK))
+    f.assert_(io.write | f.implies | f.delay[0:] | io.read,
+              on=f.posedge(io.CLK))
+    f.assert_(io.write | f.implies | f.delay[1:] | io.read,
+              on=f.posedge(io.CLK))
+```
+
+## Repetition and Sequences
+Here's an example of using repetition and sequences.  Note the use of
+`f.sequence` in order to group sequences together for the repeition operator.
+
+This property waits for read and write to be low for 2 cycles, followed by seq0
+(read low, then write high) repeated twice followed by seq1 (read high, write
+high).
+```python
+class Main(m.Circuit):
+    io = m.IO(write=m.In(m.Bit), read=m.In(m.Bit)) + m.ClockIO()
+    # SVA
+    seq0 = f.sequence(f.sva(~io.read, "##1", io.write))
+    seq1 = f.sequence(f.sva(io.read, "##1", io.write))
+    f.assert_(f.sva(~io.read & ~io.write, "[*2] |->", seq0,
+                    f"[*2] ##1", seq1), on=f.posedge(io.CLK))
+    # Infix
+    seq0 = f.sequence(~io.read | f.delay[1] | io.write)
+    seq1 = f.sequence(io.read | f.delay[1] | io.write)
+    f.assert_(~io.read & ~io.write | f.repeat[2] | f.implies | seq0 |
+              f.repeat[2] | f.delay[1] | seq1, on=f.posedge(io.CLK))
 ```
