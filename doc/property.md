@@ -6,6 +6,13 @@ a magic implementation of the `__or__` and `__ror__` methods to define custom
 "infix" operators.  The second provides an interface to provide strings
 containing SVA operator syntax.
 # Infix Operator Interface
+This interface overloads the use of the `|` operator to define a "custom infix"
+operator.  Here's an example of a property where `io.I` being high implies that
+the value (driver) of `io.O` will be high one cycle later.
+```python
+f.assert_(io.I | f.implies | f.delay[1] | (io.O.value() == 0),
+          on=f.posedge(io.CLK))
+```
 ## Operators
 * `f.implies` corresponds to SVA `|->`
 * `f.delay[N]` corresponds to SVA `##N`
