@@ -66,6 +66,10 @@ class Repeat(GetItemProperty):
     pass
 
 
+class Goto(GetItemProperty):
+    pass
+
+
 def make_GetItemOp(cls):
     class GetItemOp:
         def __getitem__(self, val):
@@ -75,6 +79,7 @@ def make_GetItemOp(cls):
 
 delay = make_GetItemOp(Delay)()
 repeat = make_GetItemOp(Repeat)()
+goto = make_GetItemOp(Goto)()
 
 
 class Posedge:
@@ -110,6 +115,7 @@ class _Compiler:
         if isinstance(value, Implies):
             return (f"{self._compile(value.antecedent)} |-> "
                     f"{self._compile(value.consequent)}")
+        # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
             if value.lhs is not None:
@@ -128,6 +134,17 @@ class _Compiler:
             else:
                 num_cycles = f"[*{num_cycles}]"
             return result + f"{num_cycles} {self._compile(value.rhs)}"
+        if isinstance(value, Goto):
+            result = ""
+            if value.lhs is not None:
+                result += self._compile(value.lhs) + " "
+            num_cycles = value.num_cycles
+            if isinstance(num_cycles, slice):
+                if (num_cycles.start is None or num_cycles.stop is None or
+                        num_cycles.step is not None):
+                    raise ValueError(f"Invalid slice for goto: {num_cycles}")
+                num_cycles = f"{num_cycles.start}:{num_cycles.stop}"
+            return result + f"[-> {num_cycles}] {self._compile(value.rhs)}"
         if isinstance(value, m.Type):
             key = f"x{len(self.format_args)}"
             self.format_args[key] = value
