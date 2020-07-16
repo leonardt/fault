@@ -33,7 +33,7 @@ jobs:
           pip install pytest
           pip install pytest-cov pytest-codestyle
           pip install mantle>=2.0.0  # for tests.common
-          pip install vcdvcd
+          pip install vcdvcd decorator
           pip install .
     - name: Pytest
       shell: bash -l {0}
