@@ -47,7 +47,10 @@ class GetItemProperty(Property):
         self.rhs = None
 
     def __or__(self, other):
-        if self.rhs is not None:
+        # TODO: Generalize precedence logic
+        if isinstance(other, Infix):
+            return other.__ror__(self)
+        elif self.rhs is not None:
             self.rhs = self.rhs | other
         else:
             self.rhs = other
@@ -154,13 +157,17 @@ class _Compiler:
             for arg in value.args:
                 if isinstance(arg, str):
                     property_str += f" {arg} "
-                elif isinstance(arg, SVAProperty):
+                elif isinstance(arg, (SVAProperty, Sequence)):
                     property_str += f" {self._compile(arg)} "
                 else:
                     key = f"x{len(self.format_args)}"
                     self.format_args[key] = arg
                     property_str += f" {{{key}}} "
             return property_str
+        if isinstance(value, Sequence):
+            return f"({self._compile(value.prop)})"
+        if value is None:
+            return ""
         raise NotImplementedError(type(value))
 
     def compile(self, prop):
@@ -174,3 +181,15 @@ def assert_(prop, on):
     m.inline_verilog(
         f"assert property ({event_str} {prop});", **format_args
     )
+
+
+class Sequence:
+    def __init__(self, prop):
+        if not isinstance(prop, (Property, SVAProperty)):
+            raise TypeError("Expected type Property or SVAProperty not "
+                            f"{type(prop)}")
+        self.prop = prop
+
+
+def sequence(prop):
+    return Sequence(prop)
