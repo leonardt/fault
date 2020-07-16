@@ -249,8 +249,8 @@ def test_goto_repetition(sva, num_reps, capsys):
             f.assert_(f.sva(io.write == 1, f"[-> {symb}]", '##1', io.read,
                             '##1', io.write), on=f.posedge(io.CLK))
         else:
-            f.assert_((io.write == 1) | f.goto[num_reps] | f.delay[1] | io.read |
-                      f.delay[1] | io.write, on=f.posedge(io.CLK))
+            f.assert_((io.write == 1) | f.goto[num_reps] | f.delay[1] | io.read
+                      | f.delay[1] | io.write, on=f.posedge(io.CLK))
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.write = 1
