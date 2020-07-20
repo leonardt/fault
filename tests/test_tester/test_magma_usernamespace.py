@@ -2,6 +2,7 @@ import tempfile
 import fault as f
 from ..common import SimpleALU, pytest_sim_params
 
+
 def pytest_generate_tests(metafunc):
     pytest_sim_params(metafunc, 'verilator', 'system-verilog')
 
