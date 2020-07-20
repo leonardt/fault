@@ -25,9 +25,9 @@ class VerilogTarget(Target):
                  use_kratos=False, value_file_name='get_value_file.txt'):
         super().__init__(circuit)
 
-        if circuit_name is None:
-            circuit_name = self.circuit.name
         self.circuit_name = circuit_name
+        if self.circuit_name is None:
+            self.circuit_name = self.circuit.name
 
         self.directory = Path(directory)
         os.makedirs(directory, exist_ok=True)
@@ -40,6 +40,11 @@ class VerilogTarget(Target):
 
         self.magma_output = magma_output
         self.magma_opts = magma_opts if magma_opts is not None else {}
+        if "user_namespace" in self.magma_opts and circuit_name is None:
+            # If user provides a circuit name, we will not change it (assumes
+            # they include the user_namespace)
+            self.circuit_name = (magma_opts["user_namespace"] + "_" +
+                                 self.circuit_name)
 
         if hasattr(circuit, "verilog_file_name") and \
                 os.path.splitext(circuit.verilog_file_name)[-1] == ".sv" or \
