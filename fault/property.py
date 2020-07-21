@@ -195,6 +195,9 @@ class _Compiler:
             return f"({self._compile(value.prop)})"
         if value is None:
             return ""
+        if isinstance(value, FunctionCall):
+            args = ", ".join(self._compile(arg) for arg in value.args)
+            return f"{value.func.name}({args})"
         raise NotImplementedError(type(value))
 
     def compile(self, prop):
@@ -222,12 +225,18 @@ def sequence(prop):
     return Sequence(prop)
 
 
-class Function(Property):
+class FunctionCall:
+    def __init__(self, func, args):
+        self.func = func
+        self.args = args
+
+
+class Function:
     def __init__(self, name):
         self.name = name
 
     def __call__(self, *args):
-        self.args = args
+        return FunctionCall(self, args)
 
 
 onehot0 = Function("onehot0")
