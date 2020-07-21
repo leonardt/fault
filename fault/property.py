@@ -137,12 +137,8 @@ class _Compiler:
         return f"[{start}:{stop}]"
 
     def _compile(self, value):
-        if isinstance(value, Property):
-            rhs_str = ""
-            if value.rhs is not None:
-                rhs_str = self._compile(value.rhs)
-            return (f"{self._compile(value.lhs)} {value.op_str} "
-                    f"{rhs_str}")
+        if isinstance(value, Not):
+            return f"! {self._compile(value.arg)}"
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
@@ -173,6 +169,12 @@ class _Compiler:
                     raise ValueError(f"Invalid slice for goto: {num_cycles}")
                 num_cycles = f"{num_cycles.start}:{num_cycles.stop}"
             return result + f"[-> {num_cycles}] {self._compile(value.rhs)}"
+        if isinstance(value, Property):
+            rhs_str = ""
+            if value.rhs is not None:
+                rhs_str = self._compile(value.rhs)
+            return (f"{self._compile(value.lhs)} {value.op_str} "
+                    f"{rhs_str}")
         if isinstance(value, m.Type):
             key = f"x{len(self.format_args)}"
             self.format_args[key] = value
