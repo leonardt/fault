@@ -297,7 +297,7 @@ def test_eventually(sva, capsys):
         tester.advance_cycle()
     # Read does not eventually go high
     with pytest.raises(AssertionError):
-        tester.compile_and_run("system-verilog", simulator="ncsim", directory="build",
+        tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
