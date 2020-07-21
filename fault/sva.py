@@ -4,4 +4,10 @@ class SVAProperty:
 
 
 def sva(*args):
-    return SVAProperty(args)
+    new_args = tuple()
+    # Escape format chars
+    for arg in args:
+        if isinstance(arg, str):
+            arg = arg.replace("{", "{{").replace("}", "}}")
+        new_args += (arg,)
+    return SVAProperty(new_args)

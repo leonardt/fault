@@ -75,6 +75,15 @@ def until_with(lhs, rhs):
     return UntilWith(lhs, rhs)
 
 
+class Inside(Property):
+    op_str = "inside"
+
+
+@Infix
+def inside(lhs, rhs):
+    return Inside(lhs, rhs)
+
+
 class GetItemProperty(Property):
     def __init__(self, num_cycles):
         if isinstance(num_cycles, slice):
@@ -216,6 +225,13 @@ class _Compiler:
         if isinstance(value, FunctionCall):
             args = ", ".join(self._compile(arg) for arg in value.args)
             return f"{value.func.name}({args})"
+        if isinstance(value, set):
+            contents = ", ".join(self._compile(arg) for arg in value)
+            # Double escape on curly braces since this will run through format
+            # inside inline_verilog logic
+            return f"{{{{{contents}}}}}"
+        if isinstance(value, int):
+            return str(value)
         raise NotImplementedError(type(value))
 
     def compile(self, prop):

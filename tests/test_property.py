@@ -456,3 +456,33 @@ def test_until_with(sva, capsys):
                                flags=["-sv"], magma_opts={"inline": True})
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@requires_ncsim
+@pytest.mark.parametrize("sva", [True, False])
+def test_inside(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bits[2])) + m.ClockIO()
+        if sva:
+            f.assert_(f.sva(io.a, "inside {0, 1}"), on=f.posedge(io.CLK))
+        else:
+            f.assert_(io.a | f.inside | {0, 1}, on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.circuit.a = 1
+    tester.advance_cycle()
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 2
+    tester.advance_cycle()
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
