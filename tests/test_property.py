@@ -486,3 +486,45 @@ def test_inside(sva, capsys):
                                flags=["-sv"], magma_opts={"inline": True})
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@requires_ncsim
+def test_disable_if():
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
+        io += m.ClockIO(has_resetn=True)
+        f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN))
+        f.assert_(f.sva(io.a, "|-> ##2", io.b), on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.circuit.RESETN = 0
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})

@@ -149,8 +149,8 @@ def posedge(value):
 
 
 class _Compiler:
-    def __init__(self):
-        self.format_args = {}
+    def __init__(self, format_args):
+        self.format_args = format_args
 
     def _codegen_slice(self, value):
         start = value.start
@@ -236,14 +236,19 @@ class _Compiler:
 
     def compile(self, prop):
         compiled = self._compile(prop)
-        return compiled, self.format_args
+        return compiled
 
 
-def assert_(prop, on):
-    prop, format_args = _Compiler().compile(prop)
+def assert_(prop, on, disable_iff=None):
+    format_args = {}
+    _compiler = _Compiler(format_args)
+    prop = _compiler.compile(prop)
+    disable_str = ""
+    if disable_iff is not None:
+        disable_str = f" disable iff ({_compiler.compile(disable_iff)})"
     event_str = on.compile(format_args)
     m.inline_verilog(
-        f"assert property ({event_str} {prop});", **format_args
+        f"assert property ({event_str}{disable_str} {prop});", **format_args
     )
 
 
