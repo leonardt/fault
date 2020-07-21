@@ -285,7 +285,7 @@ def test_eventually(sva, capsys):
             f.assert_(f.sva(io.write == 1, f"|-> s_eventually", io.read == 1),
                       on=f.posedge(io.CLK))
         else:
-            f.assert_((io.write == 1) | f.implies | f.eventually | 
+            f.assert_((io.write == 1) | f.implies | f.eventually |
                       (io.read == 1), on=f.posedge(io.CLK))
 
     tester = f.SynchronousTester(Main, Main.CLK)
