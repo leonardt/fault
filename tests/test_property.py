@@ -308,6 +308,7 @@ def test_eventually(sva, capsys):
                            flags=["-sv"], magma_opts={"inline": True})
 
 
+@requires_ncsim
 @pytest.mark.parametrize("sva", [True, False])
 def test_throughout(sva, capsys):
     class Main(m.Circuit):
