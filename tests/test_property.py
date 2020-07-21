@@ -282,10 +282,10 @@ def test_eventually(sva, capsys):
     class Main(m.Circuit):
         io = m.IO(write=m.In(m.Bit), read=m.In(m.Bit)) + m.ClockIO()
         if sva:
-            f.assert_(f.sva(io.write == 1, f"|-> s_eventually", io.write),
+            f.assert_(f.sva(io.write == 1, f"|-> s_eventually", io.read == 1),
                       on=f.posedge(io.CLK))
         else:
-            f.assert_((io.write == 1) | f.implies | f.eventually | io.read,
+            f.assert_((io.write == 1) | f.implies | f.eventually | (io.read == 1),
                       on=f.posedge(io.CLK))
 
     tester = f.SynchronousTester(Main, Main.CLK)
