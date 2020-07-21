@@ -66,6 +66,15 @@ def until(lhs, rhs):
     return Until(lhs, rhs)
 
 
+class UntilWith(Property):
+    op_str = "until_with"
+
+
+@Infix
+def until_with(lhs, rhs):
+    return UntilWith(lhs, rhs)
+
+
 class GetItemProperty(Property):
     def __init__(self, num_cycles):
         if isinstance(num_cycles, slice):
