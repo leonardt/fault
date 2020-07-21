@@ -239,7 +239,7 @@ class _Compiler:
         return compiled
 
 
-def assert_(prop, on, disable_iff=None, compile_guard=None):
+def assert_(prop, on, disable_iff=None, compile_guard=None, name=None):
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
@@ -248,9 +248,13 @@ def assert_(prop, on, disable_iff=None, compile_guard=None):
         disable_str = f" disable iff ({_compiler.compile(disable_iff)})"
     event_str = on.compile(format_args)
     prop_str = f"assert property ({event_str}{disable_str} {prop});"
+    if name is not None:
+        if not isinstance(compile_guard, str):
+            raise TypeError("Expected string for name")
+        prop_str = f"{name}: {prop_str}"
     if compile_guard is not None:
         if not isinstance(compile_guard, str):
-            raise TypeError("Expected string for compile guard")
+            raise TypeError("Expected string for compile_guard")
         prop_str = f"""\
 `ifdef {compile_guard}
     {prop_str}

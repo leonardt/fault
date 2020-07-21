@@ -531,14 +531,16 @@ def test_disable_if():
 
 
 @requires_ncsim
-def test_ifdef():
+def test_ifdef_and_name(capsys):
     class Main(m.Circuit):
         io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
         io += m.ClockIO(has_resetn=True)
         f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
-                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON")
+                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
+                  name="foo")
         f.assert_(f.sva(io.a, "|-> ##2", io.b), on=f.posedge(io.CLK),
-                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON")
+                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
+                  name="bar")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.RESETN = 1
@@ -555,3 +557,6 @@ def test_ifdef():
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv", "+define+ASSERT_ON"],
                                magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.foo has failed" in out
+    assert "Assertion Main_tb.dut.bar has failed" in out
