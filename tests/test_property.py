@@ -314,7 +314,7 @@ def test_throughout(sva, capsys):
     class Main(m.Circuit):
         io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit), c=m.In(m.Bit)) + m.ClockIO()
         if sva:
-            seq = f.sequence(io.b, "throughout", "!", io.c, "[-> 1]")
+            seq = f.sva(io.b, "throughout", "!", io.c, "[-> 1]")
             f.assert_(f.sva(f.rose(io.a), "|->", seq),
                       on=f.posedge(io.CLK))
         else:
