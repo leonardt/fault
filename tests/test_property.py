@@ -318,7 +318,7 @@ def test_throughout(sva, capsys):
             f.assert_(f.sva(f.rose(io.a), "|->", seq),
                       on=f.posedge(io.CLK))
         else:
-            seq = f.sequence(io.b | f.throughout | f.not_(io.c | f.goto[1]))
+            seq = io.b | f.throughout | f.not_(io.c | f.goto[1])
             f.assert_(f.rose(io.a) | f.implies | seq,
                       on=f.posedge(io.CLK))
 
@@ -332,8 +332,9 @@ def test_throughout(sva, capsys):
     tester.advance_cycle()
     for i in range(random.randint(3, 7)):
         tester.advance_cycle()
-    tester.circuit.b = 0
     tester.circuit.c = 0
+    tester.advance_cycle()
+    tester.circuit.b = 0
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True})
@@ -379,8 +380,8 @@ def test_until(sva, capsys):
     for i in range(random.randint(3, 7)):
         tester.advance_cycle()
     tester.circuit.b = 0
-    tester.advance_cycle()
     tester.circuit.c = 0
+    tester.advance_cycle()
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True})
@@ -389,14 +390,15 @@ def test_until(sva, capsys):
     tester.circuit.a = 0
     tester.circuit.c = 1
     tester.advance_cycle()
-    # Posedge a, b goes low same cycle as c
+    # Posedge a, b goes low two cycles before c
     tester.circuit.a = 1
     tester.circuit.b = 1
     tester.advance_cycle()
     tester.advance_cycle()
     tester.circuit.b = 0
-    tester.circuit.c = 0
     tester.advance_cycle()
+    tester.advance_cycle()
+    tester.circuit.c = 0
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
@@ -427,8 +429,9 @@ def test_until_with(sva, capsys):
     tester.advance_cycle()
     for i in range(random.randint(3, 7)):
         tester.advance_cycle()
-    tester.circuit.b = 0
     tester.circuit.c = 0
+    tester.advance_cycle()
+    tester.circuit.b = 0
     tester.advance_cycle()
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
@@ -438,10 +441,12 @@ def test_until_with(sva, capsys):
     tester.circuit.a = 0
     tester.circuit.c = 1
     tester.advance_cycle()
-    # Posedge a, b does not goes low same cycle as c
+    # Posedge a, b goes low before c
     tester.circuit.a = 1
     tester.circuit.b = 1
     tester.advance_cycle()
+    tester.advance_cycle()
+    tester.circuit.b = 0
     tester.advance_cycle()
     tester.circuit.c = 0
     tester.advance_cycle()
