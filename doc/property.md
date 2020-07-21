@@ -24,6 +24,7 @@ f.assert_(io.I | f.implies | f.delay[1] | (io.O.value() == 0),
 * `f.repeat[1:]` corresponds to SVA `[+]`
 * `f.goto[N]` corresponds to SVA `[-> N]`
 * `f.goto[M:N]` corresponds to SVA `[-> M:N]`
+* `f.eventually` corresponds to SVA `s_eventually`
 
 # SVA 
 Use the `f.sva` function to construct sva properties by interleaving magma
