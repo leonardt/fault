@@ -57,6 +57,15 @@ def throughout(lhs, rhs):
     return Throughout(lhs, rhs)
 
 
+class Until(Property):
+    op_str = "until"
+
+
+@Infix
+def until(lhs, rhs):
+    return Until(lhs, rhs)
+
+
 class GetItemProperty(Property):
     def __init__(self, num_cycles):
         if isinstance(num_cycles, slice):
@@ -184,7 +193,7 @@ class _Compiler:
             for arg in value.args:
                 if isinstance(arg, str):
                     property_str += f" {arg} "
-                elif isinstance(arg, (SVAProperty, Sequence)):
+                elif isinstance(arg, (SVAProperty, Sequence, FunctionCall)):
                     property_str += f" {self._compile(arg)} "
                 else:
                     key = f"x{len(self.format_args)}"
