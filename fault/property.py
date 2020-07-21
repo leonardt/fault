@@ -239,14 +239,14 @@ class Function:
         return FunctionCall(self, args)
 
 
-onehot0 = Function("onehot0")
-onehot = Function("onehot")
-countones = Function("countones")
-isunknown = Function("isunknown")
-past = Function("past")
-rose = Function("rose")
-fell = Function("fell")
-stable = Function("stable")
+onehot0 = Function("$onehot0")
+onehot = Function("$onehot")
+countones = Function("$countones")
+isunknown = Function("$isunknown")
+past = Function("$past")
+rose = Function("$rose")
+fell = Function("$fell")
+stable = Function("$stable")
 
 
 class Not(Property):
