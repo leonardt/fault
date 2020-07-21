@@ -306,3 +306,37 @@ def test_eventually(sva, capsys):
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True})
+
+
+@pytest.mark.parametrize("sva", [True, False])
+def test_throughout(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit), c=m.In(m.Bit)) + m.ClockIO()
+        if sva:
+            seq1 = f.Sequence(io.b, "throughout", "!", io.c, "[-> 1]")
+            f.assert_(f.sva(f.rose(io.a), "|->", seq1),
+                      on=f.posedge(io.CLK))
+        else:
+            seq0 = f.Sequence(io.c | f.goto[1])
+            seq1 = f.Sequence(io.b | f.throughout | ~seq0 )
+            f.assert_(f.rose(io.a) | f.implies | seq1,
+                      on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.write = 1
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.circuit.write = 0
+    for i in range(random.randint(3, 7)):
+        tester.advance_cycle()
+    # Read does not eventually go high
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+    tester.circuit.read = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})

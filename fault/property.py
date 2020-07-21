@@ -6,7 +6,17 @@ from fault.sva import SVAProperty
 
 
 class Property:
-    pass
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __or__(self, other):
+        if isinstance(self.rhs, Infix):
+            result = self.rhs.__ror__(self) | other
+            self.rhs = None
+            return result
+        self.rhs = self.rhs | other
+        return self
 
 
 class Infix:
@@ -21,17 +31,7 @@ class Infix:
 
 
 class Implies(Property):
-    def __init__(self, antecedent, consequent):
-        self.antecedent = antecedent
-        self.consequent = consequent
-
-    def __or__(self, other):
-        if isinstance(self.consequent, Infix):
-            result = self.consequent.__ror__(self) | other
-            self.consequent = None
-            return result
-        self.consequent = self.consequent | other
-        return self
+    op_str = "|->"
 
 
 @Infix
@@ -40,18 +40,21 @@ def implies(antecedent, consequent):
 
 
 class Eventually(Property):
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
-
-    def __or__(self, other):
-        self.rhs |= other
-        return self
+    op_str = "s_eventually"
 
 
 @Infix
 def eventually(lhs, rhs):
     return Eventually(lhs, rhs)
+
+
+class Throughout(Property):
+    op_str = "throughout"
+
+
+@Infix
+def throughout(lhs, rhs):
+    return Throughout(lhs, rhs)
 
 
 class GetItemProperty(Property):
@@ -134,11 +137,11 @@ class _Compiler:
         return f"[{start}:{stop}]"
 
     def _compile(self, value):
-        if isinstance(value, Implies):
+        if isinstance(value, Property):
             rhs_str = ""
-            if value.consequent is not None:
-                rhs_str = self._compile(value.consequent)
-            return (f"{self._compile(value.antecedent)} |-> "
+            if value.rhs is not None:
+                rhs_str = self._compile(value.rhs)
+            return (f"{self._compile(value.lhs)} {value.op_str} "
                     f"{rhs_str}")
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
@@ -188,8 +191,6 @@ class _Compiler:
             return property_str
         if isinstance(value, Sequence):
             return f"({self._compile(value.prop)})"
-        if isinstance(value, Eventually):
-            return f"{self._compile(value.lhs)} s_eventually {self._compile(value.rhs)}"
         if value is None:
             return ""
         raise NotImplementedError(type(value))
@@ -217,3 +218,30 @@ class Sequence:
 
 def sequence(prop):
     return Sequence(prop)
+
+
+class Function(Property):
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(self, *args):
+        self.args = args
+
+
+onehot0 = Function("onehot0")
+onehot = Function("onehot")
+countones = Function("countones")
+isunknown = Function("isunknown")
+past = Function("past")
+rose = Function("rose")
+fell = Function("fell")
+stable = Function("stable")
+
+
+class Not(Property):
+    def __init__(self, arg):
+        self.arg = arg
+
+
+def not_(arg):
+    return Not(arg)

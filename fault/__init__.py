@@ -14,5 +14,6 @@ from .util import clog2
 from .spice_target import A2DError
 
 from fault.property import (assert_, implies, delay, posedge, repeat, goto,
-                            sequence, eventually)
+                            sequence, eventually, onehot0, onehot, countones,
+                            isunknown, past, rose, fell, stable, not_)
 from fault.sva import sva
