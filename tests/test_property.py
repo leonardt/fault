@@ -528,3 +528,30 @@ def test_disable_if():
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
+
+
+@requires_ncsim
+def test_ifdef():
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
+        io += m.ClockIO(has_resetn=True)
+        f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON")
+        f.assert_(f.sva(io.a, "|-> ##2", io.b), on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON")
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    # Should not fail with no ASSERT_ON
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+    # Should fail
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv", "+define+ASSERT_ON"],
+                               magma_opts={"inline": True})

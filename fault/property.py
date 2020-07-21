@@ -239,7 +239,7 @@ class _Compiler:
         return compiled
 
 
-def assert_(prop, on, disable_iff=None):
+def assert_(prop, on, disable_iff=None, compile_guard=None):
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
@@ -247,9 +247,16 @@ def assert_(prop, on, disable_iff=None):
     if disable_iff is not None:
         disable_str = f" disable iff ({_compiler.compile(disable_iff)})"
     event_str = on.compile(format_args)
-    m.inline_verilog(
-        f"assert property ({event_str}{disable_str} {prop});", **format_args
-    )
+    prop_str = f"assert property ({event_str}{disable_str} {prop});"
+    if compile_guard is not None:
+        if not isinstance(compile_guard, str):
+            raise TypeError("Expected string for compile guard")
+        prop_str = f"""\
+`ifdef {compile_guard}
+    {prop_str}
+`endif
+"""
+    m.inline_verilog(prop_str, **format_args)
 
 
 class Sequence:
