@@ -26,6 +26,10 @@ class Implies(Property):
         self.consequent = consequent
 
     def __or__(self, other):
+        if isinstance(self.consequent, Infix):
+            result = self.consequent.__ror__(self) | other
+            self.consequent = None
+            return result
         self.consequent = self.consequent | other
         return self
 
@@ -33,6 +37,21 @@ class Implies(Property):
 @Infix
 def implies(antecedent, consequent):
     return Implies(antecedent, consequent)
+
+
+class Eventually(Property):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __or__(self, other):
+        self.rhs |= other
+        return self
+
+
+@Infix
+def eventually(lhs, rhs):
+    return Eventually(lhs, rhs)
 
 
 class GetItemProperty(Property):
@@ -116,8 +135,11 @@ class _Compiler:
 
     def _compile(self, value):
         if isinstance(value, Implies):
+            rhs_str = ""
+            if value.consequent is not None:
+                rhs_str = self._compile(value.consequent)
             return (f"{self._compile(value.antecedent)} |-> "
-                    f"{self._compile(value.consequent)}")
+                    f"{rhs_str}")
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
@@ -166,6 +188,8 @@ class _Compiler:
             return property_str
         if isinstance(value, Sequence):
             return f"({self._compile(value.prop)})"
+        if isinstance(value, Eventually):
+            return f"{self._compile(value.lhs)} s_eventually {self._compile(value.rhs)}"
         if value is None:
             return ""
         raise NotImplementedError(type(value))

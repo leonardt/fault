@@ -274,3 +274,34 @@ def test_goto_repetition(sva, num_reps, capsys):
                                flags=["-sv"], magma_opts={"inline": True})
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@pytest.mark.parametrize("sva", [True, False])
+def test_eventually(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(write=m.In(m.Bit), read=m.In(m.Bit)) + m.ClockIO()
+        if sva:
+            f.assert_(f.sva(io.write == 1, f"|-> s_eventually", io.write),
+                      on=f.posedge(io.CLK))
+        else:
+            f.assert_((io.write == 1) | f.implies | f.eventually | io.read,
+                      on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.write = 1
+    tester.circuit.read = 0
+    tester.advance_cycle()
+    tester.circuit.write = 0
+    for i in range(random.randint(3, 7)):
+        tester.advance_cycle()
+    # Read does not eventually go high
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+    tester.circuit.read = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
