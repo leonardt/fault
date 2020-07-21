@@ -276,6 +276,7 @@ def test_goto_repetition(sva, num_reps, capsys):
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
 
+@requires_ncsim
 @pytest.mark.parametrize("sva", [True, False])
 def test_eventually(sva, capsys):
     class Main(m.Circuit):
