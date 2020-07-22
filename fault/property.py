@@ -6,7 +6,17 @@ from fault.sva import SVAProperty
 
 
 class Property:
-    pass
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __or__(self, other):
+        if isinstance(self.rhs, Infix):
+            result = self.rhs.__ror__(self) | other
+            self.rhs = None
+            return result
+        self.rhs = self.rhs | other
+        return self
 
 
 class Infix:
@@ -21,17 +31,7 @@ class Infix:
 
 
 class Implies(Property):
-    def __init__(self, antecedent, consequent):
-        self.antecedent = antecedent
-        self.consequent = consequent
-
-    def __or__(self, other):
-        if isinstance(self.consequent, Infix):
-            result = self.consequent.__ror__(self) | other
-            self.consequent = None
-            return result
-        self.consequent = self.consequent | other
-        return self
+    op_str = "|->"
 
 
 @Infix
@@ -40,18 +40,48 @@ def implies(antecedent, consequent):
 
 
 class Eventually(Property):
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
-
-    def __or__(self, other):
-        self.rhs |= other
-        return self
+    op_str = "s_eventually"
 
 
 @Infix
 def eventually(lhs, rhs):
     return Eventually(lhs, rhs)
+
+
+class Throughout(Property):
+    op_str = "throughout"
+
+
+@Infix
+def throughout(lhs, rhs):
+    return Throughout(lhs, rhs)
+
+
+class Until(Property):
+    op_str = "until"
+
+
+@Infix
+def until(lhs, rhs):
+    return Until(lhs, rhs)
+
+
+class UntilWith(Property):
+    op_str = "until_with"
+
+
+@Infix
+def until_with(lhs, rhs):
+    return UntilWith(lhs, rhs)
+
+
+class Inside(Property):
+    op_str = "inside"
+
+
+@Infix
+def inside(lhs, rhs):
+    return Inside(lhs, rhs)
 
 
 class GetItemProperty(Property):
@@ -119,8 +149,8 @@ def posedge(value):
 
 
 class _Compiler:
-    def __init__(self):
-        self.format_args = {}
+    def __init__(self, format_args):
+        self.format_args = format_args
 
     def _codegen_slice(self, value):
         start = value.start
@@ -134,12 +164,8 @@ class _Compiler:
         return f"[{start}:{stop}]"
 
     def _compile(self, value):
-        if isinstance(value, Implies):
-            rhs_str = ""
-            if value.consequent is not None:
-                rhs_str = self._compile(value.consequent)
-            return (f"{self._compile(value.antecedent)} |-> "
-                    f"{rhs_str}")
+        if isinstance(value, Not):
+            return f"! {self._compile(value.arg)}"
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
@@ -170,6 +196,12 @@ class _Compiler:
                     raise ValueError(f"Invalid slice for goto: {num_cycles}")
                 num_cycles = f"{num_cycles.start}:{num_cycles.stop}"
             return result + f"[-> {num_cycles}] {self._compile(value.rhs)}"
+        if isinstance(value, Property):
+            rhs_str = ""
+            if value.rhs is not None:
+                rhs_str = self._compile(value.rhs)
+            return (f"{self._compile(value.lhs)} {value.op_str} "
+                    f"{rhs_str}")
         if isinstance(value, m.Type):
             key = f"x{len(self.format_args)}"
             self.format_args[key] = value
@@ -179,7 +211,7 @@ class _Compiler:
             for arg in value.args:
                 if isinstance(arg, str):
                     property_str += f" {arg} "
-                elif isinstance(arg, (SVAProperty, Sequence)):
+                elif isinstance(arg, (SVAProperty, Sequence, FunctionCall)):
                     property_str += f" {self._compile(arg)} "
                 else:
                     key = f"x{len(self.format_args)}"
@@ -188,23 +220,47 @@ class _Compiler:
             return property_str
         if isinstance(value, Sequence):
             return f"({self._compile(value.prop)})"
-        if isinstance(value, Eventually):
-            return f"{self._compile(value.lhs)} s_eventually {self._compile(value.rhs)}"
         if value is None:
             return ""
+        if isinstance(value, FunctionCall):
+            args = ", ".join(self._compile(arg) for arg in value.args)
+            return f"{value.func.name}({args})"
+        if isinstance(value, set):
+            contents = ", ".join(self._compile(arg) for arg in value)
+            # Double escape on curly braces since this will run through format
+            # inside inline_verilog logic
+            return f"{{{{{contents}}}}}"
+        if isinstance(value, int):
+            return str(value)
         raise NotImplementedError(type(value))
 
     def compile(self, prop):
         compiled = self._compile(prop)
-        return compiled, self.format_args
+        return compiled
 
 
-def assert_(prop, on):
-    prop, format_args = _Compiler().compile(prop)
+def assert_(prop, on, disable_iff=None, compile_guard=None, name=None):
+    format_args = {}
+    _compiler = _Compiler(format_args)
+    prop = _compiler.compile(prop)
+    disable_str = ""
+    if disable_iff is not None:
+        disable_str = f" disable iff ({_compiler.compile(disable_iff)})"
     event_str = on.compile(format_args)
-    m.inline_verilog(
-        f"assert property ({event_str} {prop});", **format_args
-    )
+    prop_str = f"assert property ({event_str}{disable_str} {prop});"
+    if name is not None:
+        if not isinstance(compile_guard, str):
+            raise TypeError("Expected string for name")
+        prop_str = f"{name}: {prop_str}"
+    if compile_guard is not None:
+        if not isinstance(compile_guard, str):
+            raise TypeError("Expected string for compile_guard")
+        prop_str = f"""\
+`ifdef {compile_guard}
+    {prop_str}
+`endif
+"""
+    m.inline_verilog(prop_str, **format_args)
 
 
 class Sequence:
@@ -217,3 +273,36 @@ class Sequence:
 
 def sequence(prop):
     return Sequence(prop)
+
+
+class FunctionCall:
+    def __init__(self, func, args):
+        self.func = func
+        self.args = args
+
+
+class Function:
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(self, *args):
+        return FunctionCall(self, args)
+
+
+onehot0 = Function("$onehot0")
+onehot = Function("$onehot")
+countones = Function("$countones")
+isunknown = Function("$isunknown")
+past = Function("$past")
+rose = Function("$rose")
+fell = Function("$fell")
+stable = Function("$stable")
+
+
+class Not(Property):
+    def __init__(self, arg):
+        self.arg = arg
+
+
+def not_(arg):
+    return Not(arg)

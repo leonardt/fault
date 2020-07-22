@@ -25,6 +25,10 @@ f.assert_(io.I | f.implies | f.delay[1] | (io.O.value() == 0),
 * `f.goto[N]` corresponds to SVA `[-> N]`
 * `f.goto[M:N]` corresponds to SVA `[-> M:N]`
 * `f.eventually` corresponds to SVA `s_eventually`
+* `f.throughout` corresponds to SVA `throughout`
+* `f.until` corresponds to SVA `until`
+* `f.until_with` corresponds to SVA `until_with`
+* `f.inside` corresponds to SV `inside`
 
 # SVA 
 Use the `f.sva` function to construct sva properties by interleaving magma
@@ -34,10 +38,45 @@ f.assert_(f.sva(io.I, "|-> ##1", io.O.value() == 0),
           on=f.posedge(io.CLK))
 ```
 
+# System and Sampled Value Functions
+* `f.onehot0`
+* `f.onehot`
+* `f.countones`
+* `f.isunknown`
+* `f.past`
+* `f.rose`
+* `f.fell`
+* `f.stable`
+
+# Other
+* `f.not_` negates property
+
+# Compile Guards (ifdef)
+Use the `compile_guard` parameter and pass a string for the variable to guard
+the property.
+```python
+f.assert_(..., compile_guard="ASSERT_ON", ...)
+```
+
+This will wrap the generated property inside a macro.
+```verilog
+`ifdef ASSERT_ON
+    ...
+`endif
+```
+
+# Disable If
+Use the `disable_iff` parameter and pass a signal or expression, for example
+with a negedge RESET:
+```python
+f.assert_(..., on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN), ...)
+```
+
 # Examples
 Here are some representative examples, for a complete set of examples and
 corresponding test cases, see
 [tests/test_property.py](../tests/test_property.py).
+
 ## Basic assertion
 Here's an example of a basic implication/delay assertion on a register.
 ```python

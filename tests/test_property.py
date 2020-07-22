@@ -306,3 +306,257 @@ def test_eventually(sva, capsys):
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True})
+
+
+@requires_ncsim
+@pytest.mark.parametrize("sva", [True, False])
+def test_throughout(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit), c=m.In(m.Bit)) + m.ClockIO()
+        if sva:
+            seq = f.sva(io.b, "throughout", "!", io.c, "[-> 1]")
+            f.assert_(f.sva(f.rose(io.a), "|->", seq),
+                      on=f.posedge(io.CLK))
+        else:
+            seq = io.b | f.throughout | f.not_(io.c | f.goto[1])
+            f.assert_(f.rose(io.a) | f.implies | seq,
+                      on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.circuit.c = 1
+    tester.advance_cycle()
+    # Posedge a, b high until c goes low
+    tester.circuit.a = 1
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    for i in range(random.randint(3, 7)):
+        tester.advance_cycle()
+    tester.circuit.c = 0
+    tester.advance_cycle()
+    tester.circuit.b = 0
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.circuit.c = 1
+    tester.advance_cycle()
+    # Posedge a, b not high until c goes low
+    tester.circuit.a = 1
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    tester.circuit.b = 0
+    tester.advance_cycle()
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@requires_ncsim
+@pytest.mark.parametrize("sva", [True, False])
+def test_until(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit), c=m.In(m.Bit)) + m.ClockIO()
+        if sva:
+            seq = f.sequence(f.sva(io.b, "until !", io.c))
+            f.assert_(f.sva(f.rose(io.a), "|->", seq), on=f.posedge(io.CLK))
+        else:
+            seq = f.sequence(io.b | f.until | f.not_(io.c))
+            f.assert_(f.rose(io.a) | f.implies | seq, on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.circuit.c = 1
+    tester.advance_cycle()
+    # Posedge a, b high until 1 cycle before c goes low
+    tester.circuit.a = 1
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    for i in range(random.randint(3, 7)):
+        tester.advance_cycle()
+    tester.circuit.b = 0
+    tester.circuit.c = 0
+    tester.advance_cycle()
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.circuit.c = 1
+    tester.advance_cycle()
+    # Posedge a, b goes low two cycles before c
+    tester.circuit.a = 1
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    tester.advance_cycle()
+    tester.circuit.b = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    tester.circuit.c = 0
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@requires_ncsim
+@pytest.mark.parametrize("sva", [True, False])
+def test_until_with(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit), c=m.In(m.Bit)) + m.ClockIO()
+        if sva:
+            seq = f.sequence(f.sva(io.b, "until_with !", io.c))
+            f.assert_(f.sva(f.rose(io.a), "|->", seq), on=f.posedge(io.CLK))
+        else:
+            seq = f.sequence(io.b | f.until_with | f.not_(io.c))
+            f.assert_(f.rose(io.a) | f.implies | seq, on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.circuit.c = 1
+    tester.advance_cycle()
+    # Posedge a, b high until the cycle c goes low
+    tester.circuit.a = 1
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    for i in range(random.randint(3, 7)):
+        tester.advance_cycle()
+    tester.circuit.c = 0
+    tester.advance_cycle()
+    tester.circuit.b = 0
+    tester.advance_cycle()
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.circuit.c = 1
+    tester.advance_cycle()
+    # Posedge a, b goes low before c
+    tester.circuit.a = 1
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    tester.advance_cycle()
+    tester.circuit.b = 0
+    tester.advance_cycle()
+    tester.circuit.c = 0
+    tester.advance_cycle()
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@requires_ncsim
+@pytest.mark.parametrize("sva", [True, False])
+def test_inside(sva, capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bits[2])) + m.ClockIO()
+        if sva:
+            f.assert_(f.sva(io.a, "inside {0, 1}"), on=f.posedge(io.CLK))
+        else:
+            f.assert_(io.a | f.inside | {0, 1}, on=f.posedge(io.CLK))
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.circuit.a = 1
+    tester.advance_cycle()
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.a = 2
+    tester.advance_cycle()
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.__assert_1 has failed" in out
+
+
+@requires_ncsim
+def test_disable_if():
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
+        io += m.ClockIO(has_resetn=True)
+        f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN))
+        f.assert_(f.sva(io.a, "|-> ##2", io.b), on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.circuit.b = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.circuit.RESETN = 0
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+
+
+@requires_ncsim
+def test_ifdef_and_name(capsys):
+    class Main(m.Circuit):
+        io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
+        io += m.ClockIO(has_resetn=True)
+        f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
+                  name="foo")
+        f.assert_(f.sva(io.a, "|-> ##2", io.b), on=f.posedge(io.CLK),
+                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
+                  name="bar")
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.a = 1
+    tester.advance_cycle()
+    tester.circuit.a = 0
+    tester.advance_cycle()
+    tester.advance_cycle()
+    # Should not fail with no ASSERT_ON
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
+    # Should fail
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv", "+define+ASSERT_ON"],
+                               magma_opts={"inline": True})
+    out, _ = capsys.readouterr()
+    assert "Assertion Main_tb.dut.foo has failed" in out
+    assert "Assertion Main_tb.dut.bar has failed" in out
