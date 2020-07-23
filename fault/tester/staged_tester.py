@@ -428,7 +428,7 @@ class IfTester(NoClockInit, Tester):
         self.else_actions = []
 
     def _else(self):
-        return ElseTester(self.else_actions, self.circuit, self.clock)
+        return ElseTester(self.else_actions, self._circuit, self.clock)
 
 
 StagedTester = Tester

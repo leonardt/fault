@@ -655,6 +655,8 @@ def test_tester_if(target, simulator):
     else_tester = if_tester._else()
     assert not else_tester.actions, "Should not default clock init"
     else_tester.poke(circ.I, 0)
+    else_tester.circuit.I = 0
+    # Test circuit interface bug
     tester.eval()
     tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
