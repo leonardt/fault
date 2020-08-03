@@ -25,7 +25,7 @@ jobs:
       shell: bash
       run: |
           brew update
-          brew upgrade mpfr
+          brew upgrade gmp mpfr libmpc
           brew install verilator icarus-verilog
           verilator --version
           iverilog -V
