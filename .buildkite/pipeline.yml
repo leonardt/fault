@@ -14,6 +14,7 @@ steps:
       echo $$PATH
 
       # install python dependencies for testing
+      pip install "pytest<6"
       pip install pytest-cov pytest-codestyle
       pip install --upgrade "mantle>=2.0.0"
       pip install vcdvcd decorator
@@ -48,6 +49,7 @@ steps:
 
       # install python dependencies for testing
       pip install wheel
+      pip install "pytest<6"
       pip install pytest-cov pytest-codestyle
       pip install vcdvcd decorator
       pip install --upgrade "mantle>=2.0.0"

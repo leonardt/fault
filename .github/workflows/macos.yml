@@ -30,7 +30,7 @@ jobs:
     - name: Install Python packages
       shell: bash -l {0}
       run: |
-          pip install pytest
+          pip install pytest<6
           pip install pytest-cov pytest-codestyle
           pip install mantle>=2.0.0  # for tests.common
           pip install vcdvcd decorator
