@@ -1,12 +1,21 @@
 import magma as m
 
 
+def _is_nd_array(T):
+    if issubclass(T, m.Digital):
+        return True
+    if issubclass(T, m.Array):
+        return _is_nd_array(T.T)
+    return False
+
+
 def verilog_name(name):
     if isinstance(name, m.ref.DefnRef):
         return str(name)
     if isinstance(name, m.ref.ArrayRef):
         array_name = verilog_name(name.array.name)
-        if issubclass(name.array.T, m.Digital):
+        if (issubclass(name.array.T, m.Digital) or
+                _is_nd_array(type(name.array))):
             return f"{array_name}[{name.index}]"
         return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
