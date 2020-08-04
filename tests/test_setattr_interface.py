@@ -25,6 +25,7 @@ def pytest_generate_tests(metafunc):
 
 def run_test(target, simulator, tester, disp_type='on_error'):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
+        _dir = "build"
         kwargs = {}
         if target != "python":
             kwargs["directory"] = _dir
@@ -34,6 +35,9 @@ def run_test(target, simulator, tester, disp_type='on_error'):
             kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
             kwargs["simulator"] = simulator
+            if simulator == "iverilog":
+                # unpacked arrays not support by iverilog
+                kwargs["disable_ndarray"] = True
         tester.compile_and_run(target, **kwargs)
 
 

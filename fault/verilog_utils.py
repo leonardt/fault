@@ -9,17 +9,17 @@ def _is_nd_array(T):
     return False
 
 
-def verilog_name(name):
+def verilog_name(name, disable_ndarray=False):
     if isinstance(name, m.ref.DefnRef):
         return str(name)
     if isinstance(name, m.ref.ArrayRef):
-        array_name = verilog_name(name.array.name)
+        array_name = verilog_name(name.array.name, disable_ndarray)
         if (issubclass(name.array.T, m.Digital) or
-                _is_nd_array(type(name.array))):
+                (_is_nd_array(type(name.array)) and not disable_ndarray)):
             return f"{array_name}[{name.index}]"
         return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
-        tuple_name = verilog_name(name.tuple.name)
+        tuple_name = verilog_name(name.tuple.name, disable_ndarray)
         index = name.index
         try:
             int(index)

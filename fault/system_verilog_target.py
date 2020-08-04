@@ -60,7 +60,7 @@ class SystemVerilogTarget(VerilogTarget):
                  use_input_wires=False, parameters=None, disp_type='on_error',
                  waveform_file=None, coverage=False, use_kratos=False,
                  use_sva=False, skip_run=False, no_top_module=False,
-                 vivado_use_system_verilog=True):
+                 vivado_use_system_verilog=True, disable_ndarray=False):
         """
         circuit: a magma circuit
 
@@ -149,6 +149,14 @@ class SystemVerilogTarget(VerilogTarget):
         vivado_use_system_verilog: If True (default), mark Vivado source files
                                    as SystemVerilog so that more modern syntax
                                    is supported.
+
+        disable_ndarray: If True, disable magma/fault support for
+                         codegenerating verilog ndarrays (multi-dimensional
+                         arrays of bits).
+                         Default is False except when the simulator is
+                         "iverilog" when it is always True (since iverilog does
+                         not currently support multi-dimensional unpacked
+                         arrays)
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -167,6 +175,12 @@ class SystemVerilogTarget(VerilogTarget):
 
         # set default for magma compilation options
         magma_opts = magma_opts if magma_opts is not None else {}
+
+        if simulator == "iverilog":
+            disable_ndarray = True
+        if disable_ndarray:
+            magma_opts["disable_ndarray"] = True
+        self.disable_ndarray = disable_ndarray
 
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
@@ -265,11 +279,11 @@ class SystemVerilogTarget(VerilogTarget):
                 name = f"dut.{port.system_verilog_path}"
             else:
                 # Top level ports assign to the external reg
-                name = verilog_name(port[-1].name)
+                name = verilog_name(port[-1].name, self.disable_ndarray)
         elif isinstance(port, fault.WrappedVerilogInternalPort):
             name = f"dut.{port.path}"
         else:
-            name = verilog_name(port.name)
+            name = verilog_name(port.name, self.disable_ndarray)
         return name
 
     def process_peek(self, value):
@@ -521,7 +535,7 @@ class SystemVerilogTarget(VerilogTarget):
         return ['#1;']
 
     def make_step(self, i, action):
-        name = verilog_name(action.clock.name)
+        name = verilog_name(action.clock.name, self.disable_ndarray)
         code = []
         for step in range(action.steps):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")
@@ -1047,7 +1061,7 @@ class SynchronousSystemVerilogTarget(SystemVerilogTarget):
             raise ValueError("Clock required")
 
         super().__init__(*args, **kwargs)
-        name = verilog_name(clock.name)
+        name = verilog_name(clock.name, self.disable_ndarray)
         self.clock_drivers.append(
             f"always #{self.clock_step_delay} {name} = ~{name};"
         )
