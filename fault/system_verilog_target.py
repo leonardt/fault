@@ -155,8 +155,7 @@ class SystemVerilogTarget(VerilogTarget):
                          arrays of bits).
                          Default is False except when the simulator is
                          "iverilog" when it is always True (since iverilog does
-                         not currently support multi-dimensional unpacked
-                         arrays)
+                         not currently support unpacked arrays)
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
