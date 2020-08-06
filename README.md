@@ -247,7 +247,8 @@ For the `system-verilog` target, tracing is enabled by default.  Disable this
 feature using the `compile_and_run` parameter `dump_waveform=False`.  By
 default, the waveform file will be named `waveforms.vcd` for `ncsim` and
 `waveforms.vpd` for `vcs`.  The name of the file can be changed using the
-parameter `waveform_file="<file_name>"`.
+parameter `waveform_file="<file_name>"`.  The `vcs` simulator also supports
+dumping `fsdb` by using the argument `waveform_type="fsdb"`.
 
 ### How do I pass through flags to the simulator?
 The `verilator` and `system-verilog` target support the parameter `flags` which

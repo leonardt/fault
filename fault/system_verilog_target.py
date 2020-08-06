@@ -54,13 +54,13 @@ class SystemVerilogTarget(VerilogTarget):
                  magma_opts=None, include_verilog_libraries=None,
                  simulator=None, timescale="1ns/1ns", clock_step_delay=5,
                  num_cycles=10000, dump_waveforms=True, dump_vcd=None,
-                 no_warning=False, sim_env=None, ext_model_file=None,
-                 ext_libs=None, defines=None, flags=None, inc_dirs=None,
-                 ext_test_bench=False, top_module=None, ext_srcs=None,
-                 use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False, skip_run=False, no_top_module=False,
-                 vivado_use_system_verilog=True):
+                 waveform_type=None, no_warning=False, sim_env=None,
+                 ext_model_file=None, ext_libs=None, defines=None, flags=None,
+                 inc_dirs=None, ext_test_bench=False, top_module=None,
+                 ext_srcs=None, use_input_wires=False, parameters=None,
+                 disp_type='on_error', waveform_file=None, coverage=False,
+                 use_kratos=False, use_sva=False, skip_run=False,
+                 no_top_module=False, vivado_use_system_verilog=True):
         """
         circuit: a magma circuit
 
@@ -134,6 +134,9 @@ class SystemVerilogTarget(VerilogTarget):
                    in, then print STDERR after the process completes.
 
         dump_waveforms: Enable tracing of internal values
+
+        waveform_type: 'vcd', 'vpd', 'fsdb'.  Default for ncsim is 'vcd'. Default
+                       for vcs is 'vpd'.
 
         waveform_file: name of file to dump waveforms (default is
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
@@ -221,7 +224,14 @@ class SystemVerilogTarget(VerilogTarget):
         self.use_sva = use_sva
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
-                self.waveform_file = "waveforms.vpd"
+                if self.waveform_type is None:
+                    suffix = "vpd"
+                else:
+                    if self.waveform_type not in ["vpd", "fsdb"]:
+                        raise ValueError("Only 'vpd' and 'fsdb' supported for "
+                                         "vcs waveform type")
+                    suffix = self.waveform_type
+                self.waveform_file = f"waveforms.{self.waveform_type}"
             elif self.simulator in {"ncsim", "iverilog", "vivado"}:
                 self.waveform_file = "waveforms.vcd"
             else:
@@ -603,9 +613,14 @@ class SystemVerilogTarget(VerilogTarget):
 
         # set up probing
         if self.dump_waveforms and self.simulator == "vcs":
-            initial_body += [f'$vcdplusfile("{self.waveform_file}");',
-                             f'$vcdpluson();',
-                             f'$vcdplusmemon();']
+            if self.waveform_type == "vpd":
+                initial_body += [f'$vcdplusfile("{self.waveform_file}");',
+                                 f'$vcdpluson();',
+                                 f'$vcdplusmemon();']
+            else:
+                assert self.waveform_type == "fsdb"
+                initial_body += [f'$fsdbDumpFile("{self.waveform_file}");',
+                                 f'fsdbDumpVars;']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
