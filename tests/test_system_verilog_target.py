@@ -8,7 +8,7 @@ from .common import TestBasicClkCircuit
 
 @pytest.mark.parametrize("simulator,waveform_type", [("ncsim", "vcd"), 
                                                      ("vcs", "vpd"),
-                                                     ("vcs", "fsdb")]
+                                                     ("vcs", "fsdb")])
 @pytest.mark.parametrize("use_sva", [True, False])
 def test_waves(simulator, waveform_type, use_sva):
     if simulator == 'vcs' and not shutil.which("vcs"):
