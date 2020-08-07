@@ -48,7 +48,7 @@ class VerilogTarget(Target):
 
         if hasattr(circuit, "verilog_file_name") and \
                 os.path.splitext(circuit.verilog_file_name)[-1] == ".sv" or \
-                use_kratos:
+                use_kratos or "sv" in self.magma_opts:
             suffix = "sv"
         else:
             suffix = "v"
