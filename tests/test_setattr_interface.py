@@ -33,6 +33,7 @@ def run_test(target, simulator, tester, disp_type='on_error'):
             kwargs["magma_opts"] = {"verilator_debug": True}
             kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
+            kwargs["magma_opts"] = {"sv": True}
             kwargs["simulator"] = simulator
         tester.compile_and_run(target, **kwargs)
 
