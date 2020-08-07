@@ -569,7 +569,7 @@ class SystemVerilogTarget(VerilogTarget):
             while not issubclass(type_.T, m.Digital):
                 outer_width += f"[{type_.N - 1}:0]"
                 type_ = type_.T
-            inner_width = f"{type_.N - 1}"
+            inner_width = f"[{type_.N - 1}:0]"
             t = "reg" if type_.is_input() else "wire"
             self.add_decl(f'{t} {inner_width}', f'{name} {outer_width}')
             return [f".{name}({name})"]
