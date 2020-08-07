@@ -26,7 +26,7 @@ setup(
         "cosa",
         "z3-solver",
         "hwtypes",
-        "magma-lang>=2.0.0",
+        "magma-lang>=2.0.73",
         "pyyaml",
         "scipy",
         "numpy",
