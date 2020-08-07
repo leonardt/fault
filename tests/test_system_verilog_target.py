@@ -6,7 +6,7 @@ import pytest
 from .common import TestBasicClkCircuit
 
 
-@pytest.mark.parametrize("simulator,waveform_type", [("ncsim", "vcd"), 
+@pytest.mark.parametrize("simulator,waveform_type", [("ncsim", "vcd"),
                                                      ("vcs", "vpd"),
                                                      ("vcs", "fsdb")])
 @pytest.mark.parametrize("use_sva", [True, False])
