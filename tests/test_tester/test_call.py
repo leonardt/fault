@@ -18,7 +18,8 @@ def test_call_interface_basic(target, simulator):
             tester.compile_and_run(target, directory=_dir)
         else:
             tester.compile_and_run(target, directory=_dir,
-                                   simulator=simulator)
+                                   simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_call_interface_kwargs(target, simulator):
@@ -30,7 +31,8 @@ def test_call_interface_kwargs(target, simulator):
             tester.compile_and_run(target, directory=_dir)
         else:
             tester.compile_and_run(target, directory=_dir,
-                                   simulator=simulator)
+                                   simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_call_interface_kwargs(target, simulator):
@@ -42,7 +44,8 @@ def test_call_interface_kwargs(target, simulator):
             tester.compile_and_run(target, directory=_dir)
         else:
             tester.compile_and_run(target, directory=_dir,
-                                   simulator=simulator)
+                                   simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_call_interface_clock(target, simulator, caplog):
@@ -62,7 +65,8 @@ def test_call_interface_clock(target, simulator, caplog):
                                    flags=["-Wno-unused"])
         else:
             tester.compile_and_run(target, directory=_dir,
-                                   simulator=simulator)
+                                   simulator=simulator,
+                                   magma_opts={"sv": True})
     warning = "Number of arguments to __call__ did not match number of " \
               "circuit inputs"
     assert warning in caplog.messages

@@ -77,7 +77,8 @@ def test_tester_basic(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
     tester.compile_and_run("coreir")
     tester.clear()
     assert tester.actions == []
@@ -95,7 +96,8 @@ def test_tester_basic_fail(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_clock(target, simulator):
@@ -109,7 +111,8 @@ def test_tester_clock(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_peek(target, simulator):
@@ -128,7 +131,8 @@ def test_tester_peek(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_peek_input(target, simulator):
@@ -144,7 +148,8 @@ def test_tester_peek_input(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_nested_arrays_by_element(target, simulator):
@@ -165,7 +170,8 @@ def test_tester_nested_arrays_by_element(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_nested_arrays_bulk(target, simulator):
@@ -187,7 +193,8 @@ def test_tester_nested_arrays_bulk(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_double_nested_arrays_broadcast(target, simulator):
@@ -211,7 +218,8 @@ def test_tester_double_nested_arrays_broadcast(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_nested_array_tuple_broadcast(target, simulator):
@@ -237,7 +245,8 @@ def test_tester_nested_array_tuple_broadcast(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_big_int(target, simulator):
@@ -257,7 +266,8 @@ def test_tester_big_int(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_128(target, simulator):
@@ -277,7 +287,8 @@ def test_tester_128(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_retarget_tester(target, simulator):
@@ -316,7 +327,8 @@ def test_retarget_tester(target, simulator):
         if target == "verilator":
             copy.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            copy.compile_and_run(target, directory=_dir, simulator=simulator)
+            copy.compile_and_run(target, directory=_dir, simulator=simulator,
+                                 magma_opts={"sv": True})
 
 
 def test_run_error():
@@ -442,7 +454,8 @@ def test_tester_verilog_wrapped(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_loop(target, simulator):
@@ -463,7 +476,8 @@ def test_tester_loop(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_file_io(target, simulator):
@@ -499,7 +513,8 @@ def test_tester_file_io(target, simulator):
             tester.compile_and_run(target, directory=_dir,
                                    flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
         # read output
         with open(test_file_out, "rb") as file:
@@ -541,7 +556,8 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
         # read output
         with open(test_file_out, "rb") as file:
@@ -581,7 +597,8 @@ def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
         # read output
         with open(test_file_out, "rb") as file:
@@ -603,7 +620,8 @@ def test_tester_while(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_while2(target, simulator):
@@ -620,7 +638,8 @@ def test_tester_while2(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_while3(target, simulator):
@@ -638,7 +657,8 @@ def test_tester_while3(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_if(target, simulator):
@@ -663,7 +683,8 @@ def test_tester_if(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_file_scanf(target, simulator):
@@ -699,7 +720,8 @@ def test_tester_file_scanf(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_sint_circuit(target, simulator):
@@ -724,6 +746,7 @@ def test_sint_circuit(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -742,6 +765,7 @@ def test_tuple_circuit(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -770,6 +794,7 @@ def test_nested_tuple_circuit(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -812,6 +837,7 @@ def test_poke_bitwise_nested(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -829,6 +855,7 @@ def test_generic_expect_fail(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -855,4 +882,5 @@ def test_wait_until_tuple(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
