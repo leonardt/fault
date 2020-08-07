@@ -32,7 +32,7 @@ def test_init_clock():
         else:
             return
         tester.compile_and_run("system-verilog", simulator=simulator,
-                               directory=tempdir)
+                               directory=tempdir, magma_opts={"sv": True})
         vcd_file = os.path.join(tempdir, "waveforms.vcd")
         vcd = VCDVCD(vcd_file, signals=["SimpleALU_tb.dut.CLK"])
         tvs = next(iter(vcd.get_data().values()))["tv"]
