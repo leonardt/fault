@@ -60,7 +60,8 @@ class SystemVerilogTarget(VerilogTarget):
                  ext_srcs=None, use_input_wires=False, parameters=None,
                  disp_type='on_error', waveform_file=None, coverage=False,
                  use_kratos=False, use_sva=False, skip_run=False,
-                 no_top_module=False, vivado_use_system_verilog=True):
+                 no_top_module=False, vivado_use_system_verilog=True,
+                 disable_ndarray=False):
         """
         circuit: a magma circuit
 
