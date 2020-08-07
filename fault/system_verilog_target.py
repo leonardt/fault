@@ -649,7 +649,7 @@ class SystemVerilogTarget(VerilogTarget):
             else:
                 assert self.waveform_type == "fsdb"
                 initial_body += [f'$fsdbDumpFile("{self.waveform_file}");',
-                                 f'fsdbDumpVars;']
+                                 f'$fsdbDumpVars;']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
