@@ -573,7 +573,7 @@ class SystemVerilogTarget(VerilogTarget):
             t = "reg" if type_.is_input() else "wire"
             self.add_decl(f'{t} {inner_width}', f'{name} {outer_width}')
             return [f".{name}({name})"]
-        elif (is_array_of_non_bits or issubclass(type_, m.Tuple):
+        elif is_array_of_non_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
