@@ -564,8 +564,7 @@ class SystemVerilogTarget(VerilogTarget):
     def generate_port_code(self, name, type_, power_args):
         is_array_of_non_bits = issubclass(type_, m.Array) and \
             not issubclass(type_.T, m.Bit)
-        if (is_nd_array(type_) and not issubclass(type_.T, m.Digital) and 
-                not self.disable_ndarray):
+        if is_nd_array(type_) and not self.disable_ndarray:
             outer_width = ""
             while not issubclass(type_.T, m.Digital):
                 outer_width += f"[{type_.N - 1}:0]"

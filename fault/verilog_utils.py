@@ -1,11 +1,11 @@
 import magma as m
 
 
-def is_nd_array(T):
-    if issubclass(T, m.Digital):
+def is_nd_array(T, skip=True):
+    if issubclass(T, m.Digital) and not skip:
         return True
     if issubclass(T, m.Array):
-        return is_nd_array(T.T)
+        return is_nd_array(T.T, False)
     return False
 
 
