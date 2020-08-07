@@ -1,6 +1,6 @@
 import warnings
 from fault.verilog_target import VerilogTarget
-from .verilog_utils import verilog_name
+from .verilog_utils import verilog_name, is_nd_array
 from .util import (is_valid_file_mode, file_mode_allows_reading,
                    file_mode_allows_writing)
 import magma as m
@@ -564,7 +564,16 @@ class SystemVerilogTarget(VerilogTarget):
     def generate_port_code(self, name, type_, power_args):
         is_array_of_non_bits = issubclass(type_, m.Array) and \
             not issubclass(type_.T, m.Bit)
-        if is_array_of_non_bits or issubclass(type_, m.Tuple):
+        if is_nd_array(type_) and not self.disable_ndarray:
+            outer_width = ""
+            while not issubclass(type_.T, m.Digital):
+                outer_width += f"[{type_.N - 1}:0]"
+                type_ = type_.T
+            inner_width = f"{type_.N - 1}"
+            t = "reg" if type_.is_input() else "wire"
+            self.add_decl(f'{t} {inner_width}', f'{name} {outer_width}')
+            return [f".{name}({name})"]
+        elif (is_array_of_non_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
