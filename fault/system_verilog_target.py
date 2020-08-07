@@ -275,7 +275,7 @@ class SystemVerilogTarget(VerilogTarget):
             port = port.select_path
         if isinstance(port, SelectPath):
             if len(port) > 2:
-                name = f"dut.{port.system_verilog_path}"
+                name = f"dut.{port.system_verilog_path(self.disable_ndarray)}"
             else:
                 # Top level ports assign to the external reg
                 name = verilog_name(port[-1].name, self.disable_ndarray)
@@ -289,7 +289,10 @@ class SystemVerilogTarget(VerilogTarget):
         if isinstance(value.port, fault.WrappedVerilogInternalPort):
             return f"dut.{value.port.path}"
         elif isinstance(value.port, PortWrapper):
-            return f"dut.{value.port.select_path.system_verilog_path}"
+            path = value.port.select_path.system_verilog_path(
+                self.disable_ndarray
+            )
+            return f"dut.{path}"
         return f"{value.port.name}"
 
     def make_var(self, i, action):
@@ -319,7 +322,8 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(value, actions.Peek):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
-            value = f"dut.{value.select_path.system_verilog_path}"
+            path = value.select_path.system_verilog_path(self.disable_ndarray)
+            value = f"dut.{path}"
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
@@ -344,7 +348,8 @@ class SystemVerilogTarget(VerilogTarget):
             op = value.op_str
             return f"{op} ({operand})"
         elif isinstance(value, PortWrapper):
-            return f"dut.{value.select_path.system_verilog_path}"
+            path = value.select_path.system_verilog_path(self.disable_ndarray)
+            return f"dut.{path}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
