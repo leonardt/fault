@@ -236,6 +236,7 @@ class SystemVerilogTarget(VerilogTarget):
         self.disp_type = disp_type
         self.waveform_file = waveform_file
         self.use_sva = use_sva
+        self.waveform_type = waveform_type
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
                 if self.waveform_type is None:
