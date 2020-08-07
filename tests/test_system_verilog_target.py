@@ -45,4 +45,5 @@ def test_waves(simulator, waveform_type, use_sva):
         tester.compile_and_run(target="system-verilog", simulator=simulator,
                                directory=_dir, dump_waveforms=False,
                                use_sva=use_sva, waveform_type=waveform_type)
-        assert not os.path.exists(os.path.join(_dir, f"waveforms.{suffix}"))
+        assert not os.path.exists(os.path.join(_dir,
+                                               f"waveforms.{waveform_type}"))
