@@ -28,13 +28,13 @@ def test_waves(simulator, waveform_type, use_sva):
                                directory=_dir, use_sva=use_sva,
                                waveform_type=waveform_type,
                                dump_waveforms=True)
-        assert os.path.exists(os.path.join(_dir, 
+        assert os.path.exists(os.path.join(_dir,
                                            f"waveforms.{waveform_type}"))
 
     # Test custom
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator=simulator,
-                               directory=_dir, 
+                               directory=_dir,
                                waveform_file=f"waves.{waveform_type}",
                                use_sva=use_sva, waveform_type=waveform_type,
                                dump_waveforms=True)
