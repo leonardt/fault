@@ -19,7 +19,9 @@ def test_user_namespace(target, simulator):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             t.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"],
-                              magma_opts={"user_namespace": "my_namespace"})
+                              magma_opts={"user_namespace": "my_namespace",
+                                          "sv": True})
         else:
             t.compile_and_run(target, directory=_dir, simulator=simulator,
-                              magma_opts={"user_namespace": "my_namespace"})
+                              magma_opts={"user_namespace": "my_namespace",
+                                          "sv": True})
