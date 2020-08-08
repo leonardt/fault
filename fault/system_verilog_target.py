@@ -726,7 +726,7 @@ class SystemVerilogTarget(VerilogTarget):
             sim_err_str = None
             # Run simulation
             bin_cmd = [bin_file]
-            bin_err_str = 'Error'
+            bin_err_str = ['Error', 'Fatal']
         elif self.simulator == 'iverilog':
             # Compile simulation
             sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
