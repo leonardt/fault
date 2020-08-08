@@ -47,7 +47,7 @@ class SelectPath:
     def system_verilog_path(self, disable_ndarray):
         def name_func(x):
             return verilog_name(x, disable_ndarray)
-        return self.make_path(".", 
+        return self.make_path(".",
                               name_func=name_func)
 
     @property

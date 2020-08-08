@@ -1057,12 +1057,13 @@ class SystemVerilogTarget(VerilogTarget):
         # misc flags
         cmd += ['-g2012']
 
-        # source files
-        cmd += [f'{src}' for src in sources]
-
-        # set the top module
+        # set the top module.  note that the '-s' option must
+        # come before the source file list.
         if not self.no_top_module:
             cmd += ['-s', f'{self.top_module}']
+
+        # source files
+        cmd += [f'{src}' for src in sources]
 
         # return arg list and binary file location
         return cmd, bin_file
