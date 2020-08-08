@@ -733,7 +733,7 @@ class SystemVerilogTarget(VerilogTarget):
             sim_err_str = ['syntax error', 'I give up.']
             # Run simulation
             bin_cmd = ['vvp', '-N', bin_file]
-            bin_err_str = 'ERROR'
+            bin_err_str = ['ERROR', 'FATAL']
         else:
             raise NotImplementedError(self.simulator)
 
