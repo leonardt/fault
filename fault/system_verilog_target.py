@@ -646,10 +646,6 @@ class SystemVerilogTarget(VerilogTarget):
                 initial_body += [f'$vcdplusfile("{self.waveform_file}");',
                                  f'$vcdpluson();',
                                  f'$vcdplusmemon();']
-            else:
-                assert self.waveform_type == "fsdb"
-                initial_body += [f'$fsdbDumpfile("{self.waveform_file}");',
-                                 f'$fsdbDumpvars;']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
@@ -1030,8 +1026,11 @@ class SystemVerilogTarget(VerilogTarget):
         if self.dump_waveforms:
             cmd += ['-debug_pp']
 
-        if self.dump_waveforms and self.waveform_type == "vcd":
-            cmd += ['+vcs+vcdpluson']
+            if self.waveform_type == "vcd":
+                cmd += ['+vcs+vcdpluson']
+
+            if self.waveform_type == "fsdb":
+                cmd += [f'+fsdbfile+{self.waveform_file}']
 
         # specify top module
         if not self.no_top_module:
