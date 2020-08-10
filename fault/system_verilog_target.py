@@ -648,8 +648,8 @@ class SystemVerilogTarget(VerilogTarget):
                                  f'$vcdplusmemon();']
             else:
                 assert self.waveform_type == "fsdb"
-                initial_body += [f'$fsdbDumpFile("{self.waveform_file}");',
-                                 f'$fsdbDumpVars;']
+                initial_body += [f'$fsdbDumpfile("{self.waveform_file}");',
+                                 f'$fsdbDumpvars;']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
@@ -1007,9 +1007,6 @@ class SystemVerilogTarget(VerilogTarget):
         for dir_ in self.inc_dirs:
             cmd += [f'+incdir+{dir_}']
 
-        if self.dump_waveforms and self.waveform_type == "fsdb": 
-            cmd += ['-debug_access+pp']
-
         # define variables
         cmd += self.def_args(prefix='+define+')
 
@@ -1031,7 +1028,10 @@ class SystemVerilogTarget(VerilogTarget):
             raise NotImplementedError("coverage in vcs is not implemented yet")
 
         if self.dump_waveforms:
-            cmd += ['+vcs+vcdpluson', '-debug_pp']
+            cmd += ['-debug_pp']
+
+        if self.dump_waveforms and self.waveform_type == "vcd":
+            cmd += ['+vcs+vcdpluson']
 
         # specify top module
         if not self.no_top_module:
