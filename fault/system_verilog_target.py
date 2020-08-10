@@ -1007,7 +1007,7 @@ class SystemVerilogTarget(VerilogTarget):
         for dir_ in self.inc_dirs:
             cmd += [f'+incdir+{dir_}']
 
-        if self.dump_waveforms and waveform_type == "fsdb": 
+        if self.dump_waveforms and self.waveform_type == "fsdb": 
             cmd += ['-debug_access+pp']
 
         # define variables
