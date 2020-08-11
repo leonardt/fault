@@ -1032,7 +1032,7 @@ class SystemVerilogTarget(VerilogTarget):
             if self.waveform_type == "fsdb":
                 cmd += ['+vcsd', '+vpi', 
                 ('-P $VERDI_HOME/shared/PLI/VCS/$PLATFORM/novas.tb'
-                 '$VERDI_HOME/shared/PLI/VCS/$PLATFORM/pli.a'),
+                 ' $VERDI_HOME/shared/PLI/VCS/$PLATFORM/pli.a'),
                 f'+fsdbfile+{self.waveform_file}']
 
         # specify top module
