@@ -24,10 +24,10 @@ def test_waves(simulator, waveform_type, use_sva):
     tester.step(2)
     # Test default
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
-        # Note this will only work on kiwi/buildkite env, users should set their specific link flags
+        # Note this will only work on kiwi/buildkite env, users should set
+        # their specific link flags
         verdi_home = os.environ["VERDIHOME"]
-        flags = ['-P', 
+        flags = ['-P',
                  f' {verdi_home}/share/PLI/vcs_latest/LINUX64/novas.tab',
                  f' {verdi_home}/share/PLI/vcs_latest/LINUX64/pli.a']
         tester.compile_and_run(target="system-verilog", simulator=simulator,
