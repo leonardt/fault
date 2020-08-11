@@ -247,7 +247,36 @@ For the `system-verilog` target, enable this feature using the
 `compile_and_run` parameter `dump_waveform=True`.  By default, the waveform
 file will be named `waveforms.vcd` for `ncsim` and `waveforms.vpd` for `vcs`.
 The name of the file can be changed using the parameter
-`waveform_file="<file_name>"`.
+`waveform_file="<file_name>"`.  
+
+The `vcs` simulator also supports dumping `fsdb` by using the argument
+`waveform_type="fsdb"`.  For this to work, you'll need to also use the `flags`
+argument using the path defined in your verdi manual.  For example,
+`$VERDI_HOME/doc/linking_dumping.pdf`.  
+
+Here is an example using an older version of verdi (using the VERDIHOME
+environment variable):
+```python
+verdi_home = os.environ["VERDIHOME"]
+# You may need to change the 'vcs_latest' and 'LINUX64' parts of the path
+# depending on your verdi version, please consult
+# $VERDI_HOME/doc/linking_dumping.pdf
+flags = ['-P', 
+         f' {verdi_home}/share/PLI/vcs_latest/LINUX64/novas.tab',
+         f' {verdi_home}/share/PLI/vcs_latest/LINUX64/pli.a']
+tester.compile_and_run(target="system-verilog", simulator="vcs",
+                       waveform_type="fsdb", dump_waveforms=True, flags=flags)
+```
+
+Here's an example for a newer version of verdi
+```python
+verdi_home = os.environ["VERDI_HOME"]
+flags = ['-P',
+         f' {verdi_home}/share/PLI/VCS/linux64/novas.tab',
+         f' {verdi_home}/share/PLI/VCS/linux64/pli.a']
+tester.compile_and_run(target="system-verilog", simulator="vcs",
+                       waveform_type="fsdb", dump_waveforms=True, flags=flags)
+```
 
 ### How do I pass through flags to the simulator?
 The `verilator` and `system-verilog` target support the parameter `flags` which
