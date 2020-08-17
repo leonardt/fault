@@ -382,17 +382,20 @@ class SystemVerilogTarget(VerilogTarget):
     def make_delay(self, i, action):
         return [f'#({action.time}*1s);']
 
-    def make_print(self, i, action):
-        # build up argument list for the $write command
+    def _make_print_args(self, values):
         args = []
-        args.append(f'"{action.format_str}"')
-        for port in action.ports:
+        for port in values:
             if isinstance(port, (Number, AbstractBit, AbstractBitVector)) and \
                     not isinstance(port, m.Bits):
                 args.append(f'{port}')
             else:
                 args.append(f'{self.make_name(port)}')
+        return args
 
+    def make_print(self, i, action):
+        # build up argument list for the $write command
+        args = [f'"{action.format_str}"']
+        args += self._make_print_args(action.ports)
         # generate the command
         args = ', '.join(args)
         return [f'$write({args});']
@@ -540,13 +543,7 @@ class SystemVerilogTarget(VerilogTarget):
             else:
                 assert isinstance(action.msg, tuple)
                 err_msg += "\\n" + action.msg[0]
-                for arg in action.msg[1:]:
-                    if isinstance(arg, (Number, AbstractBit,
-                                        AbstractBitVector)) and \
-                            not isinstance(arg, m.Bits):
-                        err_args.append(f'{arg}')
-                    else:
-                        err_args.append(f'{self.make_name(arg)}')
+                err_args += self._make_print_args(action.msg[1:])
 
         # construct the body of the $error call
         err_fmt_str = f'"{err_hdr}.  {err_msg}."'
