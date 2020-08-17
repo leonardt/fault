@@ -35,7 +35,7 @@ jobs:
           pip install "pytest<6"
           pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
-          pip install vcdvcd decorator
+          pip install vcdvcd decorator kratos
           pip install .
     - name: Pytest
       shell: bash -l {0}
