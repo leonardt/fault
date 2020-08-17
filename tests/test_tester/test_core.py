@@ -99,7 +99,7 @@ def test_tester_basic_fail(target, simulator, capsys):
                                        flags=["-Wno-fatal"])
             else:
                 tester.compile_and_run(target, directory=_dir,
-                                       simulator=simulator, 
+                                       simulator=simulator,
                                        magma_opts={"sv": True})
     out, err = capsys.readouterr()
     assert "MY_MESSAGE: got 1, expected 0!" in out + err
@@ -119,7 +119,7 @@ def test_tester_basic_fail2(target, simulator, capsys):
                                        flags=["-Wno-fatal"])
             else:
                 tester.compile_and_run(target, directory=_dir,
-                                       simulator=simulator, 
+                                       simulator=simulator,
                                        magma_opts={"sv": True})
     out, err = capsys.readouterr()
     assert "some failure message" in out + err

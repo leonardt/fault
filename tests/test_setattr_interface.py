@@ -189,7 +189,7 @@ def test_setattr_basic_fail(target, simulator, capsys):
     with pytest.raises(AssertionError) as e:
         run_test(target, simulator, tester)
     if target == "python":
-        assert "MY_MESSAGE: got 1, expected 0!"  in str(e)
+        assert "MY_MESSAGE: got 1, expected 0!" in str(e)
     else:
         out, err = capsys.readouterr()
         assert "MY_MESSAGE: got 1, expected 0!" in out, out + err
