@@ -309,6 +309,7 @@ def test_tester_128(target, simulator):
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
+        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
