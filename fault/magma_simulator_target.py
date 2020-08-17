@@ -22,8 +22,7 @@ class MagmaSimulatorTarget(Target):
             return PythonSimulator
         raise NotImplementedError(backend)
 
-    @staticmethod
-    def check(got, port, expected):
+    def check(self, got, port, expected, msg, simulator):
         if isinstance(port, m.Array) and \
                 isinstance(port.T, m.Digital) and \
                 not isinstance(port, m.Bits) and \
@@ -35,9 +34,30 @@ class MagmaSimulatorTarget(Target):
             expected = expected.as_bool_list()
         if isinstance(port, m.Array):
             for i in range(port.N):
-                MagmaSimulatorTarget.check(got[i], port[i], expected[i])
+                self.check(got[i], port[i], expected[i], msg, simulator)
             return
-        assert got == expected, f"Got {got}, expected {expected}"
+        error_msg = f"Got {got}, expected {expected}"
+        equal = got == expected
+        if not equal and msg is not None:
+            if isinstance(msg, str):
+                error_msg += "\n" + msg
+            else:
+                assert isinstance(msg, tuple)
+                format_str = msg[0]
+                got = [self.get_value(simulator, port) for port in msg[1:]]
+                values = ()
+                for value, port in zip(got, msg[1:]):
+                    if isinstance(port, m.Array) and \
+                            issubclass(port.T, m.Digital):
+                        value = BitVector[len(port)](value).as_uint()
+                    elif isinstance(port, m.Array):
+                        raise NotImplementedError("Printing complex nested"
+                                                  " arrays")
+                    values += (value, )
+                format_str = format_str.replace("\\n", "\n")
+                error_msg += "\n" + format_str % values
+
+        assert equal, error_msg
 
     def process_port(self, port):
         scope = Scope()
@@ -90,7 +110,7 @@ class MagmaSimulatorTarget(Target):
             elif isinstance(action, fault.actions.Expect):
                 got = self.get_value(simulator, action.port)
                 expected = self.get_value(simulator, action.value)
-                MagmaSimulatorTarget.check(got, action.port, expected)
+                self.check(got, action.port, expected, action.msg, simulator)
             elif isinstance(action, fault.actions.Eval):
                 simulator.evaluate()
             elif isinstance(action, fault.actions.Step):

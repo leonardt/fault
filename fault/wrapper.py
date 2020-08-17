@@ -55,9 +55,9 @@ class PortWrapper(expression.Expression):
         self.parent = parent
         self.init_done = True
 
-    def expect(self, value):
+    def expect(self, value, msg=None):
         select_path = self.select_path
-        select_path.tester.expect(select_path, value)
+        select_path.tester.expect(select_path, value, msg=msg)
 
     def __setitem__(self, key, value):
         if not isinstance(self.port, (m.Array, m.Tuple)):

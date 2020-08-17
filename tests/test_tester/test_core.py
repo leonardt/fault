@@ -84,20 +84,45 @@ def test_tester_basic(target, simulator):
     assert tester.actions == []
 
 
-@pytest.mark.xfail(strict=True)
-def test_tester_basic_fail(target, simulator):
+def test_tester_basic_fail(target, simulator, capsys):
     circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
     tester.eval()
-    tester.expect(circ.O, 0)
-    with tempfile.TemporaryDirectory(dir=".") as _dir:
-        if target == "verilator":
-            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
-        else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator,
-                                   magma_opts={"sv": True})
+    tester.expect(circ.O, 0, msg=("MY_MESSAGE: got %x, expected 0!",
+                                  tester.circuit.O))
+    with pytest.raises(AssertionError) as e:
+        with tempfile.TemporaryDirectory(dir=".") as _dir:
+            if target == "verilator":
+                tester.compile_and_run(target, directory=_dir,
+                                       flags=["-Wno-fatal"])
+            else:
+                tester.compile_and_run(target, directory=_dir,
+                                       simulator=simulator, 
+                                       magma_opts={"sv": True})
+    out, err = capsys.readouterr()
+    assert "MY_MESSAGE: got 1, expected 0!" in out + err
+
+
+def test_tester_basic_fail2(target, simulator, capsys):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    tester.expect(circ.O, 0, msg="some failure message")
+    with pytest.raises(AssertionError) as e:
+        with tempfile.TemporaryDirectory(dir=".") as _dir:
+            if target == "verilator":
+                tester.compile_and_run(target, directory=_dir,
+                                       flags=["-Wno-fatal"])
+            else:
+                tester.compile_and_run(target, directory=_dir,
+                                       simulator=simulator, 
+                                       magma_opts={"sv": True})
+    out, err = capsys.readouterr()
+    assert "some failure message" in out + err
 
 
 def test_tester_clock(target, simulator):

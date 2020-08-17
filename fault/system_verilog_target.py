@@ -534,6 +534,19 @@ class SystemVerilogTarget(VerilogTarget):
                     cond = f'({name} == {value})'
                 err_msg = 'Expected %x, got %x'
                 err_args = [value, name]
+        if action.msg is not None:
+            if isinstance(action.msg, str):
+                err_msg += "\\n" + action.msg
+            else:
+                assert isinstance(action.msg, tuple)
+                err_msg += "\\n" + action.msg[0]
+                for arg in action.msg[1:]:
+                    if isinstance(arg, (Number, AbstractBit,
+                                        AbstractBitVector)) and \
+                            not isinstance(arg, m.Bits):
+                        err_args.append(f'{arg}')
+                    else:
+                        err_args.append(f'{self.make_name(arg)}')
 
         # construct the body of the $error call
         err_fmt_str = f'"{err_hdr}.  {err_msg}."'

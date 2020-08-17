@@ -283,3 +283,18 @@ The `verilator` and `system-verilog` target support the parameter `flags` which
 accepts a list of flags (strings) that will be passed through to the simulator
 command (`verilator` for verilator, `irun` for ncsim, `vcs` for vcs, and
 `iverilog` for iverilog).
+
+### Can I include a message to print when an expect fails?
+Use the `msg` argument to the expect action. You can either pass a standalone
+string, e.g.
+```python
+tester.circuit.O.expect(0, msg="my error message")
+```
+
+or you can pass a printf style message using a tuple.  The first argument
+should be the format string, the subsequent arguments are the format values,
+e.g.
+```python
+tester.circuit.O.expect(0, msg=("MY_MESSAGE: got %x, expected 0!",
+                                tester.circuit.O))
+```
