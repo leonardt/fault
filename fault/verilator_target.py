@@ -331,9 +331,11 @@ class VerilatorTarget(VerilogTarget):
 
     def make_print(self, i, action):
         ports = self._make_print_args(action.ports)
-        if ports:
-            ports = ", " + ", ".join(ports)
-        return [f'printf("{action.format_str}"{ports});']
+        if len(ports) != 0:
+            ports_str = ", " + ", ".join(ports)
+        else:
+            ports_str = ""
+        return [f'printf("{action.format_str}"{ports_str});']
 
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
