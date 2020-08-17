@@ -378,9 +378,10 @@ class VerilatorTarget(VerilogTarget):
             for j in range(math.ceil(action.value.num_bits / slice_range)):
                 value = action.value[j * slice_range:min(
                     (j + 1) * slice_range, action.value.num_bits)]
-                asserts.append(self._make_assert(f"top->{name}[{j}]", value, i,
-                                                 f"\"{debug_name}\"",
-                                                 user_msg))
+                asserts.append(self._make_assert(
+                    f"((unsigned int) top->{name}[{j}])", 
+                    f"((unsigned int) {value})", i, f"\"{debug_name}\"",
+                    user_msg))
             return asserts
         else:
             value = self.process_value(action.port, value)
@@ -398,7 +399,8 @@ class VerilatorTarget(VerilogTarget):
                 port_len = len(port)
             mask = (1 << port_len) - 1
 
-            return [self._make_assert(port_value, f"{value} & {mask}", i,
+            return [self._make_assert(f"((unsigned int) {port_value})",
+                                      f"(unsigned int) ({value} & {mask})", i,
                                       f"\"{debug_name}\"", user_msg)]
 
     def make_eval(self, i, action):
