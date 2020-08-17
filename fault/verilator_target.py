@@ -312,10 +312,10 @@ class VerilatorTarget(VerilogTarget):
                     result += self.make_poke(i, action)
             return result
 
-    def make_print(self, i, action):
+    def _make_print_args(self, ports):
         port_names = []
         prefix = self.get_verilator_prefix()
-        for port in action.ports:
+        for port in ports:
             if isinstance(port, fault.WrappedVerilogInternalPort):
                 path = port.path.replace(".", "->")
                 name = f"{prefix}->{path}"
@@ -327,9 +327,12 @@ class VerilatorTarget(VerilogTarget):
             else:
                 name = verilator_name(port.name)
             port_names.append(name)
-        ports = ", ".join(f"top->{name}" for name in port_names)
+        return tuple(f"top->{name}" for name in port_names)
+
+    def make_print(self, i, action):
+        ports = self._make_print_args(action.ports)
         if ports:
-            ports = ", " + ports
+            ports = ", " + ", ".join(ports)
         return [f'printf("{action.format_str}"{ports});']
 
     def make_expect(self, i, action):
@@ -363,19 +366,7 @@ class VerilatorTarget(VerilogTarget):
             else:
                 assert isinstance(action.msg, tuple)
                 user_msg += (action.msg[0], )
-                for arg in action.msg[1:]:
-                    prefix = self.get_verilator_prefix()
-                    if isinstance(arg, fault.WrappedVerilogInternalPort):
-                        path = arg.path.replace(".", "->")
-                        name = f"{prefix}->{path}"
-                    elif isinstance(arg, PortWrapper):
-                        arg = arg.select_path
-                        name = arg.verilator_path
-                        if len(arg) > 2:
-                            name = f"{prefix}->" + name
-                    else:
-                        name = verilator_name(arg.name)
-                    user_msg += (f"top->{name}", )
+                user_msg += self._make_print_args(action.msg[1:])
 
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
