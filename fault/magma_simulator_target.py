@@ -22,6 +22,20 @@ class MagmaSimulatorTarget(Target):
             return PythonSimulator
         raise NotImplementedError(backend)
 
+    def _make_print_str(self, format_str, values, simulator):
+        got = [self.get_value(simulator, port) for port in values]
+        format_values = ()
+        for value, port in zip(got, values):
+            if isinstance(port, m.Array) and \
+                    issubclass(port.T, m.Digital):
+                value = BitVector[len(port)](value).as_uint()
+            elif isinstance(port, m.Array):
+                raise NotImplementedError("Printing complex nested"
+                                          " arrays")
+            format_values += (value, )
+        format_str = format_str.replace("\\n", "\n")
+        return format_str % format_values
+
     def check(self, got, port, expected, msg, simulator):
         if isinstance(port, m.Array) and \
                 isinstance(port.T, m.Digital) and \
@@ -43,20 +57,8 @@ class MagmaSimulatorTarget(Target):
                 error_msg += "\n" + msg
             else:
                 assert isinstance(msg, tuple)
-                format_str = msg[0]
-                got = [self.get_value(simulator, port) for port in msg[1:]]
-                values = ()
-                for value, port in zip(got, msg[1:]):
-                    if isinstance(port, m.Array) and \
-                            issubclass(port.T, m.Digital):
-                        value = BitVector[len(port)](value).as_uint()
-                    elif isinstance(port, m.Array):
-                        raise NotImplementedError("Printing complex nested"
-                                                  " arrays")
-                    values += (value, )
-                format_str = format_str.replace("\\n", "\n")
-                error_msg += "\n" + format_str % values
-
+                error_msg += "\n" + self._make_print_str(msg[0], msg[1:],
+                                                         simulator)
         assert equal, error_msg
 
     def process_port(self, port):
@@ -95,18 +97,9 @@ class MagmaSimulatorTarget(Target):
                     value = value.as_uint()
                 self.set_value(simulator, action.port, value)
             elif isinstance(action, fault.actions.Print):
-                got = [self.get_value(simulator, port) for port in action.ports]
-                values = ()
-                for value, port in zip(got, action.ports):
-                    if isinstance(port, m.Array) and \
-                            issubclass(port.T, m.Digital):
-                        value = BitVector[len(port)](value).as_uint()
-                    elif isinstance(port, m.Array):
-                        raise NotImplementedError("Printing complex nested"
-                                                  " arrays")
-                    values += (value, )
-                format_str = action.format_str.replace("\\n", "\n")
-                print(format_str % values, end="")
+                print(self._make_print_str(action.format_str, action.ports,
+                                           simulator),
+                      end="")
             elif isinstance(action, fault.actions.Expect):
                 got = self.get_value(simulator, action.port)
                 expected = self.get_value(simulator, action.value)
