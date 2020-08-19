@@ -125,7 +125,7 @@ class GetValue(Action):
 
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None, caller=None):
+                 above=None, below=None, caller=None, msg=None):
         # call super constructor
         super().__init__(port, value)
 
@@ -150,6 +150,10 @@ class Expect(PortAction):
         self.above = above
         self.below = below
         self.caller = caller
+        if msg is not None and not isinstance(msg, (str, tuple)):
+            raise ValueError("Expected string or tuple of form (format_str,"
+                             " format_args...) for expect msg")
+        self.msg = msg
 
     @property
     def traceback(self):

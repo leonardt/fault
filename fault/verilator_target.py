@@ -51,27 +51,6 @@ void write_coverage() {{
 VerilatedVcdC* tracer;
 #endif
 
-void my_assert(
-    unsigned int got,
-    unsigned int expected,
-    int i,
-    const char* port) {{
-  if (got != expected) {{
-    std::cerr << std::endl;  // end the current line
-    std::cerr << \"Got      : 0x\" << std::hex << got << std::endl;
-    std::cerr << \"Expected : 0x\" << std::hex << expected << std::endl;
-    std::cerr << \"i        : \" << std::dec << i << std::endl;
-    std::cerr << \"Port     : \" << port << std::endl;
-#if VM_TRACE
-    // Dump one more timestep so we see the current values
-    tracer->dump(main_time);
-    tracer->close();
-#endif
-    {kratos_exit_call}
-    exit(1);
-  }}
-}}
-
 int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
@@ -164,6 +143,35 @@ class VerilatorTarget(VerilogTarget):
 
         # Initialize variables
         self.verilator_version = verilator_version(disp_type=self.disp_type)
+
+
+    def _make_assert(self, got, expected, i, port, user_msg):
+        kratos_exit_call = ""
+        if self.use_kratos:
+            kratos_exit_call = "teardown_runtime();"
+        user_msg_str = ""
+        if user_msg:
+            arg_str = ""
+            if len(user_msg) > 1:
+                arg_str += f", {', '.join(user_msg[1:])}"
+            user_msg_str += f"printf(\"{user_msg[0]}\"{arg_str});"
+        return f"""\
+      if (({got}) != ({expected})) {{
+        std::cerr << std::endl;  // end the current line
+        std::cerr << \"Got      : 0x\" << std::hex << ({got}) << std::endl;
+        std::cerr << \"Expected : 0x\" << std::hex << ({expected}) << std::endl;
+        std::cerr << \"i        : \" << std::dec << {i} << std::endl;
+        std::cerr << \"Port     : \" << {port} << std::endl;
+        {user_msg_str}
+#if VM_TRACE
+        // Dump one more timestep so we see the current values
+        tracer->dump(main_time);
+        tracer->close();
+#endif
+        {kratos_exit_call}
+        exit(1);
+      }}
+    """
 
     def get_verilator_prefix(self):
         if self.verilator_version > 3.874:
@@ -304,10 +312,10 @@ class VerilatorTarget(VerilogTarget):
                     result += self.make_poke(i, action)
             return result
 
-    def make_print(self, i, action):
+    def _make_print_args(self, ports):
         port_names = []
         prefix = self.get_verilator_prefix()
-        for port in action.ports:
+        for port in ports:
             if isinstance(port, fault.WrappedVerilogInternalPort):
                 path = port.path.replace(".", "->")
                 name = f"{prefix}->{path}"
@@ -319,10 +327,15 @@ class VerilatorTarget(VerilogTarget):
             else:
                 name = verilator_name(port.name)
             port_names.append(name)
-        ports = ", ".join(f"top->{name}" for name in port_names)
-        if ports:
-            ports = ", " + ports
-        return [f'printf("{action.format_str}"{ports});']
+        return tuple(f"top->{name}" for name in port_names)
+
+    def make_print(self, i, action):
+        ports = self._make_print_args(action.ports)
+        if len(ports) != 0:
+            ports_str = ", " + ", ".join(ports)
+        else:
+            ports_str = ""
+        return [f'printf("{action.format_str}"{ports_str});']
 
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
@@ -347,6 +360,16 @@ class VerilatorTarget(VerilogTarget):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
             value = f"top->{prefix}->" + value.select_path.verilator_path
+
+        user_msg = ()
+        if action.msg is not None:
+            if isinstance(action.msg, str):
+                user_msg += (action.msg, )
+            else:
+                assert isinstance(action.msg, tuple)
+                user_msg += (action.msg[0], )
+                user_msg += self._make_print_args(action.msg[1:])
+
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
             asserts = []
@@ -355,8 +378,10 @@ class VerilatorTarget(VerilogTarget):
             for j in range(math.ceil(action.value.num_bits / slice_range)):
                 value = action.value[j * slice_range:min(
                     (j + 1) * slice_range, action.value.num_bits)]
-                asserts += [f"my_assert(top->{name}[{j}], {value}, "
-                            f"{i}, \"{debug_name}\");"]
+                asserts.append(self._make_assert(
+                    f"((unsigned int) top->{name}[{j}])", 
+                    f"((unsigned int) {value})", i, f"\"{debug_name}\"",
+                    user_msg))
             return asserts
         else:
             value = self.process_value(action.port, value)
@@ -374,8 +399,9 @@ class VerilatorTarget(VerilogTarget):
                 port_len = len(port)
             mask = (1 << port_len) - 1
 
-            return [f"my_assert({port_value}, {value} & {mask}, "
-                    f"{i}, \"{debug_name}\");"]
+            return [self._make_assert(f"((unsigned int) {port_value})",
+                                      f"(unsigned int) ({value} & {mask})", i,
+                                      f"\"{debug_name}\"", user_msg)]
 
     def make_eval(self, i, action):
         return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
