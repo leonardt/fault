@@ -291,7 +291,7 @@ string, e.g.
 tester.circuit.O.expect(0, msg="my error message")
 ```
 
-or you can pass a printf style message using a tuple.  The first argument
+or you can pass a printf/$display style message using a tuple.  The first argument
 should be the format string, the subsequent arguments are the format values,
 e.g.
 ```python
