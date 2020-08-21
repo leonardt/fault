@@ -156,21 +156,21 @@ class VerilatorTarget(VerilogTarget):
                 arg_str += f", {', '.join(user_msg[1:])}"
             user_msg_str += f"printf(\"{user_msg[0]}\"{arg_str});"
         return f"""\
-      if (({got}) != ({expected})) {{
-        std::cerr << std::endl;  // end the current line
-        std::cerr << \"Got      : 0x\" << std::hex << ({got}) << std::endl;
-        std::cerr << \"Expected : 0x\" << std::hex << ({expected}) << std::endl;
-        std::cerr << \"i        : \" << std::dec << {i} << std::endl;
-        std::cerr << \"Port     : \" << {port} << std::endl;
-        {user_msg_str}
+if (({got}) != ({expected})) {{
+    std::cerr << std::endl;  // end the current line
+    std::cerr << \"Got      : 0x\" << std::hex << ({got}) << std::endl;
+    std::cerr << \"Expected : 0x\" << std::hex << ({expected}) << std::endl;
+    std::cerr << \"i        : \" << std::dec << {i} << std::endl;
+    std::cerr << \"Port     : \" << {port} << std::endl;
+    {user_msg_str}
 #if VM_TRACE
-        // Dump one more timestep so we see the current values
-        tracer->dump(main_time);
-        tracer->close();
+    // Dump one more timestep so we see the current values
+    tracer->dump(main_time);
+    tracer->close();
 #endif
-        {kratos_exit_call}
-        exit(1);
-      }}
+    {kratos_exit_call}
+    exit(1);
+}}
     """
 
     def get_verilator_prefix(self):
