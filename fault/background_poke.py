@@ -66,6 +66,53 @@ class Thread():
             self.get_val = get_val
             self.dt = params.get('dt', 1 / (freq*self.default_steps_per_cycle))
 
+        elif type_ == 'ramp':
+            start = params.get('start', 0)
+            stop = params.get('stop', None)
+            rate = params.get('rate', 1) # volts per second
+            etol = params.get('etol', 0.1)
+            assert etol > 0, 'Ramp error tolerance must be positive'
+            dt = abs(etol / rate)
+
+            def get_val(t):
+                x = start + rate * (t - self.start)
+                if stop != None:
+                    if (rate>0 and x>stop) or (rate<0 and x<stop):
+                        x = stop
+                        self.dt = float('inf')
+                return x
+            self.get_val = get_val
+            self.dt = dt
+
+        elif type_ == 'future':
+            # PROBLEM: it looks like get_val is called immediately when this
+            # poke is done. That's a problem because we don't know what value
+            # to poke then; we actually just want to pass
+            wait = params.get('wait', None)
+            waits = params.get('waits', [wait])
+            value = params.get('value', poke.value)
+            values = params.get('values', [value])
+            waits.append(float('inf'))
+            self.future_count = 0
+            def get_val(t):
+                if t + epsilon > self.future_next:
+                    self.future_count += 1
+                    self.future_next += waits[self.future_count]
+                v = values[self.future_count]
+                if self.future_count >= len(waits) - 1:
+                    self.dt = float('inf')
+                else:
+                    self.dt = waits[self.future_count]
+                    self.future_count += 1
+                return v
+            self.get_val = get_val
+            self.dt = waits[0] if len(waits) > 0 else float('inf')
+            self.future_next = self.start + self.dt
+        else:
+            assert False, 'Unrecognized background_poke type '+str(type_)
+
+
+
     def step(self, t):
         '''
         Returns a new Poke object with the correct value set for time t.
