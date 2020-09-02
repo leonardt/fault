@@ -910,3 +910,25 @@ def test_wait_until_tuple(target, simulator):
             kwargs["simulator"] = simulator
             kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
+
+
+def test_peek_bitwise(target, simulator, capsys):
+    tester = fault.Tester(TestByteCircuit)
+    tester.circuit.I = 0xBE
+    tester.eval()
+    for i in range(8):
+        if_tester = tester._if(tester.circuit.I[i])
+        if_tester.print("*")
+        if_tester._else().print("_")
+    tester.print("\n")
+
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir,
+                                   disp_type="realtime")
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   disp_type="realtime")
+
+    out, _ = capsys.readouterr()
+    assert out.splitlines()[-2] == "_*****_*"
