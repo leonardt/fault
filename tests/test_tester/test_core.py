@@ -935,6 +935,6 @@ def test_peek_bitwise(target, simulator, capsys):
     offset = {
         "vcs": 8,
         "ncsim": 5,
-        "vivado": 8
+        "vivado": 7
     }.get(simulator, 2)
     assert out.splitlines()[-offset] == "_*****_*", out
