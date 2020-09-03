@@ -28,6 +28,10 @@ class TesterBase:
         self.actions = []
         if clock is not None and not isinstance(clock, m.Clock):
             raise TypeError(f"Expected clock port: {clock, type(clock)}")
+        else:
+            clock = self._find_default_clock(
+                self._circuit.interface.ports.values()
+            )
         self.clock = clock
         # Make sure the user has initialized the clock before stepping it
         # While verilator initializes the clock value to 0, this assumption
@@ -40,6 +44,24 @@ class TesterBase:
         if reset is not None and not isinstance(reset, m.Reset):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
+
+    def _find_default_clock(self, ports):
+        """Automatically finds a clock if there is only one"""
+        clock = None
+        for port in ports:
+            next_clock = None
+            if isinstance(port, m.Clock):
+                next_clock = port
+            elif isinstance(port, (m.Array, m.Tuple)):
+                nested_clock = self._find_default_clock(port)
+                if nested_clock is not None:
+                    next_clock = nested_clock
+            if next_clock is not None:
+                if clock is not None:
+                    # Found multiple clocks, do not try to guess a default
+                    return None
+                clock = next_clock
+        return clock
 
     @abstractmethod
     def _poke(self, port, value, delay=None):

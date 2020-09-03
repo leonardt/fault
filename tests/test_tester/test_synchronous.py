@@ -1,4 +1,6 @@
+import pytest
 from fault import SynchronousTester
+import magma as m
 from hwtypes import BitVector
 from ..common import SimpleALU, pytest_sim_params
 
@@ -32,3 +34,38 @@ def test_synchronous_basic(target, simulator):
     else:
         tester.compile_and_run(target, simulator=simulator,
                                magma_opts={"sv": True})
+
+
+def test_find_default_clock():
+    tester = SynchronousTester(SimpleALU)
+    assert tester.clock == SimpleALU.CLK
+
+
+def test_find_default_clock_nested():
+    class Foo(m.Circuit):
+        io = m.IO(
+            I=m.In(m.Tuple[m.Clock, m.Bit])
+        )
+    tester = SynchronousTester(Foo)
+    assert tester.clock == Foo.I[0]
+
+
+def test_find_default_clock_multiple():
+    class Foo(m.Circuit):
+        io = m.IO(
+            clock0=m.In(m.Clock),
+            clock1=m.In(m.Clock)
+        )
+    with pytest.raises(ValueError) as e:
+        SynchronousTester(Foo)
+    assert str(e.value) == "SynchronousTester requires a clock"
+
+
+def test_find_default_clock_nested_multiple():
+    class Foo(m.Circuit):
+        io = m.IO(
+            I=m.In(m.Tuple[m.Clock, m.Clock])
+        )
+    with pytest.raises(ValueError) as e:
+        SynchronousTester(Foo)
+    assert str(e.value) == "SynchronousTester requires a clock"
