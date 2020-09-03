@@ -17,6 +17,7 @@ def test_init_clock():
     tester.step(2)
     tester.circuit.c.expect(3)
     with tempfile.TemporaryDirectory() as tempdir:
+        tempdir = "build"
         tester.compile_and_run("verilator", flags=["--trace", "-Wno-fatal"],
                                directory=tempdir)
         vcd_file = os.path.join(tempdir, "logs", "SimpleALU.vcd")
