@@ -26,8 +26,9 @@ class TesterBase:
         self.poke_delay_default = poke_delay_default
         self.expect_strict_default = expect_strict_default
         self.actions = []
-        if clock is not None and not isinstance(clock, m.Clock):
-            raise TypeError(f"Expected clock port: {clock, type(clock)}")
+        if clock is not None:
+            if not isinstance(clock, m.Clock):
+                raise TypeError(f"Expected clock port: {clock, type(clock)}")
         else:
             clock = self._find_default_clock(
                 self._circuit.interface.ports.values()
