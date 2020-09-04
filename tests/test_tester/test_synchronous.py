@@ -28,7 +28,7 @@ def test_synchronous_basic(target, simulator):
         tester.advance_cycle()
 
     if target == "verilator":
-        tester.compile_and_run("verilator", flags=['-Wno-unused'])
+        tester.compile_and_run("verilator")
     else:
         tester.compile_and_run(target, simulator=simulator,
                                magma_opts={"sv": True})
