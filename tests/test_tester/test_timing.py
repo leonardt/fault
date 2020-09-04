@@ -17,13 +17,12 @@ def test_init_clock():
     tester.step(2)
     tester.circuit.c.expect(3)
     with tempfile.TemporaryDirectory() as tempdir:
-        tempdir = "build"
         tester.compile_and_run("verilator", flags=["--trace", "-Wno-fatal"],
                                directory=tempdir)
         vcd_file = os.path.join(tempdir, "logs", "SimpleALU.vcd")
         vcd = VCDVCD(vcd_file, signals=["TOP.CLK"])
         # One elem dict, we can grab the first element
-        tvs = next(iter(vcd.get_data().values()))["tv"]
+        tvs = vcd["TOP.CLK"].tv
         assert tvs == [(0, '0'), (5, '1'), (10, '0')]
 
         if shutil.which("iverilog"):
@@ -37,5 +36,5 @@ def test_init_clock():
                                dump_waveforms=True)
         vcd_file = os.path.join(tempdir, "waveforms.vcd")
         vcd = VCDVCD(vcd_file, signals=["SimpleALU_tb.dut.CLK"])
-        tvs = next(iter(vcd.get_data().values()))["tv"]
+        tvs = vcd["SimpleALU_tb.dut.CLK"].tv
         assert tvs == [(0, '0'), (5, '1'), (10, '0')]
