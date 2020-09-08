@@ -54,7 +54,7 @@ class TesterBase:
             if isinstance(port, m.Clock):
                 next_clock = port
             elif isinstance(port, (m.Array, m.Tuple)):
-                nested_clock = self._find_default_clock(port)
+                nested_clock = self._find_default_clock(port.ts)
                 if nested_clock is not None:
                     next_clock = nested_clock
             if next_clock is not None:
