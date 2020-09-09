@@ -106,6 +106,7 @@ class VerilatorTarget(VerilogTarget):
             include_verilog_libraries = []
         if magma_opts is None:
             magma_opts = {}
+        magma_opts.setdefault("verilator_compat", True)
 
         # Save settings
         self.disp_type = disp_type
