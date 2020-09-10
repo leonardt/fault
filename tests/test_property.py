@@ -1,5 +1,6 @@
 import shutil
 import random
+import os
 
 import pytest
 import decorator
@@ -530,7 +531,6 @@ def test_disable_if():
                                flags=["-sv"], magma_opts={"inline": True})
 
 
-@requires_ncsim
 def test_ifdef_and_name(capsys):
     class Main(m.Circuit):
         io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
@@ -538,7 +538,9 @@ def test_ifdef_and_name(capsys):
         f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
                   disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
                   name="foo")
-        f.assert_(f.sva(io.a, "|-> ##2", io.b), on=f.posedge(io.CLK),
+        temp = m.Bit(name="temp")
+        temp @= io.a
+        f.assert_(f.sva(temp, "|-> ##2", io.b), on=f.posedge(io.CLK),
                   disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
                   name="bar")
 
@@ -552,6 +554,9 @@ def test_ifdef_and_name(capsys):
     # Should not fail with no ASSERT_ON
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True})
+    # Check that wire prefix is generated properly
+    with open("build/Main.v", "r") as file_:
+        assert "wire _FAULT_ASSERT_WIRE_0" in file_.read() 
     # Should fail
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
