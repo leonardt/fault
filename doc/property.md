@@ -80,6 +80,35 @@ with a negedge RESET:
 f.assert_(..., on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN), ...)
 ```
 
+# Helper function for default clock/reset
+A useful pattern is leveraging magma's automatic clock wiring logic to handle
+default clock and reset values so the user doesn't have to provide them for
+most assertions where the default clock is obvious and will be wired up
+automatically.
+
+To do this, create a temporary value of the approriate type and use that for
+the on/disable_iff parameter.  This undriven temporary value will be
+automatically wired up by magma.   We leave this to the user rather than having
+it built-in so the user can control the Clock type or the reset type/semantics.
+
+Here's an example:
+```python
+def my_assert(property, on=None, disable_iff=None):
+    # If needed, create undriven clock/reset temporaries, will be driven by
+    # automatic clock wiring logic
+    if on is None:
+        on = f.posedge(m.Clock())
+    if disable_iff is None:
+        disable_iff = f.not_(m.ResetN())
+    f.assert_(property, on=on, disable_iff=disable_iff)
+
+class Main(m.Circuit):
+    io = m.IO(I=m.In(m.Bits[8]), O=m.Out(m.Bits[8]))
+    io += m.ClockIO(has_resetn=True)
+    io.O @= m.Register(T=m.Bits[8], reset_type=m.ResetN)()(io.I)
+    my_assert(io.I | f.implies | f.delay[1] | io.O)
+```
+
 # Examples
 Here are some representative examples, for a complete set of examples and
 corresponding test cases, see

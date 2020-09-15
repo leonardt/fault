@@ -566,3 +566,38 @@ def test_ifdef_and_name(capsys):
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.foo has failed" in out
     assert "Assertion Main_tb.dut.bar has failed" in out
+
+
+@requires_ncsim
+def test_default_clock_function():
+    def my_assert(property, on=None, disable_iff=None):
+        # If needed, create undriven clock/reset temporaries, will be driven by
+        # automatic clock wiring logic
+        if on is None:
+            on = f.posedge(m.Clock())
+        if disable_iff is None:
+            disable_iff = f.not_(m.AsyncResetN())
+        f.assert_(property, on=on, disable_iff=disable_iff)
+
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bits[8]), O=m.Out(m.Bits[8]))
+        io += m.ClockIO(has_async_resetn=True)
+        io.O @= m.Register(T=m.Bits[8], reset_type=m.AsyncResetN)()(io.I)
+        my_assert(io.I | f.implies | f.delay[1] | io.O)
+
+    tester = f.SynchronousTester(Main, Main.CLK)
+    I_seq = [1, 0, 1, 0, 0]
+    O_seq = [1, 0, 1, 0, 0]
+    tester.circuit.ASYNCRESETN = 1
+    for I, O in zip(I_seq, O_seq):
+        tester.circuit.I = I
+        tester.advance_cycle()
+        tester.circuit.O.expect(O)
+    # Should disable during reset
+    tester.circuit.I = 1
+    tester.circuit.ASYNCRESETN = 0
+    tester.advance_cycle()
+    tester.circuit.O.expect(0)
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True})
