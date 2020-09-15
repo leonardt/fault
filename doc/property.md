@@ -65,6 +65,21 @@ This will wrap the generated property inside a macro.
 `endif
 ```
 
+**NOTE**: One issue with using a compile guard is that when the macro is disabled
+magma/fault will produce dangling wires (these are used inside the body
+of the macro which has been disabled).  As a temporary measure, fault will generate
+these wires with the prefix `_FAULT_ASSERT_WIRE_` so you can direct your lint
+tool to ignore these dangling wires (e.g. when you disable macros for synthesis).
+The prefix can be chagned by setting the parameter `inline_wire_prefix` when
+invoking `f.assert_`.
+
+# Disable If
+Use the `disable_iff` parameter and pass a signal or expression, for example
+with a negedge RESET:
+```python
+f.assert_(..., on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN), ...)
+```
+
 # Helper function for default clock/reset
 A useful pattern is leveraging magma's automatic clock wiring logic to handle
 default clock and reset values so the user doesn't have to provide them for
@@ -92,13 +107,6 @@ class Main(m.Circuit):
     io += m.ClockIO(has_resetn=True)
     io.O @= m.Register(T=m.Bits[8], reset_type=m.ResetN)()(io.I)
     my_assert(io.I | f.implies | f.delay[1] | io.O)
-```
-
-# Disable If
-Use the `disable_iff` parameter and pass a signal or expression, for example
-with a negedge RESET:
-```python
-f.assert_(..., on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN), ...)
 ```
 
 # Examples
