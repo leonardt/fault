@@ -582,10 +582,16 @@ def test_default_clock_function():
     tester = f.SynchronousTester(Main, Main.CLK)
     I_seq = [1, 0, 1, 0, 0]
     O_seq = [1, 0, 1, 0, 0]
+    tester.circuit.RESETN = 1
     for I, O in zip(I_seq, O_seq):
         tester.circuit.I = I
         tester.advance_cycle()
         tester.circuit.O.expect(O)
+    # Should disable during reset
+    tester.circuit.I = 1
+    tester.circuit.RESETN = 0
+    tester.advance_cycle()
+    tester.circuit.O.expect(0)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True})
