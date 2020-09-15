@@ -570,26 +570,26 @@ def test_default_clock_function():
         if on is None:
             on = f.posedge(m.Clock())
         if disable_iff is None:
-            disable_iff = f.not_(m.ResetN())
+            disable_iff = f.not_(m.AsyncResetN())
         f.assert_(property, on=on, disable_iff=disable_iff)
 
     class Main(m.Circuit):
         io = m.IO(I=m.In(m.Bits[8]), O=m.Out(m.Bits[8]))
-        io += m.ClockIO(has_resetn=True)
-        io.O @= m.Register(T=m.Bits[8], reset_type=m.ResetN)()(io.I)
+        io += m.ClockIO(has_async_resetn=True)
+        io.O @= m.Register(T=m.Bits[8], reset_type=m.AsyncResetN)()(io.I)
         my_assert(io.I | f.implies | f.delay[1] | io.O)
 
     tester = f.SynchronousTester(Main, Main.CLK)
     I_seq = [1, 0, 1, 0, 0]
     O_seq = [1, 0, 1, 0, 0]
-    tester.circuit.RESETN = 1
+    tester.circuit.ASYNCRESETN = 1
     for I, O in zip(I_seq, O_seq):
         tester.circuit.I = I
         tester.advance_cycle()
         tester.circuit.O.expect(O)
     # Should disable during reset
     tester.circuit.I = 1
-    tester.circuit.RESETN = 0
+    tester.circuit.ASYNCRESETN = 0
     tester.advance_cycle()
     tester.circuit.O.expect(0)
 
