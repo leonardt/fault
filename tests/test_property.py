@@ -581,7 +581,7 @@ def test_default_clock_function():
 
     tester = f.SynchronousTester(Main, Main.CLK)
     I_seq = [1, 0, 1, 0, 0]
-    O_seq = [0, 1, 0, 1, 0]
+    O_seq = [1, 0, 1, 0, 0]
     for I, O in zip(I_seq, O_seq):
         tester.circuit.I = I
         tester.advance_cycle()
