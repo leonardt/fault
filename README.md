@@ -299,3 +299,16 @@ e.g.
 tester.circuit.O.expect(0, msg=("MY_MESSAGE: got %x, expected 0!",
                                 tester.circuit.O))
 ```
+
+### Can I display or print values from my testbench?
+Yes, you can use the `tester.print` API which accepts a format string and a
+variable number of arguments.  Here's an example:
+```python
+tester = fault.Tester(circ, circ.CLK)
+tester.poke(circ.I, 0)
+tester.eval()
+tester.expect(circ.O, 0)
+tester.poke(circ.CLK, 0)
+tester.step()
+tester.print("%08x", circ.O)
+```
