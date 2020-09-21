@@ -310,5 +310,5 @@ tester.eval()
 tester.expect(circ.O, 0)
 tester.poke(circ.CLK, 0)
 tester.step()
-tester.print("%08x", circ.O)
+tester.print("%08x\n", circ.O)
 ```
