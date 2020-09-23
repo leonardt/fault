@@ -7,6 +7,7 @@ from .common import TestBasicClkCircuit
 
 
 @pytest.mark.parametrize("simulator,waveform_type", [("ncsim", "vcd"),
+                                                     ("xcelium", "vcd"),
                                                      ("vcs", "vpd"),
                                                      ("vcs", "fsdb")])
 @pytest.mark.parametrize("use_sva", [True, False])
@@ -15,6 +16,9 @@ def test_waves(simulator, waveform_type, use_sva):
         pytest.skip("Skipping vcs waveform test because vcs is not available")
     if simulator == 'ncsim' and not shutil.which("irun"):
         pytest.skip("Skipping ncsim waveform test because ncsim is not "
+                    "available")
+    if simulator == 'xcelium' and not shutil.which("xrun"):
+        pytest.skip("Skipping xcelium waveform test because xrun is not "
                     "available")
     circ = TestBasicClkCircuit
     tester = fault.Tester(circ, circ.CLK)
