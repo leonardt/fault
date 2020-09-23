@@ -6,7 +6,7 @@ steps:
 
       # tool setup
       source /cad/modules/tcl/init/bash
-      module load base incisive vcs hspice spectre verdi
+      module load base incisive vcs xcelium hspice spectre verdi
 
       # create conda env
       conda create -p ./conda_env -m -y pip numpy python=3.7.3

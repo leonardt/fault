@@ -204,7 +204,7 @@ class SystemVerilogTarget(VerilogTarget):
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
-        if simulator not in {"vcs", "ncsim", "iverilog", "vivado"}:
+        if simulator not in {"vcs", "ncsim", "xcelium", "iverilog", "vivado"}:
             raise ValueError(f"Unsupported simulator {simulator}")
 
         # save settings
@@ -247,7 +247,7 @@ class SystemVerilogTarget(VerilogTarget):
                                          "vcs waveform type")
                     suffix = self.waveform_type
                 self.waveform_file = f"waveforms.{self.waveform_type}"
-            elif self.simulator in {"ncsim", "iverilog", "vivado"}:
+            elif self.simulator in {"ncsim", "xcelium", "iverilog", "vivado"}:
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
@@ -264,6 +264,10 @@ class SystemVerilogTarget(VerilogTarget):
                 raise ImportError("Cannot find kratos-runtime in the system. "
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
+
+        # set up cadence tools command
+        self.ncsim_cmd = self.cadence_cmd("irun")
+        self.xcelium_cmd = self.cadence_cmd("xrun")
 
     def add_decl(self, type_, name, exist_ok=False):
         if str(name) in self.declarations:
@@ -729,10 +733,18 @@ class SystemVerilogTarget(VerilogTarget):
         vlog_srcs += self.include_verilog_libraries
 
         # generate simulator commands
-        if self.simulator == 'ncsim':
+        if self.simulator == 'ncsim' or self.simulator == "incisive":
             # Compile and run simulation
-            cmd_file = self.write_ncsim_tcl()
+            cmd_file = self.write_cadence_tcl()
             sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            sim_err_str = None
+            # Skip "bin_cmd"
+            bin_cmd = None
+            bin_err_str = None
+        elif self.simulator == 'xcelium':
+            # Compile and run simulation
+            cmd_file = self.write_cadence_tcl()
+            sim_cmd = self.xcelium_cmd(sources=vlog_srcs, cmd_file=cmd_file)
             sim_err_str = None
             # Skip "bin_cmd"
             bin_cmd = None
@@ -825,7 +837,7 @@ class SystemVerilogTarget(VerilogTarget):
         # also add the directory to the current LD_LIBRARY_PATH
         self.sim_env["LD_LIBRARY_PATH"] = os.path.abspath(self.directory)
 
-    def write_ncsim_tcl(self):
+    def write_cadence_tcl(self):
         # construct the TCL commands to run the Incisive/Xcelium simulation
         tcl_cmds = []
         if self.dump_waveforms:
@@ -919,57 +931,59 @@ class SystemVerilogTarget(VerilogTarget):
             retval += [def_arg]
         return retval
 
-    def ncsim_cmd(self, sources, cmd_file):
-        cmd = []
+    def cadence_cmd(self, tool_name):
+        def cmd_fn(sources, cmd_file):
+            cmd = []
 
-        # binary name
-        cmd += ['irun']
+            # binary name
+            cmd += [tool_name]
 
-        # add any extra flags
-        cmd += self.flags
+            # add any extra flags
+            cmd += self.flags
 
-        # send name of top module to the simulator
-        if not self.no_top_module:
-            cmd += ['-top', f'{self.top_module}']
+            # send name of top module to the simulator
+            if not self.no_top_module:
+                cmd += ['-top', f'{self.top_module}']
 
-        # timescale
-        cmd += ['-timescale', f'{self.timescale}']
+            # timescale
+            cmd += ['-timescale', f'{self.timescale}']
 
-        # TCL commands
-        cmd += ['-input', f'{cmd_file}']
+            # TCL commands
+            cmd += ['-input', f'{cmd_file}']
 
-        # source files
-        cmd += [f'{src}' for src in sources]
+            # source files
+            cmd += [f'{src}' for src in sources]
 
-        # library files
-        for lib in self.ext_libs:
-            cmd += ['-v', f'{lib}']
+            # library files
+            for lib in self.ext_libs:
+                cmd += ['-v', f'{lib}']
 
-        # include directory search path
-        for dir_ in self.inc_dirs:
-            cmd += ['-incdir', f'{dir_}']
+            # include directory search path
+            for dir_ in self.inc_dirs:
+                cmd += ['-incdir', f'{dir_}']
 
-        # define variables
-        cmd += self.def_args(prefix='+define+')
+            # define variables
+            cmd += self.def_args(prefix='+define+')
 
-        # misc flags
-        if self.dump_waveforms:
-            cmd += ["-access", "r"]
-        cmd += ['-notimingchecks']
-        if self.no_warning:
-            cmd += ['-neverwarn']
+            # misc flags
+            if self.dump_waveforms:
+                cmd += ["-access", "r"]
+            cmd += ['-notimingchecks']
+            if self.no_warning:
+                cmd += ['-neverwarn']
 
-        # kratos flags
-        if self.use_kratos:
-            from kratos_runtime import get_ncsim_flag
-            cmd += get_ncsim_flag().split()
+            # kratos flags
+            if self.use_kratos:
+                from kratos_runtime import get_ncsim_flag
+                cmd += get_ncsim_flag().split()
 
-        # coverage flags
-        if self.coverage:
-            cmd += ["-coverage", "b", "-covoverwrite"]
+            # coverage flags
+            if self.coverage:
+                cmd += ["-coverage", "b", "-covoverwrite"]
 
-        # return arg list
-        return cmd
+            # return arg list
+            return cmd
+        return cmd_fn
 
     def vivado_cmd(self, cmd_file):
         cmd = []
