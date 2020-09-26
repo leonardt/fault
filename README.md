@@ -286,12 +286,12 @@ For example:
 ```python
 tester.compile_and_run(target="system-verilog", simulator="vcs",
                        waveform_type="fsdb", dump_waveforms=True,
-                       fsdb_dumpvars_args='0, "top"')
+                       fsdb_dumpvars_args='0, "dut"')
 ```
 
 will produce:
 ```verilog
-  $fsdbDumpvars(0, "top");
+  $fsdbDumpvars(0, "dut");
 ```
 
 inside the generated test bench.
