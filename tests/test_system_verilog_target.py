@@ -27,6 +27,7 @@ def test_waves(simulator, waveform_type, use_sva):
     tester.circuit.I = 1
     tester.step(2)
     flags = []
+    kwargs = {}
     if waveform_type == "fsdb":
         # Note this will only work on kiwi/buildkite env, users should set
         # their specific link flags
@@ -34,12 +35,13 @@ def test_waves(simulator, waveform_type, use_sva):
         flags += ['-P',
                   f' {verdi_home}/share/PLI/vcs_latest/LINUX64/novas.tab',
                   f' {verdi_home}/share/PLI/vcs_latest/LINUX64/pli.a']
+        kwargs["fsdb_dumpvars_args"] = '0, "dut"'
     # Test default
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator=simulator,
                                directory=_dir, use_sva=use_sva,
                                waveform_type=waveform_type,
-                               dump_waveforms=True, flags=flags)
+                               dump_waveforms=True, flags=flags, **kwargs)
         assert os.path.exists(os.path.join(_dir,
                                            f"waveforms.{waveform_type}"))
 
@@ -49,13 +51,14 @@ def test_waves(simulator, waveform_type, use_sva):
                                directory=_dir,
                                waveform_file=f"waves.{waveform_type}",
                                use_sva=use_sva, waveform_type=waveform_type,
-                               dump_waveforms=True, flags=flags)
+                               dump_waveforms=True, flags=flags, **kwargs)
         assert os.path.exists(os.path.join(_dir, f"waves.{waveform_type}"))
 
     # Test off
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         tester.compile_and_run(target="system-verilog", simulator=simulator,
                                directory=_dir, dump_waveforms=False,
-                               use_sva=use_sva, waveform_type=waveform_type)
+                               use_sva=use_sva, waveform_type=waveform_type,
+                               **kwargs)
         assert not os.path.exists(os.path.join(_dir,
                                                f"waveforms.{waveform_type}"))

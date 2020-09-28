@@ -61,7 +61,7 @@ class SystemVerilogTarget(VerilogTarget):
                  disp_type='on_error', waveform_file=None, coverage=False,
                  use_kratos=False, use_sva=False, skip_run=False,
                  no_top_module=False, vivado_use_system_verilog=True,
-                 disable_ndarray=False):
+                 disable_ndarray=False, fsdb_dumpvars_args=""):
         """
         circuit: a magma circuit
 
@@ -160,6 +160,9 @@ class SystemVerilogTarget(VerilogTarget):
                          Default is False except when the simulator is
                          "iverilog" when it is always True (since iverilog does
                          not currently support unpacked arrays)
+
+        fsdb_dumpvars_args: (optional) arguments to the `fsdbDumpvars()`
+                            function
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -264,6 +267,7 @@ class SystemVerilogTarget(VerilogTarget):
                 raise ImportError("Cannot find kratos-runtime in the system. "
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
+        self.fsdb_dumpvars_args = fsdb_dumpvars_args
 
         # set up cadence tools command
         self.ncsim_cmd = self.cadence_cmd("irun")
@@ -662,7 +666,7 @@ class SystemVerilogTarget(VerilogTarget):
                                  f'$vcdplusmemon();']
             if self.waveform_type == "fsdb":
                 initial_body += [f'$fsdbDumpfile("{self.waveform_file}");',
-                                 f'$fsdbDumpvars();']
+                                 f'$fsdbDumpvars({self.fsdb_dumpvars_args});']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',

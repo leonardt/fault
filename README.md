@@ -279,6 +279,23 @@ tester.compile_and_run(target="system-verilog", simulator="vcs",
                        waveform_type="fsdb", dump_waveforms=True, flags=flags)
 ```
 
+To configure fsdb dumping, use the `fsdb_dumpvars_args` parameter of the
+compile_and_run command to pass a string to the `$fsdbDumpvars()` function.
+
+For example:
+```python
+tester.compile_and_run(target="system-verilog", simulator="vcs",
+                       waveform_type="fsdb", dump_waveforms=True,
+                       fsdb_dumpvars_args='0, "dut"')
+```
+
+will produce:
+```verilog
+  $fsdbDumpvars(0, "dut");
+```
+
+inside the generated test bench.
+
 ### How do I pass through flags to the simulator?
 The `verilator` and `system-verilog` target support the parameter `flags` which
 accepts a list of flags (strings) that will be passed through to the simulator
