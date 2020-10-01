@@ -1,5 +1,6 @@
 from .base import TesterBase
 from .utils import get_port_type
+from fault.tester.control import LoopIndex, add_control_structures
 import fault
 import inspect
 import fault
@@ -28,11 +29,11 @@ import fault.expression as expression
 import os
 import inspect
 from fault.config import get_test_dir
-from typing import List
 import tempfile
 from hwtypes import BitVector
 
 
+@add_control_structures
 class Tester(TesterBase):
     """
     The fault `Tester` object provides a mechanism in Python to construct tests
@@ -320,7 +321,7 @@ class Tester(TesterBase):
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        loop_tester = LoopTester(self._circuit, self.clock)
+        loop_tester = self.LoopTester(self._circuit, self.clock)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
@@ -351,12 +352,12 @@ class Tester(TesterBase):
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        while_tester = LoopTester(self._circuit, self.clock)
+        while_tester = self.LoopTester(self._circuit, self.clock)
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
     def _if(self, cond):
-        if_tester = IfTester(self._circuit, self.clock)
+        if_tester = self.IfTester(self._circuit, self.clock)
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester
@@ -386,49 +387,6 @@ class Tester(TesterBase):
     def wait_until_posedge(self, signal, steps_per_iter=1):
         self.wait_until_low(signal)
         self.wait_until_high(signal)
-
-
-class LoopIndex:
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return self.name
-
-
-class NoClockInit:
-    """
-    Sub testers should not initialize the clock
-    """
-
-    def init_clock(self):
-        pass
-
-
-class LoopTester(NoClockInit, Tester):
-    __unique_index_id = -1
-
-    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
-        super().__init__(circuit, clock)
-        LoopTester.__unique_index_id += 1
-        self.index = LoopIndex(
-            f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
-
-
-class ElseTester(NoClockInit, Tester):
-    def __init__(self, else_actions: List, circuit: m.Circuit,
-                 clock: m.Clock = None):
-        super().__init__(circuit, clock)
-        self.actions = else_actions
-
-
-class IfTester(NoClockInit, Tester):
-    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
-        super().__init__(circuit, clock)
-        self.else_actions = []
-
-    def _else(self):
-        return ElseTester(self.else_actions, self._circuit, self.clock)
 
 
 StagedTester = Tester
