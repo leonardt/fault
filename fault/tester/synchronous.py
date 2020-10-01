@@ -2,7 +2,10 @@ from .staged_tester import StagedTester
 from ..system_verilog_target import SynchronousSystemVerilogTarget
 from ..verilator_target import SynchronousVerilatorTarget
 
+from fault.tester.control import add_control_structures
 
+
+@add_control_structures
 class SynchronousTester(StagedTester):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
