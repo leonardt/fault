@@ -6,9 +6,14 @@ class EdgeNotFoundError(Exception):
     pass
 
 def get_value_domain(results, action, time, get_name):
-    style = action.params['style']
+    style = action.params.pop('style')
     # TODO is this the right way to get the name?
-    res = results[get_name(action.port)]
+    #res = results[get_name(action.port)]
+    try:
+        res = results[get_name(action.port)]
+    except KeyError:
+        res = results[get_name(action.port).lower()]
+
     if isinstance(res, ResultInterp):
         res_style = 'pwc'
     elif isinstance(res, SpiceResult):
@@ -17,6 +22,8 @@ def get_value_domain(results, action, time, get_name):
         assert False, f'Unrecognized result class {type(res)} for result {res}'
     # TODO default height for spice is different and depends on vsup
     height = action.params.get('height', 0.5)
+    if 'height' in action.params:
+        action.params.pop('height')
     if style == 'single':
         # equivalent to a regular get_value
         value = res(time)
@@ -143,14 +150,18 @@ def find_edge_spice(x, y, t_start, height, forward=False, count=1, rising=True):
         while y[i] > height:
             i += direction
             if i < 0 or i >= len(y):
-                msg = f'only {len(edges)} of requested {count} edges found'
-                raise EdgeNotFoundError(msg)
+                #msg = f'only {len(edges)} of requested {count} edges found'
+                #raise EdgeNotFoundError(msg)
+                remaining = [-1] * (count - len(edges))
+                return edges + remaining
         # now move until we hit the high
         while y[i] <= height:
             i += direction
             if i < 0 or i >= len(y):
-                msg = f'only {len(edges)} of requested {count} edges found'
-                raise EdgeNotFoundError(msg)
+                #msg = f'only {len(edges)} of requested {count} edges found'
+                #raise EdgeNotFoundError(msg)
+                remaining = [-1] * (count - len(edges))
+                return edges + remaining
 
         # the crossing happens from i to i+1
         # fraction is how far you must go from i to (i-direction) to hit the crossing

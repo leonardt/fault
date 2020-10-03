@@ -187,10 +187,10 @@ def parse_vcd(filename, dut, interp='previous'):
             return float(val_str)
         else:
             # TODO deal with x and z
-            # atm it breaks if the value can't be cast to a float
-            if val_str == 'x':
+            # Right now it will invalidate the whole bus if one bit is x or z
+            if 'x' in val_str:
                 return float('nan')
-            elif val_str == 'z':
+            elif 'z' in val_str:
                 return float('nan')
             return int(val_str, 2)
 

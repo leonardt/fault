@@ -555,7 +555,10 @@ class SystemVerilogTarget(VerilogTarget):
                 width_str = f" [{len(type_) - 1}:0]"
             if issubclass(type_, RealType):
                 print('name,type', name, type_)
-                if getattr(getattr(self.circuit, name), 'representation', None) == 'mlingua':
+                # TODO  in some cases with arrays the name does not match up as expected
+                # which is why I added the first half of the check in the if statement
+                if (hasattr(self.circuit, name)
+                    and getattr(getattr(self.circuit, name), 'representation', None) == 'mlingua'):
                     t = "pwl"
                 else:
                     t = "real"

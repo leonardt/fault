@@ -16,7 +16,7 @@ class Thread():
     # this avoids ambiguity when landing exactly on the clock edge
     # Also, used to check whether a step was supposed to have happened exactly
     # on a scheduled update, or is too early and we should reschedule
-    epsilon = 1e-18
+    epsilon = 1e-17
 
     def __init__(self, time, poke):
         #print('creating thread for', poke, 'at time', time)
@@ -85,28 +85,33 @@ class Thread():
             self.dt = dt
 
         elif type_ == 'future':
-            # PROBLEM: it looks like get_val is called immediately when this
-            # poke is done. That's a problem because we don't know what value
-            # to poke then; we actually just want to pass
             wait = params.get('wait', None)
             waits = params.get('waits', [wait])
             value = params.get('value', poke.value)
             values = params.get('values', [value])
-            waits.append(float('inf'))
+
+            # for the duration of wait[i], output shoud be value[i]
+            values = [None] + values
+            waits = waits + [float('inf')]
+
             self.future_count = 0
             def get_val(t):
-                if t + epsilon > self.future_next:
+                if t + 2*self.epsilon > self.future_next:
+                    assert t - self.future_next < self.epsilon, 'Missed update in future background poke'
                     self.future_count += 1
                     self.future_next += waits[self.future_count]
+                    self.dt = self.future_next - t
                 v = values[self.future_count]
-                if self.future_count >= len(waits) - 1:
-                    self.dt = float('inf')
+                if abs(t-self.next_update) <= self.epsilon:
+                    if self.future_next - (self.next_update + self.dt) < -self.epsilon:
+                        pass
                 else:
-                    self.dt = waits[self.future_count]
-                    self.future_count += 1
+                    if self.future_next - self.next_update < -self.epsilon:
+                        pass
+                #assert self.next_update+self.dt <= self.future_next
                 return v
             self.get_val = get_val
-            self.dt = waits[0] if len(waits) > 0 else float('inf')
+            self.dt = waits[0]
             self.future_next = self.start + self.dt
         else:
             assert False, 'Unrecognized background_poke type '+str(type_)
@@ -121,12 +126,19 @@ class Thread():
         # TODO don't poke at the same time twice
         missed_update_msg = 'Background Poke thread not updated in time'
         assert t <= self.next_update + self.epsilon, missed_update_msg
-        if abs(t - self.next_update) < self.epsilon:
-            self.next_update = t + self.dt
+
+        # must call get_val before calculating next_update because it can alter self.dt
         value = self.get_val(t)
-        poke = copy.copy(self.poke)
-        poke.value = value
-        return poke
+        if abs(t - self.next_update) < 2*self.epsilon:
+            self.next_update = t + self.dt
+
+        if value is None:
+            # The actual delay will get set later
+            return Delay(-1)
+        else:
+            poke = copy.copy(self.poke)
+            poke.value = value
+            return poke
 
     def __lt__(self, other):
         return self.next_update < other
@@ -136,12 +148,18 @@ class ThreadPool():
     # if the next background update is within epsilon of the next manual
     # update, then the background one comes first
     # Which comes first is arbitrary, but this epsilon makes it consistent
-    epsilon = 1e-18
+    epsilon = 1e-17 # 1e-18
 
     def __init__(self, time):
         self.t = time
         self.background_threads = []
         self.active_ports = set()
+
+    def set_action_delay(self, action, delay):
+        if isinstance(action, Delay):
+            action.time = delay
+        else:
+            action.delay = delay
 
     def get_next_update_time(self):
         if len(self.background_threads) == 0:
@@ -177,7 +195,8 @@ class ThreadPool():
                 # calculate the next update
                 next_thing_time = min(self.get_next_update_time(), t_end)
                 #print('\ncalculated next thing time', next_thing_time, 'at time', t)
-                action.delay = next_thing_time - t
+                delay = next_thing_time - t
+                self.set_action_delay(action, delay)
                 #print('also adding action', action, 'delay', action.delay)
                 t = next_thing_time
                 actions.append(action)
@@ -202,10 +221,11 @@ class ThreadPool():
         self.background_threads.remove(offender)
         heapq.heapify(self.background_threads)
         poke = offender.step(self.t)
-        poke.delay = 0
         if poke is None:
+            # TODO I don't think this path is ever taken?
             return []
         else:
+            self.set_action_delay(poke, 0)
             return [poke]
 
     def process(self, action, delay):
@@ -231,10 +251,7 @@ class ThreadPool():
             # the delay of an action owned by someone else. But with the new
             # Read action it's important that the object doesn't change 
             # because the user is holding a pointer to the old Read object
-            if isinstance(action, Delay):
-                action.time = new_delay
-            else:
-                action.delay = new_delay
+            self.set_action_delay(action, new_delay)
             new_action_list.append(action)
             #new_action = copy.copy(action)
             #new_action.delay = new_delay

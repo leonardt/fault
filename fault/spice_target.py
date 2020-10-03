@@ -635,7 +635,10 @@ class SpiceTarget(Target):
                 return f'{p.name}'
 
         # grab the relevant info
-        res = results[get_spice_name(action.port)]
+        try:
+            res = results[get_spice_name(action.port)]
+        except KeyError:
+            res = results[get_spice_name(action.port).lower()]
         if action.params == None:
             # straightforward read of voltage
             # get port values
