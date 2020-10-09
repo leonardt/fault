@@ -1,4 +1,4 @@
-from .tester import Tester
+from .staged_tester import Tester
 
 
 class Sequence:

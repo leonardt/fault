@@ -3,7 +3,8 @@ import pytest
 import magma as m
 from hwtypes import BitVector
 
-from fault.sequence import InputSequence, OutputSequence, SequenceTester
+from fault.tester.sequence_tester import (InputSequence, OutputSequence,
+                                          SequenceTester)
 
 
 class ALUCore(m.Circuit):
