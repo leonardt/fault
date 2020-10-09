@@ -899,7 +899,7 @@ def test_wait_until_tuple(target, simulator):
         tff = m.Register(m.Bit, has_enable=True)()
         tff.CLK @= io.clocks.clk0
         tff.CE @= m.enable(count.O == 3)
-        io.clocks.clk1 @= tff(tff.O ^ 1)
+        io.clocks.clk1 @= m.clock(tff(tff.O ^ 1))
 
     tester = fault.Tester(Main, Main.clocks.clk0)
     tester.wait_until_posedge(tester.circuit.clocks.clk1)
