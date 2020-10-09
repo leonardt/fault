@@ -14,11 +14,13 @@ class ALUCore(m.Circuit):
     io.c @= m.mux([io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b],
                   io.opcode)
 
+
 def core_input_driver(tester, value):
     a, b, opcode = value
     tester.circuit.a = a
     tester.circuit.b = b
     tester.circuit.opcode = opcode
+
 
 def shared_output_monitor(tester, value):
     tester.circuit.c.expect(value)
