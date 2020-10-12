@@ -36,10 +36,18 @@ class SequenceTester(Tester):
         `sequences`
         """
         super().__init__(circuit, clock)
+        self.sequences = sequences
+
+    def _compile_sequences(self):
+        """
+        Sequences are compiled as part of the `_compile` method, this allows
+        the user to record standard tester actions as setup code (e.g. reset,
+        config) before processing the sequences
+        """
         inputs = []
         outputs = []
         length = None
-        for seq in sequences:
+        for seq in self.sequences:
             if length is None:
                 length = len(seq[1])
             else:
@@ -50,15 +58,18 @@ class SequenceTester(Tester):
                 assert isinstance(seq[1], OutputSequence)
                 outputs.append((seq[0], iter(seq[1])))
 
-
         for _ in range(length):
             for driver, sequence in inputs:
                 driver(self, next(sequence))
 
-            if clock is None:
+            if self.clock is None:
                 self.eval()
             else:
                 self.step(2)
 
             for monitor, sequence in outputs:
                 monitor(self, next(sequence))
+
+    def _compile(self, target="verilator", **kwargs):
+        self._compile_sequences()
+        super()._compile(target, **kwargs)
