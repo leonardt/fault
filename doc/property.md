@@ -80,6 +80,15 @@ with a negedge RESET:
 f.assert_(..., on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN), ...)
 ```
 
+# Name
+Use the `name` parameter to give a property a name in the generated code.
+
+For example,
+```python
+f.assert_(..., name="my_property")
+```
+will insert `my_property:` before the generated property code.
+
 # Helper function for default clock/reset
 A useful pattern is leveraging magma's automatic clock wiring logic to handle
 default clock and reset values so the user doesn't have to provide them for
