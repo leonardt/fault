@@ -532,17 +532,19 @@ def test_disable_if():
 
 
 @requires_ncsim
-def test_ifdef_and_name(capsys):
+@pytest.mark.parametrize('compile_guard', ["ASSERT_ON",
+                                           ["ASSERT_ON", "FORMAL_ON"]])
+def test_ifdef_and_name(capsys, compile_guard):
     class Main(m.Circuit):
         io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit))
         io += m.ClockIO(has_resetn=True)
         f.assert_(io.a | f.implies | f.delay[2] | io.b, on=f.posedge(io.CLK),
-                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
+                  disable_iff=f.not_(io.RESETN), compile_guard=compile_guard,
                   name="foo")
         temp = m.Bit(name="temp")
         temp @= io.a
         f.assert_(f.sva(temp, "|-> ##2", io.b), on=f.posedge(io.CLK),
-                  disable_iff=f.not_(io.RESETN), compile_guard="ASSERT_ON",
+                  disable_iff=f.not_(io.RESETN), compile_guard=compile_guard,
                   name="bar")
 
     tester = f.SynchronousTester(Main, Main.CLK)
@@ -560,8 +562,11 @@ def test_ifdef_and_name(capsys):
         assert "wire _FAULT_ASSERT_WIRE_0" in file_.read()
     # Should fail
     with pytest.raises(AssertionError):
+        if isinstance(compile_guard, str):
+            compile_guard = [compile_guard]
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv", "+define+ASSERT_ON"],
+                               flags=["-sv"] +
+                               [f"+define+{guard}" for guard in compile_guard],
                                magma_opts={"inline": True})
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.foo has failed" in out

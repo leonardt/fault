@@ -250,15 +250,20 @@ def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
     event_str = on.compile(format_args)
     prop_str = f"assert property ({event_str}{disable_str} {prop});"
     if name is not None:
-        if not isinstance(compile_guard, str):
+        if not isinstance(name, str):
             raise TypeError("Expected string for name")
         prop_str = f"{name}: {prop_str}"
     if compile_guard is not None:
-        if not isinstance(compile_guard, str):
-            raise TypeError("Expected string for compile_guard")
-        prop_str = f"""\
-`ifdef {compile_guard}
-    {prop_str}
+        if not isinstance(compile_guard, (str, list)):
+            raise TypeError("Expected string or list for compile_guard")
+        if isinstance(compile_guard, str):
+            compile_guard = [compile_guard]
+        for guard in reversed(compile_guard):
+            # Add tabs to line for indent
+            nested_prop_str = "\n    ".join(prop_str.splitlines())
+            prop_str = f"""\
+`ifdef {guard}
+    {nested_prop_str}
 `endif
 """
     m.inline_verilog(prop_str, inline_wire_prefix=inline_wire_prefix,
