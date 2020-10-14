@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from fault.tester.staged_tester import Tester
 
 
@@ -24,11 +26,18 @@ class SequenceTester(Tester):
         super()._compile(target, **kwargs)
 
 
-class Driver:
+class SequenceTesterEntity(ABC):
     def set_tester(self, tester):
         self.tester = tester
 
 
-class Monitor:
-    def set_tester(self, tester):
-        self.tester = tester
+class Driver(SequenceTesterEntity):
+    @abstractmethod
+    def consume(self, *args):
+        pass
+
+
+class Monitor(SequenceTesterEntity):
+    @abstractmethod
+    def observe(self, *args):
+        pass
