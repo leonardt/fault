@@ -65,6 +65,20 @@ This will wrap the generated property inside a macro.
 `endif
 ```
 
+For multiple guards, you can pass a list of strings, for example:
+```python
+f.assert_(..., compile_guard=["ASSERT_ON", "FORMAL_ON"], ...)
+```
+
+will produce
+```verilog
+`ifdef ASSERT_ON
+    `ifdef FORMAL_ON
+        ...
+    `endif
+`endif
+```
+
 **NOTE**: One issue with using a compile guard is that when the macro is disabled
 magma/fault will produce dangling wires (these are used inside the body
 of the macro which has been disabled).  As a temporary measure, fault will generate
