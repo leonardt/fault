@@ -250,7 +250,7 @@ def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
     event_str = on.compile(format_args)
     prop_str = f"assert property ({event_str}{disable_str} {prop});"
     if name is not None:
-        if not isinstance(compile_guard, str):
+        if not isinstance(name, str):
             raise TypeError("Expected string for name")
         prop_str = f"{name}: {prop_str}"
     if compile_guard is not None:
