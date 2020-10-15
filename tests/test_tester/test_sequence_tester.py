@@ -29,14 +29,14 @@ class ALUTile(m.Circuit):
 
 
 class CoreDriver(Driver):
-    def consume(self, a, b, opcode):
+    def lower(self, a, b, opcode):
         self.tester.circuit.a = a
         self.tester.circuit.b = b
         self.tester.circuit.opcode = opcode
 
 
 class TileDriver(Driver):
-    def consume(self, a, b, opcode):
+    def lower(self, a, b, opcode):
         self.tester.circuit.config_en = 1
         self.tester.circuit.config_data = opcode
         self.tester.step(2)

@@ -14,7 +14,7 @@ class SequenceTester(Tester):
 
     def _compile_sequences(self):
         for item in self.sequence:
-            self.driver.consume(*item)
+            self.driver.lower(*item)
             if self.clock is None:
                 self.eval()
             else:
@@ -33,7 +33,7 @@ class SequenceTesterEntity(ABC):
 
 class Driver(SequenceTesterEntity):
     @abstractmethod
-    def consume(self, *args):
+    def lower(self, *args):
         pass
 
 
