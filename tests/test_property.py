@@ -584,25 +584,31 @@ def test_default_clock_function():
             disable_iff = f.not_(m.AsyncResetN())
         f.assert_(property, on=on, disable_iff=disable_iff)
 
+    class ClockIntf(m.Product):
+        clock = m.In(m.Clock)
+        reset = m.In(m.AsyncResetN)
+
     class Main(m.Circuit):
         io = m.IO(I=m.In(m.Bits[8]), O=m.Out(m.Bits[8]))
-        io += m.ClockIO(has_async_resetn=True)
+        io += m.IO(clocks=ClockIntf)
         io.O @= m.Register(T=m.Bits[8], reset_type=m.AsyncResetN)()(io.I)
         my_assert(io.I | f.implies | f.delay[1] | io.O)
 
-    tester = f.SynchronousTester(Main, Main.CLK)
+    tester = f.SynchronousTester(Main, Main.clocks.clock)
     I_seq = [1, 0, 1, 0, 0]
     O_seq = [1, 0, 1, 0, 0]
-    tester.circuit.ASYNCRESETN = 1
+    tester.circuit.clocks.reset = 1
     for I, O in zip(I_seq, O_seq):
         tester.circuit.I = I
         tester.advance_cycle()
         tester.circuit.O.expect(O)
     # Should disable during reset
     tester.circuit.I = 1
-    tester.circuit.ASYNCRESETN = 0
+    tester.circuit.clocks.reset = 0
     tester.advance_cycle()
     tester.circuit.O.expect(0)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_opts={"inline": True,
+                                                      "drive_undriven": True,
+                                                      "terminate_unused": True})
