@@ -931,10 +931,4 @@ def test_peek_bitwise(target, simulator, capsys):
                                    disp_type="realtime")
 
     out, _ = capsys.readouterr()
-    # vcs/ncsim prints extra lines at end
-    offset = {
-        "vcs": 8,
-        "ncsim": 5,
-        "vivado": 7
-    }.get(simulator, 2)
     assert "_*****_*" in out, out
