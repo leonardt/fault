@@ -21,6 +21,10 @@ jobs:
       with:
         auto-update-conda: true
         python-version: 3.7
+    - name: Uninstall Python
+      shell: bash
+      run: |
+        sudo apt uninstall -y python3
     - name: Install verilator
       shell: bash
       run: |
