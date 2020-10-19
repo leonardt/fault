@@ -7,7 +7,7 @@ try:
                                     Or, Distinct)
     import pono
 except ImportError:
-    pytest.skip("Could not import pono or smt_switch")
+    pytestmark = pytest.mark.skip("Could not import pono or smt_switch")
 
 
 class ConfigReg(m.Circuit):
