@@ -16,15 +16,6 @@ jobs:
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
-    - name: Setup Env
-      uses: goanpeca/setup-miniconda@v1
-      with:
-        auto-update-conda: true
-        python-version: 3.7
-    - name: Uninstall Python
-      shell: bash
-      run: |
-        sudo apt remove -y python3
     - name: Install verilator
       shell: bash
       run: |
@@ -36,7 +27,7 @@ jobs:
           wget https://github.com/rdaly525/coreir/releases/download/v0.1.49/coreir-linux.tar.gz
           tar -xzf coreir-linux.tar.gz
           cd coreir-linux && make install && cd ../
-          pip install Cython==0.29 --install-option="--no-cython-compile"
+          sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
           git clone https://github.com/upscale-project/pono
           cd pono
           ./travis-scripts/setup-msat.sh --auto-yes
@@ -45,20 +36,20 @@ jobs:
           ./contrib/setup-btor2tools.sh
           ./travis-scripts/download-cvc4.sh
           ./contrib/setup-smt-switch.sh --with-msat --cvc4-home=./deps/CVC4 --python
-          pip install -e ./deps/smt-switch/build/python
+          sudo pip3 install -e ./deps/smt-switch/build/python
           ./configure.sh --with-msat --python --with-coreir-extern
           cd build && make -j2 && make test && cd ../
-          pip install -e ./build/python
+          sudo pip3 install -e ./build/python
           cd ..
 
     - name: Install Python packages
       shell: bash -l {0}
       run: |
-          pip install "pytest<6"
-          pip install pytest-cov pytest-pycodestyle
-          pip install mantle>=2.0.0  # for tests.common
-          pip install vcdvcd decorator kratos
-          pip install .
+          sudo pip3 install "pytest<6"
+          sudo pip3 install pytest-cov pytest-pycodestyle
+          sudo pip3 install mantle>=2.0.0  # for tests.common
+          sudo pip3 install vcdvcd decorator kratos
+          sudo pip3 install .
 
     - name: Pytest
       shell: bash -l {0}
