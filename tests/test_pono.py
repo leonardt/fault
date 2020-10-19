@@ -1,13 +1,13 @@
 import pytest
 import coreir
 import magma as m
-import smt_switch as ss
-from smt_switch.primops import (BVAdd, BVSub, BVMul, BVUdiv, Equal, Ite, Or,
-                                Distinct)
 try:
+    import smt_switch as ss
+    from smt_switch.primops import (BVAdd, BVSub, BVMul, BVUdiv, Equal, Ite,
+                                    Or, Distinct)
     import pono
 except ImportError:
-    pytest.skip("Could not import pono")
+    pytest.skip("Could not import pono or smt_switch")
 
 
 class ConfigReg(m.Circuit):
