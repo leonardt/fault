@@ -24,7 +24,7 @@ jobs:
     - name: Uninstall Python
       shell: bash
       run: |
-        sudo apt uninstall -y python3
+        sudo apt remove -y python3
     - name: Install verilator
       shell: bash
       run: |
