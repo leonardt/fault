@@ -340,3 +340,9 @@ tester.compile("verilator")
 # generate the test bench file (returns the name of the file)
 tb_file = tester.generate_test_bench("verilator")
 ```
+
+or for system verilog
+```
+tester.compile("system-verilog", simulator="ncsim")
+tb_file = tester.generate_test_bench("system-verilog")
+```
