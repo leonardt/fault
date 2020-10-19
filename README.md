@@ -333,8 +333,7 @@ tester.print("%08x\n", circ.O)
 
 
 ### Can I just generate a test bench without running it?
-Yes (currently only supported by the verilator target, please open an issue to
-request support for another target).  Here's an example:
+Yes, here's an example:
 ```
 # compile the tester
 tester.compile("verilator")

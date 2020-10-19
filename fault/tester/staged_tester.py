@@ -259,11 +259,11 @@ class Tester(TesterBase):
         logging.info("Success!")
 
     def generate_test_bench(self, target="verilator"):
-        if target != "verilator":
-            raise NotImplementedError(target)
         target_obj = self._get_target(target)
-        return target_obj.generate_test_bench(self.actions,
-                                              self.verilator_includes)
+        args = (self.actions, )
+        if target == "verilator":
+            args += (self.verilator_includes, )
+        return target_obj.generate_test_bench(*args)
 
     def _compile_and_run(self, target="verilator", **kwargs):
         """
