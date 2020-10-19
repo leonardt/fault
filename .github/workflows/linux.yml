@@ -16,17 +16,17 @@ jobs:
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
-    - name: Install verilator
+    - name: Install dependencies
       shell: bash
       run: |
-          sudo apt install -y verilator libgmp-dev libmpfr-dev libmpc-dev iverilog
+          sudo apt install -y verilator libgmp-dev libmpfr-dev libmpc-dev iverilog python3-pip python3-setuptools
           verilator --version
     - name: Install pono
       shell: bash
       run: |
           wget https://github.com/rdaly525/coreir/releases/download/v0.1.49/coreir-linux.tar.gz
           tar -xzf coreir-linux.tar.gz
-          cd coreir-linux && make install && cd ../
+          cd coreir-linux && sudo make install && cd ../
           sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
           git clone https://github.com/upscale-project/pono
           cd pono
