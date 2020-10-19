@@ -81,33 +81,9 @@ def test_pono(config_data):
         test_state,
         solver.make_term(
             Ite,
-            solver.make_term(
-                Equal,
-                test_state,
-                solver.make_term(0, bvsort2)
-            ),
-            solver.make_term(1, bvsort2),
-            solver.make_term(
-                Ite,
-                solver.make_term(
-                    Equal,
-                    test_state,
-                    solver.make_term(1, bvsort2)
-                ),
-                solver.make_term(2, bvsort2),
-                solver.make_term(
-                    Ite,
-                    solver.make_term(
-                        Equal,
-                        test_state,
-                        solver.make_term(2, bvsort2)
-                    ),
-                    solver.make_term(3, bvsort2),
-                    solver.make_term(3, bvsort2)
-                )
-            )
-        )
-    )
+            solver.make_term(Equal, test_state, solver.make_term(3, bvsort2)),
+            solver.make_term(3, bvsort2),
+            solver.make_term(BVAdd, test_state, solver.make_term(1, bvsort2))))
 
     # Boolean sort
     boolsort = solver.make_sort(ss.sortkinds.BOOL)
