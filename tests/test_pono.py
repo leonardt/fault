@@ -40,6 +40,9 @@ def test_pono(config_data):
     # Create solver/interpolator
     solver = ss.create_msat_solver(False)
     itp = ss.create_msat_interpolator()
+    # set solver options
+    solver.set_opt('produce-models', 'true')
+    solver.set_opt('incremental', 'true')
 
     # create RTS, populate with encoder
     rts = pono.RelationalTransitionSystem(solver)
@@ -106,25 +109,7 @@ def test_pono(config_data):
                 solver.make_term(0, bvsort2)
             ),
             solver.make_term(True),
-            solver.make_term(
-                Ite,
-                solver.make_term(
-                    Equal,
-                    test_state,
-                    solver.make_term(1, bvsort2)
-                ),
-                solver.make_term(False),
-                solver.make_term(
-                    Ite,
-                    solver.make_term(
-                        Equal,
-                        test_state,
-                        solver.make_term(2, bvsort2)
-                    ),
-                    solver.make_term(False),
-                    solver.make_term(False)
-                )
-            )
+            solver.make_term(False)
         )
     )
     # input and state var should be equal
@@ -143,9 +128,5 @@ def test_pono(config_data):
         rts, solver.make_term(Or, solver.make_term(Equal, imp_res, spec_res),
                               solver.make_term(Distinct, test_state,
                                                solver.make_term(3, bvsort2))))
-
-    # set solver options
-    solver.set_opt('produce-models', 'true')
-    solver.set_opt('incremental', 'true')
     interp = pono.InterpolantMC(prop, solver, itp)
     assert interp.check_until(10)
