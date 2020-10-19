@@ -4,7 +4,10 @@ import magma as m
 import smt_switch as ss
 from smt_switch.primops import (BVAdd, BVSub, BVMul, BVUdiv, Equal, Ite, Or,
                                 Distinct)
-import pono
+try:
+    import pono
+except ImportError:
+    pytest.skip("Could not import pono")
 
 
 class ConfigReg(m.Circuit):

@@ -26,6 +26,27 @@ jobs:
       run: |
           sudo apt install -y verilator libgmp-dev libmpfr-dev libmpc-dev iverilog
           verilator --version
+    - name: Install pono
+      shell: bash
+      run: |
+          wget https://github.com/rdaly525/coreir/releases/download/v0.1.49/coreir-linux.tar.gz
+          tar -xzf coreir-linux.tar.gz
+          cd coreir-linux && make install && cd ../
+          pip install Cython==0.29 --install-option="--no-cython-compile"
+          git clone https://github.com/upscale-project/pono
+          cd pono
+          ./travis-scripts/setup-msat.sh --auto-yes
+          ./contrib/setup-bison.sh
+          ./contrib/setup-flex.sh
+          ./contrib/setup-btor2tools.sh
+          ./travis-scripts/download-cvc4.sh
+          ./contrib/setup-smt-switch.sh --with-msat --cvc4-home=./deps/CVC4 --python
+          pip install -e ./deps/smt-switch/build/python
+          ./configure.sh --with-msat --python --with-coreir-extern
+          cd build && make -j2 && make test && cd ../
+          pip install -e ./build/python
+          cd ..
+
     - name: Install Python packages
       shell: bash -l {0}
       run: |
