@@ -1,3 +1,4 @@
+import os
 import magma as m
 import random
 from hwtypes import BitVector
@@ -938,3 +939,14 @@ def test_peek_bitwise(target, simulator, capsys):
         "vivado": 7
     }.get(simulator, 2)
     assert "_*****_*" in out, out
+
+
+def test_tester_basic_generate_test_bench():
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        tester.compile("verilator", directory=_dir)
+        tb_file = tester.generate_test_bench("verilator")
+        assert os.path.exists(tb_file)
