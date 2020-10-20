@@ -330,3 +330,19 @@ tester.poke(circ.CLK, 0)
 tester.step()
 tester.print("%08x\n", circ.O)
 ```
+
+
+### Can I just generate a test bench without running it?
+Yes, here's an example:
+```
+# compile the tester
+tester.compile("verilator")
+# generate the test bench file (returns the name of the file)
+tb_file = tester.generate_test_bench("verilator")
+```
+
+or for system verilog
+```
+tester.compile("system-verilog", simulator="ncsim")
+tb_file = tester.generate_test_bench("system-verilog")
+```
