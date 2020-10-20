@@ -27,6 +27,7 @@ jobs:
           sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
           git clone https://github.com/upscale-project/pono
           cd pono
+          mkdir deps
           cd deps
           wget https://github.com/rdaly525/coreir/releases/download/v0.1.49/coreir-linux.tar.gz
           tar -xzf coreir-linux.tar.gz
