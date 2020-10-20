@@ -26,7 +26,7 @@ jobs:
       run: |
           wget https://github.com/rdaly525/coreir/releases/download/v0.1.49/coreir-linux.tar.gz
           tar -xzf coreir-linux.tar.gz
-          mkdir -p /usr/include/coreir/passes/analysis/verilog
+          sudo mkdir -p /usr/include/coreir/passes/analysis/verilog
           cd coreir-linux && sudo make install && cd ../
           sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
           git clone https://github.com/upscale-project/pono
