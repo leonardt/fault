@@ -2,8 +2,6 @@ import tempfile
 
 import pytest
 
-from smt_switch.primops import BVUge, And, BVUlt
-
 from hwtypes import BitVector
 
 import magma as m
@@ -34,11 +32,10 @@ class SimpleALU(m.Circuit):
 def test_tester_magma_internal_signals_verilator(target):
     if target == "pono":
         try:
-            import smt_switch
+            from smt_switch.primops import BVUge, And, BVUlt
             import pono
             # Use symbols to avoid unused symbols lint warning
             pono
-            smt_switch
         except ImportError:
             pytest.skip("Could not import pono or smt_switch")
     circ = SimpleALU
