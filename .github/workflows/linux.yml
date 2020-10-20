@@ -24,16 +24,12 @@ jobs:
     - name: Install pono
       shell: bash
       run: |
-          sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
-          git clone https://github.com/upscale-project/pono
-          cd pono
-          mkdir deps
-          cd deps
           wget https://github.com/rdaly525/coreir/releases/download/v0.1.49/coreir-linux.tar.gz
           tar -xzf coreir-linux.tar.gz
-          mkdir coreir
-          mv coreir-linux coreir/local
-          cd ..
+          cd coreir-linux && sudo make install && cd ../
+          sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
+          git clone https://github.com/leonardt/pono
+          cd pono
           ./travis-scripts/setup-msat.sh --auto-yes
           ./contrib/setup-bison.sh
           ./contrib/setup-flex.sh
@@ -41,7 +37,7 @@ jobs:
           ./travis-scripts/download-cvc4.sh
           ./contrib/setup-smt-switch.sh --with-msat --cvc4-home=./deps/CVC4 --python
           sudo pip3 install -e ./deps/smt-switch/build/python
-          ./configure.sh --with-msat --python --with-coreir
+          ./configure.sh --with-msat --python --with-coreir-extern
           cd build && make -j2 && make test && cd ../
           sudo pip3 install -e ./build/python
           cd ..
