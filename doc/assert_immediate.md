@@ -5,7 +5,7 @@
 Here is the interface:
 ```python
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     on="*"):
+                     on=None):
     """
     cond: m.Bit
     success_msg (optional): passed to $display on success
@@ -13,6 +13,8 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                             wrapped in quotes, integers are passed without
                             quotes (for $fatal))
     severity (optional): "error", "fatal", or "warning"
+    on (optional): If None, uses always @(*) sensitivity, otherwise something
+                   like f.posedge(io.CLK)
     """
 ```
 

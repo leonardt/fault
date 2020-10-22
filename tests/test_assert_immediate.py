@@ -8,7 +8,8 @@ import magma as m
 @pytest.mark.parametrize('success_msg', [None, "OK"])
 @pytest.mark.parametrize('failure_msg', [None, "FAILED"])
 @pytest.mark.parametrize('severity', ["error", "fatal", "warning"])
-def test_immediate_assert(capsys, failure_msg, success_msg, severity):
+@pytest.mark.parametrize('on', [None, f.posedge])
+def test_immediate_assert(capsys, failure_msg, success_msg, severity, on):
     if failure_msg is not None and severity == "fatal":
         # Use integer exit code
         failure_msg = 1
@@ -17,16 +18,18 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity):
         io = m.IO(
             I0=m.In(m.Bit),
             I1=m.In(m.Bit)
-        )
+        ) + m.ClockIO()
+        io.CLK.unused()
         f.assert_immediate(~(io.I0 & io.I1),
                            success_msg=success_msg,
                            failure_msg=failure_msg,
-                           severity=severity)
+                           severity=severity,
+                           on=on if on is None else on(io.CLK))
 
-    tester = f.Tester(Foo)
+    tester = f.Tester(Foo, Foo.CLK)
     tester.circuit.I0 = 1
     tester.circuit.I1 = 1
-    tester.eval()
+    tester.step(2)
     try:
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("verilator", magma_opts={"inline": True},
@@ -44,7 +47,7 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity):
             msg = "%Warning:"
         else:
             msg = "%Error:"
-        msg += " Foo.v:13: Assertion failed in TOP.Foo"
+        msg += " Foo.v:29: Assertion failed in TOP.Foo"
         if severity == "error":
             msg += f": {failure_msg}"
         assert msg in out
@@ -52,9 +55,11 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity):
     tester.clear()
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1
-    tester.eval()
+    tester.step(2)
     with tempfile.TemporaryDirectory() as dir_:
-        tester.compile_and_run("verilator", magma_opts={"inline": True},
+        tester.compile_and_run("verilator",
+                               magma_opts={"inline": True,
+                                           "verilator_compat": True},
                                flags=['--assert'], directory=dir_,
                                disp_type="realtime")
     out, _ = capsys.readouterr()
