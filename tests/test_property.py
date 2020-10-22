@@ -622,13 +622,15 @@ def test_not_onehot():
 
     tester = f.Tester(Main, Main.CLK)
     tester.circuit.I = 0xFF
+    tester.step(2)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"inline": True,
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
 
-    tester.circuit.I = 0x70
+    tester.circuit.I = 0x80
+    tester.step(2)
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
