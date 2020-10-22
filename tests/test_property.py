@@ -612,3 +612,27 @@ def test_default_clock_function():
                            flags=["-sv"], magma_opts={"inline": True,
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
+
+
+@requires_ncsim
+def test_not_onehot():
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bits[8])) + m.ClockIO()
+        f.assert_(f.not_(f.onehot(io.I)), on=f.posedge(io.CLK))
+
+    tester = f.Tester(Main, Main.CLK)
+    tester.circuit.I = 0xFF
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True,
+                                                      "drive_undriven": True,
+                                                      "terminate_unused": True})
+
+    tester.circuit.I = 0x70
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"],
+                               magma_opts={"inline": True,
+                                           "drive_undriven": True,
+                                           "terminate_unused": True})
