@@ -3,6 +3,7 @@ import pytest
 
 import fault as f
 import magma as m
+from fault.verilator_utils import verilator_version
 
 
 @pytest.mark.parametrize('success_msg', [None, "OK"])
@@ -10,6 +11,8 @@ import magma as m
 @pytest.mark.parametrize('severity', ["error", "fatal", "warning"])
 @pytest.mark.parametrize('on', [None, f.posedge])
 def test_immediate_assert(capsys, failure_msg, success_msg, severity, on):
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
     if failure_msg is not None and severity == "fatal":
         # Use integer exit code
         failure_msg = 1
