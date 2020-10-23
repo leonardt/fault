@@ -239,7 +239,7 @@ class _Compiler:
         return compiled
 
 
-def _make_statement(prop, on, disable_iff, compile_guard, name,
+def _make_statement(statement, prop, on, disable_iff, compile_guard, name,
                     inline_wire_prefix):
     format_args = {}
     _compiler = _Compiler(format_args)
@@ -248,7 +248,7 @@ def _make_statement(prop, on, disable_iff, compile_guard, name,
     if disable_iff is not None:
         disable_str = f" disable iff ({_compiler.compile(disable_iff)})"
     event_str = on.compile(format_args)
-    prop_str = f"assert property ({event_str}{disable_str} {prop});"
+    prop_str = f"{statement} property ({event_str}{disable_str} {prop});"
     if name is not None:
         if not isinstance(name, str):
             raise TypeError("Expected string for name")
@@ -272,13 +272,13 @@ def _make_statement(prop, on, disable_iff, compile_guard, name,
 
 def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
             inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
-    _make_statement("assert", on, disable_iff, compile_guard, name,
+    _make_statement("assert", prop, on, disable_iff, compile_guard, name,
                     inline_wire_prefix)
 
 
 def cover(prop, on, disable_iff=None, compile_guard=None, name=None,
           inline_wire_prefix="_FAULT_COVER_WIRE_"):
-    _make_statement("cover", on, disable_iff, compile_guard, name,
+    _make_statement("cover", prop, on, disable_iff, compile_guard, name,
                     inline_wire_prefix)
 
 

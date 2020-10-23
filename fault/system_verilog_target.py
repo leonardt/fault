@@ -852,6 +852,7 @@ class SystemVerilogTarget(VerilogTarget):
             tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale ps']  # noqa
             tcl_cmds += [f'probe -create -all -vcd -depth all']
         tcl_cmds += [f'run {self.num_cycles}ns']
+        tcl_cmds += ['assertion -summary -final']
         tcl_cmds += [f'quit']
 
         # write the command file
@@ -987,7 +988,7 @@ class SystemVerilogTarget(VerilogTarget):
 
             # coverage flags
             if self.coverage:
-                cmd += ["-coverage", "b", "-covoverwrite"]
+                cmd += ["-coverage", "a", "-covoverwrite"]
 
             # return arg list
             return cmd
