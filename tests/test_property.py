@@ -649,3 +649,21 @@ def test_cover(capsys):
          0      1      0   Main_tb.dut.__cover1
   Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 0\
 """ in out
+
+
+@requires_ncsim
+def test_assume(capsys):
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
+        io.O @= m.Register(T=m.Bit)()(io.I)
+        f.assume(io.I | f.delay[1] | ~io.I, on=f.posedge(io.CLK))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    # assume behaves like assert in simulation (but used as an assumption for
+    # formal tools)
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})

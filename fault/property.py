@@ -282,6 +282,12 @@ def cover(prop, on, disable_iff=None, compile_guard=None, name=None,
                     inline_wire_prefix)
 
 
+def assume(prop, on, disable_iff=None, compile_guard=None, name=None,
+          inline_wire_prefix="_FAULT_ASSUME_WIRE_"):
+    _make_statement("assume", prop, on, disable_iff, compile_guard, name,
+                    inline_wire_prefix)
+
+
 class Sequence:
     def __init__(self, prop):
         if not isinstance(prop, (Property, SVAProperty)):
