@@ -239,8 +239,8 @@ class _Compiler:
         return compiled
 
 
-def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
-            inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
+def _make_statement(prop, on, disable_iff, compile_guard, name,
+                    inline_wire_prefix):
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
@@ -268,6 +268,18 @@ def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
 """
     m.inline_verilog(prop_str, inline_wire_prefix=inline_wire_prefix,
                      **format_args)
+
+
+def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
+            inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
+    _make_statement("assert", on, disable_iff, compile_guard, name,
+                    inline_wire_prefix)
+
+
+def cover(prop, on, disable_iff=None, compile_guard=None, name=None,
+          inline_wire_prefix="_FAULT_COVER_WIRE_"):
+    _make_statement("cover", on, disable_iff, compile_guard, name,
+                    inline_wire_prefix)
 
 
 class Sequence:
