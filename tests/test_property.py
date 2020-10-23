@@ -613,6 +613,7 @@ def test_default_clock_function():
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
 
+
 @requires_ncsim
 def test_cover(capsys):
     class Main(m.Circuit):
