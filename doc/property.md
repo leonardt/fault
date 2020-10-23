@@ -242,3 +242,7 @@ def test_coverage(capsys):
   Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 0\
 """ in out
 ```
+
+# Assume
+Fault provides the function `f.assume` that uses the same interface as
+`f.assert_` and will generate a system verilog `assume` statement
