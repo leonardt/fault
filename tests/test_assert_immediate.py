@@ -10,7 +10,9 @@ from fault.verilator_utils import verilator_version
 @pytest.mark.parametrize('failure_msg', [None, "FAILED"])
 @pytest.mark.parametrize('severity', ["error", "fatal", "warning"])
 @pytest.mark.parametrize('on', [None, f.posedge])
-def test_immediate_assert(capsys, failure_msg, success_msg, severity, on):
+@pytest.mark.parametrize('name', [None, "my_assert"])
+def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
+                          name):
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
     if failure_msg is not None and severity == "fatal":
@@ -27,7 +29,8 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity, on):
                            success_msg=success_msg,
                            failure_msg=failure_msg,
                            severity=severity,
-                           on=on if on is None else on(io.CLK))
+                           on=on if on is None else on(io.CLK),
+                           name=name)
 
     tester = f.Tester(Foo, Foo.CLK)
     tester.circuit.I0 = 1
@@ -46,11 +49,14 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity, on):
         assert severity == "warning"
     out, _ = capsys.readouterr()
     if failure_msg is not None:
+        print(out)
         if severity == "warning":
             msg = "%Warning:"
         else:
             msg = "%Error:"
         msg += " Foo.v:29: Assertion failed in TOP.Foo"
+        if name is not None:
+            msg += f".{name}"
         if severity == "error":
             msg += f": {failure_msg}"
         assert msg in out
