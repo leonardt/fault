@@ -194,7 +194,7 @@ class Main(m.Circuit):
               f.repeat[2] | f.delay[1] | seq1, on=f.posedge(io.CLK))
 ```
 
-# Coverage
+# Cover
 Fault provides a function `f.cover` that uses the same interface as
 `f.assert_`.  This will generate a system verilog coverage statement.
 In order to use this, you'll need to compile_and_run your circuit with
