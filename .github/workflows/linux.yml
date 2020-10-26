@@ -33,7 +33,7 @@ jobs:
           sudo make install 
           cd ../
           sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
-          git clone https://github.com/leonardt/pono
+          git clone https://github.com/upscale-project/pono
           cd pono
           ./travis-scripts/setup-msat.sh --auto-yes
           ./contrib/setup-bison.sh
