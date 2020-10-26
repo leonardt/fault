@@ -1,11 +1,11 @@
 import fault
 from .staged_tester import Tester
 from fault.wrapper import Wrapper, PortWrapper, InstanceWrapper
-try:
-    from fault.pono_target import PonoTarget
-except ImportError:
-    # Optional dependency
-    pass
+from fault.pono_target import PonoTarget
+# try:
+# except ImportError:
+#     # Optional dependency
+#     pass
 import fault.actions as actions
 from fault.random import ConstrainedRandomGenerator
 
