@@ -27,7 +27,7 @@ class SimpleALU(m.Circuit):
               ) + m.ClockIO()
 
     opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
-    io.c @= m.mux([io.a + io.b, io.a - io.b, io.a * io.b, io.a // io.b], opcode)
+    io.c @= m.mux([io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
 
 
 @pytest.mark.parametrize('config_data', range(4))
