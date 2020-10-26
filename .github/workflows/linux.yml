@@ -24,8 +24,8 @@ jobs:
     - name: Install pono
       shell: bash
       env: 
-          CC:gcc-8
-          CXX:g++-8
+          CC: gcc-8
+          CXX: g++-8
       run: |
           wget https://github.com/rdaly525/coreir/releases/download/v0.1.50/coreir-linux.tar.gz
           tar -xzf coreir-linux.tar.gz
