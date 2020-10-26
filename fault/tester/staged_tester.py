@@ -236,16 +236,19 @@ class Tester(TesterBase):
             kwargs["directory"] = self._make_directory(kwargs["directory"])
         self._compile(target, **kwargs)
 
+    def _get_target(self, target):
+        try:
+            return self.targets[target]
+        except KeyError:
+            raise Exception(
+                f"Could not find target={target}, did you compile it first?")
+
     def run(self, target="verilator"):
         """
         Run the current action sequence using the specified `target`.  The user
         should call `compile` with `target` before calling `run`.
         """
-        # Try to get the target
-        try:
-            target_obj = self.targets[target]
-        except KeyError:
-            raise Exception(f"Could not find target={target}, did you compile it first?")  # noqa
+        target_obj = self._get_target(target)
 
         # Run the target, possibly passing in some custom arguments
         logging.info("Running tester...")
@@ -254,6 +257,13 @@ class Tester(TesterBase):
         else:
             target_obj.run(self.actions)
         logging.info("Success!")
+
+    def generate_test_bench(self, target="verilator"):
+        target_obj = self._get_target(target)
+        args = (self.actions, )
+        if target == "verilator":
+            args += (self.verilator_includes, )
+        return target_obj.generate_test_bench(*args)
 
     def _compile_and_run(self, target="verilator", **kwargs):
         """

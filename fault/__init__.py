@@ -18,3 +18,4 @@ from fault.property import (assert_, implies, delay, posedge, repeat, goto,
                             isunknown, past, rose, fell, stable, not_,
                             throughout, until, until_with, inside)
 from fault.sva import sva
+from fault.assert_immediate import assert_immediate

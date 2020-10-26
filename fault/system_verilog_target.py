@@ -722,15 +722,19 @@ class SystemVerilogTarget(VerilogTarget):
         # return the string representing the system-verilog testbench
         return src
 
-    def run(self, actions, power_args=None):
+    def generate_test_bench(self, actions, power_args=None):
+        if self.ext_test_bench:
+            raise Exception(
+                "Cannot generate_test_bench when using external test bench")
         # set defaults
         power_args = power_args if power_args is not None else {}
+        return self.write_test_bench(actions=actions, power_args=power_args)
 
+    def run(self, actions, power_args=None):
         # assemble list of sources files
         vlog_srcs = []
         if not self.ext_test_bench:
-            tb_file = self.write_test_bench(actions=actions,
-                                            power_args=power_args)
+            tb_file = self.generate_test_bench(actions, power_args)
             vlog_srcs += [tb_file]
         if not self.ext_model_file:
             vlog_srcs += [self.verilog_file]

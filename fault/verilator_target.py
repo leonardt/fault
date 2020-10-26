@@ -600,18 +600,24 @@ if (!({expr_str})) {{
 
         return src
 
-    def run(self, actions, verilator_includes=None, num_tests=0,
-            _circuit=None):
-        # Set defaults
+    def generate_test_bench(self, actions, verilator_includes=None,
+                            num_tests=0, _circuit=None):
+        # Set default
         if verilator_includes is None:
             verilator_includes = []
-
         # Write the verilator driver to file.
         src = self.generate_code(actions, verilator_includes, num_tests,
                                  _circuit)
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         with open(driver_file, "w") as f:
             f.write(src)
+        return driver_file
+
+    def run(self, actions, verilator_includes=None, num_tests=0,
+            _circuit=None):
+
+        self.generate_test_bench(actions, verilator_includes, num_tests,
+                                 _circuit)
 
         # if use kratos, symbolic link the library to dest folder
         if self.use_kratos:

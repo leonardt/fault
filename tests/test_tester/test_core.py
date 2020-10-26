@@ -1,3 +1,4 @@
+import os
 import magma as m
 import random
 from hwtypes import BitVector
@@ -931,10 +932,18 @@ def test_peek_bitwise(target, simulator, capsys):
                                    disp_type="realtime")
 
     out, _ = capsys.readouterr()
-    # vcs/ncsim prints extra lines at end
-    offset = {
-        "vcs": 8,
-        "ncsim": 5,
-        "vivado": 7
-    }.get(simulator, 2)
     assert "_*****_*" in out, out
+
+
+def test_tester_basic_generate_test_bench(target, simulator):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"directory": _dir}
+        if target != "verilator":
+            kwargs["simulator"] = simulator
+        tester.compile(target, **kwargs)
+        tb_file = tester.generate_test_bench(target)
+        assert os.path.exists(tb_file)
