@@ -43,7 +43,7 @@ jobs:
           ./contrib/setup-smt-switch.sh --with-msat --cvc4-home=./deps/CVC4 --python
           sudo pip3 install -e ./deps/smt-switch/build/python
           ./configure.sh --with-msat --python --with-coreir-extern
-          cd build && make -j2 && make test && cd ../
+          cd build && make -j2 pono-lib && make test && cd ../
           sudo pip3 install -e ./build/python
           cd ..
 
