@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       shell: bash
       run: |
-          sudo apt install -y verilator libgmp-dev libmpfr-dev libmpc-dev iverilog python3-pip python3-setuptools
+          sudo apt install -y verilator libgmp-dev libmpfr-dev libmpc-dev iverilog
           verilator --version
     - name: Install pono
       shell: bash
@@ -29,7 +29,7 @@ jobs:
           cd coreir-linux
           sudo make install 
           cd ../
-          sudo pip3 install Cython==0.29 --install-option="--no-cython-compile"
+          pip install Cython==0.29 --install-option="--no-cython-compile"
           git clone https://github.com/upscale-project/pono
           cd pono
           ./travis-scripts/setup-msat.sh --auto-yes
@@ -38,20 +38,20 @@ jobs:
           ./contrib/setup-btor2tools.sh
           ./travis-scripts/download-cvc4.sh
           ./contrib/setup-smt-switch.sh --with-msat --cvc4-home=./deps/CVC4 --python
-          sudo pip3 install -e ./deps/smt-switch/build/python
+          pip install -e ./deps/smt-switch/build/python
           ./configure.sh --with-msat --python --with-coreir-extern
           cd build && make -j2 pono-lib && cd ../
-          sudo pip3 install -e ./build/python
+          pip install -e ./build/python
           cd ..
 
     - name: Install Python packages
       shell: bash -l {0}
       run: |
-          sudo pip3 install "pytest<6"
-          sudo pip3 install pytest-cov pytest-pycodestyle
-          sudo pip3 install mantle>=2.0.0  # for tests.common
-          sudo pip3 install vcdvcd decorator kratos
-          sudo pip3 install .
+          pip install "pytest<6"
+          pip install pytest-cov pytest-pycodestyle
+          pip install mantle>=2.0.0  # for tests.common
+          pip install vcdvcd decorator kratos
+          pip install .
 
     - name: Pytest
       shell: bash -l {0}
