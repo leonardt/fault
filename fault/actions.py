@@ -1,3 +1,4 @@
+import enum
 from abc import ABC, abstractmethod
 
 from .ms_types import (RealIn, RealOut, RealInOut,
@@ -247,6 +248,40 @@ class Loop(Action):
                    self.actions]
         return Loop(n_iter=self.n_iter, loop_var=self.loop_var,
                     actions=actions, count=self.count)
+
+
+class Fork(Action):
+    def __init__(self, name, actions):
+        self.name = name
+        self.actions = actions
+
+    def __str__(self):
+        return f"Fork({self.name}"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return Fork(self.name, actions)
+
+
+class JoinType(enum.Enum):
+    Default = enum.auto()
+    None_ = enum.auto()
+    Any = enum.auto()
+
+
+class Join(Action):
+    def __init__(self, *processes, join_type=JoinType.Default):
+        self.join_type = join_type
+        self.processes = list(*processes)
+
+    def __str__(self):
+        return f"Join({self.join_type.name})"
+
+    def retarget(self, new_circuit, clock):
+        processes = [process.retarget(new_circuit, clock) for process in
+                     self.processes]
+        return Join(*processes, join_type=self.join_type)
 
 
 class FileOpen(Action):

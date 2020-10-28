@@ -336,6 +336,28 @@ class Tester(TesterBase):
                                  loop_tester.actions))
         return loop_tester
 
+    def fork(self, name):
+        """
+        Returns a fork process to record actions inside the fork
+        """
+        fork_tester = self.ForkTester(name, self._circuit, self.clock)
+        return fork_tester
+
+    def join(self, *args, join_type=actions.JoinType.Default):
+        """
+        Join all forked processes together
+        """
+        processes = [actions.Fork(p.name, p.actions) for p in args]
+        join_action = actions.Join(processes, join_type=join_type)
+        self.actions.append(join_action)
+        return join_action
+
+    def join_any(self, *args):
+        return self.join(*args, join_type=actions.JoinType.Any)
+
+    def join_none(self, *args):
+        return self.join(*args, join_type=actions.JoinType.None_)
+
     def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """
         mode : "r" for read, "w" for write

@@ -427,6 +427,9 @@ if (({got}) != ({expected})) {{
             code.append("main_time += 5;")
         return code
 
+    def make_join(self, i, action):
+        raise NotImplementedError("fork/join not implemented for Verilator")
+
     def make_file_open(self, i, action):
         # make sure the file mode is supported
         if not is_valid_file_mode(action.file.mode):
