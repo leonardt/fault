@@ -669,7 +669,7 @@ def test_assume(capsys):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_opts={"inline": True})
 
-        
+
 @requires_ncsim
 @pytest.mark.parametrize('use_sva', [False, True])
 def test_not_onehot(use_sva):
