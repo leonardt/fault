@@ -73,3 +73,33 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
     out, _ = capsys.readouterr()
     if success_msg is not None:
         assert success_msg in out
+
+
+def test_immediate_assert_tuple_msg(capsys):
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
+
+    class Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bit),
+            I1=m.In(m.Bit)
+        ) + m.ClockIO()
+        io.CLK.unused()
+        f.assert_immediate(
+            io.I0 == io.I1,
+            failure_msg=("io.I0 -> %x != %x <- io.I1", io.I0, io.I1)
+        )
+
+    tester = f.Tester(Foo, Foo.CLK)
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 0
+    tester.eval()
+    with pytest.raises(AssertionError):
+        with tempfile.TemporaryDirectory() as dir_:
+            tester.compile_and_run("verilator", magma_opts={"inline": True},
+                                   flags=['--assert'], directory=dir_,
+                                   disp_type="realtime")
+    out, _ = capsys.readouterr()
+    msg = ("%Error: Foo.v:29: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
+           " io.I1")
+    assert msg in out
