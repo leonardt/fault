@@ -3,7 +3,7 @@ from fault.property import Posedge
 
 
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     on=None):
+                     on=None, name=None):
     """
     cond: m.Bit
     success_msg (optional): passed to $display on success
@@ -13,6 +13,7 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
     severity (optional): "error", "fatal", or "warning"
     on (optional): If None, uses always @(*) sensitivity, otherwise something
                    like f.posedge(io.CLK)
+    name (optional): Adds `{name}: ` prefix to assertion
     """
     success_msg_str = ""
     if success_msg is not None:
@@ -33,6 +34,7 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
         on = on.compile(format_args)
     else:
         raise TypeError(f"Unexpected type for on={type(on)}")
+    name_str = "" if name is None else f"{name}: "
     m.inline_verilog(
-        "always {on} assert ({cond}){success_msg_str}{failure_msg_str};",
+        "always {on} {name_str}assert ({cond}){success_msg_str}{failure_msg_str};",
         **format_args)
