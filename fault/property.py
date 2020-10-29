@@ -164,8 +164,8 @@ class _Compiler:
         return f"[{start}:{stop}]"
 
     def _compile(self, value):
-        if isinstance(value, Not):
-            return f"! {self._compile(value.arg)}"
+        if isinstance(value, PropertyUnaryOp):
+            return f"{value.op_str} {self._compile(value.arg)}"
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
@@ -211,7 +211,8 @@ class _Compiler:
             for arg in value.args:
                 if isinstance(arg, str):
                     property_str += f" {arg} "
-                elif isinstance(arg, (SVAProperty, Sequence, FunctionCall)):
+                elif isinstance(arg, (SVAProperty, Sequence, FunctionCall,
+                                      PropertyUnaryOp)):
                     property_str += f" {self._compile(arg)} "
                 else:
                     key = f"x{len(self.format_args)}"
@@ -324,7 +325,13 @@ fell = Function("$fell")
 stable = Function("$stable")
 
 
-class Not(Property):
+class PropertyUnaryOp:
+    pass
+
+
+class Not(PropertyUnaryOp):
+    op_str = "!"
+
     def __init__(self, arg):
         self.arg = arg
 
