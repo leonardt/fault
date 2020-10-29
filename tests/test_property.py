@@ -612,3 +612,43 @@ def test_default_clock_function():
                            flags=["-sv"], magma_opts={"inline": True,
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
+
+
+@requires_ncsim
+@pytest.mark.parametrize('use_sva', [False, True])
+def test_not_onehot(use_sva):
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bits[8]), x=m.In(m.Bit)) + m.ClockIO()
+        if use_sva:
+            f.assert_(f.sva(f.not_(f.onehot(io.I)), "|-> ##1", io.x),
+                      on=f.posedge(io.CLK))
+        else:
+            f.assert_(f.not_(f.onehot(io.I)) | f.implies | f.delay[1] | io.x,
+                      on=f.posedge(io.CLK))
+
+    tester = f.Tester(Main, Main.CLK)
+    tester.circuit.I = 0xFF
+    tester.step(2)
+    tester.circuit.x = True
+    tester.circuit.I = 0x80
+    tester.step(2)
+    tester.circuit.I = 0x0
+    tester.circuit.x = False
+    tester.step(2)
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True,
+                                                      "drive_undriven": True,
+                                                      "terminate_unused": True})
+
+    tester.circuit.I = 0xFF
+    tester.step(2)
+    tester.circuit.x = 0
+    tester.step(2)
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"],
+                               magma_opts={"inline": True,
+                                           "drive_undriven": True,
+                                           "terminate_unused": True})
