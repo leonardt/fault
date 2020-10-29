@@ -271,17 +271,17 @@ class JoinType(enum.Enum):
 
 
 class Join(Action):
-    def __init__(self, *processes, join_type=JoinType.Default):
+    def __init__(self, processes, join_type=JoinType.Default):
         self.join_type = join_type
-        self.processes = list(*processes)
+        self.processes = processes
 
     def __str__(self):
         return f"Join({self.join_type.name})"
 
     def retarget(self, new_circuit, clock):
-        processes = [process.retarget(new_circuit, clock) for process in
-                     self.processes]
-        return Join(*processes, join_type=self.join_type)
+        processes = (process.retarget(new_circuit, clock) for process in
+                     self.processes)
+        return Join(processes, join_type=self.join_type)
 
 
 class FileOpen(Action):

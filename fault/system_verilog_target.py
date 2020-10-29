@@ -424,6 +424,8 @@ class SystemVerilogTarget(VerilogTarget):
             code += ["join_none"]
         elif action.join_type == actions.JoinType.Any:
             code += ["join_any"]
+        else:
+            raise ValueError(f"Unexpected joint_type: {action.join_type}")
         return code
 
     def make_file_open(self, i, action):
