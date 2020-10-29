@@ -240,8 +240,8 @@ class _Compiler:
         return compiled
 
 
-def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
-            inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
+def _make_statement(statement, prop, on, disable_iff, compile_guard, name,
+                    inline_wire_prefix):
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
@@ -249,7 +249,7 @@ def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
     if disable_iff is not None:
         disable_str = f" disable iff ({_compiler.compile(disable_iff)})"
     event_str = on.compile(format_args)
-    prop_str = f"assert property ({event_str}{disable_str} {prop});"
+    prop_str = f"{statement} property ({event_str}{disable_str} {prop});"
     if name is not None:
         if not isinstance(name, str):
             raise TypeError("Expected string for name")
@@ -269,6 +269,24 @@ def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
 """
     m.inline_verilog(prop_str, inline_wire_prefix=inline_wire_prefix,
                      **format_args)
+
+
+def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
+            inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
+    _make_statement("assert", prop, on, disable_iff, compile_guard, name,
+                    inline_wire_prefix)
+
+
+def cover(prop, on, disable_iff=None, compile_guard=None, name=None,
+          inline_wire_prefix="_FAULT_COVER_WIRE_"):
+    _make_statement("cover", prop, on, disable_iff, compile_guard, name,
+                    inline_wire_prefix)
+
+
+def assume(prop, on, disable_iff=None, compile_guard=None, name=None,
+          inline_wire_prefix="_FAULT_ASSUME_WIRE_"):
+    _make_statement("assume", prop, on, disable_iff, compile_guard, name,
+                    inline_wire_prefix)
 
 
 class Sequence:

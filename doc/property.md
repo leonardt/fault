@@ -193,3 +193,56 @@ class Main(m.Circuit):
     f.assert_(~io.read & ~io.write | f.repeat[2] | f.implies | seq0 |
               f.repeat[2] | f.delay[1] | seq1, on=f.posedge(io.CLK))
 ```
+
+# Cover
+Fault provides a function `f.cover` that uses the same interface as
+`f.assert_`.  This will generate a system verilog coverage statement.
+In order to use this, you'll need to compile_and_run your circuit with
+`coverage=True` (NOTE: `vcs` is currently unsupported, please open an issue to
+request support).
+
+Here's an example:
+```python
+def test_coverage(capsys):
+    """
+    NOTE: Uses pytest's capsys feature to check the output of stdout
+    """
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
+        io.O @= m.Register(T=m.Bit)()(io.I)
+        f.cover(io.I | f.delay[1] | ~io.I, on=f.posedge(io.CLK))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True},
+                           disp_type="realtime", coverage=True)
+
+    out, _ = capsys.readouterr()
+    # not covered
+    assert """\
+  Disabled Finish Failed   Assertion Name
+         0      0      0   Main_tb.dut.__cover1
+  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 0
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True},
+                           disp_type="realtime", coverage=True)
+
+    out, _ = capsys.readouterr()
+    # covered
+    assert """\
+  Disabled Finish Failed   Assertion Name
+         0      1      0   Main_tb.dut.__cover1
+  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 0\
+""" in out
+```
+
+# Assume
+Fault provides the function `f.assume` that uses the same interface as
+`f.assert_` and will generate a system verilog `assume` statement

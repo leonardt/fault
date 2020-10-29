@@ -16,6 +16,7 @@ from .spice_target import A2DError
 from fault.property import (assert_, implies, delay, posedge, repeat, goto,
                             sequence, eventually, onehot0, onehot, countones,
                             isunknown, past, rose, fell, stable, not_,
-                            throughout, until, until_with, inside)
+                            throughout, until, until_with, inside, cover,
+                            assume)
 from fault.sva import sva
 from fault.assert_immediate import assert_immediate
