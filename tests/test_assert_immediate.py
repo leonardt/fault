@@ -49,7 +49,6 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
         assert severity == "warning"
     out, _ = capsys.readouterr()
     if failure_msg is not None:
-        print(out)
         if severity == "warning":
             msg = "%Warning:"
         else:
