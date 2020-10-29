@@ -5,7 +5,7 @@
 Here is the interface:
 ```python
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     on=None):
+                     on=None, name=None):
     """
     cond: m.Bit
     success_msg (optional): passed to $display on success
@@ -15,6 +15,7 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
     severity (optional): "error", "fatal", or "warning"
     on (optional): If None, uses always @(*) sensitivity, otherwise something
                    like f.posedge(io.CLK)
+    name (optional): Adds `{name}: ` prefix to assertion
     """
 ```
 

@@ -612,3 +612,99 @@ def test_default_clock_function():
                            flags=["-sv"], magma_opts={"inline": True,
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
+
+
+@requires_ncsim
+def test_cover(capsys):
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
+        io.O @= m.Register(T=m.Bit)()(io.I)
+        f.cover(io.I | f.delay[1] | ~io.I, on=f.posedge(io.CLK))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True},
+                           disp_type="realtime", coverage=True)
+
+    out, _ = capsys.readouterr()
+    # not covered
+    assert """\
+  Disabled Finish Failed   Assertion Name
+         0      0      0   Main_tb.dut.__cover1
+  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 0
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True},
+                           disp_type="realtime", coverage=True)
+
+    out, _ = capsys.readouterr()
+    # covered
+    assert """\
+  Disabled Finish Failed   Assertion Name
+         0      1      0   Main_tb.dut.__cover1
+  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 0\
+""" in out
+
+
+@requires_ncsim
+def test_assume(capsys):
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
+        io.O @= m.Register(T=m.Bit)()(io.I)
+        f.assume(io.I | f.delay[1] | ~io.I, on=f.posedge(io.CLK))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 1
+    tester.advance_cycle()
+    # assume behaves like assert in simulation (but used as an assumption for
+    # formal tools)
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"], magma_opts={"inline": True})
+
+
+@requires_ncsim
+@pytest.mark.parametrize('use_sva', [False, True])
+def test_not_onehot(use_sva):
+    class Main(m.Circuit):
+        io = m.IO(I=m.In(m.Bits[8]), x=m.In(m.Bit)) + m.ClockIO()
+        if use_sva:
+            f.assert_(f.sva(f.not_(f.onehot(io.I)), "|-> ##1", io.x),
+                      on=f.posedge(io.CLK))
+        else:
+            f.assert_(f.not_(f.onehot(io.I)) | f.implies | f.delay[1] | io.x,
+                      on=f.posedge(io.CLK))
+
+    tester = f.Tester(Main, Main.CLK)
+    tester.circuit.I = 0xFF
+    tester.step(2)
+    tester.circuit.x = True
+    tester.circuit.I = 0x80
+    tester.step(2)
+    tester.circuit.I = 0x0
+    tester.circuit.x = False
+    tester.step(2)
+
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], magma_opts={"inline": True,
+                                                      "drive_undriven": True,
+                                                      "terminate_unused": True})
+
+    tester.circuit.I = 0xFF
+    tester.step(2)
+    tester.circuit.x = 0
+    tester.step(2)
+
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"],
+                               magma_opts={"inline": True,
+                                           "drive_undriven": True,
+                                           "terminate_unused": True})
