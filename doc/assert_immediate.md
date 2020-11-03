@@ -26,10 +26,7 @@ class Foo(m.Circuit):
         I0=m.In(m.Bit),
         I1=m.In(m.Bit)
     )
-    f.assert_immediate(~(io.I0 & io.I1),
-                       success_msg=success_msg,
-                       failure_msg=failure_msg,
-                       severity=severity)
+    f.assert_immediate(~(io.I0 & io.I1), failure_msg="Failed!")
 
 tester = f.Tester(Foo)
 tester.circuit.I0 = 1
@@ -47,4 +44,29 @@ tester.circuit.I1 = 1
 tester.eval()
 tester.compile_and_run("verilator", magma_opts={"inline": True},
                        flags=['--assert'])
+```
+
+The `assert_immediate` `failure_msg` parameter can accept a tuple of the form `("<display message>", *display_args)`.  This is useful for displaying debug information upon an assertion failure.  Here is an example:
+```python
+class Foo(m.Circuit):
+    io = m.IO(
+        I0=m.In(m.Bit),
+        I1=m.In(m.Bit)
+    )
+    f.assert_immediate(
+        io.I0 == io.I1,
+        failure_msg=("io.I0 -> %x != %x <- io.I1", io.I0, io.I1)
+    )
+
+tester = f.Tester(Foo)
+tester.circuit.I0 = 1
+tester.circuit.I1 = 0
+tester.eval()
+tester.compile_and_run("verilator", magma_opts={"inline": True},
+                       flags=['--assert'])
+````
+
+This produces the error message:
+```
+%Error: Foo.v:29: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <- io.I1
 ```
