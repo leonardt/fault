@@ -83,14 +83,13 @@ def test_immediate_assert_tuple_msg(capsys):
         io = m.IO(
             I0=m.In(m.Bit),
             I1=m.In(m.Bit)
-        ) + m.ClockIO()
-        io.CLK.unused()
+        )
         f.assert_immediate(
             io.I0 == io.I1,
             failure_msg=("io.I0 -> %x != %x <- io.I1", io.I0, io.I1)
         )
 
-    tester = f.Tester(Foo, Foo.CLK)
+    tester = f.Tester(Foo)
     tester.circuit.I0 = 1
     tester.circuit.I1 = 0
     tester.eval()
@@ -100,6 +99,6 @@ def test_immediate_assert_tuple_msg(capsys):
                                    flags=['--assert'], directory=dir_,
                                    disp_type="realtime")
     out, _ = capsys.readouterr()
-    msg = ("%Error: Foo.v:29: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
+    msg = ("%Error: Foo.v:13: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")
-    assert msg in out
+    assert msg in out, out

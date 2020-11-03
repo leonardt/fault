@@ -58,7 +58,7 @@ class Foo(m.Circuit):
         failure_msg=("io.I0 -> %x != %x <- io.I1", io.I0, io.I1)
     )
 
-tester = f.Tester(Foo, Foo.CLK)
+tester = f.Tester(Foo)
 tester.circuit.I0 = 1
 tester.circuit.I1 = 0
 tester.eval()
