@@ -52,8 +52,7 @@ class Foo(m.Circuit):
     io = m.IO(
         I0=m.In(m.Bit),
         I1=m.In(m.Bit)
-    ) + m.ClockIO()
-    io.CLK.unused()
+    )
     f.assert_immediate(
         io.I0 == io.I1,
         failure_msg=("io.I0 -> %x != %x <- io.I1", io.I0, io.I1)
