@@ -9,7 +9,9 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
     success_msg (optional): passed to $display on success
     failure_msg (optional): passed to else $<severity> on failure (strings are
                             wrapped in quotes, integers are passed without
-                            quotes (for $fatal))
+                            quotes (for $fatal)), can also pass a tuple of the
+                            form  `("<display message>", *display_args)` to 
+                            display debug information upon failure
     severity (optional): "error", "fatal", or "warning"
     on (optional): If None, uses always @(*) sensitivity, otherwise something
                    like f.posedge(io.CLK)
