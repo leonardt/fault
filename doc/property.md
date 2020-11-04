@@ -17,8 +17,8 @@ f.assert_(io.I | f.implies | f.delay[1] | (io.O.value() == 0),
 * `f.implies` corresponds to SVA `|->`
 * `f.delay[N]` corresponds to SVA `##N`
 * `f.delay[M:N]` corresponds to SVA `##[M:N]`
-* `f.delay[0:]` corresponds to SVA `##[*]`
-* `f.delay[1:]` corresponds to SVA `##[+]`
+* `f.delay[0:]` corresponds to SVA `##[*]` or `##[*0:$]`
+* `f.delay[1:]` corresponds to SVA `##[+]` or `##[*1:$]`
 * `f.repeat[N]` corresponds to SVA `[*N]`
 * `f.repeat[0:]` corresponds to SVA `[*]`
 * `f.repeat[1:]` corresponds to SVA `[+]`
@@ -246,3 +246,100 @@ def test_coverage(capsys):
 # Assume
 Fault provides the function `f.assume` that uses the same interface as
 `f.assert_` and will generate a system verilog `assume` statement
+
+# Advanced Examples
+## Example 1
+### Verilog
+```verilog
+input [7:0] a, b, c;
+output [7:0] x, y;
+
+`ASSERT(name_A,
+  !$onehot(a) && |b && x[0] |=> y != $past(y, 2),
+ clk, resetn
+)
+```
+### Python
+```python
+class Foo(m.Circuit):
+    io = m.IO(a=m.In(m.Bits[8]), b=m.In(m.Bits[8]), c=m.In(m.Bits[8]),
+              x=m.Out(m.Bits[8]), y=m.Out(m.Bits[8]))
+    io += m.ClockIO(has_resetn=True)
+    # sva syntax
+    f.assert_(
+        f.sva(f.not_(f.onehot(io.a)), "&&",
+              io.b.reduce_or(), "&&",
+              x[0], "|=>", io.y != f.past(io.y, 2)
+        ),
+        name="name_A",
+        on=f.posedge(io.CLK),
+        disable_iff=f.not_(io.RESETN)
+    )
+    # infix syntax
+    f.assert_(
+        f.not_(f.onehot(io.a)) &
+        io.b.reduce_or() &
+        x[0] |f.implies| io.y != f.past(io.y, 2),
+        name="name_A",
+        on=f.posedge(io.CLK),
+        disable_iff=f.not_(io.RESETN)
+    )
+```
+
+## Example 2
+### Verilog
+```verilog
+input valid, sop, eop;
+output ready;
+
+`ASSERT(eop_must_happen_btn_two_sop_A,
+  not(!(valid && ready && eop) throughout ((valid && ready && sop)[->2])),
+ clk, resetn
+)
+
+`ASSERT(first_valid_after_eop_must_have_sop_A,
+  (valid && ready && eop) ##1 (!valid)[*0:$] ##1 valid |-> sop,
+ clk, resetn
+)
+```
+```python
+class Foo(m.Circuit):
+    io = m.IO(valid=m.In(m.Bit), sop=m.In(m.Bit), eop=m.In(m.Bit),
+              ready=m.Out(m.Bit))
+    # sva syntax
+    f.assert_(
+        f.sva(f.not_(~(io.valid & io.ready & io.eop)), "throughout",
+            # Note: need sequence here to wrap parens
+            f.sequence(f.sva((io.valid & io.ready & io.sop), "[-> 2]"))
+        ),
+        name="eop_must_happen_btn_two_sop_A",
+        on=f.posedge(io.CLK),
+        disable_iff=f.not_(io.RESETN)
+    )
+    f.assert_(
+        f.sva(io.valid & io.ready & io.eop, "##1",
+            f.sequence(~io.valid), "[*0:$] ##1", io.valid, "|->", io.sop
+        ),
+        name="first_valid_after_eop_must_have_sop_A",
+        on=f.posedge(io.CLK),
+        disable_iff=f.not_(io.RESETN)
+    )
+
+    # infix syntax
+    f.assert_(
+        f.sva(f.not_(~(io.valid & io.ready & io.eop)) |f.throughout|
+            ((io.valid & io.ready & io.sop) | f.goto[2])
+        ),
+        name="eop_must_happen_btn_two_sop_A",
+        on=f.posedge(io.CLK),
+        disable_iff=f.not_(io.RESETN)
+    )
+    f.assert_(
+        f.sva(io.valid & io.ready & io.eop |f.delay[1]|
+            (~io.valid) |f.delay[0:]|f.delay[1]| io.valid |f.implies| io.sop
+        ),
+        name="first_valid_after_eop_must_have_sop_A",
+        on=f.posedge(io.CLK),
+        disable_iff=f.not_(io.RESETN)
+    )
+```
