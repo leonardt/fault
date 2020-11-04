@@ -3,6 +3,8 @@ from functools import partial
 import magma as m
 
 from fault.sva import SVAProperty
+from fault.expression import Expression, UnaryOp, BinaryOp
+from fault.infix import Infix
 
 
 class Property:
@@ -17,17 +19,6 @@ class Property:
             return result
         self.rhs = self.rhs | other
         return self
-
-
-class Infix:
-    def __init__(self, func):
-        self.func = func
-
-    def __or__(self, other):
-        return self.func(other)
-
-    def __ror__(self, other):
-        return Infix(partial(self.func, other))
 
 
 class Implies(Property):
@@ -212,7 +203,7 @@ class _Compiler:
                 if isinstance(arg, str):
                     property_str += f" {arg} "
                 elif isinstance(arg, (SVAProperty, Sequence, FunctionCall,
-                                      PropertyUnaryOp)):
+                                      PropertyUnaryOp, Expression)):
                     property_str += f" {self._compile(arg)} "
                 else:
                     key = f"x{len(self.format_args)}"
@@ -233,6 +224,21 @@ class _Compiler:
             return f"{{{{{contents}}}}}"
         if isinstance(value, int):
             return str(value)
+        if isinstance(value, BinaryOp):
+            left = self._compile(value.left)
+            right = self._compile(value.right)
+            op = value.op_str
+            if op == "==":
+                # Use strict eq
+                op = "==="
+            elif op == "!=":
+                # Use strict neq
+                op = "!=="
+            return f"({left}) {op} ({right})"
+        if isinstance(value, UnaryOp):
+            operand = self._compile(value.operand)
+            op = value.op_str
+            return f"{op} ({operand})"
         raise NotImplementedError(type(value))
 
     def compile(self, prop):
@@ -301,7 +307,7 @@ def sequence(prop):
     return Sequence(prop)
 
 
-class FunctionCall:
+class FunctionCall(Expression):
     def __init__(self, func, args):
         self.func = func
         self.args = args
@@ -329,7 +335,7 @@ class PropertyUnaryOp:
     pass
 
 
-class Not(PropertyUnaryOp):
+class Not(PropertyUnaryOp, Expression):
     op_str = "!"
 
     def __init__(self, arg):

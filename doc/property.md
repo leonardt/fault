@@ -269,7 +269,7 @@ class Foo(m.Circuit):
     f.assert_(
         f.sva(f.not_(f.onehot(io.a)), "&&",
               io.b.reduce_or(), "&&",
-              x[0], "|=>", io.y != f.past(io.y, 2)
+              io.x[0], "|=>", io.y != f.past(io.y, 2)
         ),
         name="name_A",
         on=f.posedge(io.CLK),
@@ -279,7 +279,7 @@ class Foo(m.Circuit):
     f.assert_(
         f.not_(f.onehot(io.a)) &
         io.b.reduce_or() &
-        x[0] |f.implies| io.y != f.past(io.y, 2),
+        io.x[0] |f.implies| io.y != f.past(io.y, 2),
         name="name_A",
         on=f.posedge(io.CLK),
         disable_iff=f.not_(io.RESETN)

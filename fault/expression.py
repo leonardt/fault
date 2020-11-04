@@ -1,3 +1,7 @@
+from magma.t import Type
+from fault.infix import Infix
+
+
 class Expression:
     def __and__(self, other):
         return And(self, other)
@@ -56,6 +60,9 @@ class Expression:
         return Div(self, other)
 
     def __or__(self, other):
+        if isinstance(other, Infix):
+            # Force Infix operator logic
+            return NotImplemented
         return Or(self, other)
 
     def __xor__(self, other):
