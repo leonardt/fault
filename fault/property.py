@@ -1,5 +1,3 @@
-from functools import partial
-
 import magma as m
 
 from fault.sva import SVAProperty
@@ -331,11 +329,11 @@ fell = Function("$fell")
 stable = Function("$stable")
 
 
-class PropertyUnaryOp:
+class PropertyUnaryOp(Expression):
     pass
 
 
-class Not(PropertyUnaryOp, Expression):
+class Not(PropertyUnaryOp):
     op_str = "!"
 
     def __init__(self, arg):
