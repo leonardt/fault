@@ -710,6 +710,7 @@ def test_not_onehot(use_sva):
                                            "drive_undriven": True,
                                            "terminate_unused": True})
 
+
 @requires_ncsim
 @pytest.mark.parametrize('use_sva', [True, False])
 @pytest.mark.parametrize('should_pass', [True, False])
@@ -732,9 +733,8 @@ def test_advanced_property_example_1(use_sva, should_pass):
             f.assert_(
                 f.sva(f.not_(f.onehot(io.a)), "&&",
                       io.b.reduce_or(), "&&",
-                      io.x[0].value(), "|=>", 
-                      io.y.value() != f.past(io.y.value(), 2)
-                ),
+                      io.x[0].value(), "|=>",
+                      io.y.value() != f.past(io.y.value(), 2)),
                 name="name_A",
                 on=f.posedge(io.CLK),
                 disable_iff=f.not_(io.RESETN)
@@ -743,13 +743,12 @@ def test_advanced_property_example_1(use_sva, should_pass):
             f.assert_(
                 # Note parens matter!
                 (f.not_(f.onehot(io.a)) & io.b.reduce_or() & io.x[0].value())
-                |f.implies|f.delay[1]|
+                | f.implies | f.delay[1] |
                 (io.y != f.past(io.y.value(), 2)),
                 name="name_A",
                 on=f.posedge(io.CLK),
                 disable_iff=f.not_(io.RESETN)
             )
-        
 
     tester = f.Tester(Foo, Foo.CLK)
     tester.circuit.RESETN = 1
@@ -771,3 +770,67 @@ def test_advanced_property_example_1(use_sva, should_pass):
     except AssertionError:
         assert not should_pass
 
+
+@requires_ncsim
+@pytest.mark.parametrize('use_sva', [True, False])
+@pytest.mark.parametrize('should_pass', [True, False])
+def test_advanced_property_example_2(use_sva, should_pass):
+    class Foo(m.Circuit):
+        io = m.IO(valid=m.In(m.Bit), sop=m.In(m.Bit), eop=m.In(m.Bit),
+                  ready=m.Out(m.Bit)) + m.ClockIO(has_resetn=True)
+        io.ready @= 1
+        if use_sva:
+            f.assert_(
+                f.sva(f.not_(~(io.valid & io.ready.value() & io.eop)),
+                      "throughout",
+                      # Note: need sequence here to wrap parens
+                      f.sequence(f.sva((io.valid & io.ready.value() & io.sop),
+                                       "[-> 2]"))),
+                name="eop_must_happen_btn_two_sop_A",
+                on=f.posedge(io.CLK),
+                disable_iff=f.not_(io.RESETN)
+            )
+            f.assert_(
+                f.sva(io.valid & io.ready.value() & io.eop, "##1",
+                      ~io.valid, "[*0:$] ##1", io.valid, "|->", io.sop),
+                name="first_valid_after_eop_must_have_sop_A",
+                on=f.posedge(io.CLK),
+                disable_iff=f.not_(io.RESETN)
+            )
+        else:
+            f.assert_(
+                f.not_(~(io.valid & io.ready.value() & io.eop))
+                | f.throughout |
+                ((io.valid & io.ready.value() & io.sop) | f.goto[2]),
+                name="eop_must_happen_btn_two_sop_A",
+                on=f.posedge(io.CLK),
+                disable_iff=f.not_(io.RESETN)
+            )
+            f.assert_(
+                (io.valid & io.ready.value() & io.eop) | f.delay[1] |
+                (~io.valid) | f.repeat[0:] | f.delay[1] |
+                (io.valid | f.implies | io.sop),
+                name="first_valid_after_eop_must_have_sop_A",
+                on=f.posedge(io.CLK),
+                disable_iff=f.not_(io.RESETN)
+            )
+
+    tester = f.Tester(Foo, Foo.CLK)
+    tester.circuit.RESETN = 1
+    tester.circuit.valid = 1
+    tester.circuit.eop = 1
+    tester.circuit.sop = 1
+    tester.step(2)
+    if not should_pass:
+        tester.circuit.sop = 0
+    tester.step(2)
+    try:
+        tester.compile_and_run("system-verilog", simulator="ncsim",
+                               flags=["-sv"],
+                               magma_opts={"inline": True,
+                                           "drive_undriven": True,
+                                           "terminate_unused": True})
+    except AssertionError:
+        assert not should_pass
+    else:
+        assert should_pass
