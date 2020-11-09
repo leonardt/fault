@@ -413,6 +413,21 @@ class SystemVerilogTarget(VerilogTarget):
         self.add_decl('integer', action.loop_var, exist_ok=True)
         return super().make_loop(i, action)
 
+    def make_join(self, i, action):
+        code = ["fork"]
+        for p in action.processes:
+            code += self.make_block(i, None, None, p.actions, p.name)
+        # join
+        if action.join_type == actions.JoinType.Default:
+            code += ["join"]
+        elif action.join_type == actions.JoinType.None_:
+            code += ["join_none"]
+        elif action.join_type == actions.JoinType.Any:
+            code += ["join_any"]
+        else:
+            raise ValueError(f"Unexpected joint_type: {action.join_type}")
+        return code
+
     def make_file_open(self, i, action):
         # make sure the file mode is supported
         if not is_valid_file_mode(action.file.mode):
