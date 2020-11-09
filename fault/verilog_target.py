@@ -139,6 +139,8 @@ class VerilogTarget(Target):
             return self.make_guarantee(i, action)
         elif isinstance(action, actions.Loop):
             return self.make_loop(i, action)
+        elif isinstance(action, actions.Join):
+            return self.make_join(i, action)
         elif isinstance(action, actions.FileOpen):
             return self.make_file_open(i, action)
         elif isinstance(action, actions.FileWrite):
@@ -207,6 +209,10 @@ class VerilogTarget(Target):
         return self.make_block(i, 'for', cond, action.actions)
 
     @abstractmethod
+    def make_join(self, i, action):
+        pass
+
+    @abstractmethod
     def make_file_open(self, i, action):
         pass
 
@@ -259,12 +265,12 @@ class VerilogTarget(Target):
     def make_assert(self, i, action):
         pass
 
-    def make_block(self, i, name, cond, actions):
+    def make_block(self, i, name, cond, actions, label=None):
         '''
         Generic function that creates a properly indented code block.  This
         is useful for constructing "if", "while", and "for" blocks
         Format:
-        {name} ({cond}) BLOCK_START
+        {name} ({cond}) BLOCK_START : LABEL
             actions[0]
             actions[1]
             ...
@@ -277,10 +283,15 @@ class VerilogTarget(Target):
 
         # build up the code block
         code = []
+        code_str = []
+        if name is not None:
+            code_str += [f"{name}"]
         if cond is not None:
-            code += [f'{name} ({cond}) {self.BLOCK_START}']
-        else:
-            code += [f'{name} {self.BLOCK_START}']
+            code_str += [f"({cond})"]
+        code_str += [f"{self.BLOCK_START}"]
+        if label is not None:
+            code_str += [f": {label}"]
+        code += [" ".join(code_str)]
         code += [f'{self.TAB}{line}'
                  for line in self.generate_action_code(i, actions)]
         code += [f'{self.BLOCK_END}']

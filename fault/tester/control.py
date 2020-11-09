@@ -52,7 +52,13 @@ def add_control_structures(tester_class):
         def _else(self):
             return ElseTester(self.else_actions, self._circuit, self.clock)
 
+    class ForkTester(NoClockInit, tester_class):
+        def __init__(self, name, circuit: m.Circuit, clock: m.Clock = None):
+            super().__init__(circuit, clock)
+            self.name = name
+
     tester_class.LoopTester = LoopTester
     tester_class.ElseTester = ElseTester
     tester_class.IfTester = IfTester
+    tester_class.ForkTester = ForkTester
     return tester_class

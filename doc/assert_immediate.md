@@ -46,6 +46,7 @@ tester.compile_and_run("verilator", magma_opts={"inline": True},
                        flags=['--assert'])
 ```
 
+## Display Values on Failure
 The `assert_immediate` `failure_msg` parameter can accept a tuple of the form `("<display message>", *display_args)`.  This is useful for displaying debug information upon an assertion failure.  Here is an example:
 ```python
 class Foo(m.Circuit):
