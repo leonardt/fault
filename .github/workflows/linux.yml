@@ -25,7 +25,7 @@ jobs:
           pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
           pip install vcdvcd decorator kratos
-          pip install pono
+          pip install smt-switch pono
           pip install .
 
     - name: Pytest
