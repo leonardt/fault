@@ -18,7 +18,7 @@ def get_width(port):
 class PonoTarget(VerilogTarget):
     def __init__(self, circuit, directory="build/", skip_compile=False,
                  include_verilog_libraries=[], magma_output="coreir-verilog",
-                 circuit_name=None, magma_opts={}, solver="msat"):
+                 circuit_name=None, magma_opts={}, solver="btor"):
         super().__init__(circuit, circuit_name, directory, skip_compile,
                          include_verilog_libraries, magma_output, magma_opts)
         self.state_index = 0
@@ -116,7 +116,7 @@ class PonoTarget(VerilogTarget):
                 sort = solver.make_sort(ss.sortkinds.BV, width)
             rts.constrain_inputs(assumption.value(solver, ports[name], sort))
 
-    def process_guarantees(self, solver, rts, at_end_state_flag, itp, ports):
+    def process_guarantees(self, solver, rts, at_end_state_flag, ports):
         for i, guarantee in enumerate(self.guarantees):
             prop = pono.Property(
                 rts,
@@ -126,7 +126,7 @@ class PonoTarget(VerilogTarget):
                     guarantee.value(solver, ports)
                 )
             )
-            interp = pono.InterpolantMC(prop, solver, itp)
+            interp = pono.KInduction(prop, solver)
             assert interp.check_until(10), interp.witness()
 
     def generate_code(self, actions, solver, rts, ports):
@@ -196,8 +196,7 @@ class PonoTarget(VerilogTarget):
 
     def run(self, actions):
         # Create solver/interpolator
-        solver = ss.create_msat_solver(False)
-        itp = ss.create_msat_interpolator()
+        solver = ss.create_btor_solver(False)
 
         # set solver options
         solver.set_opt('produce-models', 'true')
@@ -231,4 +230,4 @@ class PonoTarget(VerilogTarget):
                                      ports[name]))
 
         at_end_state_flag = self.generate_code(actions, solver, rts, ports)
-        self.process_guarantees(solver, rts, at_end_state_flag, itp, ports)
+        self.process_guarantees(solver, rts, at_end_state_flag, ports)
