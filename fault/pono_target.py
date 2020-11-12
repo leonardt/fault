@@ -85,6 +85,9 @@ class PonoTarget(VerilogTarget):
     def make_while(self, i, action):
         raise NotImplementedError()
 
+    def make_join(self, i, action):
+        raise NotImplementedError()
+
     def make_step(self, i, action):
         if action.steps > 2:
             # Only supports 1 cycle per state
