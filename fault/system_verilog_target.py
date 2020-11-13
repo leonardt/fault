@@ -629,8 +629,6 @@ class SystemVerilogTarget(VerilogTarget):
             if issubclass(type_, m.Array) and \
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
-            if issubclass(type_, m.SInt):
-                width_str = f" signed {width_str}"
             if issubclass(type_, RealType):
                 t = "real"
             elif name in power_args.get("supply0s", []):
