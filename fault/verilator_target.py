@@ -27,6 +27,7 @@ max_bits = 64 if platform.architecture()[0] == "64bit" else 32
 
 
 src_tpl = """\
+#include "math.h"
 {includes}
 
 // Based on https://www.veripool.org/projects/verilator/wiki/Manual-verilator#CONNECTING-TO-C
@@ -240,8 +241,16 @@ if (({got}) != ({expected})) {{
         elif isinstance(value, actions.Var):
             return value.name
         elif isinstance(value, expression.FunctionCall):
+            if isinstance(value, expression.Integer):
+                assert len(value.args) == 1
+                return f"((int) {self.compile_expression(value.args[0])})"
             args = ", ".join(self.compile_expression(x) for x in value.args)
-            return f"{value.func_str}({args})"
+            func_str = value.func_str
+            if func_str in {"min", "max"}:
+                func_str = f"std::{func_str}"
+            return f"{func_str}({args})"
+        elif isinstance(value, int):
+            return str(value)
         return value
 
     def process_bitwise_assign(self, port, name, value):

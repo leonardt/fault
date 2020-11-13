@@ -178,7 +178,7 @@ class Min(FunctionCall):
 
 
 def min(x, y):
-    return min(x, y)
+    return Min(x, y)
 
 
 class Max(FunctionCall):
@@ -186,7 +186,7 @@ class Max(FunctionCall):
 
 
 def max(x, y):
-    return max(x, y)
+    return Max(x, y)
 
 
 class Signed(FunctionCall):
@@ -195,3 +195,11 @@ class Signed(FunctionCall):
 
 def signed(x):
     return Signed(x)
+
+
+class Integer(FunctionCall):
+    func_str = "int'"
+
+
+def integer(x):
+    return Integer(x)

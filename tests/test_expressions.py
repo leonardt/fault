@@ -186,3 +186,45 @@ def test_abs(target, simulator):
     tester.assert_(fault.abs(fault.signed(tester.circuit.O) - expect) <= 1)
     with pytest.raises(AssertionError):
         run_test(tester, target, simulator)
+
+
+def test_min(target, simulator):
+    if simulator == "iverilog":
+        pytest.skip("int casting does not work with iverilog")
+    if simulator == "ncsim":
+        pytest.skip("ncsim does not define $min")
+    class Foo(m.Circuit):
+        io = m.IO(I=m.In(m.SInt[2]), O=m.Out(m.SInt[2]))
+        io.O @= io.I
+
+    tester = fault.Tester(Foo)
+    tester.circuit.I = 1
+    tester.eval()
+    tester.assert_(fault.min(fault.integer(tester.circuit.O), 0) == 0)
+    tester.assert_(fault.min(fault.integer(tester.circuit.O), 2) == 1)
+    run_test(tester, target, simulator)
+
+    tester.assert_(fault.min(fault.integer(tester.circuit.O), 2) == 2)
+    with pytest.raises(AssertionError):
+        run_test(tester, target, simulator)
+
+
+def test_max(target, simulator):
+    if simulator == "iverilog":
+        pytest.skip("int casting does not work with iverilog")
+    if simulator == "ncsim":
+        pytest.skip("ncsim does not define $max")
+    class Foo(m.Circuit):
+        io = m.IO(I=m.In(m.SInt[2]), O=m.Out(m.SInt[2]))
+        io.O @= io.I
+
+    tester = fault.Tester(Foo)
+    tester.circuit.I = 1
+    tester.eval()
+    tester.assert_(fault.max(fault.integer(tester.circuit.O), 0) == 1)
+    tester.assert_(fault.max(fault.integer(tester.circuit.O), 2) == 2)
+    run_test(tester, target, simulator)
+
+    tester.assert_(fault.max(fault.integer(tester.circuit.O), 2) == 1)
+    with pytest.raises(AssertionError):
+        run_test(tester, target, simulator)

@@ -376,7 +376,13 @@ class SystemVerilogTarget(VerilogTarget):
             value = value.name
         elif isinstance(value, expression.FunctionCall):
             args = ", ".join(self.compile_expression(x) for x in value.args)
-            return f"${value.func_str}({args})"
+            func_str = value.func_str
+            if not isinstance(value, expression.Integer):
+                # special casting syntax
+                func_str = f"${func_str}"
+            return f"{func_str}({args})"
+        elif isinstance(value, int):
+            return str(value)
         return value
 
     def make_poke(self, i, action):
