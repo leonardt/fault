@@ -158,3 +158,48 @@ class XOr(BinaryOp):
 
 class Or(BinaryOp):
     op_str = "|"
+
+
+class FunctionCall(Expression):
+    def __init__(self, *args):
+        self.args = args
+
+
+class Abs(FunctionCall):
+    func_str = "abs"
+
+
+def abs(x):
+    return Abs(x)
+
+
+class Min(FunctionCall):
+    func_str = "min"
+
+
+def min(x, y):
+    return Min(x, y)
+
+
+class Max(FunctionCall):
+    func_str = "max"
+
+
+def max(x, y):
+    return Max(x, y)
+
+
+class Signed(FunctionCall):
+    func_str = "signed"
+
+
+def signed(x):
+    return Signed(x)
+
+
+class Integer(FunctionCall):
+    func_str = "int'"
+
+
+def integer(x):
+    return Integer(x)

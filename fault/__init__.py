@@ -20,3 +20,4 @@ from fault.property import (assert_, implies, delay, posedge, repeat, goto,
                             assume)
 from fault.sva import sva
 from fault.assert_immediate import assert_immediate
+from fault.expression import abs, min, max, signed, integer
