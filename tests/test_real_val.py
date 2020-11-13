@@ -5,7 +5,7 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'system-verilog')
+    pytest_sim_params(metafunc, 'system-verilog', 'verilator')
 
 
 def test_real_val(target, simulator):
@@ -24,12 +24,21 @@ def test_real_val(target, simulator):
     tester.eval()
     tester.expect(realadd.c_val, 3.625, abs_tol=1e-4)
 
+    # define target-specific kwargs
+    kwargs = {}
+    module_file = Path('tests/verilog/realadd.sv').resolve()
+    if target == 'verilator':
+        kwargs['ext_model_file'] = module_file
+    elif target == 'system-verilog':
+        kwargs['simulator'] = simulator
+        kwargs['include_verilog_libraries'] = [module_file]
+        kwargs['ext_model_file'] = True
+        if simulator == 'iverilog':
+            kwargs['defines'] = {'__IVERILOG__': None}
+
     # run the test
     tester.compile_and_run(
         target=target,
-        simulator=simulator,
-        ext_libs=[Path('tests/verilog/realadd.sv').resolve()],
-        defines={f'__{simulator.upper()}__': None},
-        ext_model_file=True,
-        tmp_dir=True
+        tmp_dir=True,
+        **kwargs
     )
