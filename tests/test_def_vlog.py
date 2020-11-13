@@ -32,7 +32,6 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=42):
     module_file = Path('tests/verilog/defadd.sv').resolve()
     if target == 'verilator':
         kwargs['ext_model_file'] = module_file
-        kwargs['flags'] = ['-Wno-WIDTH']
     elif target == 'system-verilog':
         kwargs['simulator'] = simulator
         kwargs['include_verilog_libraries'] = [module_file]
