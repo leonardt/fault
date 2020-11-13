@@ -16,11 +16,10 @@ def run_test(tester, target, simulator):
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {
             "target": target,
-            "directory": _dir,
+            "directory": _dir
         }
         if target == "system-verilog":
             kwargs["simulator"] = simulator
-            kwargs["directory"] = "build"
         tester.compile_and_run(**kwargs)
 
 
