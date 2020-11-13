@@ -193,6 +193,7 @@ def test_min(target, simulator):
         pytest.skip("int casting does not work with iverilog")
     if simulator == "ncsim":
         pytest.skip("ncsim does not define $min")
+
     class Foo(m.Circuit):
         io = m.IO(I=m.In(m.SInt[2]), O=m.Out(m.SInt[2]))
         io.O @= io.I
@@ -214,6 +215,7 @@ def test_max(target, simulator):
         pytest.skip("int casting does not work with iverilog")
     if simulator == "ncsim":
         pytest.skip("ncsim does not define $max")
+
     class Foo(m.Circuit):
         io = m.IO(I=m.In(m.SInt[2]), O=m.Out(m.SInt[2]))
         io.O @= io.I
