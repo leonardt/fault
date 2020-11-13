@@ -239,6 +239,9 @@ if (({got}) != ({expected})) {{
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
             return value.name
+        elif isinstance(value, expression.FunctionCall):
+            args = ", ".join(self.compile_expression(x) for x in value.args)
+            return f"{value.func_str}({args})"
         return value
 
     def process_bitwise_assign(self, port, name, value):

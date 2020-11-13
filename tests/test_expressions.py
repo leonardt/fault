@@ -20,6 +20,7 @@ def run_test(tester, target, simulator):
         }
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["directory"] = "build"
         tester.compile_and_run(**kwargs)
 
 
@@ -158,3 +159,31 @@ def test_op_tree(target, simulator):
         tester.expect(tester._circuit.O, expected)
 
     run_test(tester, target, simulator)
+
+
+def test_abs(target, simulator):
+    if simulator == "iverilog":
+        pytest.skip("$abs does not work as expected with iverilog")
+
+    class Foo(m.Circuit):
+        io = m.IO(I=m.In(m.SInt[2]), O=m.Out(m.SInt[2]))
+        io.O @= io.I
+
+    tester = fault.Tester(Foo)
+    tester.circuit.I = expect = 1
+    tester.eval()
+    # abs(1 - 1) == 0
+    tester.assert_(fault.abs(fault.signed(tester.circuit.O) - expect) <= 1)
+    tester.circuit.I = 0
+    expect = 1
+    tester.eval()
+    # abs(0 - 1) == 1
+    tester.assert_(fault.abs(fault.signed(tester.circuit.O) - expect) <= 1)
+    run_test(tester, target, simulator)
+
+    # test failure case
+    expect = 2
+    # abs(0 - 2) == 2
+    tester.assert_(fault.abs(fault.signed(tester.circuit.O) - expect) <= 1)
+    with pytest.raises(AssertionError):
+        run_test(tester, target, simulator)

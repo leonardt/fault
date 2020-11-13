@@ -374,6 +374,9 @@ class SystemVerilogTarget(VerilogTarget):
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
             value = value.name
+        elif isinstance(value, expression.FunctionCall):
+            args = ", ".join(self.compile_expression(x) for x in value.args)
+            return f"${value.func_str}({args})"
         return value
 
     def make_poke(self, i, action):
@@ -626,6 +629,8 @@ class SystemVerilogTarget(VerilogTarget):
             if issubclass(type_, m.Array) and \
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
+            if issubclass(type_, m.SInt):
+                width_str = f" signed {width_str}"
             if issubclass(type_, RealType):
                 t = "real"
             elif name in power_args.get("supply0s", []):
