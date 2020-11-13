@@ -16,6 +16,7 @@ import math
 from hwtypes import BitVector, AbstractBitVectorMeta, Bit
 from fault.random import constrained_random_bv
 from fault.subprocess_run import subprocess_run
+from fault.ms_types import RealType
 import fault.utils as utils
 import fault.expression as expression
 import platform
@@ -87,10 +88,11 @@ class VerilatorTarget(VerilogTarget):
     LOOP_VAR_TYPE = 'int'
 
     def __init__(self, circuit, directory="build/",
-                 flags=None, skip_compile=False, include_verilog_libraries=None,
+                 flags=None, skip_compile=None, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False,
-                 disp_type='on_error', coverage=False, use_kratos=False):
+                 disp_type='on_error', coverage=False, use_kratos=False,
+                 defines=None, parameters=None, ext_model_file=None):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -101,16 +103,26 @@ class VerilatorTarget(VerilogTarget):
             -I flag. From the the verilator docs:
                 -I<dir>                    Directory to search for includes
         """
+
         # Set defaults
         if include_verilog_libraries is None:
             include_verilog_libraries = []
         if magma_opts is None:
             magma_opts = {}
+        if skip_compile is None:
+            if ext_model_file is None:
+                skip_compile = False
+            else:
+                skip_compile = True
         magma_opts.setdefault("verilator_compat", True)
 
         # Save settings
         self.disp_type = disp_type
         self.use_kratos = use_kratos
+        self.parameters = parameters if parameters is not None else {}
+
+        # Try to import kratos_runtime, if needed
+        # (it may be used in verilator_comp_cmd)
         if use_kratos:
             try:
                 import kratos_runtime
@@ -124,19 +136,27 @@ class VerilatorTarget(VerilogTarget):
                          include_verilog_libraries, magma_output, magma_opts,
                          coverage=coverage)
 
+        # Determine the path to the Verilog file being tested
+        if ext_model_file is not None:
+            verilog_filename = str(ext_model_file)
+        else:
+            verilog_filename = self.verilog_file.name
+
         # Compile the design using `verilator`, if not skip
         if not skip_verilator:
             driver_file = self.directory / Path(
                 f"{self.circuit_name}_driver.cpp")
             comp_cmd = verilator_comp_cmd(
                 top=self.circuit_name,
-                verilog_filename=self.verilog_file.name,
+                verilog_filename=verilog_filename,
                 include_verilog_libraries=self.include_verilog_libraries,
                 include_directories=include_directories,
                 driver_filename=driver_file.name,
                 verilator_flags=flags,
                 coverage=self.coverage,
-                use_kratos=use_kratos
+                use_kratos=use_kratos,
+                defines=defines,
+                parameters=parameters
             )
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
@@ -145,8 +165,8 @@ class VerilatorTarget(VerilogTarget):
         # Initialize variables
         self.verilator_version = verilator_version(disp_type=self.disp_type)
 
-
-    def _make_assert(self, got, expected, i, port, user_msg):
+    def _make_assert(self, got, expected, i, port, user_msg,
+                     below=None, above=None, style='hex'):
         kratos_exit_call = ""
         if self.use_kratos:
             kratos_exit_call = "teardown_runtime();"
@@ -156,13 +176,38 @@ class VerilatorTarget(VerilogTarget):
             if len(user_msg) > 1:
                 arg_str += f", {', '.join(user_msg[1:])}"
             user_msg_str += f"printf(\"{user_msg[0]}\"{arg_str});"
-        return f"""\
-if (({got}) != ({expected})) {{
+
+        # determine the condition to use
+        if above is not None:
+            if below is not None:
+                # must be in range
+                cond = f'(({above} <= {got}) && ({got} <= {below}))'  # noqa
+            else:
+                # must be above
+                cond = f'({above} <= {got})'
+        else:
+            if below is not None:
+                # must be below
+                cond = f'({got} <= {below})'
+            else:
+                # equality comparison
+                cond = f'({got} == {expected})'
+
+        # determine how the output should be formatted
+        if style == 'hex':
+            fmt = '"0x" << std::hex'
+        elif style == 'scientific':
+            fmt = 'std::scientific'
+        else:
+            raise Exception(f'Unknown style: ' + style)
+
+        return f'''\
+if (!({cond})) {{
     std::cerr << std::endl;  // end the current line
-    std::cerr << \"Got      : 0x\" << std::hex << ({got}) << std::endl;
-    std::cerr << \"Expected : 0x\" << std::hex << ({expected}) << std::endl;
-    std::cerr << \"i        : \" << std::dec << {i} << std::endl;
-    std::cerr << \"Port     : \" << {port} << std::endl;
+    std::cerr << "Got      : " << {fmt} << ({got}) << std::endl;
+    std::cerr << "Expected : " << {fmt} << ({expected}) << std::endl;
+    std::cerr << "i        : " << std::dec << {i} << std::endl;
+    std::cerr << "Port     : " << {port} << std::endl;
     {user_msg_str}
 #if VM_TRACE
     // Dump one more timestep so we see the current values
@@ -172,7 +217,7 @@ if (({got}) != ({expected})) {{
     {kratos_exit_call}
     exit(1);
 }}
-    """
+    '''
 
     def get_verilator_prefix(self):
         if self.verilator_version > 3.874:
@@ -202,7 +247,13 @@ if (({got}) != ({expected})) {{
         if isinstance(value, Bit):
             return int(value)
         if isinstance(value, (int, BitVector)) and value < 0:
-            return self.process_signed_values(port, value)
+            if isinstance(port, RealType):
+                # if the value is an int, but the port is a RealType,
+                # then we don't want to try to convert the value to
+                # an unsigned integer
+                return value
+            else:
+                return self.process_signed_values(port, value)
         if isinstance(value, (int, BitVector)):
             return value
         if isinstance(value, actions.Var):
@@ -386,7 +437,7 @@ if (({got}) != ({expected})) {{
                 value = action.value[j * slice_range:min(
                     (j + 1) * slice_range, action.value.num_bits)]
                 asserts.append(self._make_assert(
-                    f"((unsigned int) top->{name}[{j}])", 
+                    f"((unsigned int) top->{name}[{j}])",
                     f"((unsigned int) {value})", i, f"\"{debug_name}\"",
                     user_msg))
             return asserts
@@ -404,11 +455,30 @@ if (({got}) != ({expected})) {{
                 port_len = 1
             else:
                 port_len = len(port)
-            mask = (1 << port_len) - 1
 
-            return [self._make_assert(f"((unsigned int) {port_value})",
-                                      f"(unsigned int) ({value} & {mask})", i,
-                                      f"\"{debug_name}\"", user_msg)]
+            # deal with real-valued expressions
+            if isinstance(port, RealType):
+                got = f"({port_value})"
+                expected = f"({value})"
+                style = 'scientific'
+            else:
+                mask = (1 << port_len) - 1
+                got = f"((unsigned int) {port_value})"
+                expected = f"(unsigned int) ({value} & {mask})"
+                style = 'hex'
+
+            return [
+                self._make_assert(
+                    got=got,
+                    expected=expected,
+                    i=i,
+                    port=f'"{debug_name}"',
+                    user_msg=user_msg,
+                    below=action.below,
+                    above=action.above,
+                    style=style
+                )
+            ]
 
     def make_eval(self, i, action):
         return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
