@@ -18,7 +18,8 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
                        include_verilog_libraries=None,
                        include_directories=None,
                        driver_filename=None, verilator_flags=None,
-                       coverage=False, use_kratos=False):
+                       coverage=False, use_kratos=False,
+                       defines=None, parameters=None):
     # set defaults
     if include_verilog_libraries is None:
         include_verilog_libraries = []
@@ -26,6 +27,10 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
         include_directories = []
     if verilator_flags is None:
         verilator_flags = []
+    if defines is None:
+        defines = {}
+    if parameters is None:
+        parameters = {}
 
     # build up the command
     retval = []
@@ -34,21 +39,37 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
     retval += ['-Wno-INCABSPATH']
     retval += ['-Wno-DECLFILENAME']
     retval += verilator_flags
+
     if verilog_filename is not None:
         retval += ['--cc', f'{verilog_filename}']
         if use_kratos:
             from kratos_runtime import get_lib_path
             retval += [os.path.basename(get_lib_path())]
+
     # -v arguments
     for file_ in include_verilog_libraries:
         retval += ['-v', f'{file_}']
+
     # -I arguments
     for dir_ in include_directories:
         retval += [f'-I{dir_}']
+
+    # -D arguments
+    for k, v in defines.items():
+        if v is not None:
+            retval += [f'-D{k}={v}']
+        else:
+            retval += [f'-D{k}']
+
+    # -G arguments
+    for k, v in parameters.items():
+        retval += [f'-G{k}={v}']
+
     if driver_filename is not None:
         retval += ['--exe', f'{driver_filename}']
     if top is not None:
         retval += ['--top-module', f'{top}']
+
     # vpi flag
     if use_kratos:
         retval += ["--vpi"]

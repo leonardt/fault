@@ -36,13 +36,11 @@ def add_control_structures(tester_class):
             self.index = LoopIndex(
                 f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
 
-
     class ElseTester(NoClockInit, tester_class):
         def __init__(self, else_actions: List, circuit: m.Circuit,
                      clock: m.Clock = None):
             super().__init__(circuit, clock)
             self.actions = else_actions
-
 
     class IfTester(NoClockInit, tester_class):
         def __init__(self, circuit: m.Circuit, clock: m.Clock = None):

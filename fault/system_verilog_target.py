@@ -136,7 +136,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         dump_waveforms: Enable tracing of internal values
 
-        waveform_type: 'vcd', 'vpd', 'fsdb'.  Default for ncsim is 'vcd'. Default
+        waveform_type: 'vcd', 'vpd', 'fsdb'. Default for ncsim is 'vcd'. Default
                        for vcs is 'vpd'.
 
         waveform_file: name of file to dump waveforms (default is
