@@ -8,13 +8,12 @@ import fault
 
 
 class Queue(m.Generator2):
-    def __init__(self, T, entries, pipe=False, flow=False, with_bug=False):
+    def __init__(self, T, entries, with_bug=False):
         assert entries >= 0
         self.io = m.IO(
             # Flipped since enq/deq is from perspective of the client
             enq=m.DeqIO[T],
-            deq=m.EnqIO[T],
-            count=m.Out(m.UInt[m.bitutils.clog2(entries + 1)])
+            deq=m.EnqIO[T]
         ) + m.ClockIO()
 
         ram = m.Memory(entries, T)()
@@ -47,30 +46,8 @@ class Queue(m.Generator2):
         maybe_full.CE @= m.enable(do_enq != do_deq)
         self.io.deq.data @= ram[deq_ptr.O[:-1]]
 
-        if flow:
-            raise NotImplementedError()
-        if pipe:
-            raise NotImplementedError()
-
         def ispow2(n):
             return (n & (n - 1) == 0) and n != 0
-
-        count_len = len(self.io.count)
-        if ispow2(entries):
-            self.io.count @= m.mux([m.bits(0, count_len), entries],
-                                   maybe_full.O & ptr_match)
-        else:
-            ptr_diff = enq_ptr.O - deq_ptr.O
-            self.io.count @= m.mux([
-                m.mux([
-                    m.bits(0, count_len),
-                    entries
-                ], maybe_full.O),
-                m.mux([
-                    ptr_diff,
-                    entries + ptr_diff
-                ], deq_ptr.O > enq_ptr.O)
-            ], ptr_match)
 
 
 @pytest.mark.parametrize("with_bug", False)
@@ -119,7 +96,6 @@ end""")
         queue = Queue4x8()
         queue.enq @= io.enq
         queue.deq @= io.deq
-        queue.count.unused()
 
         monitor = Monitor()
         monitor.enq.valid @= io.enq.valid
