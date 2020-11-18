@@ -1,7 +1,5 @@
 import random
 
-import pytest
-
 import magma as m
 import mantle
 import fault
@@ -50,7 +48,6 @@ class Queue(m.Generator2):
             return (n & (n - 1) == 0) and n != 0
 
 
-@pytest.mark.parametrize("with_bug", False)
 def test_queue(with_bug):
     T = m.Bits[8]
     Queue4x8 = Queue(T, 4, with_bug=with_bug)
