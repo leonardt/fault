@@ -212,6 +212,12 @@ class CallExpression(Expression):
             func = func.__init__
         assert isinstance(func, pysv.function.DPIFunctionCall)
         self.call_inst = pysv.make_call(func, *args, **kwargs)
+        # get the class instance name
+        if func.meta is not None:
+            self.name = func.meta
+            func.meta = None
+        else:
+            self.name = None
 
-    def str(self, is_sv, arg_to_str):
-        return self.call_inst.str(is_sv, arg_to_str)
+    def str(self, is_sv, arg_to_str, use_ptr=False):
+        return self.call_inst.str(is_sv, arg_to_str, class_var_name=self.name, use_ptr=use_ptr)

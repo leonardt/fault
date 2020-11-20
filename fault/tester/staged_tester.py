@@ -362,12 +362,14 @@ class Tester(TesterBase):
 
     def make_call(self, func, *args, **kwargs):
         if type(func) == type:
-            func = func.__init__
-        assert isinstance(func, pysv.function.DPIFunctionCall)
+            func_def = func.__init__
+        else:
+            func_def = func
+        assert isinstance(func_def, pysv.function.DPIFunctionCall)
         if func not in self.pysv_funcs:
             self.pysv_funcs.append(func)
         self.actions.append(actions.Call(func))
-        return expression.CallExpression(func, *args, **kwargs)
+        return expression.CallExpression(func_def, *args, **kwargs)
 
     def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """

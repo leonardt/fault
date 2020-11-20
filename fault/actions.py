@@ -5,6 +5,7 @@ from .ms_types import (RealIn, RealOut, RealInOut,
                        ElectIn, ElectOut, ElectInOut)
 
 import fault
+import pysv
 from fault.select_path import SelectPath
 import fault.expression as expression
 
@@ -406,6 +407,17 @@ class Var(Action, expression.Expression):
 
     def retarget(self, new_circuit, clock):
         return Var(self.name, self._type)
+
+    def __getattr__(self, name):
+        if type(self._type) == type:
+            func = getattr(self._type, name)
+            assert isinstance(func, pysv.function.DPIFunctionCall),\
+                "Only pysv class object can be used to get class methods"
+            # also set the name for the expression to meta temporarily
+            func.meta = self.name
+            return func
+        else:
+            return object.__getattribute__(self, name)
 
 
 class Assert(Action):

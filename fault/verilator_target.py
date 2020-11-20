@@ -251,7 +251,7 @@ if (!({cond})) {{
         if isinstance(value, expression.CallExpression):
             def arg_to_str(v):
                 return self.process_value(port, v)
-            return value.str(False, arg_to_str)
+            return value.str(False, arg_to_str, use_ptr=True)
         elif isinstance(value, expression.Expression):
             return self.compile_expression(value)
         if isinstance(value, Bit):
@@ -616,6 +616,8 @@ if (!({cond})) {{
             for s, t in size_map:
                 if size_key <= s:
                     return [f"{t} {action.name};"]
+        elif type(action._type) == type:
+            return [f"{action._type.__name__} *{action.name};"]
 
         raise NotImplementedError(action._type)
 

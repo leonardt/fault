@@ -32,7 +32,7 @@ def run_tester(tester, target, simulator):
     tester.compile_and_run(**kwargs)
 
 
-def test_function(target, simulator):
+def _test_function(target, simulator):
     @sv(a=DataType.UByte, b=DataType.UByte, return_type=DataType.UByte)
     def gold_func(a, b):
         return a + b
@@ -74,7 +74,7 @@ def test_class(target, simulator):
     # start testing
     tester.poke(tester.circuit.B, 1)
     tester.eval()
-    tester.expect(tester.circuit.O, tester.make_call(Model.add, 1))
+    tester.expect(tester.circuit.O, tester.make_call(model.add, 1))
 
     run_tester(tester, target, simulator)
 
