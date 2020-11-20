@@ -52,7 +52,7 @@ def is_input(port):
 
 class Poke(PortAction):
     def __init__(self, port, value, delay=None):
-        if is_input(port):
+        if not isinstance(port, Var) and is_input(port):
             raise ValueError(f"Can only poke inputs: {port.debug_name} "
                              f"{type(port)}")
         self.delay = delay

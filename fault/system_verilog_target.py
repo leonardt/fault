@@ -301,6 +301,8 @@ class SystemVerilogTarget(VerilogTarget):
                 name = verilog_name(port[-1].name, self.disable_ndarray)
         elif isinstance(port, fault.WrappedVerilogInternalPort):
             name = f"dut.{port.path}"
+        elif isinstance(port, actions.Var):
+            name = port.name
         else:
             name = verilog_name(port.name, self.disable_ndarray)
         return name
