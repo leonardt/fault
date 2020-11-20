@@ -6,7 +6,8 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, "system-verilog", "verilator", exclude=["vivado", "iverilog"])
+    pytest_sim_params(metafunc, "system-verilog", "verilator",
+                      exclude=["vivado", "iverilog"])
 
 
 class dut(m.Circuit):
@@ -23,9 +24,10 @@ def run_tester(tester, target, simulator):
 
     if target == "verilator":
         kwargs.pop("simulator")
-        # notice that since verilator commands are generated when the tester is initialized
-        # we can't keep track of inserted imported functions in the constructor. as a result
-        # user need to specify the flag in the constructor
+        # notice that since verilator commands are generated when the tester
+        # is initialized, we can't keep track of inserted imported functions
+        # in the constructor. as a result user need to specify the flag in
+        # the constructor
         kwargs["use_pysv"] = True
 
     # run the test
@@ -46,7 +48,8 @@ def test_function(target, simulator):
                                    tester.circuit.A, tester.circuit.B))
     # test out assigning values
     v = tester.Var("v", BitVector[4])
-    tester.poke(v, tester.make_call(gold_func, tester.circuit.A, tester.circuit.B))
+    tester.poke(v, tester.make_call(gold_func, tester.circuit.A,
+                                    tester.circuit.B))
     tester.eval()
     tester.expect(tester.circuit.O, v)
 
