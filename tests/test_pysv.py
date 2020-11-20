@@ -32,7 +32,7 @@ def run_tester(tester, target, simulator):
     tester.compile_and_run(**kwargs)
 
 
-def _test_function(target, simulator):
+def test_function(target, simulator):
     @sv(a=DataType.UByte, b=DataType.UByte, return_type=DataType.UByte)
     def gold_func(a, b):
         return a + b

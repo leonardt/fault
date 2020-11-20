@@ -325,6 +325,10 @@ class SystemVerilogTarget(VerilogTarget):
         if isinstance(action._type, AbstractBitVectorMeta):
             self.add_decl(f'reg [{action._type.size - 1}:0]', action.name)
             return []
+        elif isinstance(action._type, type):
+            self.add_decl(f"{action._type.__name__}", action.name)
+            return []
+
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
@@ -401,7 +405,12 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} <= {value};']
+        # class instance can only be created via blocking assignment
+        if isinstance(action.port, actions.Var) and isinstance(action.port._type, type):
+            assign = "="
+        else:
+            assign = "<="
+        retval += [f'{name} {assign} {value};']
         if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
