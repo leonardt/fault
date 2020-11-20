@@ -271,6 +271,8 @@ if (!({cond})) {{
         # c type
         if isinstance(port, SelectPath):
             port = port[-1]
+        if isinstance(port, actions.Var):
+            port = port._type
         port_len = len(port)
         return BitVector[port_len](value).as_uint()
 
@@ -594,18 +596,14 @@ if (!({cond})) {{
         ])
 
     def make_var(self, i, action):
-        signed = False
-        if issubclass(action._type, SIntVector):
-            signed = True
         if isinstance(action._type, AbstractBitVectorMeta):
             size = action._type.size
-            size_map = [(1, "int8_t"), (2, "int16_t"), (4, "int32_t"),
-                        (8, "int64_t")]
+            size_map = [(1, "uint8_t"), (2, "uint16_t"), (4, "uint32_t"),
+                        (8, "uint64_t")]
             size_key = (size - 1) // 8 + 1
-            sign_prefix = "" if signed else "u"
             for s, t in size_map:
                 if size_key <= s:
-                    return [f"{sign_prefix}{t} {action.name};"]
+                    return [f"{t} {action.name};"]
 
         raise NotImplementedError(action._type)
 

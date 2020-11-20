@@ -8,6 +8,7 @@ from fault.ms_types import RealType
 from fault.array import Array
 from fault.select_path import SelectPath
 from hwtypes.adt import Enum
+from hwtypes import BitVector
 
 
 def make_value(type_, value):
@@ -26,6 +27,8 @@ def make_value(type_, value):
         return make_array(type_.T, type_.N, value)
     if issubclass(type_, magma.Tuple):
         raise NotImplementedError()
+    if issubclass(type_, BitVector):
+        return value
     raise NotImplementedError(type_, value)
 
 
