@@ -284,6 +284,17 @@ class Join(Action):
         return Join(processes, join_type=self.join_type)
 
 
+class Call(Action):
+    def __init__(self, func):
+        self.func = func
+
+    def __str__(self):
+        return f"Call({self.func.__name__})"
+
+    def retarget(self, new_circuit, clock):
+        return Call(self.func.func_call)
+
+
 class FileOpen(Action):
     def __init__(self, file):
         """

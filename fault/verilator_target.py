@@ -71,7 +71,7 @@ int main(int argc, char **argv) {{
   tracer->dump(main_time);
   tracer->close();
 #endif
-  {kratos_exit_call}
+  {exit_code}
 
 #ifdef _VERILATED_COV_H_
     write_coverage();
@@ -121,6 +121,7 @@ class VerilatorTarget(VerilogTarget):
         self.disp_type = disp_type
         self.use_kratos = use_kratos
         self.parameters = parameters if parameters is not None else {}
+        self.exit_code = ""
 
         # Try to import kratos_runtime, if needed
         # (it may be used in verilator_comp_cmd)
@@ -168,9 +169,8 @@ class VerilatorTarget(VerilogTarget):
 
     def _make_assert(self, got, expected, i, port, user_msg,
                      below=None, above=None, style='hex'):
-        kratos_exit_call = ""
         if self.use_kratos:
-            kratos_exit_call = "teardown_runtime();"
+            self.exit_code += "teardown_runtime();\n"
         user_msg_str = ""
         if user_msg:
             arg_str = ""
@@ -215,7 +215,7 @@ if (!({cond})) {{
     tracer->dump(main_time);
     tracer->close();
 #endif
-    {kratos_exit_call}
+    {self.exit_code}
     exit(1);
 }}
     '''
@@ -683,17 +683,16 @@ if (!({expr_str})) {{
             includes_src += "\nvoid initialize_runtime();\n"
             includes_src += "void teardown_runtime();\n"
             kratos_start_call = "initialize_runtime();"
-            kratos_exit_call = "teardown_runtime();"
+            self.exit_code += "teardown_runtime();"
         else:
             kratos_start_call = ""
-            kratos_exit_call = ""
 
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
             circuit_name=self.circuit_name,
             kratos_start_call=kratos_start_call,
-            kratos_exit_call=kratos_exit_call
+            exit_code=self.exit_code
         )
 
         return src

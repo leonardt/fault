@@ -30,6 +30,7 @@ import os
 import inspect
 from fault.config import get_test_dir
 import tempfile
+import pysv
 from hwtypes import BitVector
 
 
@@ -357,6 +358,14 @@ class Tester(TesterBase):
 
     def join_none(self, *args):
         return self.join(*args, join_type=actions.JoinType.None_)
+
+    def make_call(self, func, *args, **kwargs):
+        if type(func) == type:
+            func = func.__init__
+        assert isinstance(func, pysv.function.DPIFunctionCall)
+
+        self.actions.append(actions.Call(func))
+        return expression.CallExpression(func, *args, **kwargs)
 
     def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """
