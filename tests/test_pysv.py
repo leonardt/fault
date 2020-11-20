@@ -1,6 +1,7 @@
 from pysv import sv, DataType
 import fault
 import magma as m
+from hwtypes import BitVector
 from .common import pytest_sim_params
 
 
@@ -16,7 +17,7 @@ def test_function(target, simulator):
 
     tester = fault.Tester(dut)
 
-    @sv(a=DataType.UByte, b=DataType.UByte)
+    @sv(a=DataType.UByte, b=DataType.UByte, return_type=DataType.UByte)
     def gold_func(a, b):
         return a + b
 
@@ -26,6 +27,12 @@ def test_function(target, simulator):
     tester.expect(tester.circuit.O,
                   tester.make_call(gold_func,
                                    tester.circuit.A, tester.circuit.B))
+    # test out assigning values
+    v = tester.Var("v", BitVector[4])
+    tester.poke(v, tester.make_call(gold_func, tester.circuit.A, tester.circuit.B))
+    tester.eval()
+    tester.expect(tester.circuit.O, v)
+
     kwargs = {
         "target": target,
         "simulator": simulator,
