@@ -868,6 +868,25 @@ def test_poke_bitwise_nested(target, simulator):
         tester.compile_and_run(**kwargs)
 
 
+def test_poke_expect_var(target, simulator):
+    circ = TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.eval()
+    v = tester.Var("v", m.Bits[3])
+    tester.poke(v, 1)
+    tester.eval()
+    tester.poke(circ.I, v)
+    tester.eval()
+    tester.expect(circ.O, 1)
+    tester.expect(circ.O, v)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+        tester.compile_and_run(**kwargs)
+
+
 @pytest.mark.xfail(strict=True)
 def test_generic_expect_fail(target, simulator):
     circ = TestNestedArraysCircuit

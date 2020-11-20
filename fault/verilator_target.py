@@ -343,6 +343,8 @@ if (!({cond})) {{
                 # to use top->v instead of top->{circuit_name}
                 name += f"{prefix}->"
             name += action.port.verilator_path
+        elif isinstance(action.port, actions.Var):
+            name = action.port.name
         else:
             name = verilator_name(action.port.name)
 
@@ -367,7 +369,10 @@ if (!({cond})) {{
             value = action.value
             value = self.process_value(action.port, value)
             value = self.process_bitwise_assign(action.port, name, value)
-            result = [f"top->{name} = {value};"]
+            if isinstance(action.port, actions.Var):
+                result = [f"{name} = {value};"]
+            else:
+                result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
             if is_reg_poke:
@@ -589,9 +594,17 @@ if (!({cond})) {{
         ])
 
     def make_var(self, i, action):
-        if isinstance(action._type, AbstractBitVectorMeta) and \
-                action._type.size == 32:
-            return [f"unsigned int {action.name};"]
+        if isinstance(action._type, AbstractBitVectorMeta):
+            size = action._type.size
+            # FIXME: assume all values are unsigned. can't get sign info
+            #  from AbstractBitVectorMeta
+            size_map = [(1, "uint8_t"), (2, "uint16_t"), (4, "uint32_t"),
+                        (8, "uint64_t")]
+            size_key = (size - 1) // 8 + 1
+            for s, t in size_map:
+                if size_key <= s:
+                    return [f"{t} {action.name};"]
+
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
