@@ -694,6 +694,9 @@ class SystemVerilogTarget(VerilogTarget):
             port_list.extend(result)
         port_list = f',\n{2*self.TAB}'.join(port_list)
 
+        if len(self.pysv_funcs) > 0:
+            self.imports.append("pysv")
+
         # build up the body of the initial block
         initial_body = []
 

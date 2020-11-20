@@ -85,6 +85,7 @@ class Tester(TesterBase):
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
+        self.pysv_funcs = []
 
     def init_clock(self):
         if self.clock is not None:
@@ -363,7 +364,8 @@ class Tester(TesterBase):
         if type(func) == type:
             func = func.__init__
         assert isinstance(func, pysv.function.DPIFunctionCall)
-
+        if func not in self.pysv_funcs:
+            self.pysv_funcs.append(func)
         self.actions.append(actions.Call(func))
         return expression.CallExpression(func, *args, **kwargs)
 

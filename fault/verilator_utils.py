@@ -19,7 +19,8 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
                        include_directories=None,
                        driver_filename=None, verilator_flags=None,
                        coverage=False, use_kratos=False,
-                       defines=None, parameters=None):
+                       defines=None, parameters=None,
+                       use_pysv=None):
     # set defaults
     if include_verilog_libraries is None:
         include_verilog_libraries = []
@@ -45,6 +46,9 @@ def verilator_comp_cmd(top=None, verilog_filename=None,
         if use_kratos:
             from kratos_runtime import get_lib_path
             retval += [os.path.basename(get_lib_path())]
+    if use_pysv:
+        # this file name is the same cross all platforms
+        retval += ["libpysv.so"]
 
     # -v arguments
     for file_ in include_verilog_libraries:

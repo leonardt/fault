@@ -1,11 +1,11 @@
-from pysv import sv
+from pysv import sv, DataType
 import fault
 import magma as m
 from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'system-verilog', exclude=["vivado", "iverilog"])
+    pytest_sim_params(metafunc, "system-verilog", "verilator", exclude=["vivado", "iverilog"])
 
 
 def test_function(target, simulator):
@@ -16,7 +16,7 @@ def test_function(target, simulator):
 
     tester = fault.Tester(dut)
 
-    @sv()
+    @sv(a=DataType.UByte, b=DataType.UByte)
     def gold_func(a, b):
         return a + b
 
@@ -26,10 +26,22 @@ def test_function(target, simulator):
     tester.expect(tester.circuit.O,
                   tester.make_call(gold_func,
                                    tester.circuit.A, tester.circuit.B))
+    kwargs = {
+        "target": target,
+        "simulator": simulator,
+        "tmp_dir": False
+    }
+
+    if target == "verilator":
+        kwargs.pop("simulator")
+        # notice that since verilator commands are generated when the tester is initialized
+        # we can't keep track of inserted imported functions in the constructor. as a result
+        # user need to specify the flag in the constructor
+        kwargs["use_pysv"] = True
 
     # run the test
-    tester.compile_and_run(
-        target=target,
-        simulator=simulator,
-        tmp_dir=False
-    )
+    tester.compile_and_run(**kwargs)
+
+
+if __name__ == "__main__":
+    test_function("verilator", None)
