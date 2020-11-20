@@ -883,7 +883,7 @@ def test_poke_expect_var(target, simulator, T, value):
     tester.expect(circ.O, value)
     tester.expect(circ.O, v)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        kwargs = {"target": target, "directory": "build"}
+        kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
