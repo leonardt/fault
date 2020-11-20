@@ -71,10 +71,11 @@ def test_class(target, simulator):
     model = tester.Var("model", Model)
     tester.poke(model, tester.make_call(Model, a_value))
 
-    # start testing
-    tester.poke(tester.circuit.B, 1)
-    tester.eval()
-    tester.expect(tester.circuit.O, tester.make_call(model.add, 1))
+    # start testing. using a loop
+    loop = tester.loop(10)
+    loop.poke(tester.circuit.B, loop.index)
+    loop.eval()
+    loop.expect(tester.circuit.O, tester.make_call(model.add, loop.index))
 
     run_tester(tester, target, simulator)
 
