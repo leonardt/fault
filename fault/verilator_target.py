@@ -13,7 +13,7 @@ from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from hwtypes import BitVector, AbstractBitVectorMeta, Bit
+from hwtypes import BitVector, AbstractBitVectorMeta, Bit, SIntVector
 from fault.random import constrained_random_bv
 from fault.subprocess_run import subprocess_run
 from fault.ms_types import RealType
@@ -594,16 +594,18 @@ if (!({cond})) {{
         ])
 
     def make_var(self, i, action):
+        signed = False
+        if issubclass(action._type, SIntVector):
+            signed = True
         if isinstance(action._type, AbstractBitVectorMeta):
             size = action._type.size
-            # FIXME: assume all values are unsigned. can't get sign info
-            #  from AbstractBitVectorMeta
-            size_map = [(1, "uint8_t"), (2, "uint16_t"), (4, "uint32_t"),
-                        (8, "uint64_t")]
+            size_map = [(1, "int8_t"), (2, "int16_t"), (4, "int32_t"),
+                        (8, "int64_t")]
             size_key = (size - 1) // 8 + 1
+            sign_prefix = "" if signed else "u"
             for s, t in size_map:
                 if size_key <= s:
-                    return [f"{t} {action.name};"]
+                    return [f"{sign_prefix}{t} {action.name};"]
 
         raise NotImplementedError(action._type)
 
