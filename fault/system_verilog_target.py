@@ -801,20 +801,15 @@ class SystemVerilogTarget(VerilogTarget):
             vlog_srcs = [os.path.relpath(pkg_file, self.directory)] + vlog_srcs
 
         # generate simulator commands
-        if self.simulator == 'ncsim' or self.simulator == "incisive":
+        if self.simulator == 'ncsim' or self.simulator == "incisive" or self.simulator == "xcelium":
             # Compile and run simulation
             cmd_file = self.write_cadence_tcl()
-            sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            if self.simulator == "xcelium":
+                sim_cmd = self.xcelium_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            else:
+                sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
             if lib_path:
                 sim_cmd += ["-sv_lib", os.path.relpath(lib_path, self.directory)]
-            sim_err_str = None
-            # Skip "bin_cmd"
-            bin_cmd = None
-            bin_err_str = None
-        elif self.simulator == 'xcelium':
-            # Compile and run simulation
-            cmd_file = self.write_cadence_tcl()
-            sim_cmd = self.xcelium_cmd(sources=vlog_srcs, cmd_file=cmd_file)
             sim_err_str = None
             # Skip "bin_cmd"
             bin_cmd = None
@@ -831,6 +826,8 @@ class SystemVerilogTarget(VerilogTarget):
             # Compile simulation
             # TODO: what error strings are expected at this stage?
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            if lib_path:
+                sim_cmd += ["-sv_lib", os.path.relpath(lib_path, self.directory)]
             sim_err_str = None
             # Run simulation
             bin_cmd = [bin_file]
