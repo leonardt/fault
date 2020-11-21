@@ -28,6 +28,9 @@ steps:
 
       # install kratos runtime
       pip install kratos-runtime
+
+      # use the latest cmake
+      pip install cmake
       
       # run tests
       ./conda_env/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
@@ -53,6 +56,9 @@ steps:
       pip install pytest-cov pytest-pycodestyle
       pip install vcdvcd decorator kratos
       pip install --upgrade "mantle>=2.0.0"
+
+      # use the latest cmake
+      pip install cmake
 
       # install fault
       pip install -e .
