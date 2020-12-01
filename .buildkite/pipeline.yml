@@ -1,9 +1,5 @@
 steps:
   - command: |
-      # set up environment
-      export PATH=/usr/local/miniconda/bin:$$PATH
-      echo $$PATH
-
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base incisive vcs xcelium hspice spectre verdi
@@ -23,7 +19,7 @@ steps:
       
       # install SMT solvers
       mkdir ./smt_solvers
-      ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
+      ./venv/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./venv/lib/python3.7/site-packages --msat --confirm-agreement
 
       # install kratos runtime
       pip install kratos-runtime
@@ -32,7 +28,7 @@ steps:
       pip install cmake
       
       # run tests
-      ./conda_env/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+      ./venv/bin/pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
 
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
