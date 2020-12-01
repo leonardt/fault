@@ -9,7 +9,9 @@ steps:
       source venv/bin/activate
 
       # install python dependencies for testing
-      pip install pytest pytest-cov pytest-pycodestyle
+      pip install wheel
+      pip install "pytest<6"
+      pip install pytest-cov pytest-pycodestyle
       pip install --upgrade "mantle>=2.0.0"
       pip install vcdvcd decorator kratos
 
