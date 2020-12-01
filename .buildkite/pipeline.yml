@@ -11,6 +11,7 @@ steps:
       # create conda env
       conda create -p ./conda_env -m -y pip numpy python=3.7.3
       export PATH=$$PWD/conda_env/bin:$$PATH
+      export LD_LIBRARY_PATH=$$PWD/conda_env/lib:$$LD_LIBRARY_PATH
       echo $$PATH
 
       # install python dependencies for testing
