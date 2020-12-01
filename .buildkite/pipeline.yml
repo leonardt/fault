@@ -8,10 +8,9 @@ steps:
       source /cad/modules/tcl/init/bash
       module load base incisive vcs xcelium hspice spectre verdi
 
-      # create conda env
-      conda create -p ./conda_env -m -y pip numpy python=3.7.3
-      export PATH=$$PWD/conda_env/bin:$$PATH
-      echo $$PATH
+      # create virtual environment
+      python3.7 -m venv venv
+      source venv/bin/activate
 
       # install python dependencies for testing
       pip install "pytest<6"
