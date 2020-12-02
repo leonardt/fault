@@ -30,6 +30,9 @@ def run_tester(tester, target, simulator):
         # in the constructor. as a result user need to specify the flag in
         # the constructor
         kwargs["use_pysv"] = True
+        # force verilator to use C++11. This is only needed if the compiler is
+        # ancient, e.g. gcc-4.8
+        kwargs["flags"] = ["--CFLAGS", "-std=c++11"]
 
     # run the test
     tester.compile_and_run(**kwargs)
