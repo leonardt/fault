@@ -5,14 +5,14 @@ steps:
   - wait
   - command: |
       # set up environment
-      chsh -s /usr/bin/bash
+      chsh -s /bin/bash
       # tool setup
       source /cad/modules/tcl/init/sh
       module load base incisive vcs xcelium hspice spectre verdi
       
       rm -rf /aha/garnet
       cp -r /workdir /aha/garnet
-      
+
       apt-get install -y  verilator
 
       # install python dependencies for testing
