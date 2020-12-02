@@ -6,7 +6,7 @@ steps:
   - command: |
       # set up environment
       # tool setup
-      source /cad/modules/tcl/init/bash
+      source /cad/modules/tcl/init/sh
       module load base incisive vcs xcelium hspice spectre verdi
       
       rm -rf /aha/garnet
