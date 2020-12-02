@@ -1,14 +1,16 @@
 steps:
+  - label: "Pruning docker images"
+    commands:
+    - yes | docker image prune -a --filter "until=24h" --filter=label='description=garnet' || true
+  - wait
   - command: |
       # set up environment
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base incisive vcs xcelium hspice spectre verdi
-
-      # create virtual environment
-      export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib64:$LD_LIBRARY_PATH
-      python3.7 -m venv venv
-      source venv/bin/activate
+      
+      rm -rf /aha/garnet
+      cp -r /workdir /aha/garnet
 
       # install python dependencies for testing
       pip install "pytest<6"
@@ -18,17 +20,15 @@ steps:
       pip install DeCiDa
 
       # install fault
-      pip install -e .
+      pip install -e /aha/garnet
       
-      # install SMT solvers
-      # mkdir ./smt_solvers
-      # pysmt-install --install-path ./smt_solvers --bindings-path=./env/lib/python3.7/site-packages --msat --confirm-agreement
-
       # install kratos runtime
       pip install kratos-runtime
 
       # use the latest cmake
       pip install cmake
+      
+      cd /aha/garnet
       
       # run tests
       pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s -k test_function
@@ -37,8 +37,14 @@ steps:
       bash <(curl -s https://codecov.io/bash)
     label: "test"
     timeout_in_minutes: 60
+    plugins:
+      - docker#v3.2.0:
+        image: stanfordaha/garnet
+        volumes:
+          - "/cad/:/cad"
+        shell: ["/bin/bash", "-e", "-c"]
     agents:
-      fault2: "true"
+      docker: "true"
   - command: |
       # set up environment
       source /etc/environment
