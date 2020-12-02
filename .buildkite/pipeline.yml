@@ -13,7 +13,7 @@ steps:
       rm -rf /aha/garnet
       cp -r /workdir /aha/garnet
 
-      apt-get install -y  verilator
+      apt-get update && apt-get install -y  verilator
 
       # install python dependencies for testing
       pip install "pytest<6"
