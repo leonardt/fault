@@ -5,6 +5,7 @@ steps:
   - wait
   - command: |
       # set up environment
+      chsh -s /usr/bin/bash
       # tool setup
       source /cad/modules/tcl/init/sh
       module load base incisive vcs xcelium hspice spectre verdi
@@ -40,6 +41,7 @@ steps:
     plugins:
       - docker#v3.2.0:
           image: stanfordaha/garnet
+          propagate-environment: true
           volumes:
             - "/cad/:/cad"
           shell: ["/bin/bash", "-e", "-c"]
