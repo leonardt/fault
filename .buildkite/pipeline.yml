@@ -15,6 +15,12 @@ steps:
       cp -r /workdir /aha/garnet
 
       apt-get update && apt-get install -y time verilator
+      wget https://www.sqlite.org/2020/sqlite-autoconf-3340000.tar.gz
+      tar zxvf sqlite-autoconf-3340000.tar.gz
+      cd sqlite-autoconf-3340000
+      ./configure
+      make && make install
+      cd ..
 
       # install python dependencies for testing
       pip install "pytest<6"
