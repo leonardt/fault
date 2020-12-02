@@ -7,7 +7,7 @@ steps:
       # set up environment
       chsh -s /bin/bash
       # tool setup
-      source /cad/modules/tcl/init/sh
+      source /cad/modules/tcl/init/bash
       module load base incisive vcs xcelium hspice spectre verdi
       
       rm -rf /aha/garnet
