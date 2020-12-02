@@ -5,7 +5,8 @@ steps:
   - wait
   - command: |
       # set up environment
-      chsh -s /bin/bash
+      rm /bin/sh
+      ln -s /bin/bash /bin/sh
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base vcs xcelium hspice spectre verdi
