@@ -1,4 +1,8 @@
 steps:
+  - label: "Pruning docker images"
+    commands:
+    - yes | docker image prune -a --filter "until=24h" --filter=label='description=garnet' || true
+  - wait
   - command: |
       # set up environment
       # tool setup
@@ -35,10 +39,10 @@ steps:
     timeout_in_minutes: 60
     plugins:
       - docker#v3.2.0:
-        image: stanfordaha/garnet
-        volumes:
-          - "/cad/:/cad"
-        shell: ["/bin/bash", "-e", "-c"]
+          image: stanfordaha/garnet
+          volumes:
+            - "/cad/:/cad"
+          shell: ["/bin/bash", "-e", "-c"]
     agents:
       docker: "true"
   - command: |
