@@ -8,7 +8,7 @@ steps:
       chsh -s /bin/bash
       # tool setup
       source /cad/modules/tcl/init/bash
-      module load base incisive vcs xcelium hspice spectre verdi
+      module load base vcs xcelium hspice spectre verdi
       
       rm -rf /aha/garnet
       cp -r /workdir /aha/garnet
