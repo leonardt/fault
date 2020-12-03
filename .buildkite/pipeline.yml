@@ -32,7 +32,7 @@ steps:
       # use the latest cmake
       pip install cmake
       
-      cd /aha/garnet
+      cd /aha/fault
       
       # run tests
       coverage run -m pytest --pycodestyle --source=fault tests/ -v -r s -k test_function
