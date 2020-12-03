@@ -868,8 +868,7 @@ class SystemVerilogTarget(VerilogTarget):
         # run the simulation binary (if applicable)
         if bin_cmd is not None:
             subprocess_run(bin_cmd, cwd=self.directory, env=self.sim_env,
-                           err_str=bin_err_str, disp_type=self.disp_type,
-                           shell=True)
+                           err_str=bin_err_str, disp_type=self.disp_type)
 
         # post-process GetValue actions
         self.post_process_get_value_actions(actions)
