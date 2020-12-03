@@ -35,7 +35,7 @@ steps:
       cd /aha/garnet
       
       # run tests
-      pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s -k test_function
+      coverage --source=fault run -m pytest --pycodestyle tests/ -v -r s -k test_function
 
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
