@@ -18,10 +18,10 @@ steps:
 
       # install python dependencies for testing
       pip install "pytest<6"
-      pip install pytest-cov pytest-pycodestyle
+      pip install coverage pytest-pycodestyle
       pip install --upgrade "mantle>=2.0.0"
       pip install vcdvcd decorator kratos
-      pip install DeCiDa
+      pip install DeCiDa scipy numpy
 
       # install fault
       pip install -e /aha/fault
