@@ -10,7 +10,7 @@ steps:
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base vcs xcelium hspice spectre verdi
-      
+
       rm -rf /aha/fault
       cp -r /workdir /aha/fault
       printf "deb http://archive.ubuntu.com/ubuntu hirsute-backports main restricted universe multiverse" > /etc/apt/sources.list.d/backports.list
