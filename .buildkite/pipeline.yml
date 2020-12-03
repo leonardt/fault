@@ -73,7 +73,7 @@ steps:
       pip install -e .
       
       # run tests
-      pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+      pytest --pycodestyle --cov-report=xml tests/ -v -r s
 
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
