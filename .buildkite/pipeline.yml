@@ -11,8 +11,8 @@ steps:
       source /cad/modules/tcl/init/bash
       module load base vcs xcelium hspice spectre verdi
       
-      rm -rf /aha/garnet
-      cp -r /workdir /aha/garnet
+      rm -rf /aha/fault
+      cp -r /workdir /aha/fault
 
       apt-get update && apt-get install -y time verilator
 
@@ -24,7 +24,7 @@ steps:
       pip install DeCiDa
 
       # install fault
-      pip install -e /aha/garnet
+      pip install -e /aha/fault
       
       # install kratos runtime
       pip install kratos-runtime
