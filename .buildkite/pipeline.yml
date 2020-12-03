@@ -15,6 +15,7 @@ steps:
       cp -r /workdir /aha/garnet
 
       apt-get update && apt-get install -y time verilator
+      apt-get remove -y sqlite3 && apt-get install -y sqlite3
 
       # install python dependencies for testing
       pip install "pytest<6"
