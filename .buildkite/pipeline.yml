@@ -35,7 +35,7 @@ steps:
       cd /aha/fault
       
       # run tests
-      coverage run -m pytest --pycodestyle tests/ -v -r s -k test_function
+      coverage run -m pytest --pycodestyle tests/ -v -r s
 
       # upload coverage results
       bash <(curl -s https://codecov.io/bash)
