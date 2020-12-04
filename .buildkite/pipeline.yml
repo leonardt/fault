@@ -14,7 +14,7 @@ steps:
       rm -rf /aha/fault
       cp -r /workdir /aha/fault
       printf "deb http://archive.ubuntu.com/ubuntu hirsute-backports main restricted universe multiverse" > /etc/apt/sources.list.d/backports.list
-      apt-get update && apt-get install -y time verilator
+      apt-get update && apt-get install -y time verilator/hirsute-backports  
 
       # install python dependencies for testing
       pip install "pytest<6"
