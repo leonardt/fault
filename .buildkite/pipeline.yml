@@ -23,8 +23,8 @@ steps:
       pip install -e .
       
       # install SMT solvers
-      mkdir ./smt_solvers
-      ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
+      # mkdir ./smt_solvers
+      # ./conda_env/bin/pysmt-install --install-path ./smt_solvers --bindings-path=./conda_env/lib/python3.7/site-packages --msat --confirm-agreement
 
       # install kratos runtime
       pip install kratos-runtime
