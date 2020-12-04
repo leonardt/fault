@@ -25,7 +25,7 @@ steps:
 
       # install fault
       pip install -e /aha/fault
-      
+
       # install kratos runtime
       pip install kratos-runtime
 

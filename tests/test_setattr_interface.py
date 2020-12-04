@@ -209,3 +209,10 @@ def test_setattr_basic_fail2(target, simulator, capsys):
     else:
         out, err = capsys.readouterr()
         assert "my error message" in out, out + err
+
+
+def test_set_invalid_port():
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    with pytest.raises(AttributeError):
+        tester.circuit.not_a_port = 0

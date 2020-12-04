@@ -12,13 +12,15 @@ from hwtypes import BitVector
 class TesterBase:
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
                  reset: m.Reset = None, poke_delay_default=None,
-                 expect_strict_default=True):
+                 expect_strict_default=True, debug_mode=False):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
         `reset`: optional, a port from `circuit` corresponding to the reset
         `expect_strict_default`: if True, use strict equality check if
         not specified by the user.
+        `debug_mode`: if True, use `inspect` module to store calling frame
+        information for debugging (slow performance for large test benches)
         """
         if hasattr(circuit, "circuit_definition"):
             circuit = circuit.circuit_definition
@@ -45,6 +47,8 @@ class TesterBase:
         if reset is not None and not isinstance(reset, m.Reset):
             raise TypeError(f"Expected reset port: {reset, type(reset)}")
         self.reset_port = reset
+
+        self.debug_mode = debug_mode
 
     def _find_default_clock(self, ports):
         """Automatically finds a clock if there is only one"""
@@ -147,9 +151,10 @@ class TesterBase:
         # set defaults
         if strict is None:
             strict = self.expect_strict_default
-        if caller is None:
+        if self.debug_mode and caller is None:
             try:
-                caller = inspect.getframeinfo(inspect.stack()[1][0])
+                previous_frame = inspect.currentframe().f_back
+                caller = inspect.getframeinfo(previous_frame)
             except IndexError:
                 pass
 
