@@ -37,4 +37,4 @@ def test_init_clock():
         vcd_file = os.path.join(tempdir, "waveforms.vcd")
         vcd = VCDVCD(vcd_file, signals=["SimpleALU_tb.dut.CLK"])
         tvs = vcd["SimpleALU_tb.dut.CLK"].tv
-        assert tvs == [(0, '0'), (5, '1'), (10, '0')]
+        assert tvs == [(0, '0'), (5, '1'), (10, '0')], tvs
