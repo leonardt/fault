@@ -52,10 +52,7 @@ class Wrapper:
                 return PortWrapper(self.circuit.interface.ports[attr], self)
             elif attr in self.instance_map:
                 return InstanceWrapper(self.instance_map[attr], self)
-            else:
-                object.__getattribute__(self, attr)
-        else:
-            object.__getattribute__(self, attr)
+        return object.__getattribute__(self, attr)
 
 
 class CircuitWrapper(Wrapper):
