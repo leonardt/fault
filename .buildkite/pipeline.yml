@@ -13,7 +13,7 @@ steps:
       pip install coverage pytest-pycodestyle
       pip install --upgrade "mantle>=2.0.0"
       pip install vcdvcd decorator kratos
-      pip install DeCiDa scipy numpy tkinter
+      pip install DeCiDa scipy numpy
 
       # install fault
       pip install -e .
@@ -48,7 +48,7 @@ steps:
       pip install pytest-cov pytest-pycodestyle
       pip install vcdvcd decorator kratos
       pip install --upgrade "mantle>=2.0.0"
-      pip install DeCiDa scipy numpy tkinter
+      pip install DeCiDa scipy numpy
 
       # use the latest cmake
       pip install cmake
