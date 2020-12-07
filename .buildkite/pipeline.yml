@@ -1,20 +1,12 @@
 steps:
-  - label: "Pruning docker images"
-    commands:
-    - yes | docker image prune -a --filter "until=24h" --filter=label='description=garnet' || true
-  - wait
   - command: |
-      # set up environment
-      rm /bin/sh
-      ln -s /bin/bash /bin/sh
       # tool setup
       source /cad/modules/tcl/init/bash
       module load base vcs xcelium hspice spectre verdi
 
-      rm -rf /aha/fault
-      cp -r /workdir /aha/fault
-      printf "deb http://archive.ubuntu.com/ubuntu hirsute main restricted universe multiverse" >> /etc/apt/sources.list
-      apt-get update && apt-get install -y time verilator
+      # create virtual environment
+      python3.7 -m venv venv
+      source venv/bin/activate
 
       # install python dependencies for testing
       pip install "pytest<6"
@@ -24,15 +16,13 @@ steps:
       pip install DeCiDa scipy numpy
 
       # install fault
-      pip install -e /aha/fault
+      pip install -e .
 
       # install kratos runtime
       pip install kratos-runtime
 
       # use the latest cmake
       pip install cmake
-      
-      cd /aha/fault
       
       # run tests
       coverage run -m pytest --pycodestyle tests/ -v -r s
@@ -41,15 +31,8 @@ steps:
       bash <(curl -s https://codecov.io/bash)
     label: "test"
     timeout_in_minutes: 60
-    plugins:
-      - docker#v3.2.0:
-          image: stanfordaha/garnet
-          propagate-environment: true
-          volumes:
-            - "/cad/:/cad"
-          shell: ["/bin/bash", "-e", "-c"]
     agents:
-      docker: "true"
+      fault2: "true"
   - command: |
       # set up environment
       source /etc/environment
