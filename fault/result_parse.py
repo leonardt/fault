@@ -2,9 +2,8 @@ try:
     import numpy as np
     from scipy.interpolate import interp1d
     import decida.Data
-except ModuleNotFoundError as e:
+except ModuleNotFoundError:
     print('Failed to import libraries for results parsing.  Capabilities may be limited.')  # noqa
-    raise e
 
 
 class SpiceResult:
