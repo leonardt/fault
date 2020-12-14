@@ -226,7 +226,7 @@ class SystemVerilogTarget(VerilogTarget):
                           DeprecationWarning)
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
-        self.imports = []
+        self.imports = set()
         self.declarations = {}  # dictionary keyed by signal name
         self.assigns = {}  # dictionary keyed by LHS name
         self.sim_env = sim_env if sim_env is not None else {}
@@ -534,8 +534,7 @@ class SystemVerilogTarget(VerilogTarget):
             return [f'if (!({expr_str})) $error("{expr_str} failed");']
 
     def make_call(self, i, action: actions.Call):
-        if "pysv" not in self.imports:
-            self.imports.append("pysv")
+        self.imports.add("pysv")
         return super().make_call(i, action)
 
     def make_expect(self, i, action):
@@ -704,7 +703,7 @@ class SystemVerilogTarget(VerilogTarget):
         port_list = f',\n{2*self.TAB}'.join(port_list)
 
         if len(self.pysv_funcs) > 0:
-            self.imports.append("pysv")
+            self.imports.add("pysv")
 
         # build up the body of the initial block
         initial_body = []
@@ -813,7 +812,7 @@ class SystemVerilogTarget(VerilogTarget):
             vlog_srcs = [os.path.relpath(pkg_file, self.directory)] + vlog_srcs
 
         # generate simulator commands
-        if self.simulator == 'ncsim' or self.simulator == "incisive" or self.simulator == "xcelium":
+        if self.simulator in {'ncsim', "incisive", "xcelium"}:
             # Compile and run simulation
             cmd_file = self.write_cadence_tcl()
             if self.simulator == "xcelium":

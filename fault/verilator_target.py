@@ -756,8 +756,12 @@ if (!({expr_str})) {{
             header = os.path.join(self.directory, "pysv.hh")
             pysv.generate_cxx_binding(self.pysv_funcs, filename=header)
             lib_path = pysv.compile_lib(self.pysv_funcs, os.path.join(self.directory, "obj_dir"))
+            ld_lib_path = os.path.realpath(os.path.dirname(lib_path))
             if env is None:
-                env = {"LD_LIBRARY_PATH": os.path.realpath(os.path.dirname(lib_path))}
+                env = {}
+            if "LD_LIBRARY_PATH" in env:
+                ld_lib_path = env["LD_LIBRARY_PATH"] + ":" + ld_lib_path
+            env["LD_LIBRARY_PATH"] = ld_lib_path
 
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
