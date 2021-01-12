@@ -17,12 +17,14 @@ import fault
 import fault.expression as expression
 from fault.ms_types import RealType
 import os
+import pysv
 from numbers import Number
 
 
 src_tpl = """\
 {timescale}
 module {top_module};
+{imports}
 {declarations}
 {assigns}
 {clock_drivers}
@@ -35,6 +37,7 @@ module {top_module};
 
     initial begin
 {initial_body}
+{exit_code}
         #20 $finish;
     end
 
@@ -223,6 +226,7 @@ class SystemVerilogTarget(VerilogTarget):
                           DeprecationWarning)
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
+        self.imports = set()
         self.declarations = {}  # dictionary keyed by signal name
         self.assigns = {}  # dictionary keyed by LHS name
         self.sim_env = sim_env if sim_env is not None else {}
@@ -321,6 +325,10 @@ class SystemVerilogTarget(VerilogTarget):
         if isinstance(action._type, AbstractBitVectorMeta):
             self.add_decl(f'reg [{action._type.size - 1}:0]', action.name)
             return []
+        elif isinstance(action._type, type):
+            self.add_decl(f"{action._type.__name__}", action.name)
+            return []
+
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
@@ -349,6 +357,10 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
+        elif isinstance(value, expression.CallExpression):
+            def arg_to_str(v):
+                return self.process_value(port, v)
+            value = value.str(True, arg_to_str)
         elif isinstance(value, expression.Expression):
             value = f"({self.compile_expression(value)})"
         return value
@@ -393,7 +405,12 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} <= {value};']
+        # class instance can only be created via blocking assignment
+        if isinstance(action.port, actions.Var) and isinstance(action.port._type, type):
+            assign = "="
+        else:
+            assign = "<="
+        retval += [f'{name} {assign} {value};']
         if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
@@ -515,6 +532,10 @@ class SystemVerilogTarget(VerilogTarget):
             return [f'assert ({expr_str}) else $error("{expr_str} failed");']
         else:
             return [f'if (!({expr_str})) $error("{expr_str} failed");']
+
+    def make_call(self, i, action: actions.Call):
+        self.imports.add("pysv")
+        return super().make_call(i, action)
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
@@ -681,6 +702,9 @@ class SystemVerilogTarget(VerilogTarget):
             port_list.extend(result)
         port_list = f',\n{2*self.TAB}'.join(port_list)
 
+        if len(self.pysv_funcs) > 0:
+            self.imports.add("pysv")
+
         # build up the body of the initial block
         initial_body = []
 
@@ -717,6 +741,10 @@ class SystemVerilogTarget(VerilogTarget):
         initial_body = [f'{2*self.TAB}{elem}' for elem in initial_body]
         initial_body = '\n'.join(initial_body)
 
+        # format imports
+        imports = [f"{self.TAB}import {name}::*;" for name in self.imports]
+        imports = "\n".join(imports)
+
         # format declarations
         declarations = [f'{self.TAB}{type_} {name};'
                         for type_, name in self.declarations.values()]
@@ -732,9 +760,16 @@ class SystemVerilogTarget(VerilogTarget):
 
         clock_drivers = self.TAB + "\n{self.TAB}".join(self.clock_drivers)
 
+        # exit code
+        if len(self.pysv_funcs) > 0:
+            exit_code = f"{self.TAB}pysv_finalize();\n"
+        else:
+            exit_code = ""
+
         # fill out values in the testbench template
         src = src_tpl.format(
             timescale=timescale,
+            imports=imports,
             declarations=declarations,
             clock_drivers=clock_drivers,
             assigns=assigns,
@@ -742,6 +777,7 @@ class SystemVerilogTarget(VerilogTarget):
             port_list=port_list,
             param_list=param_list,
             circuit_name=self.circuit_name,
+            exit_code=exit_code,
             top_module=self.top_module
         )
 
@@ -766,19 +802,25 @@ class SystemVerilogTarget(VerilogTarget):
             vlog_srcs += [self.verilog_file]
         vlog_srcs += self.include_verilog_libraries
 
+        lib_path = ""
+        pkg_file = ""
+        if len(self.pysv_funcs) > 0:
+            lib_path = pysv.compile_lib(self.pysv_funcs, self.directory)
+            pkg_file = os.path.join(self.directory, "pysv_pkg.sv")
+            pysv.generate_sv_binding(self.pysv_funcs, filename=pkg_file)
+            assert os.path.exists(pkg_file)
+            vlog_srcs = [os.path.relpath(pkg_file, self.directory)] + vlog_srcs
+
         # generate simulator commands
-        if self.simulator == 'ncsim' or self.simulator == "incisive":
+        if self.simulator in {'ncsim', "incisive", "xcelium"}:
             # Compile and run simulation
             cmd_file = self.write_cadence_tcl()
-            sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
-            sim_err_str = None
-            # Skip "bin_cmd"
-            bin_cmd = None
-            bin_err_str = None
-        elif self.simulator == 'xcelium':
-            # Compile and run simulation
-            cmd_file = self.write_cadence_tcl()
-            sim_cmd = self.xcelium_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            if self.simulator == "xcelium":
+                sim_cmd = self.xcelium_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            else:
+                sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            if lib_path:
+                sim_cmd += ["-sv_lib", os.path.relpath(lib_path, self.directory)]
             sim_err_str = None
             # Skip "bin_cmd"
             bin_cmd = None
@@ -795,6 +837,8 @@ class SystemVerilogTarget(VerilogTarget):
             # Compile simulation
             # TODO: what error strings are expected at this stage?
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            if lib_path:
+                sim_cmd += ["-sv_lib", os.path.relpath(lib_path, self.directory)]
             sim_err_str = None
             # Run simulation
             bin_cmd = [bin_file]

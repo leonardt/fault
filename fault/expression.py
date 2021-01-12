@@ -1,5 +1,6 @@
 from magma.t import Type
 from fault.infix import Infix
+import pysv
 
 
 class Expression:
@@ -203,3 +204,20 @@ class Integer(FunctionCall):
 
 def integer(x):
     return Integer(x)
+
+
+class CallExpression(Expression):
+    def __init__(self, func, *args, **kwargs):
+        if type(func) == type:
+            func = func.__init__
+        assert isinstance(func, pysv.function.DPIFunctionCall)
+        self.call_inst = pysv.make_call(func, *args, **kwargs)
+        # get the class instance name
+        if func.meta is not None:
+            self.name = func.meta
+            func.meta = None
+        else:
+            self.name = None
+
+    def str(self, is_sv, arg_to_str, use_ptr=False):
+        return self.call_inst.str(is_sv, arg_to_str, class_var_name=self.name, use_ptr=use_ptr)

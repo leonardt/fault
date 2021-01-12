@@ -30,7 +30,8 @@ setup(
         "pyyaml",
         "scipy",
         "numpy",
-        "DeCiDa"
+        "DeCiDa",
+        "pysv"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',

@@ -22,6 +22,7 @@ import fault.expression as expression
 import platform
 import os
 import glob
+import pysv
 
 
 max_bits = 64 if platform.architecture()[0] == "64bit" else 32
@@ -56,7 +57,7 @@ VerilatedVcdC* tracer;
 int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
-  {kratos_start_call}
+  {start_code}
 #if VM_TRACE
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {{
   tracer->dump(main_time);
   tracer->close();
 #endif
-  {kratos_exit_call}
+  {exit_code}
 
 #ifdef _VERILATED_COV_H_
     write_coverage();
@@ -93,7 +94,8 @@ class VerilatorTarget(VerilogTarget):
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False,
                  disp_type='on_error', coverage=False, use_kratos=False,
-                 defines=None, parameters=None, ext_model_file=None):
+                 defines=None, parameters=None, ext_model_file=None,
+                 use_pysv=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -121,6 +123,7 @@ class VerilatorTarget(VerilogTarget):
         self.disp_type = disp_type
         self.use_kratos = use_kratos
         self.parameters = parameters if parameters is not None else {}
+        self.exit_code = ""
 
         # Try to import kratos_runtime, if needed
         # (it may be used in verilator_comp_cmd)
@@ -143,6 +146,8 @@ class VerilatorTarget(VerilogTarget):
         else:
             verilog_filename = self.verilog_file.name
 
+        self.use_pysv = use_pysv
+
         # Compile the design using `verilator`, if not skip
         if not skip_verilator:
             driver_file = self.directory / Path(
@@ -157,7 +162,8 @@ class VerilatorTarget(VerilogTarget):
                 coverage=self.coverage,
                 use_kratos=use_kratos,
                 defines=defines,
-                parameters=parameters
+                parameters=parameters,
+                use_pysv=use_pysv
             )
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
@@ -168,9 +174,8 @@ class VerilatorTarget(VerilogTarget):
 
     def _make_assert(self, got, expected, i, port, user_msg,
                      below=None, above=None, style='hex'):
-        kratos_exit_call = ""
         if self.use_kratos:
-            kratos_exit_call = "teardown_runtime();"
+            self.exit_code += "teardown_runtime();\n"
         user_msg_str = ""
         if user_msg:
             arg_str = ""
@@ -215,7 +220,7 @@ if (!({cond})) {{
     tracer->dump(main_time);
     tracer->close();
 #endif
-    {kratos_exit_call}
+    {self.exit_code}
     exit(1);
 }}
     '''
@@ -243,7 +248,11 @@ if (!({cond})) {{
         return value_str
 
     def process_value(self, port, value):
-        if isinstance(value, expression.Expression):
+        if isinstance(value, expression.CallExpression):
+            def arg_to_str(v):
+                return self.process_value(port, v)
+            return value.str(False, arg_to_str, use_ptr=True)
+        elif isinstance(value, expression.Expression):
             return self.compile_expression(value)
         if isinstance(value, Bit):
             return int(value)
@@ -542,6 +551,9 @@ if (!({cond})) {{
             ])
         ])
 
+    def make_call(self, i, action: actions.Call):
+        return super().make_call(i, action)
+
     def make_file_close(self, i, action):
         fd_var = self.fd_var(action.file)
         return [f'fclose({fd_var});']
@@ -604,6 +616,8 @@ if (!({cond})) {{
             for s, t in size_map:
                 if size_key <= s:
                     return [f"{t} {action.name};"]
+        elif type(action._type) == type:
+            return [f"{action._type.__name__} *{action.name};"]
 
         raise NotImplementedError(action._type)
 
@@ -651,6 +665,9 @@ if (!({expr_str})) {{
             '<sys/stat.h>',
         ]
 
+        if self.use_pysv:
+            includes += ['"pysv.hh"']
+
         # if we're using the GetValue feature, then we need to open/close a
         # file in which GetValue results will be written
         if any(isinstance(action, GetValue) for action in actions):
@@ -682,18 +699,22 @@ if (!({expr_str})) {{
         if self.use_kratos:
             includes_src += "\nvoid initialize_runtime();\n"
             includes_src += "void teardown_runtime();\n"
-            kratos_start_call = "initialize_runtime();"
-            kratos_exit_call = "teardown_runtime();"
+            start_code = "initialize_runtime();\n"
+            self.exit_code += "teardown_runtime();"
         else:
-            kratos_start_call = ""
-            kratos_exit_call = ""
+            start_code = ""
+
+        # need to use using namespace
+        if self.use_pysv:
+            start_code += "using namespace pysv;\n"
+            self.exit_code += "pysv_finalize();\n"
 
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
             circuit_name=self.circuit_name,
-            kratos_start_call=kratos_start_call,
-            kratos_exit_call=kratos_exit_call
+            start_code=start_code,
+            exit_code=self.exit_code
         )
 
         return src
@@ -729,6 +750,18 @@ if (!({expr_str})) {{
             env = {"LD_LIBRARY_PATH": os.path.dirname(dst_path)}
         else:
             env = None
+
+        # codegen the c++ binding if needed
+        if len(self.pysv_funcs) > 0:
+            header = os.path.join(self.directory, "pysv.hh")
+            pysv.generate_cxx_binding(self.pysv_funcs, filename=header)
+            lib_path = pysv.compile_lib(self.pysv_funcs, os.path.join(self.directory, "obj_dir"))
+            ld_lib_path = os.path.realpath(os.path.dirname(lib_path))
+            if env is None:
+                env = {}
+            if "LD_LIBRARY_PATH" in env:
+                ld_lib_path = env["LD_LIBRARY_PATH"] + ":" + ld_lib_path
+            env["LD_LIBRARY_PATH"] = ld_lib_path
 
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)

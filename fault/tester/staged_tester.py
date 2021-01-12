@@ -30,6 +30,7 @@ import os
 import inspect
 from fault.config import get_test_dir
 import tempfile
+import pysv
 from hwtypes import BitVector
 
 
@@ -84,6 +85,7 @@ class Tester(TesterBase):
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
+        self.pysv_funcs = []
 
     def init_clock(self):
         if self.clock is not None:
@@ -357,6 +359,17 @@ class Tester(TesterBase):
 
     def join_none(self, *args):
         return self.join(*args, join_type=actions.JoinType.None_)
+
+    def make_call(self, func, *args, **kwargs):
+        if type(func) == type:
+            func_def = func.__init__
+        else:
+            func_def = func
+        assert isinstance(func_def, pysv.function.DPIFunctionCall)
+        if func not in self.pysv_funcs:
+            self.pysv_funcs.append(func)
+        self.actions.append(actions.Call(func))
+        return expression.CallExpression(func_def, *args, **kwargs)
 
     def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """
