@@ -9,9 +9,8 @@ from fault.verilator_utils import verilator_version
 @pytest.mark.parametrize('success_msg', [None, "OK"])
 @pytest.mark.parametrize('failure_msg', [None, "FAILED"])
 @pytest.mark.parametrize('severity', ["error", "fatal", "warning"])
-@pytest.mark.parametrize('on', [None, f.posedge])
 @pytest.mark.parametrize('name', [None, "my_assert"])
-def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
+def test_immediate_assert(capsys, failure_msg, success_msg, severity,
                           name):
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
@@ -29,7 +28,6 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
                            success_msg=success_msg,
                            failure_msg=failure_msg,
                            severity=severity,
-                           on=on if on is None else on(io.CLK),
                            name=name)
 
     tester = f.Tester(Foo, Foo.CLK)
