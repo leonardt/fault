@@ -122,7 +122,7 @@ def test_immediate_assert_compile_guard():
         tester.compile_and_run("verilator", magma_opts={"inline": True},
                                flags=['--assert', '-Wno-UNUSED'],
                                directory=dir_, disp_type="realtime")
-    # Should fail pass without macro defined
+    # Should fail without macro defined
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("verilator", magma_opts={"inline": True},
