@@ -105,6 +105,7 @@ def test_immediate_assert_tuple_msg(capsys):
 def test_immediate_assert_compile_guard():
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
+
     class Foo(m.Circuit):
         io = m.IO(
             I0=m.In(m.Bit),
@@ -127,4 +128,4 @@ def test_immediate_assert_compile_guard():
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("verilator", magma_opts={"inline": True},
                                    flags=['--assert', '-DASSERT_ON=1',
-                                       '-Wno-UNUSED'], directory=dir_)
+                                   '-Wno-UNUSED'], directory=dir_)
