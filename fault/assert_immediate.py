@@ -1,9 +1,10 @@
 import magma as m
 from fault.property import Posedge
+from fault.assert_utils import add_compile_guards
 
 
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     name=None):
+                     name=None, compile_guard=None):
     """
     cond: m.Bit
     success_msg (optional): passed to $display on success
@@ -14,6 +15,9 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                             display debug information upon failure
     severity (optional): "error", "fatal", or "warning"
     name (optional): Adds `{name}: ` prefix to assertion
+    compile_guard (optional): a string or list of strings corresponding to
+                              macro variables used to guard the assertion with
+                              verilog `ifdef statements
     """
     success_msg_str = ""
     if success_msg is not None:
@@ -36,7 +40,10 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                 f"Unexpected type for failure_msg={type(failure_msg)}")
         failure_msg_str = f" else ${severity}({failure_msg});"
     name_str = "" if name is None else f"{name}: "
+    assert_str = """\
+initial {name_str}assert ({cond}){success_msg_str}{failure_msg_str};\
+"""
+    assert_str = add_compile_guards(compile_guard, assert_str)
     m.inline_verilog(
-        "initial {name_str}assert ({cond})"
-        "{success_msg_str}{failure_msg_str};",
+        assert_str,
         **format_args)
