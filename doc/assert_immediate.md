@@ -13,8 +13,6 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                             wrapped in quotes, integers are passed without
                             quotes (for $fatal))
     severity (optional): "error", "fatal", or "warning"
-    on (optional): If None, uses always @(*) sensitivity, otherwise something
-                   like f.posedge(io.CLK)
     name (optional): Adds `{name}: ` prefix to assertion
     """
 ```
