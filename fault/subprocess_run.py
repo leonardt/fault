@@ -166,6 +166,10 @@ def subprocess_run(args, cwd=None, env=None, disp_type='on_error', err_str=None,
         for k, e in enumerate(err_msg):
             print(RED + BRIGHT + f'{k+1}) {e}' + RESET_ALL)
 
+        # pytest dumps the source of functions that raise exceptions.
+        # However the source of this function is not relevant to the
+        # exception being raised.  Hence by wrapping `raise AssertionError`
+        # in a function we avoid cluttering the output.
         _throw(args, cwd, env, disp_type, err_str,
                chk_ret_code, shell, use_fault_cfg)
 
