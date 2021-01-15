@@ -77,6 +77,7 @@ int main(int argc, char **argv) {{
 #ifdef _VERILATED_COV_H_
     write_coverage();
 #endif
+  top->final();
 
 }}
 """  # nopep8
