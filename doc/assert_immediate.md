@@ -1,6 +1,11 @@
-# assert_immediate
+# assert_immediate and assert_final
 
-`fault` provides the ability to define immediate assertions using the `assert_immediate` function.
+`fault` provides the ability to define immediate assertions using the
+`assert_immediate` function.  These assertions are expected to hold true
+throughout the entire simulation.  There is also an `assert_final` function
+that provides the same interface for assertions that are expected to hold true
+at the end of a simulation.
+
 
 Here is the interface:
 ```python
@@ -14,6 +19,9 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                             quotes (for $fatal))
     severity (optional): "error", "fatal", or "warning"
     name (optional): Adds `{name}: ` prefix to assertion
+    compile_guard (optional): a string or list of strings corresponding to
+                              macro variables used to guard the assertion with
+                              verilog `ifdef statements
     """
 ```
 
