@@ -711,6 +711,7 @@ def test_not_onehot(use_sva):
                                            "terminate_unused": True})
 
 
+@requires_ncsim
 @pytest.mark.parametrize('use_sva', [True, False])
 @pytest.mark.parametrize('should_pass', [True, False])
 def test_advanced_property_example_1(use_sva, should_pass):
