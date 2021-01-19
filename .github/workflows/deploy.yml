@@ -20,10 +20,9 @@ jobs:
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     - name: Setup Env
-      uses: goanpeca/setup-miniconda@v1
+    - uses: actions/setup-python@v2
       with:
-        auto-update-conda: true
-        python-version: 3.7
+        python-version: '3.8'
     - name: Install verilator
       shell: bash
       run: |
