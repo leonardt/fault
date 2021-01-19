@@ -744,7 +744,7 @@ def test_advanced_property_example_1(use_sva, should_pass):
                 # Note parens matter!
                 (f.not_(f.onehot(io.a)) & io.b.reduce_or() & io.x[0].value())
                 | f.implies | f.delay[1] |
-                (io.y != f.past(io.y.value(), 2)),
+                (io.y.value() != f.past(io.y.value(), 2)),
                 name="name_A",
                 on=f.posedge(io.CLK),
                 disable_iff=f.not_(io.RESETN)

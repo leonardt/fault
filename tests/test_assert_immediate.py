@@ -9,9 +9,8 @@ from fault.verilator_utils import verilator_version
 @pytest.mark.parametrize('success_msg', [None, "OK"])
 @pytest.mark.parametrize('failure_msg', [None, "FAILED"])
 @pytest.mark.parametrize('severity', ["error", "fatal", "warning"])
-@pytest.mark.parametrize('on', [None, f.posedge])
 @pytest.mark.parametrize('name', [None, "my_assert"])
-def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
+def test_immediate_assert(capsys, failure_msg, success_msg, severity,
                           name):
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
@@ -29,7 +28,6 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity, on,
                            success_msg=success_msg,
                            failure_msg=failure_msg,
                            severity=severity,
-                           on=on if on is None else on(io.CLK),
                            name=name)
 
     tester = f.Tester(Foo, Foo.CLK)
@@ -102,3 +100,58 @@ def test_immediate_assert_tuple_msg(capsys):
     msg = ("%Error: Foo.v:13: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")
     assert msg in out, out
+
+
+def test_immediate_assert_compile_guard():
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
+
+    class Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bit),
+            I1=m.In(m.Bit)
+        ) + m.ClockIO()
+        io.CLK.unused()
+        f.assert_immediate(~(io.I0 & io.I1), compile_guard="ASSERT_ON")
+
+    tester = f.Tester(Foo, Foo.CLK)
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 1
+    tester.step(2)
+    # Should pass without macro defined
+    with tempfile.TemporaryDirectory() as dir_:
+        tester.compile_and_run("verilator", magma_opts={"inline": True},
+                               flags=['--assert', '-Wno-UNUSED'],
+                               directory=dir_, disp_type="realtime")
+    # Should fail without macro defined
+    with pytest.raises(AssertionError):
+        with tempfile.TemporaryDirectory() as dir_:
+            tester.compile_and_run("verilator", magma_opts={"inline": True},
+                                   flags=['--assert', '-DASSERT_ON=1',
+                                   '-Wno-UNUSED'], directory=dir_)
+
+
+def test_assert_final():
+    class Foo(m.Circuit):
+        io = m.IO(
+            O=m.Out(m.UInt[2]),
+        ) + m.ClockIO()
+        count = m.Register(m.UInt[2])()
+        count.I @= count.O + 1
+        io.O @= count.O
+        f.assert_final(count.O == 3)
+
+    tester = f.Tester(Foo, Foo.CLK)
+    for i in range(2):
+        tester.step(2)
+    # Should fail since count is 2
+    with pytest.raises(AssertionError):
+        with tempfile.TemporaryDirectory() as dir_:
+            dir_ = "build"
+            tester.compile_and_run("verilator", magma_opts={"inline": True},
+                                   flags=['--assert'], directory=dir_)
+    tester.step(2)
+    # Should pass since count is 3
+    with tempfile.TemporaryDirectory() as dir_:
+        tester.compile_and_run("verilator", magma_opts={"inline": True},
+                               flags=['--assert'], directory=dir_)

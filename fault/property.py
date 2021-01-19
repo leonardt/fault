@@ -3,6 +3,7 @@ import magma as m
 from fault.sva import SVAProperty
 from fault.expression import Expression, UnaryOp, BinaryOp
 from fault.infix import Infix
+from fault.assert_utils import add_compile_guards
 
 
 class Property:
@@ -258,19 +259,7 @@ def _make_statement(statement, prop, on, disable_iff, compile_guard, name,
         if not isinstance(name, str):
             raise TypeError("Expected string for name")
         prop_str = f"{name}: {prop_str}"
-    if compile_guard is not None:
-        if not isinstance(compile_guard, (str, list)):
-            raise TypeError("Expected string or list for compile_guard")
-        if isinstance(compile_guard, str):
-            compile_guard = [compile_guard]
-        for guard in reversed(compile_guard):
-            # Add tabs to line for indent
-            nested_prop_str = "\n    ".join(prop_str.splitlines())
-            prop_str = f"""\
-`ifdef {guard}
-    {nested_prop_str}
-`endif
-"""
+    prop_str = add_compile_guards(compile_guard, prop_str)
     m.inline_verilog(prop_str, inline_wire_prefix=inline_wire_prefix,
                      **format_args)
 
