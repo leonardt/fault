@@ -1,6 +1,7 @@
 import os.path
 import shutil
 import tempfile
+import magma as m
 import fault
 import pytest
 from .common import TestBasicClkCircuit
@@ -62,3 +63,16 @@ def test_waves(simulator, waveform_type, use_sva):
                                **kwargs)
         assert not os.path.exists(os.path.join(_dir,
                                                f"waveforms.{waveform_type}"))
+
+
+def test_wait_until_sv():
+    class Foo(m.Circuit):
+        io = m.IO(valid=m.Out(m.Bit)) + m.ClockIO()
+
+    tester = fault.SynchronousTester(Foo, Foo.CLK)
+    tester.wait_until_high(tester.circuit.valid)
+    tester.compile_and_run(target="system-verilog",
+                           simulator="iverilog", skip_run=True)
+    with open("build/Foo_tb.sv") as f:
+        # Should not be missing semicolon after wait
+        assert "#5;" in f.read()

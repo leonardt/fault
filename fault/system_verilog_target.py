@@ -1203,4 +1203,4 @@ class SynchronousSystemVerilogTarget(SystemVerilogTarget):
         )
 
     def make_step(self, i, action):
-        return [f"#{self.clock_step_delay * action.steps}"]
+        return [f"#{self.clock_step_delay * action.steps};"]
