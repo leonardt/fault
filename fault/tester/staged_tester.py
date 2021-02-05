@@ -360,7 +360,7 @@ class Tester(TesterBase):
     def join_none(self, *args):
         return self.join(*args, join_type=actions.JoinType.None_)
 
-    def make_call(self, func, *args, **kwargs):
+    def _make_call_expr(self, func, *args, **kwargs):
         if type(func) == type:
             func_def = func.__init__
         else:
@@ -370,6 +370,13 @@ class Tester(TesterBase):
             self.pysv_funcs.append(func)
         self.actions.append(actions.Call(func))
         return expression.CallExpression(func_def, *args, **kwargs)
+
+    def make_call_expr(self, func, *args, **kwargs):
+        return self._make_call_expr(func, *args, **kwargs)
+
+    def make_call_stmt(self, func, *args, **kwargs):
+        call_expr = self._make_call_expr(func, *args, **kwargs)
+        self.actions.append(actions.CallStmt(call_expr))
 
     def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """

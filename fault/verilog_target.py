@@ -7,6 +7,7 @@ import fault.actions as actions
 from fault.util import flatten
 import os
 from fault.select_path import SelectPath
+import fault.expression as expression
 
 
 class VerilogTarget(Target):
@@ -146,6 +147,8 @@ class VerilogTarget(Target):
             return self.make_join(i, action)
         elif isinstance(action, actions.Call):
             return self.make_call(i, action)
+        elif isinstance(action, actions.CallStmt):
+            return self.make_call_stmt(i, action)
         elif isinstance(action, actions.FileOpen):
             return self.make_file_open(i, action)
         elif isinstance(action, actions.FileWrite):
@@ -222,6 +225,10 @@ class VerilogTarget(Target):
         if func not in self.pysv_funcs:
             self.pysv_funcs.append(func)
         return []
+
+    @abstractmethod
+    def make_call_stmt(self, i, action: expression.CallExpression):
+        pass
 
     @abstractmethod
     def make_file_open(self, i, action):

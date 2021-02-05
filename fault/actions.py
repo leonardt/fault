@@ -296,6 +296,17 @@ class Call(Action):
         return Call(self.func.func_call)
 
 
+class CallStmt(Action):
+    def __init__(self, call_expr):
+        self.call_expr = call_expr
+
+    def __str__(self):
+        return f"CallStmt({self.call_expr})"
+
+    def retarget(self, new_circuit, clock):
+        return CallStmt(self.call_expr.retarget(new_circuit, clock))
+
+
 class FileOpen(Action):
     def __init__(self, file):
         """

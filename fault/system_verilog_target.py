@@ -537,6 +537,9 @@ class SystemVerilogTarget(VerilogTarget):
         self.imports.add("pysv")
         return super().make_call(i, action)
 
+    def make_call_stmt(self, i, action: actions.CallStmt):
+        return [action.call_expr.str(True, self.compile_expression) + ";"]
+
     def make_expect(self, i, action):
         # don't do anything if any value is OK
         if value_utils.is_any(action.value):

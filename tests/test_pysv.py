@@ -49,12 +49,12 @@ def test_function(target, simulator):
     tester.poke(tester.circuit.B, 1)
     tester.eval()
     tester.expect(tester.circuit.O,
-                  tester.make_call(gold_func,
-                                   tester.circuit.A, tester.circuit.B))
+                  tester.make_call_expr(gold_func, tester.circuit.A,
+                                        tester.circuit.B))
     # test out assigning values
     v = tester.Var("v", BitVector[4])
-    tester.poke(v, tester.make_call(gold_func, tester.circuit.A,
-                                    tester.circuit.B))
+    tester.poke(v, tester.make_call_expr(gold_func, tester.circuit.A,
+                                         tester.circuit.B))
     tester.eval()
     tester.expect(tester.circuit.O, v)
 
@@ -71,6 +71,10 @@ def test_class(target, simulator):
         def add(self, a):
             return a + self.b
 
+        @sv()
+        def incr(self, amount):
+            self.b += amount
+
     clear_imports(Model)
     a_value = 1
     tester = fault.Tester(dut)
@@ -78,13 +82,17 @@ def test_class(target, simulator):
     tester.poke(tester.circuit.B, 1)
 
     model = tester.Var("model", Model)
-    tester.poke(model, tester.make_call(Model, a_value))
+    tester.poke(model, tester.make_call_expr(Model, a_value))
 
     # start testing. using a loop
     loop = tester.loop(10)
     loop.poke(tester.circuit.B, loop.index)
     loop.eval()
-    loop.expect(tester.circuit.O, tester.make_call(model.add, loop.index))
+    loop.expect(tester.circuit.O, tester.make_call_expr(model.add, loop.index))
+
+    tester.make_call_stmt(model.incr, BitVector[32](2))
+
+    tester.expect(tester.circuit.O, tester.make_call_expr(model.add, 9) - 2)
 
     run_tester(tester, target, simulator)
 
