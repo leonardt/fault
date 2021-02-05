@@ -647,11 +647,6 @@ if (!({expr_str})) {{
 }}
     """.splitlines()
 
-    def make_call_stmt(self, i, action: actions.CallStmt):
-        def arg_to_str(v):
-            return self.process_value(None, v)
-        return [action.call_expr.str(False, arg_to_str, use_ptr=True) + ";"]
-
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default

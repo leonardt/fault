@@ -225,9 +225,8 @@ class VerilogTarget(Target):
             self.pysv_funcs.append(func)
         return []
 
-    @abstractmethod
     def make_call_stmt(self, i, action: actions.CallStmt):
-        pass
+        return [self.compile_expression(action.call_expr) + ";"]
 
     @abstractmethod
     def make_file_open(self, i, action):

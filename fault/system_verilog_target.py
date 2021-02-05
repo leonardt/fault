@@ -357,10 +357,6 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
-        elif isinstance(value, expression.CallExpression):
-            def arg_to_str(v):
-                return self.process_value(port, v)
-            value = value.str(True, arg_to_str)
         elif isinstance(value, expression.Expression):
             value = f"({self.compile_expression(value)})"
         return value
@@ -397,6 +393,8 @@ class SystemVerilogTarget(VerilogTarget):
             return f"{func_str}({args})"
         elif isinstance(value, int):
             return str(value)
+        elif isinstance(value, expression.CallExpression):
+            return value.str(True, self.compile_expression, use_ptr=True)
         return value
 
     def make_poke(self, i, action):
@@ -536,9 +534,6 @@ class SystemVerilogTarget(VerilogTarget):
     def make_call(self, i, action: actions.Call):
         self.imports.add("pysv")
         return super().make_call(i, action)
-
-    def make_call_stmt(self, i, action: actions.CallStmt):
-        return [action.call_expr.str(True, self.compile_expression) + ";"]
 
     def make_expect(self, i, action):
         # don't do anything if any value is OK
