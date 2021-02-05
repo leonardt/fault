@@ -7,7 +7,6 @@ import fault.actions as actions
 from fault.util import flatten
 import os
 from fault.select_path import SelectPath
-import fault.expression as expression
 
 
 class VerilogTarget(Target):
@@ -227,7 +226,7 @@ class VerilogTarget(Target):
         return []
 
     @abstractmethod
-    def make_call_stmt(self, i, action: expression.CallExpression):
+    def make_call_stmt(self, i, action: actions.CallStmt):
         pass
 
     @abstractmethod
