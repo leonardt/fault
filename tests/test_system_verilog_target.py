@@ -32,10 +32,10 @@ def test_waves(simulator, waveform_type, use_sva):
     if waveform_type == "fsdb":
         # Note this will only work on kiwi/buildkite env, users should set
         # their specific link flags
-        verdi_home = os.environ["VERDIHOME"]
+        verdi_home = os.environ["VERDI_HOME"]
         flags += ['-P',
-                  f' {verdi_home}/share/PLI/vcs_latest/LINUX64/novas.tab',
-                  f' {verdi_home}/share/PLI/vcs_latest/LINUX64/pli.a']
+                  f' {verdi_home}/share/PLI/VCS/LINUX64/novas.tab',
+                  f' {verdi_home}/share/PLI/VCS/LINUX64/pli.a']
         kwargs["fsdb_dumpvars_args"] = '0, "dut"'
     # Test default
     with tempfile.TemporaryDirectory(dir=".") as _dir:
