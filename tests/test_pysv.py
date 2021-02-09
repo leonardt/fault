@@ -118,7 +118,7 @@ def test_monitor(target, simulator):
 
         @sv()
         def observe(self, A, B, O):
-            print(A, B, self.value)
+            print(A, B, O, self.value)
             if self.value is not None:
                 assert O == self.value, f"{O} != {self.value}"
             # TODO: Referencing bitvector here doesn't work, so just manually
