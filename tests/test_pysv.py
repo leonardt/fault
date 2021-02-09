@@ -132,6 +132,8 @@ def test_monitor(target, simulator):
     def test(circuit, enable):
         tester = fault.SynchronousTester(circuit)
         monitor = tester.Var("monitor", Monitor)
+        # TODO: Need clock to start at 1 for proper semantics
+        tester.poke(circuit.CLK, 1)
         tester.poke(monitor, tester.make_call_expr(Monitor))
         tester.attach_monitor(monitor)
         tester.poke(circuit.CE, enable)

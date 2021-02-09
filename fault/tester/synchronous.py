@@ -19,6 +19,7 @@ class SynchronousTester(StagedTester):
         raise TypeError("Cannot eval with synchronous tester")
 
     def advance_cycle(self):
+        self.step(1)
         for monitor in self.monitors:
             argspec = inspect.getfullargspec(monitor.observe.func_def.func)
             assert argspec.args[0] == "self", "Expected self as first arg"
@@ -31,7 +32,7 @@ class SynchronousTester(StagedTester):
             assert argspec.annotations == {}, "Unsupported"
             assert argspec.defaults is None, "Unsupported"
             self.make_call_stmt(monitor.observe, *args)
-        self.step(2)
+        self.step(1)
 
     def make_target(self, target, **kwargs):
         if target == "system-verilog":
