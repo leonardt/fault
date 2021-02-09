@@ -394,7 +394,7 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(value, int):
             return str(value)
         elif isinstance(value, expression.CallExpression):
-            return value.str(True, self.compile_expression, use_ptr=True)
+            return value.str(True, self.compile_expression)
         return value
 
     def make_poke(self, i, action):
