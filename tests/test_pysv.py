@@ -125,6 +125,7 @@ def test_monitor(target, simulator):
             # mask for now
             # self.value = BitVector[4](A) + BitVector[4](B)
             self.value = (A + B) & ((1 << 4) - 1)
+            print(f"next value {self.value}")
 
     clear_imports(Monitor)
 
