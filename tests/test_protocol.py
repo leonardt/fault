@@ -37,7 +37,7 @@ class MWrapper(m.MagmaProtocol, metaclass=MWrapperMeta):
 WrappedBits8 = MWrapper[m.UInt[8]]
 
 
-@m.syntax.sequential.sequential
+@m.sequential2()
 class Foo:
     def __call__(self, val: WrappedBits8) -> m.UInt[8]:
         return val.apply(lambda x: x + 1)
