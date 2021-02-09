@@ -28,7 +28,7 @@ class SynchronousTester(StagedTester):
             assert argspec.varkw is None, "Unsupported"
             assert argspec.kwonlyargs == [], "Unsupported"
             assert argspec.kwonlydefaults is None, "Unsupported"
-            assert argspec.annotations  == {}, "Unsupported"
+            assert argspec.annotations == {}, "Unsupported"
             assert argspec.defaults is None, "Unsupported"
             self.make_call_stmt(monitor.observe, *args)
         self.step(2)
