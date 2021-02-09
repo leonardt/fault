@@ -1,3 +1,4 @@
+import pytest
 from pysv import sv, DataType
 from pysv.util import clear_imports
 import fault
@@ -13,12 +14,15 @@ def pytest_generate_tests(metafunc):
 
 class dut(m.Circuit):
     io = m.IO(A=m.In(m.Bits[4]), B=m.In(m.Bits[4]), O=m.Out(m.Bits[4]))
+    io += m.ClockIO()
+    io.CLK.unused()
     io.O @= io.A + io.B
 
 
 def run_tester(tester, target, simulator):
     kwargs = {
         "target": target,
+        # "disp_type": "realtime",
         "simulator": simulator,
         "tmp_dir": False
     }
@@ -95,6 +99,53 @@ def test_class(target, simulator):
     tester.expect(tester.circuit.O, tester.make_call_expr(model.add, 9) - 2)
 
     run_tester(tester, target, simulator)
+
+
+def test_monitor(target, simulator):
+    class DelayedDUT(m.Circuit):
+        io = m.IO(A=m.In(m.Bits[4]), B=m.In(m.Bits[4]), O=m.Out(m.Bits[4]))
+        io += m.ClockIO(has_enable=True)
+        io.O @= m.Register(m.Bits[4], has_enable=True)()(dut()(io.A, io.B),
+                                                         CE=io.CE)
+
+    # TODO: Using a subclass breaks pysv
+    # class Monitor(fault.PysvMonitor):
+    class Monitor:
+        @sv()
+        def __init__(self):
+            self.value = None
+
+        @sv()
+        def observe(self, A, B, O):
+            print(A, B, self.value)
+            if self.value is not None:
+                assert O == self.value, f"{O} != {self.value}"
+            # TODO: Referencing bitvector here doesn't work, so just manually
+            # mask for now
+            # self.value = BitVector[4](A) + BitVector[4](B)
+            self.value = (A + B) & ((1 << 4) - 1)
+
+    clear_imports(Monitor)
+
+    def test(circuit, enable):
+        tester = fault.SynchronousTester(circuit)
+        monitor = tester.Var("monitor", Monitor)
+        tester.poke(monitor, tester.make_call_expr(Monitor))
+        tester.attach_monitor(monitor)
+        tester.poke(circuit.CE, enable)
+
+        for i in range(4):
+            tester.poke(tester.circuit.A, BitVector.random(4))
+            tester.poke(tester.circuit.B, BitVector.random(4))
+            tester.advance_cycle()
+        tester.advance_cycle()
+
+        run_tester(tester, target, simulator)
+    # Should work
+    test(DelayedDUT, 1)
+    with pytest.raises(AssertionError):
+        # Should fail
+        test(DelayedDUT, 0)
 
 
 if __name__ == "__main__":

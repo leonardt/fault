@@ -21,3 +21,4 @@ from fault.property import (assert_, implies, delay, posedge, repeat, goto,
 from fault.sva import sva
 from fault.assert_immediate import assert_immediate, assert_final
 from fault.expression import abs, min, max, signed, integer
+from fault.pysv import PysvMonitor
