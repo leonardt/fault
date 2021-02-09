@@ -358,7 +358,7 @@ class SystemVerilogTarget(VerilogTarget):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
         elif isinstance(value, expression.Expression):
-            value = f"({self.compile_expression(value)})"
+            value = f"{self.compile_expression(value)}"
         return value
 
     def compile_expression(self, value):
@@ -372,11 +372,11 @@ class SystemVerilogTarget(VerilogTarget):
             elif op == "!=":
                 # Use strict neq
                 op = "!=="
-            return f"({left}) {op} ({right})"
+            return f"({left} {op} {right})"
         elif isinstance(value, expression.UnaryOp):
             operand = self.compile_expression(value.operand)
             op = value.op_str
-            return f"{op} ({operand})"
+            return f"({op} {operand})"
         elif isinstance(value, PortWrapper):
             path = value.select_path.system_verilog_path(self.disable_ndarray)
             return f"dut.{path}"
