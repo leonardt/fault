@@ -24,6 +24,7 @@ def run_tester(tester, target, simulator):
         "target": target,
         # "disp_type": "realtime",
         "simulator": simulator,
+        "magma_opts": {"sv": True},
         "tmp_dir": False
     }
 
