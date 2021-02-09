@@ -146,6 +146,8 @@ class VerilogTarget(Target):
             return self.make_join(i, action)
         elif isinstance(action, actions.Call):
             return self.make_call(i, action)
+        elif isinstance(action, actions.CallStmt):
+            return self.make_call_stmt(i, action)
         elif isinstance(action, actions.FileOpen):
             return self.make_file_open(i, action)
         elif isinstance(action, actions.FileWrite):
@@ -222,6 +224,9 @@ class VerilogTarget(Target):
         if func not in self.pysv_funcs:
             self.pysv_funcs.append(func)
         return []
+
+    def make_call_stmt(self, i, action: actions.CallStmt):
+        return [self.compile_expression(action.call_expr) + ";"]
 
     @abstractmethod
     def make_file_open(self, i, action):

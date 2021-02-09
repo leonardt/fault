@@ -249,11 +249,7 @@ if (!({cond})) {{
         return value_str
 
     def process_value(self, port, value):
-        if isinstance(value, expression.CallExpression):
-            def arg_to_str(v):
-                return self.process_value(port, v)
-            return value.str(False, arg_to_str, use_ptr=True)
-        elif isinstance(value, expression.Expression):
+        if isinstance(value, expression.Expression):
             return self.compile_expression(value)
         if isinstance(value, Bit):
             return int(value)
@@ -314,6 +310,8 @@ if (!({cond})) {{
             return f"{func_str}({args})"
         elif isinstance(value, int):
             return str(value)
+        elif isinstance(value, expression.CallExpression):
+            return value.str(False, self.compile_expression, use_ptr=True)
         return value
 
     def process_bitwise_assign(self, port, name, value):
