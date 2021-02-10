@@ -366,7 +366,7 @@ class Tester(TesterBase):
         return self.join(*args, join_type=actions.JoinType.None_)
 
     def _make_call_expr(self, func, *args, **kwargs):
-        if type(func) == type:
+        if isinstance(func, type):
             func_def = func.__init__
         else:
             func_def = func

@@ -106,9 +106,7 @@ def test_monitor(target, simulator):
         io.O @= m.Register(m.Bits[4], has_enable=True)()(dut()(io.A, io.B),
                                                          CE=io.CE)
 
-    # TODO: Using a subclass breaks pysv
-    # class Monitor(fault.PysvMonitor):
-    class Monitor:
+    class Monitor(fault.PysvMonitor):
         @sv()
         def __init__(self):
             self.value = None

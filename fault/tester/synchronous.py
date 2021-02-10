@@ -6,6 +6,7 @@ from ..verilator_target import SynchronousVerilatorTarget
 
 from fault.tester.control import add_control_structures
 from fault.pysv import PysvMonitor
+import fault.actions as actions
 
 
 @add_control_structures
@@ -43,8 +44,8 @@ class SynchronousTester(StagedTester):
                                               **kwargs)
         return super().make_target(target, **kwargs)
 
-    def attach_monitor(self, monitor: PysvMonitor):
-        # TODO: See tests/test_pysv.py:111, pysv preventing inheritance
-        # if not isinstance(monitor, PysvMonitor):
-        #     raise TypeError("Expected PysvMonitor")
+    def attach_monitor(self, monitor: actions.Var):
+        if (not isinstance(monitor, actions.Var) and
+                not isinstance(monitor._type, PysvMonitor)):
+            raise TypeError("Expected PysvMonitor variable")
         self.monitors.append(monitor)
