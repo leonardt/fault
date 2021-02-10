@@ -615,7 +615,7 @@ if (!({cond})) {{
             for s, t in size_map:
                 if size_key <= s:
                     return [f"{t} {action.name};"]
-        elif type(action._type) == type:
+        elif isinstance(action._type, type):
             return [f"{action._type.__name__} *{action.name};"]
 
         raise NotImplementedError(action._type)

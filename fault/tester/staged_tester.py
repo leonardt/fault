@@ -69,7 +69,7 @@ class Tester(TesterBase):
 
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
                  reset: m.Reset = None, poke_delay_default=None,
-                 expect_strict_default=True):
+                 expect_strict_default=True, monitors=None):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
@@ -86,6 +86,10 @@ class Tester(TesterBase):
         # For public verilator modules
         self.verilator_includes = []
         self.pysv_funcs = []
+        if monitors is None:
+            self.monitors = []
+        else:
+            self.monitors = monitors
 
     def init_clock(self):
         if self.clock is not None:
@@ -333,7 +337,7 @@ class Tester(TesterBase):
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        loop_tester = self.LoopTester(self._circuit, self.clock)
+        loop_tester = self.LoopTester(self._circuit, self.clock, self.monitors)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
@@ -342,7 +346,8 @@ class Tester(TesterBase):
         """
         Returns a fork process to record actions inside the fork
         """
-        fork_tester = self.ForkTester(name, self._circuit, self.clock)
+        fork_tester = self.ForkTester(name, self._circuit, self.clock,
+                                      self.monitors)
         return fork_tester
 
     def join(self, *args, join_type=actions.JoinType.Default):
@@ -361,7 +366,7 @@ class Tester(TesterBase):
         return self.join(*args, join_type=actions.JoinType.None_)
 
     def _make_call_expr(self, func, *args, **kwargs):
-        if type(func) == type:
+        if isinstance(func, type):
             func_def = func.__init__
         else:
             func_def = func
@@ -404,12 +409,13 @@ class Tester(TesterBase):
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        while_tester = self.LoopTester(self._circuit, self.clock)
+        while_tester = self.LoopTester(self._circuit, self.clock,
+                                       self.monitors)
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
     def _if(self, cond):
-        if_tester = self.IfTester(self._circuit, self.clock)
+        if_tester = self.IfTester(self._circuit, self.clock, self.monitors)
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester

@@ -30,29 +30,30 @@ def add_control_structures(tester_class):
     class LoopTester(NoClockInit, tester_class):
         __unique_index_id = -1
 
-        def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
-            super().__init__(circuit, clock)
+        def __init__(self, circuit: m.Circuit, clock: m.Clock, monitors):
+            super().__init__(circuit, clock, monitors=monitors)
             LoopTester.__unique_index_id += 1
             self.index = LoopIndex(
                 f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
 
     class ElseTester(NoClockInit, tester_class):
         def __init__(self, else_actions: List, circuit: m.Circuit,
-                     clock: m.Clock = None):
-            super().__init__(circuit, clock)
+                     clock: m.Clock, monitors):
+            super().__init__(circuit, clock, monitors=monitors)
             self.actions = else_actions
 
     class IfTester(NoClockInit, tester_class):
-        def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
-            super().__init__(circuit, clock)
+        def __init__(self, circuit: m.Circuit, clock: m.Clock, monitors):
+            super().__init__(circuit, clock, monitors=monitors)
             self.else_actions = []
 
         def _else(self):
-            return ElseTester(self.else_actions, self._circuit, self.clock)
+            return ElseTester(self.else_actions, self._circuit, self.clock,
+                              self.monitors)
 
     class ForkTester(NoClockInit, tester_class):
-        def __init__(self, name, circuit: m.Circuit, clock: m.Clock = None):
-            super().__init__(circuit, clock)
+        def __init__(self, name, circuit: m.Circuit, clock: m.Clock, monitors):
+            super().__init__(circuit, clock, monitors=monitors)
             self.name = name
 
     tester_class.LoopTester = LoopTester

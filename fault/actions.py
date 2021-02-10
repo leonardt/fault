@@ -420,7 +420,7 @@ class Var(Action, expression.Expression):
         return Var(self.name, self._type)
 
     def __getattr__(self, name):
-        if type(self._type) == type:
+        if isinstance(self._type, type):
             func = getattr(self._type, name)
             assert isinstance(func, pysv.function.DPIFunctionCall),\
                 "Only pysv class object can be used to get class methods"
