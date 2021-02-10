@@ -1,6 +1,5 @@
 import pytest
 from pysv import sv, DataType
-from pysv.util import clear_imports
 import fault
 import magma as m
 from hwtypes import BitVector
@@ -48,7 +47,6 @@ def test_function(target, simulator):
     def gold_func(a, b):
         return a + b
 
-    clear_imports(gold_func)
     tester = fault.Tester(dut)
     tester.poke(tester.circuit.A, 1)
     tester.poke(tester.circuit.B, 1)
@@ -80,7 +78,6 @@ def test_class(target, simulator):
         def incr(self, amount):
             self.b += amount
 
-    clear_imports(Model)
     a_value = 1
     tester = fault.Tester(dut)
     tester.poke(tester.circuit.A, a_value)
@@ -121,13 +118,8 @@ def test_monitor(target, simulator):
             print(A, B, O, self.value)
             if self.value is not None:
                 assert O == self.value, f"{O} != {self.value}"
-            # TODO: Referencing bitvector here doesn't work, so just manually
-            # mask for now
-            # self.value = BitVector[4](A) + BitVector[4](B)
-            self.value = (A + B) & ((1 << 4) - 1)
+            self.value = BitVector[4](A) + BitVector[4](B)
             print(f"next value {self.value}")
-
-    clear_imports(Monitor)
 
     def test(circuit, enable):
         tester = fault.SynchronousTester(circuit)
