@@ -106,6 +106,7 @@ def test_monitor(target, simulator):
         io.O @= m.Register(m.Bits[4], has_enable=True)()(dut()(io.A, io.B),
                                                          CE=io.CE)
 
+    @fault.python_monitor()
     class Monitor(fault.PysvMonitor):
         @sv()
         def __init__(self):
@@ -140,6 +141,47 @@ def test_monitor(target, simulator):
     with pytest.raises(AssertionError):
         # Should fail
         test(DelayedDUT, 0)
+
+
+def test_monitor_product(target, simulator):
+    class T(m.Product):
+        A = m.In(m.Bits[4])
+        B = m.In(m.Bits[4])
+
+    class DelayedDUTProduct(m.Circuit):
+        io = m.IO(I=T, O=m.Out(m.Bits[4]))
+        io += m.ClockIO(has_enable=True)
+        io.O @= m.Register(m.Bits[4], has_enable=True)()(dut()(io.I.A, io.I.B),
+                                                         CE=io.CE)
+
+    @fault.python_monitor()
+    class ProductMonitor(fault.PysvMonitor):
+        @sv()
+        def __init__(self):
+            self.value = None
+
+        @sv()
+        def observe(self, I: T, O):
+            if self.value is not None:
+                assert O == self.value, f"{O} != {self.value}"
+            self.value = BitVector[4](I["A"]) + BitVector[4](I["B"])
+            print(f"next value {self.value}")
+
+    tester = fault.SynchronousTester(DelayedDUTProduct)
+    monitor = tester.Var("monitor", ProductMonitor)
+    # TODO: Need clock to start at 1 for proper semantics
+    tester.poke(DelayedDUTProduct.CLK, 1)
+    tester.poke(monitor, tester.make_call_expr(ProductMonitor))
+    tester.attach_monitor(monitor)
+    tester.poke(DelayedDUTProduct.CE, 1)
+
+    for i in range(4):
+        tester.poke(tester.circuit.I, (BitVector.random(4),
+                                       BitVector.random(4)))
+        tester.advance_cycle()
+    tester.advance_cycle()
+
+    run_tester(tester, target, simulator)
 
 
 if __name__ == "__main__":
