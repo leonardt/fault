@@ -51,12 +51,17 @@ class MonitorTransformer(cst.CSTTransformer):
                 if param.annotation is None:
                     new_params.append(param)
                 else:
-                    T = eval(to_module(param.annotation.annotation).code, dict(self.env))
+                    T = eval(to_module(param.annotation.annotation).code,
+                             dict(self.env))
                     if not issubclass(T, m.Product):
                         raise NotImplementedError()
-                    flat_args, nested_args = _gen_product_args(param.name.value, T)
-                    new_params.extend(cst.Param(cst.Name(arg)) for arg in flat_args)
-                    prelude.append(cst.parse_statement(f"{param.name.value} = {nested_args}"))
+                    flat_args, nested_args = _gen_product_args(
+                        param.name.value, T)
+                    new_params.extend(
+                        cst.Param(cst.Name(arg)) for arg in flat_args)
+                    prelude.append(
+                        cst.parse_statement(
+                            f"{param.name.value} = {nested_args}"))
             return updated_node.with_changes(
                 params=updated_node.params.with_changes(params=new_params),
                 body=updated_node.body.with_changes(
@@ -86,10 +91,10 @@ class python_monitor(apply_passes):
                          file_name=file_name)
 
     def exec(self,
-            etree: tp.Union[cst.ClassDef, cst.FunctionDef],
-            stree: tp.Union[cst.ClassDef, cst.FunctionDef],
-            env: SymbolTable,
-            metadata: tp.MutableMapping):
+             etree: tp.Union[cst.ClassDef, cst.FunctionDef],
+             stree: tp.Union[cst.ClassDef, cst.FunctionDef],
+             env: SymbolTable,
+             metadata: tp.MutableMapping):
         result = super().exec(etree, stree, env, metadata)
         result.observe._orig_args_ = metadata["_orig_observe_args_"]
         result._source_code_ = to_module(stree).code
