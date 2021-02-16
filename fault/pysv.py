@@ -14,6 +14,12 @@ import magma as m
 
 
 def _gen_product_args(base_name, T):
+    """
+    Returns:
+        * Flat arguments used for the observe function
+        * Nested arguments used to reconstruct the original argument using
+          SimpleNamespace for dot notation
+    """
     if not issubclass(T, m.Product):
         return [base_name], base_name
     flat_args = []
@@ -39,10 +45,18 @@ class MonitorTransformer(cst.CSTTransformer):
         self.metadata = metadata
 
     def leave_FunctionDef(self, original_node, updated_node):
+        """
+        Transforms the observe function to accept the flattened version of
+        arguments (e.g. product leaf ports).  Inserts code into the beginning
+        of the function to reconstruct the original argument using
+        SimpleNamespace to provide dot notation
+        """
         if match.matches(updated_node.name,
                          match.Name("observe")):
             params = updated_node.params.params
             assert match.matches(params[0], match.Param(match.Name("self")))
+            # Keep around the original arguments since this will be needed by
+            # the monitor peek logic (requires the unflattened arguments
             self.metadata["_orig_observe_args_"] = [param.name.value
                                                     for param in params]
             new_params = [params[0]]
