@@ -164,7 +164,7 @@ def test_monitor_product(target, simulator):
         def observe(self, I: T, O):
             if self.value is not None:
                 assert O == self.value, f"{O} != {self.value}"
-            self.value = BitVector[4](I["A"]) + BitVector[4](I["B"])
+            self.value = BitVector[4](I.A) + BitVector[4](I.B)
             print(f"next value {self.value}")
 
     tester = fault.SynchronousTester(DelayedDUTProduct)

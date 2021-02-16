@@ -23,8 +23,8 @@ def _gen_product_args(base_name, T):
             base_name + "_" + elem, value
         )
         flat_args += _flat_args
-        nested_args.append(f"'{elem}': {_nested_arg}")
-    return flat_args, f"{{{', '.join(nested_args)}}}"
+        nested_args.append(f"{elem}={_nested_arg}")
+    return flat_args, f"SimpleNamespace({', '.join(nested_args)})"
 
 
 class PysvMonitor(ABC, metaclass=ABCMeta):
@@ -46,7 +46,9 @@ class MonitorTransformer(cst.CSTTransformer):
             self.metadata["_orig_observe_args_"] = [param.name.value
                                                     for param in params]
             new_params = [params[0]]
-            prelude = []
+            prelude = [
+                cst.parse_statement("from types import SimpleNamespace")
+            ]
             for param in params[1:]:
                 if param.annotation is None:
                     new_params.append(param)
