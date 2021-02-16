@@ -319,7 +319,7 @@ class SystemVerilogTarget(VerilogTarget):
                 self.disable_ndarray
             )
             return f"dut.{path}"
-        return f"{value.port.name}"
+        return f"{verilog_name(value.port.name, self.disable_ndarray)}"
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta):
