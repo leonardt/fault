@@ -630,6 +630,12 @@ class SystemVerilogTarget(VerilogTarget):
                 port_list.extend(result)
         elif issubclass(type_, m.Tuple):
             for k, t in zip(type_.keys(), type_.types()):
+                try:
+                    int(k)
+                    # python/coreir don't allow pure integer names
+                    k = f"_{k}"
+                except ValueError:
+                    pass
                 result = self.generate_port_code(
                     name + "_" + str(k), t, power_args
                 )
