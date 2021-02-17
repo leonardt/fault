@@ -22,11 +22,10 @@ class SynchronousTester(StagedTester):
         raise TypeError("Cannot eval with synchronous tester")
 
     def _flat_peek(self, value):
-        if isinstance(value, m.Product):
-            return sum((self._flat_peek(elem) for elem in value), [])
-        if (isinstance(value, m.Array) and
+        if (isinstance(value, m.Tuple) or
+                isinstance(value, m.Array) and
                 not issubclass(value.T, m.Digital)):
-            raise NotImplementedError()
+            return sum((self._flat_peek(elem) for elem in value), [])
         return [self.peek(value)]
 
     def _call_monitors(self):
