@@ -8,6 +8,8 @@ from fault.tester.control import add_control_structures
 from fault.pysv import PysvMonitor
 import fault.actions as actions
 
+import magma as m
+
 
 @add_control_structures
 class SynchronousTester(StagedTester):
@@ -19,20 +21,25 @@ class SynchronousTester(StagedTester):
     def eval(self):
         raise TypeError("Cannot eval with synchronous tester")
 
+    def _flat_peek(self, value):
+        if isinstance(value, m.Product):
+            return sum((self._flat_peek(elem) for elem in value), [])
+        if (isinstance(value, m.Array) and
+                not issubclass(value.T, m.Digital)):
+            raise NotImplementedError()
+        return [self.peek(value)]
+
+    def _call_monitors(self):
+        for monitor in self.monitors:
+            args = monitor.observe._orig_args_
+            assert args[0] == "self"
+            args = sum((self._flat_peek(getattr(self._circuit, arg))
+                        for arg in args[1:]), [])
+            self.make_call_stmt(monitor.observe, *args)
+
     def advance_cycle(self):
         self.step(1)
-        for monitor in self.monitors:
-            argspec = inspect.getfullargspec(monitor.observe.func_def.func)
-            assert argspec.args[0] == "self", "Expected self as first arg"
-            args = [self.peek(getattr(self._circuit, arg))
-                    for arg in argspec.args[1:]]
-            assert argspec.varargs is None, "Unsupported"
-            assert argspec.varkw is None, "Unsupported"
-            assert argspec.kwonlyargs == [], "Unsupported"
-            assert argspec.kwonlydefaults is None, "Unsupported"
-            assert argspec.annotations == {}, "Unsupported"
-            assert argspec.defaults is None, "Unsupported"
-            self.make_call_stmt(monitor.observe, *args)
+        self._call_monitors()
         self.step(1)
 
     def make_target(self, target, **kwargs):
