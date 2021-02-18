@@ -184,5 +184,127 @@ def test_monitor_product(target, simulator):
     run_tester(tester, target, simulator)
 
 
+def test_monitor_array(target, simulator):
+    class DelayedDUTArray(m.Circuit):
+        io = m.IO(I=m.In(m.Array[2, m.Bits[4]]), O=m.Out(m.Bits[4]))
+        io += m.ClockIO(has_enable=True)
+        io.O @= m.Register(m.Bits[4], has_enable=True)()(dut()(io.I[0],
+                                                               io.I[1]),
+                                                         CE=io.CE)
+
+    @fault.python_monitor()
+    class ArrayMonitor(fault.PysvMonitor):
+        @sv()
+        def __init__(self):
+            self.value = None
+
+        @sv()
+        def observe(self, I: m.Array[2, m.Bits[4]], O):
+            if self.value is not None:
+                assert O == self.value, f"{O} != {self.value}"
+            self.value = BitVector[4](I[0]) + BitVector[4](I[1])
+            print(f"next value {self.value}")
+
+    tester = fault.SynchronousTester(DelayedDUTArray)
+    monitor = tester.Var("monitor", ArrayMonitor)
+    # TODO: Need clock to start at 1 for proper semantics
+    tester.poke(DelayedDUTArray.CLK, 1)
+    tester.poke(monitor, tester.make_call_expr(ArrayMonitor))
+    tester.attach_monitor(monitor)
+    tester.poke(DelayedDUTArray.CE, 1)
+
+    for i in range(4):
+        tester.poke(tester.circuit.I, [BitVector.random(4),
+                                       BitVector.random(4)])
+        tester.advance_cycle()
+    tester.advance_cycle()
+
+    run_tester(tester, target, simulator)
+
+
+def test_monitor_3d_array(target, simulator):
+    class DelayedDUTArray3D(m.Circuit):
+        io = m.IO(I=m.In(m.Array[(4, 2, 3), m.Bit]), O=m.Out(m.Bits[4]))
+        io += m.ClockIO(has_enable=True)
+        x = m.bits(0, 4)
+        for i in range(3):
+            for j in range(2):
+                x -= io.I[i][j]
+        io.O @= m.Register(m.Bits[4], has_enable=True)()(x, CE=io.CE)
+
+    @fault.python_monitor()
+    class Array3DMonitor(fault.PysvMonitor):
+        @sv()
+        def __init__(self):
+            self.value = None
+
+        @sv()
+        def observe(self, I: m.Array[(4, 2, 3), m.Bit], O):
+            if self.value is not None:
+                assert O == self.value, f"{O} != {self.value}"
+            self.value = BitVector[4](0)
+            for i in range(3):
+                for j in range(2):
+                    self.value -= BitVector[4](I[i][j])
+            print(f"next value {self.value}")
+
+    tester = fault.SynchronousTester(DelayedDUTArray3D)
+    monitor = tester.Var("monitor", Array3DMonitor)
+    # TODO: Need clock to start at 1 for proper semantics
+    tester.poke(DelayedDUTArray3D.CLK, 1)
+    tester.poke(monitor, tester.make_call_expr(Array3DMonitor))
+    tester.attach_monitor(monitor)
+    tester.poke(DelayedDUTArray3D.CE, 1)
+
+    for i in range(4):
+        tester.poke(
+            tester.circuit.I,
+            [[BitVector.random(4) for j in range(2)] for i in range(3)])
+        tester.advance_cycle()
+    tester.advance_cycle()
+
+    run_tester(tester, target, simulator)
+
+
+def test_monitor_array_tuple(target, simulator):
+    class DelayedDUTArrayTuple(m.Circuit):
+        io = m.IO(I=m.In(m.Array[2, m.Tuple[m.Bits[4], m.Bits[4]]]),
+                  O=m.Out(m.Bits[4]))
+        io += m.ClockIO(has_enable=True)
+        x = io.I[0][0] - io.I[0][1] - io.I[1][0] - io.I[1][1]
+        io.O @= m.Register(m.Bits[4], has_enable=True)()(x, CE=io.CE)
+
+    @fault.python_monitor()
+    class ArrayTupleMonitor(fault.PysvMonitor):
+        @sv()
+        def __init__(self):
+            self.value = None
+
+        @sv()
+        def observe(self, I: m.Array[2, m.Tuple[m.Bits[4], m.Bits[4]]], O):
+            if self.value is not None:
+                assert O == self.value, f"{O} != {self.value}"
+            self.value = BitVector[4](I[0][0]) - BitVector[4](I[0][1])
+            self.value -= BitVector[4](I[1][0]) + BitVector[4](I[1][1])
+            print(f"next value {self.value}")
+
+    tester = fault.SynchronousTester(DelayedDUTArrayTuple)
+    monitor = tester.Var("monitor", ArrayTupleMonitor)
+    # TODO: Need clock to start at 1 for proper semantics
+    tester.poke(DelayedDUTArrayTuple.CLK, 1)
+    tester.poke(monitor, tester.make_call_expr(ArrayTupleMonitor))
+    tester.attach_monitor(monitor)
+    tester.poke(DelayedDUTArrayTuple.CE, 1)
+
+    for i in range(4):
+        tester.poke(tester.circuit.I,
+                    [[BitVector.random(4), BitVector.random(4)]
+                     for j in range(2)])
+        tester.advance_cycle()
+    tester.advance_cycle()
+
+    run_tester(tester, target, simulator)
+
+
 if __name__ == "__main__":
     test_class("verilator", None)

@@ -13,24 +13,53 @@ import libcst.matchers as match
 import magma as m
 
 
-def _gen_product_args(base_name, T):
+def _is_leaf_type(T):
+    return (issubclass(T, m.Digital) or
+            issubclass(T, m.Array) and issubclass(T.T, m.Digital))
+
+
+def _gen_recursive_args(base_name, T):
     """
     Returns:
         * Flat arguments used for the observe function
         * Nested arguments used to reconstruct the original argument using
-          SimpleNamespace for dot notation
+          SimpleNamespace for dot notation on products and nested lists for
+          arrays
     """
-    if not issubclass(T, m.Product):
+    if _is_leaf_type(T):
         return [base_name], base_name
-    flat_args = []
-    nested_args = []
-    for elem, value in T.field_dict.items():
-        _flat_args, _nested_arg = _gen_product_args(
-            base_name + "_" + elem, value
-        )
-        flat_args += _flat_args
-        nested_args.append(f"{elem}={_nested_arg}")
-    return flat_args, f"SimpleNamespace({', '.join(nested_args)})"
+    if issubclass(T, m.Product):
+        flat_args = []
+        nested_args = []
+        for elem, value in T.field_dict.items():
+            _flat_args, _nested_arg = _gen_recursive_args(
+                base_name + "_" + elem, value
+            )
+            flat_args += _flat_args
+            nested_args.append(f"{elem}={_nested_arg}")
+        return flat_args, f"SimpleNamespace({', '.join(nested_args)})"
+    if issubclass(T, m.Tuple):
+        flat_args = []
+        nested_args = []
+        for i, value in enumerate(T.fields):
+            _flat_args, _nested_arg = _gen_recursive_args(
+                base_name + "_" + str(i), value
+            )
+            flat_args += _flat_args
+            nested_args.append(_nested_arg)
+        return flat_args, f"({', '.join(nested_args)},)"
+    if issubclass(T, m.Array):
+        flat_args = []
+        nested_args = []
+        for i in range(len(T)):
+            _flat_args, _nested_arg = _gen_recursive_args(
+                base_name + "_" + str(i), T.T
+            )
+            flat_args += _flat_args
+            nested_args.append(_nested_arg)
+        return flat_args, f"[{', '.join(nested_args)}]"
+
+    raise TypeError(T)
 
 
 class PysvMonitor(ABC, metaclass=ABCMeta):
@@ -69,9 +98,10 @@ class MonitorTransformer(cst.CSTTransformer):
                 else:
                     T = eval(to_module(param.annotation.annotation).code,
                              dict(self.env))
-                    if not issubclass(T, m.Product):
-                        raise NotImplementedError()
-                    flat_args, nested_args = _gen_product_args(
+                    if _is_leaf_type(T):
+                        new_params.append(param)
+                        continue
+                    flat_args, nested_args = _gen_recursive_args(
                         param.name.value, T)
                     new_params.extend(
                         cst.Param(cst.Name(arg)) for arg in flat_args)
