@@ -288,6 +288,20 @@ def test_monitor_array_tuple(target, simulator):
             self.value -= BitVector[4](I[1][0]) + BitVector[4](I[1][1])
             print(f"next value {self.value}")
 
+    @fault.python_driver()
+    class ArrayTupleDriver(fault.PysvMonitor):
+        @sv()
+        def __init__(self):
+            self.value = None
+
+        @sv()
+        def observe(self, I: m.Array[2, m.Tuple[m.Bits[4], m.Bits[4]]], O):
+            if self.value is not None:
+                assert O == self.value, f"{O} != {self.value}"
+            self.value = BitVector[4](I[0][0]) - BitVector[4](I[0][1])
+            self.value -= BitVector[4](I[1][0]) + BitVector[4](I[1][1])
+            print(f"next value {self.value}")
+
     tester = fault.SynchronousTester(DelayedDUTArrayTuple)
     monitor = tester.Var("monitor", ArrayTupleMonitor)
     # TODO: Need clock to start at 1 for proper semantics
