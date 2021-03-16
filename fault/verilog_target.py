@@ -43,11 +43,14 @@ class VerilogTarget(Target):
 
         self.magma_output = magma_output
         self.magma_opts = magma_opts if magma_opts is not None else {}
-        if "user_namespace" in self.magma_opts and circuit_name is None:
-            # If user provides a circuit name, we will not change it (assumes
-            # they include the user_namespace)
-            self.circuit_name = (magma_opts["user_namespace"] + "_" +
-                                 self.circuit_name)
+        # If user provides a circuit name, we will not change it
+        if circuit_name is None:
+            if "user_namespace" in self.magma_opts:
+                self.circuit_name = (magma_opts["user_namespace"] + "_" +
+                                     self.circuit_name)
+            if "verilog_prefix" in self.magma_opts:
+                self.circuit_name = (magma_opts["verilog_prefix"] +
+                                     self.circuit_name)
 
         if hasattr(circuit, "verilog_file_name") and \
                 os.path.splitext(circuit.verilog_file_name)[-1] == ".sv" or \
