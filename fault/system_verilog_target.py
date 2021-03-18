@@ -15,6 +15,7 @@ from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 import fault
 import fault.expression as expression
+from fault.value import Value
 from fault.ms_types import RealType
 import os
 import pysv
@@ -395,6 +396,10 @@ class SystemVerilogTarget(VerilogTarget):
             return str(value)
         elif isinstance(value, expression.CallExpression):
             return value.str(True, self.compile_expression)
+        elif isinstance(value, Value):
+            if value == Value.Unknown:
+                return "'x";
+            raise NotImplementedError(value)
         return value
 
     def make_poke(self, i, action):

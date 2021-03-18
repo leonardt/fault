@@ -4,7 +4,11 @@ import tempfile
 import magma as m
 import fault
 import pytest
-from .common import TestBasicClkCircuit
+from .common import TestBasicClkCircuit, pytest_sim_params
+
+
+def pytest_generate_tests(metafunc):
+    pytest_sim_params(metafunc, 'verilator', 'system-verilog')
 
 
 @pytest.mark.parametrize("simulator,waveform_type", [("ncsim", "vcd"),
@@ -76,3 +80,24 @@ def test_wait_until_sv():
     with open("build/Foo_tb.sv") as f:
         # Should not be missing semicolon after wait
         assert "#5;" in f.read()
+
+
+def test_unknown_value(target, simulator):
+    if target == "verilator":
+        pytest.skip("verilator does not support x")
+
+    class X(m.Circuit):
+        """
+        Stub circuit to generate x
+        """
+        io = m.IO(O=m.Out(m.Bits[4]))
+        verilog = "assign O = 'x;"
+
+    tester = fault.Tester(X)
+    tester.eval()
+    tester.circuit.O.expect(fault.UnknownValue)
+    tester.compile_and_run(target, simulator=simulator)
+    with pytest.raises(AssertionError):
+        # Expect is strict, so this should fail
+        tester.circuit.O.expect(0)
+        tester.compile_and_run(target, simulator=simulator)
