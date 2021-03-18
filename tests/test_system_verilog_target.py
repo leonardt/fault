@@ -96,6 +96,7 @@ def test_unknown_value(target, simulator):
     tester = fault.Tester(X)
     tester.eval()
     tester.circuit.O.expect(fault.UnknownValue)
+    tester.assert_(tester.peek(X.O) == fault.UnknownValue)
     tester.compile_and_run(target, simulator=simulator)
     with pytest.raises(AssertionError):
         # Expect is strict, so this should fail
