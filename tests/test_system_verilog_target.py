@@ -91,7 +91,7 @@ def test_unknown_value(target, simulator):
         Stub circuit to generate x
         """
         io = m.IO(O=m.Out(m.Bits[4]))
-        verilog = "assign O = 'x;"
+        verilog = "assign O = 4'dx;"
 
     tester = fault.Tester(X)
     tester.eval()
