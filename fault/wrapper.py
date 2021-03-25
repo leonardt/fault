@@ -19,6 +19,15 @@ class Wrapper:
         # Hack to stage this after __init__ has been run, should redefine this
         # method in a metaclass? Could also use a try/except pattern, so the
         # exceptions only occur during object instantiation
+        try:
+            init_done = object.__getattribute__(self, "init_done")
+        except AttributeError:
+            init_done = False
+
+        if not init_done:
+            object.__setattr__(self, attr, value)
+            return
+
         if hasattr(self, "circuit") and hasattr(self, "instance_map"):
             if attr in self.circuit.interface.ports.keys():
                 if isinstance(self.parent, fault.TesterBase):
@@ -26,23 +35,24 @@ class Wrapper:
                 else:
                     raise NotImplementedError()
             else:
-                object.__setattr__(self, attr, value)
+                raise AttributeError(f"{attr} is not a valid port")
         else:
-            object.__setattr__(self, attr, value)
+            raise AttributeError(f"{attr} is not a valid port")
 
     def __getattr__(self, attr):
         # Hack to stage this after __init__ has been run, should redefine this
         # method in a metaclass?
         try:
-            object.__getattribute__(self, "init_done")
+            init_done = object.__getattribute__(self, "init_done")
+        except AttributeError:
+            init_done = False
+
+        if init_done:
             if attr in self.circuit.interface.ports.keys():
                 return PortWrapper(self.circuit.interface.ports[attr], self)
             elif attr in self.instance_map:
                 return InstanceWrapper(self.instance_map[attr], self)
-            else:
-                object.__getattribute__(self, attr)
-        except AttributeError:
-            object.__getattribute__(self, attr)
+        return object.__getattribute__(self, attr)
 
 
 class CircuitWrapper(Wrapper):
@@ -55,9 +65,9 @@ class PortWrapper(expression.Expression):
         self.parent = parent
         self.init_done = True
 
-    def expect(self, value):
+    def expect(self, value, msg=None):
         select_path = self.select_path
-        select_path.tester.expect(select_path, value)
+        select_path.tester.expect(select_path, value, msg=msg)
 
     def __setitem__(self, key, value):
         if not isinstance(self.port, (m.Array, m.Tuple)):
@@ -85,13 +95,17 @@ class PortWrapper(expression.Expression):
 
     def __setattr__(self, key, value):
         try:
-            object.__getattribute__(self, "init_done")
+            init_done = object.__getattribute__(self, "init_done")
+        except AttributeError:
+            init_done = False
+
+        if init_done:
             if not isinstance(self.port, m.Tuple):
                 raise Exception(f"Can only use setattr with tuples, "
                                 f"not {type(self.port)}")
             select_path = self.select_path
             select_path.tester.poke(getattr(self.port, key), value)
-        except AttributeError:
+        else:
             return object.__setattr__(self, key, value)
 
     @property
@@ -112,7 +126,11 @@ class InstanceWrapper(Wrapper):
 
     def __setattr__(self, attr, value):
         try:
-            object.__getattribute__(self, "init_done")
+            init_done = object.__getattribute__(self, "init_done")
+        except AttributeError:
+            init_done = False
+
+        if init_done:
             if attr in self.circuit.interface.ports.keys():
                 wrapper = PortWrapper(self.circuit.interface.ports[attr], self)
                 select_path = wrapper.select_path
@@ -133,7 +151,7 @@ class InstanceWrapper(Wrapper):
             else:
                 raise Exception(f"Could not set attr {attr} with value"
                                 f" {value}")
-        except AttributeError:
+        else:
             object.__setattr__(self, attr, value)
 
     def set_definition(self, defn):

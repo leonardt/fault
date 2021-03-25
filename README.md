@@ -22,6 +22,7 @@ Check out the [fault tutorial](https://github.com/leonardt/fault/tree/master/tut
 * [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
 * [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)
 * [Integrating External Verilog](https://github.com/leonardt/fault/blob/master/doc/verilog_integration.ipynb)
+* [Properties](https://github.com/leonardt/fault/blob/master/doc/property.md)
 
 ## Supported Simulators
 
@@ -48,28 +49,25 @@ import mantle
 
 
 class ConfigReg(m.Circuit):
-    IO = ["D", m.In(m.Bits(2)), "Q", m.Out(m.Bits(2))] + \
-        m.ClockInterface(has_ce=True)
+    io = m.IO(D=m.In(m.Bits[2]), Q=m.Out(m.Bits[2])) + \
+        m.ClockIO(has_ce=True)
 
-    @classmethod
-    def definition(io):
-        reg = mantle.Register(2, has_ce=True, name="conf_reg")
-        io.Q <= reg(io.D, CE=io.CE)
+    reg = mantle.Register(2, has_ce=True, name="conf_reg")
+    io.Q @= reg(io.D, CE=io.CE)
 
 
 class SimpleALU(m.Circuit):
-    IO = ["a", m.In(m.UInt(16)),
-          "b", m.In(m.UInt(16)),
-          "c", m.Out(m.UInt(16)),
-          "config_data", m.In(m.Bits(2)),
-          "config_en", m.In(m.Enable),
-          ] + m.ClockInterface()
+    io = m.IO(
+        a=m.In(m.UInt[16]),
+        b=m.In(m.UInt[16]),
+        c=m.Out(m.UInt[16]),
+        config_data=m.In(m.Bits[2]),
+        config_en=m.In(m.Enable)
+    ) + m.ClockIO()
 
-    @classmethod
-    def definition(io):
-        opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
-        io.c <= mantle.mux(
-            [io.a + io.b, io.a - io.b, io.a * io.b, io.a / io.b], opcode)
+    opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
+    io.c @= mantle.mux(
+        [io.a + io.b, io.a - io.b, io.a * io.b, io.a ^ io.b], opcode)
 ```
 
 Here's an example test in fault that uses the configuration interface, expects
@@ -147,12 +145,9 @@ on "peeked" values, if statements, and while loops.
 Suppose we had a circuit as follows:
 ```python
 class BinaryOpCircuit(m.Circuit):
-    IO = ["I0", m.In(m.UInt[5]), "I1", m.In(m.UInt[5])]
-    IO += ["O", m.Out(m.UInt[5])]
+    io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]), O=m.Out(m.UInt[5]))
 
-    @classmethod
-    def definition(io):
-        m.wire(io.O, io.I0 + io.I1 & (io.I1 - io.I0))
+    io.O @= io.I0 + io.I1 & (io.I1 - io.I0)
 ```
 We can write a generic test that expects the output `O` in terms
 of the inputs `I0` and `I1` (rather than computing the expected value in
@@ -250,14 +245,104 @@ directory will be placed in the same directory as the generated harness, which
 is controlled by the `directory` keyword argument (by default this is
 `"build/"`).
 
-For the `system-verilog` target, tracing is enabled by default.  Disable this
-feature using the `compile_and_run` parameter `dump_waveform=False`.  By
-default, the waveform file will be named `waveforms.vcd` for `ncsim` and
-`waveforms.vpd` for `vcs`.  The name of the file can be changed using the
-parameter `waveform_file="<file_name>"`.
+For the `system-verilog` target, enable this feature using the
+`compile_and_run` parameter `dump_waveform=True`.  By default, the waveform
+file will be named `waveforms.vcd` for `ncsim` and `waveforms.vpd` for `vcs`.
+The name of the file can be changed using the parameter
+`waveform_file="<file_name>"`.  
+
+The `vcs` simulator also supports dumping `fsdb` by using the argument
+`waveform_type="fsdb"`.  For this to work, you'll need to also use the `flags`
+argument using the path defined in your verdi manual.  For example,
+`$VERDI_HOME/doc/linking_dumping.pdf`.  
+
+Here is an example using an older version of verdi (using the VERDIHOME
+environment variable):
+```python
+verdi_home = os.environ["VERDIHOME"]
+# You may need to change the 'vcs_latest' and 'LINUX64' parts of the path
+# depending on your verdi version, please consult
+# $VERDI_HOME/doc/linking_dumping.pdf
+flags = ['-P', 
+         f' {verdi_home}/share/PLI/vcs_latest/LINUX64/novas.tab',
+         f' {verdi_home}/share/PLI/vcs_latest/LINUX64/pli.a']
+tester.compile_and_run(target="system-verilog", simulator="vcs",
+                       waveform_type="fsdb", dump_waveforms=True, flags=flags)
+```
+
+Here's an example for a newer version of verdi
+```python
+verdi_home = os.environ["VERDI_HOME"]
+flags = ['-P',
+         f' {verdi_home}/share/PLI/VCS/linux64/novas.tab',
+         f' {verdi_home}/share/PLI/VCS/linux64/pli.a']
+tester.compile_and_run(target="system-verilog", simulator="vcs",
+                       waveform_type="fsdb", dump_waveforms=True, flags=flags)
+```
+
+To configure fsdb dumping, use the `fsdb_dumpvars_args` parameter of the
+compile_and_run command to pass a string to the `$fsdbDumpvars()` function.
+
+For example:
+```python
+tester.compile_and_run(target="system-verilog", simulator="vcs",
+                       waveform_type="fsdb", dump_waveforms=True,
+                       fsdb_dumpvars_args='0, "dut"')
+```
+
+will produce:
+```verilog
+  $fsdbDumpvars(0, "dut");
+```
+
+inside the generated test bench.
 
 ### How do I pass through flags to the simulator?
 The `verilator` and `system-verilog` target support the parameter `flags` which
 accepts a list of flags (strings) that will be passed through to the simulator
 command (`verilator` for verilator, `irun` for ncsim, `vcs` for vcs, and
 `iverilog` for iverilog).
+
+### Can I include a message to print when an expect fails?
+Use the `msg` argument to the expect action. You can either pass a standalone
+string, e.g.
+```python
+tester.circuit.O.expect(0, msg="my error message")
+```
+
+or you can pass a printf/$display style message using a tuple.  The first argument
+should be the format string, the subsequent arguments are the format values,
+e.g.
+```python
+tester.circuit.O.expect(0, msg=("MY_MESSAGE: got %x, expected 0!",
+                                tester.circuit.O))
+```
+
+### Can I display or print values from my testbench?
+Yes, you can use the `tester.print` API which accepts a format string and a
+variable number of arguments.  Here's an example:
+```python
+tester = fault.Tester(circ, circ.CLK)
+tester.poke(circ.I, 0)
+tester.eval()
+tester.expect(circ.O, 0)
+tester.poke(circ.CLK, 0)
+tester.step()
+tester.print("%08x\n", circ.O)
+```
+
+
+### Can I just generate a test bench without running it?
+Yes, here's an example:
+```python
+# compile the tester
+tester.compile("verilator")
+# generate the test bench file (returns the name of the file)
+tb_file = tester.generate_test_bench("verilator")
+```
+
+or for system verilog
+```python
+tester.compile("system-verilog", simulator="ncsim")
+tb_file = tester.generate_test_bench("system-verilog")
+```

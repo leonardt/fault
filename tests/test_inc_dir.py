@@ -8,7 +8,7 @@ def pytest_generate_tests(metafunc):
     pytest_sim_params(metafunc, 'system-verilog')
 
 
-def test_ext_vlog(target, simulator):
+def test_inc_dir(target, simulator):
     # declare circuit
     class mybuf_inc_test(m.Circuit):
         io = m.IO(

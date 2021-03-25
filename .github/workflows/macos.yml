@@ -17,24 +17,25 @@ jobs:
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     - name: Setup Env
-      uses: goanpeca/setup-miniconda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: true
         python-version: 3.7
     - name: Install verilator
       shell: bash
       run: |
-          brew install verilator gmp mpfr libmpc
+          brew upgrade gmp mpfr libmpc
+          brew install verilator icarus-verilog
           verilator --version
+          iverilog -V
     - name: Install Python packages
       shell: bash -l {0}
       run: |
-          pip install https://github.com/Z3Prover/z3/releases/download/Nightly/z3_solver-4.8.8.0-py2.py3-none-macosx_10_14_x86_64.whl
-          pip install pytest
-          pip install pytest-cov pytest-codestyle
+          pip install "pytest<6"
+          pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
+          pip install vcdvcd decorator kratos
           pip install .
-
     - name: Pytest
       shell: bash -l {0}
       run: |

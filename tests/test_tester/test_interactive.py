@@ -33,7 +33,7 @@ def test_interactive_clock():
     tester.circuit.CLK = 0
     tester.circuit.config_data = 1
     tester.circuit.config_en = 1
-    tester.step(2)
+    tester.advance_cycle()
     tester.circuit.c.expect(BitVector[16](0xDEAD) - BitVector[16](0xBEEF))
 
 

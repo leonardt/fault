@@ -129,3 +129,6 @@ class PythonTester(InteractiveTester):
         if isinstance(result, tuple):
             return tuple(self.peek(r.select_path) for r in result)
         return self.peek(result.select_path)
+
+    def advance_cycle(self):
+        self.step(2)

@@ -6,7 +6,7 @@ import random
 import pytest
 from .common import (SimpleALU, TestNestedArraysCircuit,
                      TestDoubleNestedArraysCircuit, TestTupleCircuit,
-                     AndCircuit, outlines)
+                     AndCircuit, outlines, TestBasicCircuit)
 
 TEST_START = '*** TEST START ***'
 
@@ -33,6 +33,7 @@ def run_test(target, simulator, tester, disp_type='on_error'):
             kwargs["magma_opts"] = {"verilator_debug": True}
             kwargs["flags"] = ["-Wno-fatal"]
         if simulator is not None:
+            kwargs["magma_opts"] = {"sv": True}
             kwargs["simulator"] = simulator
         tester.compile_and_run(target, **kwargs)
 
@@ -175,3 +176,43 @@ def test_setattr_x(target, simulator):
     tester.eval()
     tester.circuit.O.expect(fault.UnknownValue)
     run_test(target, simulator, tester)
+
+
+def test_setattr_basic_fail(target, simulator, capsys):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.circuit.I = 1
+    tester.eval()
+    tester.circuit.O.expect(0, msg=("MY_MESSAGE: got %x, expected 0!",
+                                    tester.circuit.O))
+    with pytest.raises(AssertionError) as e:
+        run_test(target, simulator, tester)
+    if target == "python":
+        assert "MY_MESSAGE: got 1, expected 0!" in str(e)
+    else:
+        out, err = capsys.readouterr()
+        assert "MY_MESSAGE: got 1, expected 0!" in out, out + err
+
+
+def test_setattr_basic_fail2(target, simulator, capsys):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.circuit.I = 1
+    tester.eval()
+    tester.circuit.O.expect(0, msg="my error message")
+    with pytest.raises(AssertionError) as e:
+        run_test(target, simulator, tester)
+    if target == "python":
+        assert "my error message" in str(e)
+    else:
+        out, err = capsys.readouterr()
+        assert "my error message" in out, out + err
+
+
+def test_set_invalid_port():
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    with pytest.raises(AttributeError):
+        tester.circuit.not_a_port = 0

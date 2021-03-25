@@ -1,6 +1,6 @@
 import warnings
 from fault.verilog_target import VerilogTarget
-from .verilog_utils import verilog_name
+from .verilog_utils import verilog_name, is_nd_array
 from .util import (is_valid_file_mode, file_mode_allows_reading,
                    file_mode_allows_writing)
 import magma as m
@@ -17,8 +17,10 @@ from fault.background_poke import background_poke_target
 from fault.mlingua_interface import mlingua_target
 import fault
 import fault.expression as expression
+from fault.value import Value
 from fault.ms_types import RealType
 import os
+import pysv
 from numbers import Number
 import re
 
@@ -27,6 +29,7 @@ src_tpl = """\
 {includes}
 {timescale}
 module {top_module};
+{imports}
 {declarations}
 {assigns}
 {clock_drivers}
@@ -39,6 +42,7 @@ module {top_module};
 
     initial begin
 {initial_body}
+{exit_code}
         #20 $finish;
     end
 
@@ -57,15 +61,16 @@ class SystemVerilogTarget(VerilogTarget):
     def __init__(self, circuit, circuit_name=None, directory="build/",
                  skip_compile=None, magma_output="coreir-verilog",
                  magma_opts=None, include_verilog_libraries=None,
-                 simulator=None, timescale="1ns/1ns", clock_step_delay=5e-9,
-                 num_cycles=10000, dump_waveforms=True, dump_vcd=None,
-                 no_warning=False, sim_env=None, ext_model_file=None,
-                 ext_libs=None, defines=None, flags=None, inc_dirs=None,
-                 ext_test_bench=False, top_module=None, ext_srcs=None,
-                 use_input_wires=False, parameters=None, disp_type='on_error',
-                 waveform_file=None, coverage=False, use_kratos=False,
-                 use_sva=False, skip_run=False, no_top_module=False,
-                 vivado_use_system_verilog=True):
+                 simulator=None, timescale="1ns/1ns", clock_step_delay=5,
+                 num_cycles=10000, dump_waveforms=False, dump_vcd=None,
+                 waveform_type=None, no_warning=False, sim_env=None,
+                 ext_model_file=None, ext_libs=None, defines=None, flags=None,
+                 inc_dirs=None, ext_test_bench=False, top_module=None,
+                 ext_srcs=None, use_input_wires=False, parameters=None,
+                 disp_type='on_error', waveform_file=None, coverage=False,
+                 use_kratos=False, use_sva=False, skip_run=False,
+                 no_top_module=False, vivado_use_system_verilog=True,
+                 disable_ndarray=False, fsdb_dumpvars_args=""):
         """
         circuit: a magma circuit
 
@@ -140,6 +145,9 @@ class SystemVerilogTarget(VerilogTarget):
 
         dump_waveforms: Enable tracing of internal values
 
+        waveform_type: 'vcd', 'vpd', 'fsdb'. Default for ncsim is 'vcd'. Default
+                       for vcs is 'vpd'.
+
         waveform_file: name of file to dump waveforms (default is
                        "waveform.vcd" for ncsim and "waveform.vpd" for vcs)
 
@@ -154,6 +162,16 @@ class SystemVerilogTarget(VerilogTarget):
         vivado_use_system_verilog: If True (default), mark Vivado source files
                                    as SystemVerilog so that more modern syntax
                                    is supported.
+
+        disable_ndarray: If True, disable magma/fault support for
+                         codegenerating verilog ndarrays (multi-dimensional
+                         arrays of bits).
+                         Default is False except when the simulator is
+                         "iverilog" when it is always True (since iverilog does
+                         not currently support unpacked arrays)
+
+        fsdb_dumpvars_args: (optional) arguments to the `fsdbDumpvars()`
+                            function
         """
         # set default for list of external sources
         if include_verilog_libraries is None:
@@ -172,6 +190,12 @@ class SystemVerilogTarget(VerilogTarget):
 
         # set default for magma compilation options
         magma_opts = magma_opts if magma_opts is not None else {}
+
+        if simulator == "iverilog":
+            disable_ndarray = True
+        if disable_ndarray:
+            magma_opts["disable_ndarray"] = True
+        self.disable_ndarray = disable_ndarray
 
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
@@ -192,7 +216,7 @@ class SystemVerilogTarget(VerilogTarget):
         if simulator is None:
             raise ValueError("Must specify simulator when using system-verilog"
                              " target")
-        if simulator not in {"vcs", "ncsim", "iverilog", "vivado"}:
+        if simulator not in {"vcs", "ncsim", "xcelium", "iverilog", "vivado"}:
             raise ValueError(f"Unsupported simulator {simulator}")
 
         # save settings
@@ -208,6 +232,7 @@ class SystemVerilogTarget(VerilogTarget):
                           DeprecationWarning)
             self.dump_waveforms = dump_vcd
         self.no_warning = no_warning
+        self.imports = set()
         self.declarations = {}  # dictionary keyed by signal name
         self.assigns = {}  # dictionary keyed by LHS name
         self.sim_env = sim_env if sim_env is not None else {}
@@ -224,10 +249,18 @@ class SystemVerilogTarget(VerilogTarget):
         self.disp_type = disp_type
         self.waveform_file = waveform_file
         self.use_sva = use_sva
+        self.waveform_type = waveform_type
         if self.waveform_file is None and self.dump_waveforms:
             if self.simulator == "vcs":
-                self.waveform_file = "waveforms.vpd"
-            elif self.simulator in {"ncsim", "iverilog", "vivado"}:
+                if self.waveform_type is None:
+                    suffix = "vpd"
+                else:
+                    if self.waveform_type not in ["vpd", "fsdb"]:
+                        raise ValueError("Only 'vpd' and 'fsdb' supported for "
+                                         "vcs waveform type")
+                    suffix = self.waveform_type
+                self.waveform_file = f"waveforms.{self.waveform_type}"
+            elif self.simulator in {"ncsim", "xcelium", "iverilog", "vivado"}:
                 self.waveform_file = "waveforms.vcd"
             else:
                 raise NotImplementedError(self.simulator)
@@ -244,7 +277,13 @@ class SystemVerilogTarget(VerilogTarget):
                 raise ImportError("Cannot find kratos-runtime in the system. "
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
+
         self.includes = []
+        self.fsdb_dumpvars_args = fsdb_dumpvars_args
+
+        # set up cadence tools command
+        self.ncsim_cmd = self.cadence_cmd("irun")
+        self.xcelium_cmd = self.cadence_cmd("xrun")
 
     def add_decl(self, type_, name, exist_ok=False):
         if str(name) in self.declarations:
@@ -268,26 +307,36 @@ class SystemVerilogTarget(VerilogTarget):
             port = port.select_path
         if isinstance(port, SelectPath):
             if len(port) > 2:
-                name = f"dut.{port.system_verilog_path}"
+                name = f"dut.{port.system_verilog_path(self.disable_ndarray)}"
             else:
                 # Top level ports assign to the external reg
-                name = verilog_name(port[-1].name)
+                name = verilog_name(port[-1].name, self.disable_ndarray)
         elif isinstance(port, fault.WrappedVerilogInternalPort):
             name = f"dut.{port.path}"
+        elif isinstance(port, actions.Var):
+            name = port.name
         else:
-            name = verilog_name(port.name)
+            name = verilog_name(port.name, self.disable_ndarray)
         return name
 
     def process_peek(self, value):
         if isinstance(value.port, fault.WrappedVerilogInternalPort):
             return f"dut.{value.port.path}"
-        else:
-            return f"{value.port.name}"
+        elif isinstance(value.port, PortWrapper):
+            path = value.port.select_path.system_verilog_path(
+                self.disable_ndarray
+            )
+            return f"dut.{path}"
+        return f"{verilog_name(value.port.name, self.disable_ndarray)}"
 
     def make_var(self, i, action):
         if isinstance(action._type, AbstractBitVectorMeta):
             self.add_decl(f'reg [{action._type.size - 1}:0]', action.name)
             return []
+        elif isinstance(action._type, type):
+            self.add_decl(f"{action._type.__name__}", action.name)
+            return []
+
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
@@ -311,12 +360,13 @@ class SystemVerilogTarget(VerilogTarget):
         elif isinstance(value, actions.Peek):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
-            value = f"dut.{value.select_path.system_verilog_path}"
+            path = value.select_path.system_verilog_path(self.disable_ndarray)
+            value = f"dut.{path}"
         elif isinstance(value, actions.FileRead):
             new_value = f"{value.file.name_without_ext}_in"
             value = new_value
         elif isinstance(value, expression.Expression):
-            value = f"({self.compile_expression(value)})"
+            value = f"{self.compile_expression(value)}"
         return value
 
     def compile_expression(self, value):
@@ -324,17 +374,39 @@ class SystemVerilogTarget(VerilogTarget):
             left = self.compile_expression(value.left)
             right = self.compile_expression(value.right)
             op = value.op_str
-            return f"({left}) {op} ({right})"
+            if op == "==":
+                # Use strict eq
+                op = "==="
+            elif op == "!=":
+                # Use strict neq
+                op = "!=="
+            return f"({left} {op} {right})"
         elif isinstance(value, expression.UnaryOp):
             operand = self.compile_expression(value.operand)
             op = value.op_str
-            return f"{op} ({operand})"
+            return f"({op} {operand})"
         elif isinstance(value, PortWrapper):
-            return f"dut.{value.select_path.system_verilog_path}"
+            path = value.select_path.system_verilog_path(self.disable_ndarray)
+            return f"dut.{path}"
         elif isinstance(value, actions.Peek):
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
             value = value.name
+        elif isinstance(value, expression.FunctionCall):
+            args = ", ".join(self.compile_expression(x) for x in value.args)
+            func_str = value.func_str
+            if not isinstance(value, expression.Integer):
+                # special casting syntax
+                func_str = f"${func_str}"
+            return f"{func_str}({args})"
+        elif isinstance(value, int):
+            return str(value)
+        elif isinstance(value, expression.CallExpression):
+            return value.str(True, self.compile_expression)
+        elif isinstance(value, Value):
+            if value == Value.Unknown:
+                return "'x";
+            raise NotImplementedError(value)
         return value
 
     def make_poke(self, i, action):
@@ -343,7 +415,12 @@ class SystemVerilogTarget(VerilogTarget):
         value = self.process_value(action.port, action.value)
         # Build up the poke action, including delay
         retval = []
-        retval += [f'{name} <= {value};']
+        # class instance can only be created via blocking assignment
+        if isinstance(action.port, actions.Var) and isinstance(action.port._type, type):
+            assign = "="
+        else:
+            assign = "<="
+        retval += [f'{name} {assign} {value};']
         if action.delay is not None:
             retval += [f'#({action.delay}*1s);']
         return retval
@@ -351,17 +428,20 @@ class SystemVerilogTarget(VerilogTarget):
     def make_delay(self, i, action):
         return [f'$write("MAKING DELAY\\n"); #({action.time}*1s);']
 
-    def make_print(self, i, action):
-        # build up argument list for the $write command
+    def _make_print_args(self, values):
         args = []
-        args.append(f'"{action.format_str}"')
-        for port in action.ports:
+        for port in values:
             if isinstance(port, (Number, AbstractBit, AbstractBitVector)) and \
                     not isinstance(port, m.Bits):
                 args.append(f'{port}')
             else:
                 args.append(f'{self.make_name(port)}')
+        return args
 
+    def make_print(self, i, action):
+        # build up argument list for the $write command
+        args = [f'"{action.format_str}"']
+        args += self._make_print_args(action.ports)
         # generate the command
         args = ', '.join(args)
         return [f'$write({args});']
@@ -370,6 +450,21 @@ class SystemVerilogTarget(VerilogTarget):
         # loop variable has to be declared outside of the loop
         self.add_decl('integer', action.loop_var, exist_ok=True)
         return super().make_loop(i, action)
+
+    def make_join(self, i, action):
+        code = ["fork"]
+        for p in action.processes:
+            code += self.make_block(i, None, None, p.actions, p.name)
+        # join
+        if action.join_type == actions.JoinType.Default:
+            code += ["join"]
+        elif action.join_type == actions.JoinType.None_:
+            code += ["join_none"]
+        elif action.join_type == actions.JoinType.Any:
+            code += ["join_any"]
+        else:
+            raise ValueError(f"Unexpected joint_type: {action.join_type}")
+        return code
 
     def make_file_open(self, i, action):
         # make sure the file mode is supported
@@ -448,6 +543,10 @@ class SystemVerilogTarget(VerilogTarget):
         else:
             return [f'if (!({expr_str})) $error("{expr_str} failed");']
 
+    def make_call(self, i, action: actions.Call):
+        self.imports.add("pysv")
+        return super().make_call(i, action)
+
     def make_expect(self, i, action):
         # don't do anything if any value is OK
         if value_utils.is_any(action.value):
@@ -503,6 +602,13 @@ class SystemVerilogTarget(VerilogTarget):
                     cond = f'({name} == {value})'
                 err_msg = 'Expected %x, got %x'
                 err_args = [value, name]
+        if action.msg is not None:
+            if isinstance(action.msg, str):
+                err_msg += "\\n" + action.msg
+            else:
+                assert isinstance(action.msg, tuple)
+                err_msg += "\\n" + action.msg[0]
+                err_args += self._make_print_args(action.msg[1:])
 
         # construct the body of the $error call
         err_fmt_str = f'"{err_hdr}.  {err_msg}."'
@@ -520,7 +626,7 @@ class SystemVerilogTarget(VerilogTarget):
         return ['#1;']
 
     def make_step(self, i, action):
-        name = verilog_name(action.clock.name)
+        name = verilog_name(action.clock.name, self.disable_ndarray)
         code = []
         for step in range(action.steps):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")
@@ -536,6 +642,12 @@ class SystemVerilogTarget(VerilogTarget):
                 port_list.extend(result)
         elif issubclass(type_, m.Tuple):
             for k, t in zip(type_.keys(), type_.types()):
+                try:
+                    int(k)
+                    # python/coreir don't allow pure integer names
+                    k = f"_{k}"
+                except ValueError:
+                    pass
                 result = self.generate_port_code(
                     name + "_" + str(k), t, power_args
                 )
@@ -545,7 +657,16 @@ class SystemVerilogTarget(VerilogTarget):
     def generate_port_code(self, name, type_, power_args):
         is_array_of_non_bits = issubclass(type_, m.Array) and \
             not issubclass(type_.T, m.Bit)
-        if is_array_of_non_bits or issubclass(type_, m.Tuple):
+        if is_nd_array(type_) and not self.disable_ndarray:
+            outer_width = ""
+            while not issubclass(type_.T, m.Digital):
+                outer_width += f"[{type_.N - 1}:0]"
+                type_ = type_.T
+            inner_width = f"[{type_.N - 1}:0]"
+            t = "reg" if type_.is_input() else "wire"
+            self.add_decl(f'{t} {inner_width}', f'{name} {outer_width}')
+            return [f".{name}({name})"]
+        elif is_array_of_non_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
         else:
             width_str = ""
@@ -604,15 +725,21 @@ class SystemVerilogTarget(VerilogTarget):
             port_list.extend(result)
         port_list = f',\n{2*self.TAB}'.join(port_list)
 
+        if len(self.pysv_funcs) > 0:
+            self.imports.add("pysv")
+
         # build up the body of the initial block
         initial_body = []
 
         # set up probing
         if self.dump_waveforms and self.simulator == "vcs":
-            print('vcs')
-            initial_body += [f'$vcdplusfile("{self.waveform_file}");',
-                             f'$vcdpluson();',
-                             f'$vcdplusmemon();']
+            if self.waveform_type == "vpd":
+                initial_body += [f'$vcdplusfile("{self.waveform_file}");',
+                                 f'$vcdpluson();',
+                                 f'$vcdplusmemon();']
+            if self.waveform_type == "fsdb":
+                initial_body += [f'$fsdbDumpfile("{self.waveform_file}");',
+                                 f'$fsdbDumpvars({self.fsdb_dumpvars_args});']
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
@@ -649,6 +776,10 @@ class SystemVerilogTarget(VerilogTarget):
         initial_body = [f'{2*self.TAB}{elem}' for elem in initial_body]
         initial_body = '\n'.join(initial_body)
 
+        # format imports
+        imports = [f"{self.TAB}import {name}::*;" for name in self.imports]
+        imports = "\n".join(imports)
+
         # format declarations
         declarations = [f'{self.TAB}{type_} {name};'
                         for type_, name in self.declarations.values()]
@@ -668,10 +799,17 @@ class SystemVerilogTarget(VerilogTarget):
 
         clock_drivers = self.TAB + "\n{self.TAB}".join(self.clock_drivers)
 
+        # exit code
+        if len(self.pysv_funcs) > 0:
+            exit_code = f"{self.TAB}pysv_finalize();\n"
+        else:
+            exit_code = ""
+
         # fill out values in the testbench template
         src = src_tpl.format(
             includes=includes,
             timescale=timescale,
+            imports=imports,
             declarations=declarations,
             clock_drivers=clock_drivers,
             assigns=assigns,
@@ -679,31 +817,50 @@ class SystemVerilogTarget(VerilogTarget):
             port_list=port_list,
             param_list=param_list,
             circuit_name=self.circuit_name,
+            exit_code=exit_code,
             top_module=self.top_module
         )
 
         # return the string representing the system-verilog testbench
         return src
 
-    def run(self, actions, power_args=None):
+    def generate_test_bench(self, actions, power_args=None):
+        if self.ext_test_bench:
+            raise Exception(
+                "Cannot generate_test_bench when using external test bench")
         # set defaults
         power_args = power_args if power_args is not None else {}
+        return self.write_test_bench(actions=actions, power_args=power_args)
 
+    def run(self, actions, power_args=None):
         # assemble list of sources files
         vlog_srcs = []
         if not self.ext_test_bench:
-            tb_file = self.write_test_bench(actions=actions,
-                                            power_args=power_args)
+            tb_file = self.generate_test_bench(actions, power_args)
             vlog_srcs += [tb_file]
         if not self.ext_model_file:
             vlog_srcs += [self.verilog_file]
         vlog_srcs += self.include_verilog_libraries
 
+        lib_path = ""
+        pkg_file = ""
+        if len(self.pysv_funcs) > 0:
+            lib_path = pysv.compile_lib(self.pysv_funcs, self.directory)
+            pkg_file = os.path.join(self.directory, "pysv_pkg.sv")
+            pysv.generate_sv_binding(self.pysv_funcs, filename=pkg_file)
+            assert os.path.exists(pkg_file)
+            vlog_srcs = [os.path.relpath(pkg_file, self.directory)] + vlog_srcs
+
         # generate simulator commands
-        if self.simulator == 'ncsim':
+        if self.simulator in {'ncsim', "incisive", "xcelium"}:
             # Compile and run simulation
-            cmd_file = self.write_ncsim_tcl()
-            sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            cmd_file = self.write_cadence_tcl()
+            if self.simulator == "xcelium":
+                sim_cmd = self.xcelium_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            else:
+                sim_cmd = self.ncsim_cmd(sources=vlog_srcs, cmd_file=cmd_file)
+            if lib_path:
+                sim_cmd += ["-sv_lib", os.path.relpath(lib_path, self.directory)]
             sim_err_str = None
             # Skip "bin_cmd"
             bin_cmd = None
@@ -720,17 +877,19 @@ class SystemVerilogTarget(VerilogTarget):
             # Compile simulation
             # TODO: what error strings are expected at this stage?
             sim_cmd, bin_file = self.vcs_cmd(sources=vlog_srcs)
+            if lib_path:
+                sim_cmd += ["-sv_lib", os.path.relpath(lib_path, self.directory)]
             sim_err_str = None
             # Run simulation
             bin_cmd = [bin_file]
-            bin_err_str = 'Error'
+            bin_err_str = ['Error', 'Fatal']
         elif self.simulator == 'iverilog':
             # Compile simulation
             sim_cmd, bin_file = self.iverilog_cmd(sources=vlog_srcs)
             sim_err_str = ['syntax error', 'I give up.']
             # Run simulation
             bin_cmd = ['vvp', '-N', bin_file]
-            bin_err_str = 'ERROR'
+            bin_err_str = ['ERROR', 'FATAL']
         else:
             raise NotImplementedError(self.simulator)
 
@@ -797,13 +956,14 @@ class SystemVerilogTarget(VerilogTarget):
         # also add the directory to the current LD_LIBRARY_PATH
         self.sim_env["LD_LIBRARY_PATH"] = os.path.abspath(self.directory)
 
-    def write_ncsim_tcl(self):
+    def write_cadence_tcl(self):
         # construct the TCL commands to run the Incisive/Xcelium simulation
         tcl_cmds = []
         if self.dump_waveforms:
             tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale ps']  # noqa
             tcl_cmds += [f'probe -create -all -vcd -depth all']
         tcl_cmds += [f'run {self.num_cycles}ns']
+        tcl_cmds += ['assertion -summary -final']
         tcl_cmds += [f'quit']
 
         # write the command file
@@ -891,57 +1051,59 @@ class SystemVerilogTarget(VerilogTarget):
             retval += [def_arg]
         return retval
 
-    def ncsim_cmd(self, sources, cmd_file):
-        cmd = []
+    def cadence_cmd(self, tool_name):
+        def cmd_fn(sources, cmd_file):
+            cmd = []
 
-        # binary name
-        cmd += ['irun']
+            # binary name
+            cmd += [tool_name]
 
-        # add any extra flags
-        cmd += self.flags
+            # add any extra flags
+            cmd += self.flags
 
-        # send name of top module to the simulator
-        if not self.no_top_module:
-            cmd += ['-top', f'{self.top_module}']
+            # send name of top module to the simulator
+            if not self.no_top_module:
+                cmd += ['-top', f'{self.top_module}']
 
-        # timescale
-        cmd += ['-timescale', f'{self.timescale}']
+            # timescale
+            cmd += ['-timescale', f'{self.timescale}']
 
-        # TCL commands
-        cmd += ['-input', f'{cmd_file}']
+            # TCL commands
+            cmd += ['-input', f'{cmd_file}']
 
-        # source files
-        cmd += [f'{src}' for src in sources]
+            # source files
+            cmd += [f'{src}' for src in sources]
 
-        # library files
-        for lib in self.ext_libs:
-            cmd += ['-v', f'{lib}']
+            # library files
+            for lib in self.ext_libs:
+                cmd += ['-v', f'{lib}']
 
-        # include directory search path
-        for dir_ in self.inc_dirs:
-            cmd += ['-incdir', f'{dir_}']
+            # include directory search path
+            for dir_ in self.inc_dirs:
+                cmd += ['-incdir', f'{dir_}']
 
-        # define variables
-        cmd += self.def_args(prefix='+define+')
+            # define variables
+            cmd += self.def_args(prefix='+define+')
 
-        # misc flags
-        if self.dump_waveforms:
-            cmd += ["-access", "r"]
-        cmd += ['-notimingchecks']
-        if self.no_warning:
-            cmd += ['-neverwarn']
+            # misc flags
+            if self.dump_waveforms:
+                cmd += ["-access", "r"]
+            cmd += ['-notimingchecks']
+            if self.no_warning:
+                cmd += ['-neverwarn']
 
-        # kratos flags
-        if self.use_kratos:
-            from kratos_runtime import get_ncsim_flag
-            cmd += get_ncsim_flag().split()
+            # kratos flags
+            if self.use_kratos:
+                from kratos_runtime import get_ncsim_flag
+                cmd += get_ncsim_flag().split()
 
-        # coverage flags
-        if self.coverage:
-            cmd += ["-coverage", "b", "-covoverwrite"]
+            # coverage flags
+            if self.coverage:
+                cmd += ["-coverage", "a", "-covoverwrite"]
 
-        # return arg list
-        return cmd
+            # return arg list
+            return cmd
+        return cmd_fn
 
     def vivado_cmd(self, cmd_file):
         cmd = []
@@ -1009,7 +1171,10 @@ class SystemVerilogTarget(VerilogTarget):
             raise NotImplementedError("coverage in vcs is not implemented yet")
 
         if self.dump_waveforms:
-            cmd += ['+vcs+vcdpluson', '-debug_pp']
+            cmd += ['-debug_pp']
+
+            if self.waveform_type == "vcd":
+                cmd += ['+vcs+vcdpluson']
 
         # specify top module
         if not self.no_top_module:
@@ -1055,12 +1220,13 @@ class SystemVerilogTarget(VerilogTarget):
         # misc flags
         cmd += ['-g2012']
 
-        # source files
-        cmd += [f'{src}' for src in sources]
-
-        # set the top module
+        # set the top module.  note that the '-s' option must
+        # come before the source file list.
         if not self.no_top_module:
             cmd += ['-s', f'{self.top_module}']
+
+        # source files
+        cmd += [f'{src}' for src in sources]
 
         # return arg list and binary file location
         return cmd, bin_file
@@ -1072,10 +1238,10 @@ class SynchronousSystemVerilogTarget(SystemVerilogTarget):
             raise ValueError("Clock required")
 
         super().__init__(*args, **kwargs)
-        name = verilog_name(clock.name)
+        name = verilog_name(clock.name, self.disable_ndarray)
         self.clock_drivers.append(
             f"always #{self.clock_step_delay} {name} = ~{name};"
         )
 
     def make_step(self, i, action):
-        return [f"#{self.clock_step_delay * action.steps}"]
+        return [f"#{self.clock_step_delay * action.steps};"]

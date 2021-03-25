@@ -5,7 +5,7 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'system-verilog')
+    pytest_sim_params(metafunc, 'system-verilog', 'verilator')
 
 
 def test_def_vlog(target, simulator, n_bits=8, b_val=76):
@@ -27,12 +27,20 @@ def test_def_vlog(target, simulator, n_bits=8, b_val=76):
     tester.eval()
     tester.expect(paramadd.c_val, 130)
 
+    # define target-specific kwargs
+    kwargs = {}
+    module_file = Path('tests/verilog/paramadd.sv').resolve()
+    if target == 'verilator':
+        kwargs['ext_model_file'] = module_file
+    elif target == 'system-verilog':
+        kwargs['simulator'] = simulator
+        kwargs['include_verilog_libraries'] = [module_file]
+        kwargs['ext_model_file'] = True
+
     # run simulation
     tester.compile_and_run(
         target=target,
-        simulator=simulator,
-        ext_libs=[Path('tests/verilog/paramadd.sv').resolve()],
         parameters={'n_bits': n_bits, 'b_val': b_val},
-        ext_model_file=True,
-        tmp_dir=True
+        tmp_dir=True,
+        **kwargs
     )

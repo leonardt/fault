@@ -44,9 +44,11 @@ class SelectPath:
         # Return the path string constructed with the provided separator.
         return separator.join(path)
 
-    @property
-    def system_verilog_path(self):
-        return self.make_path(".")
+    def system_verilog_path(self, disable_ndarray):
+        def name_func(x):
+            return verilog_name(x, disable_ndarray)
+        return self.make_path(".",
+                              name_func=name_func)
 
     @property
     def spice_path(self):

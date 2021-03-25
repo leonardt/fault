@@ -9,8 +9,8 @@ import shutil
 @pytest.mark.skipif(not shutil.which("irun"), reason="irun not available")
 def test_simple_alu_pd():
     type_map = {"CLK": m.In(m.Clock)}
-    circ = m.DefineFromVerilogFile("tests/verilog/simple_alu_pd.sv",
-                                   type_map=type_map)[0]
+    circ = m.define_from_verilog_file("tests/verilog/simple_alu_pd.sv",
+                                      type_map=type_map)[0]
     tester = fault.PowerTester(circ, circ.CLK)
     tester.add_power(circ.VDD_HIGH)
     tester.add_ground(circ.VSS)

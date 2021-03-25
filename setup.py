@@ -13,7 +13,7 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='3.0.19',
+    version='3.0.51',
     description=DESCRIPTION,
     scripts=[],
     packages=[
@@ -26,11 +26,12 @@ setup(
         "cosa",
         "z3-solver",
         "hwtypes",
-        "magma-lang>=2.0.0",
+        "magma-lang>=2.0.73",
         "pyyaml",
         "scipy",
         "numpy",
-        "DeCiDa"
+        "DeCiDa",
+        "pysv"
     ],
     license='BSD License',
     url='https://github.com/leonardt/fault',

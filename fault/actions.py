@@ -1,9 +1,11 @@
+import enum
 from abc import ABC, abstractmethod
 
 from .ms_types import (RealIn, RealOut, RealInOut,
                        ElectIn, ElectOut, ElectInOut)
 
 import fault
+import pysv
 from fault.select_path import SelectPath
 import fault.expression as expression
 from fault.domain_read import domain_read
@@ -52,7 +54,7 @@ def is_input(port):
 
 class Poke(PortAction):
     def __init__(self, port, value, delay=None):
-        if is_input(port):
+        if not isinstance(port, Var) and is_input(port):
             raise ValueError(f"Can only poke inputs: {port.debug_name} "
                              f"{type(port)}")
         self.delay = delay
@@ -152,7 +154,7 @@ class GetValue(Action):
 
 class Expect(PortAction):
     def __init__(self, port, value, strict=False, abs_tol=None, rel_tol=None,
-                 above=None, below=None, caller=None):
+                 above=None, below=None, caller=None, msg=None):
         # call super constructor
         super().__init__(port, value)
 
@@ -177,6 +179,10 @@ class Expect(PortAction):
         self.above = above
         self.below = below
         self.caller = caller
+        if msg is not None and not isinstance(msg, (str, tuple)):
+            raise ValueError("Expected string or tuple of form (format_str,"
+                             " format_args...) for expect msg")
+        self.msg = msg
 
     @property
     def traceback(self):
@@ -270,6 +276,62 @@ class Loop(Action):
                    self.actions]
         return Loop(n_iter=self.n_iter, loop_var=self.loop_var,
                     actions=actions, count=self.count)
+
+
+class Fork(Action):
+    def __init__(self, name, actions):
+        self.name = name
+        self.actions = actions
+
+    def __str__(self):
+        return f"Fork({self.name}"
+
+    def retarget(self, new_circuit, clock):
+        actions = [action.retarget(new_circuit, clock) for action in
+                   self.actions]
+        return Fork(self.name, actions)
+
+
+class JoinType(enum.Enum):
+    Default = enum.auto()
+    None_ = enum.auto()
+    Any = enum.auto()
+
+
+class Join(Action):
+    def __init__(self, processes, join_type=JoinType.Default):
+        self.join_type = join_type
+        self.processes = processes
+
+    def __str__(self):
+        return f"Join({self.join_type.name})"
+
+    def retarget(self, new_circuit, clock):
+        processes = (process.retarget(new_circuit, clock) for process in
+                     self.processes)
+        return Join(processes, join_type=self.join_type)
+
+
+class Call(Action):
+    def __init__(self, func):
+        self.func = func
+
+    def __str__(self):
+        return f"Call({self.func.__name__})"
+
+    def retarget(self, new_circuit, clock):
+        return Call(self.func.func_call)
+
+
+class CallStmt(Action):
+    def __init__(self, call_expr):
+        self.call_expr = call_expr
+
+    def __str__(self):
+        return f"CallStmt({self.call_expr})"
+
+    def retarget(self, new_circuit, clock):
+        return CallStmt(self.call_expr.retarget(new_circuit, clock))
 
 
 class FileOpen(Action):
@@ -383,6 +445,17 @@ class Var(Action, expression.Expression):
 
     def retarget(self, new_circuit, clock):
         return Var(self.name, self._type)
+
+    def __getattr__(self, name):
+        if isinstance(self._type, type):
+            func = getattr(self._type, name)
+            assert isinstance(func, pysv.function.DPIFunctionCall),\
+                "Only pysv class object can be used to get class methods"
+            # also set the name for the expression to meta temporarily
+            func.meta = self.name
+            return func
+        else:
+            return object.__getattribute__(self, name)
 
 
 class Assert(Action):

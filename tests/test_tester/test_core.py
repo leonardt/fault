@@ -1,6 +1,7 @@
+import os
 import magma as m
 import random
-from hwtypes import BitVector
+from hwtypes import BitVector, SIntVector
 import hwtypes
 import fault
 from fault.actions import Poke, Expect, Eval, Step, Print, Peek
@@ -77,25 +78,52 @@ def test_tester_basic(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
     tester.compile_and_run("coreir")
     tester.clear()
     assert tester.actions == []
 
 
-@pytest.mark.xfail(strict=True)
-def test_tester_basic_fail(target, simulator):
+def test_tester_basic_fail(target, simulator, capsys):
     circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
     tester.poke(circ.I, 1)
     tester.eval()
-    tester.expect(circ.O, 0)
-    with tempfile.TemporaryDirectory(dir=".") as _dir:
-        if target == "verilator":
-            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
-        else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+    tester.expect(circ.O, 0, msg=("MY_MESSAGE: got %x, expected 0!",
+                                  tester.circuit.O))
+    with pytest.raises(AssertionError) as e:
+        with tempfile.TemporaryDirectory(dir=".") as _dir:
+            if target == "verilator":
+                tester.compile_and_run(target, directory=_dir,
+                                       flags=["-Wno-fatal"])
+            else:
+                tester.compile_and_run(target, directory=_dir,
+                                       simulator=simulator,
+                                       magma_opts={"sv": True})
+    out, err = capsys.readouterr()
+    assert "MY_MESSAGE: got 1, expected 0!" in out + err
+
+
+def test_tester_basic_fail2(target, simulator, capsys):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    tester.eval()
+    tester.expect(circ.O, 0, msg="some failure message")
+    with pytest.raises(AssertionError) as e:
+        with tempfile.TemporaryDirectory(dir=".") as _dir:
+            if target == "verilator":
+                tester.compile_and_run(target, directory=_dir,
+                                       flags=["-Wno-fatal"])
+            else:
+                tester.compile_and_run(target, directory=_dir,
+                                       simulator=simulator,
+                                       magma_opts={"sv": True})
+    out, err = capsys.readouterr()
+    assert "some failure message" in out + err
 
 
 def test_tester_clock(target, simulator):
@@ -109,7 +137,8 @@ def test_tester_clock(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_peek(target, simulator):
@@ -128,7 +157,8 @@ def test_tester_peek(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_peek_input(target, simulator):
@@ -144,7 +174,8 @@ def test_tester_peek_input(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_nested_arrays_by_element(target, simulator):
@@ -165,7 +196,8 @@ def test_tester_nested_arrays_by_element(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_nested_arrays_bulk(target, simulator):
@@ -187,7 +219,8 @@ def test_tester_nested_arrays_bulk(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_double_nested_arrays_broadcast(target, simulator):
@@ -211,7 +244,8 @@ def test_tester_double_nested_arrays_broadcast(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_nested_array_tuple_broadcast(target, simulator):
@@ -237,7 +271,8 @@ def test_tester_nested_array_tuple_broadcast(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_big_int(target, simulator):
@@ -257,7 +292,8 @@ def test_tester_big_int(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_128(target, simulator):
@@ -274,10 +310,12 @@ def test_tester_128(target, simulator):
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
+        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_retarget_tester(target, simulator):
@@ -316,7 +354,8 @@ def test_retarget_tester(target, simulator):
         if target == "verilator":
             copy.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            copy.compile_and_run(target, directory=_dir, simulator=simulator)
+            copy.compile_and_run(target, directory=_dir, simulator=simulator,
+                                 magma_opts={"sv": True})
 
 
 def test_run_error():
@@ -442,7 +481,8 @@ def test_tester_verilog_wrapped(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_loop(target, simulator):
@@ -463,7 +503,8 @@ def test_tester_loop(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_file_io(target, simulator):
@@ -499,7 +540,8 @@ def test_tester_file_io(target, simulator):
             tester.compile_and_run(target, directory=_dir,
                                    flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
         # read output
         with open(test_file_out, "rb") as file:
@@ -541,7 +583,8 @@ def test_tester_file_io_chunk_size_4_big_endian(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
         # read output
         with open(test_file_out, "rb") as file:
@@ -581,7 +624,8 @@ def test_tester_file_io_chunk_size_4_little_endian(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
         # read output
         with open(test_file_out, "rb") as file:
@@ -603,7 +647,8 @@ def test_tester_while(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_while2(target, simulator):
@@ -620,7 +665,8 @@ def test_tester_while2(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_while3(target, simulator):
@@ -630,6 +676,7 @@ def test_tester_while3(target, simulator):
     tester.poke(circ.I, 1)
     tester.eval()
     loop = tester._while(tester.peek(tester._circuit.O) == 0)
+    assert not loop.actions, "Should not default clock init"
     loop.poke(circ.I, 1)
     loop.eval()
     tester.expect(circ.O, 1)
@@ -637,7 +684,8 @@ def test_tester_while3(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_if(target, simulator):
@@ -649,15 +697,21 @@ def test_tester_if(target, simulator):
     loop._if(tester.circuit.O == 0).poke(circ.I, 1)
     loop.eval()
     if_tester = tester._if(tester.circuit.O == 0)
+    assert not if_tester.actions, "Should not default clock init"
     if_tester.poke(circ.I, 1)
-    if_tester._else().poke(circ.I, 0)
+    else_tester = if_tester._else()
+    assert not else_tester.actions, "Should not default clock init"
+    else_tester.poke(circ.I, 0)
+    else_tester.circuit.I = 0
+    # Test circuit interface bug
     tester.eval()
     tester.expect(circ.O, 0)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_tester_file_scanf(target, simulator):
@@ -693,7 +747,8 @@ def test_tester_file_scanf(target, simulator):
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
-            tester.compile_and_run(target, directory=_dir, simulator=simulator)
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
 
 
 def test_sint_circuit(target, simulator):
@@ -718,6 +773,7 @@ def test_sint_circuit(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -736,6 +792,7 @@ def test_tuple_circuit(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -764,6 +821,7 @@ def test_nested_tuple_circuit(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
 
 
@@ -806,6 +864,28 @@ def test_poke_bitwise_nested(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
+        tester.compile_and_run(**kwargs)
+
+
+@pytest.mark.parametrize("T,value", [(BitVector[3], 1),
+                                     (SIntVector[3], -1)])
+def test_poke_expect_var(target, simulator, T, value):
+    circ = TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.eval()
+    v = tester.Var("v", T)
+    tester.poke(v, value)
+    tester.eval()
+    tester.poke(circ.I, v)
+    tester.eval()
+    tester.expect(circ.O, value)
+    tester.expect(circ.O, v)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
         tester.compile_and_run(**kwargs)
 
 
@@ -823,4 +903,68 @@ def test_generic_expect_fail(target, simulator):
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
         tester.compile_and_run(**kwargs)
+
+
+def test_wait_until_tuple(target, simulator):
+    class ClocksT(m.Product):
+        clk0 = m.In(m.Clock)
+        clk1 = m.Out(m.Clock)
+
+    class Main(m.Circuit):
+        io = m.IO(clocks=ClocksT, count=m.Out(m.UInt[3]))
+        count = m.Register(m.UInt[3])()
+        count.CLK @= io.clocks.clk0
+        io.count @= count(count.O + 1)
+
+        tff = m.Register(m.Bit, has_enable=True)()
+        tff.CLK @= io.clocks.clk0
+        tff.CE @= m.enable(count.O == 3)
+        io.clocks.clk1 @= m.clock(tff(tff.O ^ 1))
+
+    tester = fault.Tester(Main, Main.clocks.clk0)
+    tester.wait_until_posedge(tester.circuit.clocks.clk1)
+    tester.circuit.count.expect(4)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
+        tester.compile_and_run(**kwargs)
+
+
+def test_peek_bitwise(target, simulator, capsys):
+    tester = fault.Tester(TestByteCircuit)
+    tester.circuit.I = 0xBE
+    tester.eval()
+    for i in range(8):
+        if_tester = tester._if(tester.circuit.I[i])
+        if_tester.print("*")
+        if_tester._else().print("_")
+    tester.print("\n")
+
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir,
+                                   disp_type="realtime")
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   disp_type="realtime")
+
+    out, _ = capsys.readouterr()
+    assert "_*****_*" in out, out
+
+
+def test_tester_basic_generate_test_bench(target, simulator):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 1)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"directory": _dir}
+        if target != "verilator":
+            kwargs["simulator"] = simulator
+        tester.compile(target, **kwargs)
+        tb_file = tester.generate_test_bench(target)
+        assert os.path.exists(tb_file)

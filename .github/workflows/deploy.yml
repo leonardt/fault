@@ -19,11 +19,9 @@ jobs:
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
-    - name: Setup Env
-      uses: goanpeca/setup-miniconda@v1
+    - uses: actions/setup-python@v2
       with:
-        auto-update-conda: true
-        python-version: 3.7
+        python-version: '3.8'
     - name: Install verilator
       shell: bash
       run: |
@@ -32,9 +30,10 @@ jobs:
     - name: Install Python packages
       shell: bash -l {0}
       run: |
-          pip install pytest
-          pip install pytest-cov pytest-codestyle
+          pip install "pytest<6"
+          pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
+          pip install vcdvcd decorator kratos
           pip install .
 
     - name: Pytest

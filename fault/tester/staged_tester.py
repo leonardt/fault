@@ -1,5 +1,6 @@
 from .base import TesterBase
 from .utils import get_port_type
+from fault.tester.control import LoopIndex, add_control_structures
 import fault
 import inspect
 import fault
@@ -28,11 +29,12 @@ import fault.expression as expression
 import os
 import inspect
 from fault.config import get_test_dir
-from typing import List
 import tempfile
+import pysv
 from hwtypes import BitVector
 
 
+@add_control_structures
 class Tester(TesterBase):
     """
     The fault `Tester` object provides a mechanism in Python to construct tests
@@ -67,7 +69,7 @@ class Tester(TesterBase):
 
     def __init__(self, circuit: m.Circuit, clock: m.Clock = None,
                  reset: m.Reset = None, poke_delay_default=None,
-                 expect_strict_default=True):
+                 expect_strict_default=True, monitors=None):
         """
         `circuit`: the device under test (a magma circuit)
         `clock`: optional, a port from `circuit` corresponding to the clock
@@ -79,12 +81,20 @@ class Tester(TesterBase):
         """
         super().__init__(circuit, clock, reset, poke_delay_default,
                          expect_strict_default)
-        if clock is not None:
-            # Default initalize clock to zero (e.g. for SV targets)
-            self.poke(clock, 0)
+        self.init_clock()
         self.targets = {}
         # For public verilator modules
         self.verilator_includes = []
+        self.pysv_funcs = []
+        if monitors is None:
+            self.monitors = []
+        else:
+            self.monitors = monitors
+
+    def init_clock(self):
+        if self.clock is not None:
+            # Default initalize clock to zero (e.g. for SV targets)
+            self.poke(self.clock, 0)
 
     def make_target(self, target: str, **kwargs):
         """
@@ -232,16 +242,19 @@ class Tester(TesterBase):
             kwargs["directory"] = self._make_directory(kwargs["directory"])
         self._compile(target, **kwargs)
 
+    def _get_target(self, target):
+        try:
+            return self.targets[target]
+        except KeyError:
+            raise Exception(
+                f"Could not find target={target}, did you compile it first?")
+
     def run(self, target="verilator"):
         """
         Run the current action sequence using the specified `target`.  The user
         should call `compile` with `target` before calling `run`.
         """
-        # Try to get the target
-        try:
-            target_obj = self.targets[target]
-        except KeyError:
-            raise Exception(f"Could not find target={target}, did you compile it first?")  # noqa
+        target_obj = self._get_target(target)
 
         # Run the target, possibly passing in some custom arguments
         logging.info("Running tester...")
@@ -250,6 +263,13 @@ class Tester(TesterBase):
         else:
             target_obj.run(self.actions)
         logging.info("Success!")
+
+    def generate_test_bench(self, target="verilator"):
+        target_obj = self._get_target(target)
+        args = (self.actions, )
+        if target == "verilator":
+            args += (self.verilator_includes, )
+        return target_obj.generate_test_bench(*args)
 
     def _compile_and_run(self, target="verilator", **kwargs):
         """
@@ -317,10 +337,51 @@ class Tester(TesterBase):
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        loop_tester = LoopTester(self._circuit, self.clock)
+        loop_tester = self.LoopTester(self._circuit, self.clock, self.monitors)
         self.actions.append(Loop(n_iter, loop_tester.index,
                                  loop_tester.actions))
         return loop_tester
+
+    def fork(self, name):
+        """
+        Returns a fork process to record actions inside the fork
+        """
+        fork_tester = self.ForkTester(name, self._circuit, self.clock,
+                                      self.monitors)
+        return fork_tester
+
+    def join(self, *args, join_type=actions.JoinType.Default):
+        """
+        Join all forked processes together
+        """
+        processes = [actions.Fork(p.name, p.actions) for p in args]
+        join_action = actions.Join(processes, join_type=join_type)
+        self.actions.append(join_action)
+        return join_action
+
+    def join_any(self, *args):
+        return self.join(*args, join_type=actions.JoinType.Any)
+
+    def join_none(self, *args):
+        return self.join(*args, join_type=actions.JoinType.None_)
+
+    def _make_call_expr(self, func, *args, **kwargs):
+        if isinstance(func, type):
+            func_def = func.__init__
+        else:
+            func_def = func
+        assert isinstance(func_def, pysv.function.DPIFunctionCall)
+        if func not in self.pysv_funcs:
+            self.pysv_funcs.append(func)
+        self.actions.append(actions.Call(func))
+        return expression.CallExpression(func_def, *args, **kwargs)
+
+    def make_call_expr(self, func, *args, **kwargs):
+        return self._make_call_expr(func, *args, **kwargs)
+
+    def make_call_stmt(self, func, *args, **kwargs):
+        call_expr = self._make_call_expr(func, *args, **kwargs)
+        self.actions.append(actions.CallStmt(call_expr))
 
     def file_open(self, file_name, mode="r", chunk_size=1, endianness="little"):
         """
@@ -348,12 +409,13 @@ class Tester(TesterBase):
         loop action object maintains a references to the return Tester's
         `actions` list.
         """
-        while_tester = LoopTester(self._circuit, self.clock)
+        while_tester = self.LoopTester(self._circuit, self.clock,
+                                       self.monitors)
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
     def _if(self, cond):
-        if_tester = IfTester(self._circuit, self.clock)
+        if_tester = self.IfTester(self._circuit, self.clock, self.monitors)
         self.actions.append(If(cond, if_tester.actions,
                                if_tester.else_actions))
         return if_tester
@@ -371,10 +433,10 @@ class Tester(TesterBase):
         loop.step()
 
     def wait_until_low(self, signal):
-        self.wait_on(self.peek(signal))
+        self.wait_on(self.peek(signal) != 0)
 
     def wait_until_high(self, signal):
-        self.wait_on(~self.peek(signal))
+        self.wait_on(self.peek(signal) == 0)
 
     def wait_until_negedge(self, signal):
         self.wait_until_high(signal)
@@ -383,40 +445,6 @@ class Tester(TesterBase):
     def wait_until_posedge(self, signal, steps_per_iter=1):
         self.wait_until_low(signal)
         self.wait_until_high(signal)
-
-
-class LoopIndex:
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return self.name
-
-
-class LoopTester(Tester):
-    __unique_index_id = -1
-
-    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
-        super().__init__(circuit, clock)
-        LoopTester.__unique_index_id += 1
-        self.index = LoopIndex(
-            f"__fault_loop_var_action_{LoopTester.__unique_index_id}")
-
-
-class ElseTester(Tester):
-    def __init__(self, else_actions: List, circuit: m.Circuit,
-                 clock: m.Clock = None):
-        super().__init__(circuit, clock)
-        self.actions = else_actions
-
-
-class IfTester(Tester):
-    def __init__(self, circuit: m.Circuit, clock: m.Clock = None):
-        super().__init__(circuit, clock)
-        self.else_actions = []
-
-    def _else(self):
-        return ElseTester(self.else_actions, self.circuit, self.clock)
 
 
 StagedTester = Tester

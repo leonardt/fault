@@ -26,14 +26,17 @@ class VerilogTarget(Target):
                  use_kratos=False, value_file_name='get_value_file.txt'):
         super().__init__(circuit)
 
-        if circuit_name is None:
-            circuit_name = self.circuit.name
         self.circuit_name = circuit_name
+        if self.circuit_name is None:
+            self.circuit_name = self.circuit.name
 
         self.directory = Path(directory)
         os.makedirs(directory, exist_ok=True)
 
         self.skip_compile = skip_compile
+
+        # store functions need to be exported via pysv
+        self.pysv_funcs = []
 
         if include_verilog_libraries is None:
             include_verilog_libraries = []
@@ -41,10 +44,18 @@ class VerilogTarget(Target):
 
         self.magma_output = magma_output
         self.magma_opts = magma_opts if magma_opts is not None else {}
+        # If user provides a circuit name, we will not change it
+        if circuit_name is None:
+            if "user_namespace" in self.magma_opts:
+                self.circuit_name = (magma_opts["user_namespace"] + "_" +
+                                     self.circuit_name)
+            if "verilog_prefix" in self.magma_opts:
+                self.circuit_name = (magma_opts["verilog_prefix"] +
+                                     self.circuit_name)
 
         if hasattr(circuit, "verilog_file_name") and \
                 os.path.splitext(circuit.verilog_file_name)[-1] == ".sv" or \
-                use_kratos:
+                use_kratos or "sv" in self.magma_opts:
             suffix = "sv"
         else:
             suffix = "v"
@@ -135,6 +146,12 @@ class VerilogTarget(Target):
             return self.make_guarantee(i, action)
         elif isinstance(action, actions.Loop):
             return self.make_loop(i, action)
+        elif isinstance(action, actions.Join):
+            return self.make_join(i, action)
+        elif isinstance(action, actions.Call):
+            return self.make_call(i, action)
+        elif isinstance(action, actions.CallStmt):
+            return self.make_call_stmt(i, action)
         elif isinstance(action, actions.FileOpen):
             return self.make_file_open(i, action)
         elif isinstance(action, actions.FileWrite):
@@ -203,6 +220,19 @@ class VerilogTarget(Target):
         return self.make_block(i, 'for', cond, action.actions)
 
     @abstractmethod
+    def make_join(self, i, action):
+        pass
+
+    def make_call(self, i, action: actions.Call):
+        func = action.func
+        if func not in self.pysv_funcs:
+            self.pysv_funcs.append(func)
+        return []
+
+    def make_call_stmt(self, i, action: actions.CallStmt):
+        return [self.compile_expression(action.call_expr) + ";"]
+
+    @abstractmethod
     def make_file_open(self, i, action):
         pass
 
@@ -255,12 +285,12 @@ class VerilogTarget(Target):
     def make_assert(self, i, action):
         pass
 
-    def make_block(self, i, name, cond, actions):
+    def make_block(self, i, name, cond, actions, label=None):
         '''
         Generic function that creates a properly indented code block.  This
         is useful for constructing "if", "while", and "for" blocks
         Format:
-        {name} ({cond}) BLOCK_START
+        {name} ({cond}) BLOCK_START : LABEL
             actions[0]
             actions[1]
             ...
@@ -273,10 +303,15 @@ class VerilogTarget(Target):
 
         # build up the code block
         code = []
+        code_str = []
+        if name is not None:
+            code_str += [f"{name}"]
         if cond is not None:
-            code += [f'{name} ({cond}) {self.BLOCK_START}']
-        else:
-            code += [f'{name} {self.BLOCK_START}']
+            code_str += [f"({cond})"]
+        code_str += [f"{self.BLOCK_START}"]
+        if label is not None:
+            code_str += [f": {label}"]
+        code += [" ".join(code_str)]
         code += [f'{self.TAB}{line}'
                  for line in self.generate_action_code(i, actions)]
         code += [f'{self.BLOCK_END}']

@@ -13,20 +13,23 @@ from fault.verilator_utils import (verilator_make_cmd, verilator_comp_cmd,
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper, InstanceWrapper
 import math
-from hwtypes import BitVector, AbstractBitVectorMeta, Bit
+from hwtypes import BitVector, AbstractBitVectorMeta, Bit, SIntVector
 from fault.random import constrained_random_bv
 from fault.subprocess_run import subprocess_run
+from fault.ms_types import RealType
 import fault.utils as utils
 import fault.expression as expression
 import platform
 import os
 import glob
+import pysv
 
 
 max_bits = 64 if platform.architecture()[0] == "64bit" else 32
 
 
 src_tpl = """\
+#include "math.h"
 {includes}
 
 // Based on https://www.veripool.org/projects/verilator/wiki/Manual-verilator#CONNECTING-TO-C
@@ -51,32 +54,10 @@ void write_coverage() {{
 VerilatedVcdC* tracer;
 #endif
 
-void my_assert(
-    unsigned int got,
-    unsigned int expected,
-    int i,
-    const char* port) {{
-  if (got != expected) {{
-    std::cerr << std::endl;  // end the current line
-    std::cerr << \"Got      : 0x\" << std::hex << got << std::endl;
-    std::cerr << \"Expected : 0x\" << std::hex << expected << std::endl;
-    std::cerr << \"i        : \" << std::dec << i << std::endl;
-    std::cerr << \"Port     : \" << port << std::endl;
-#if VM_TRACE
-    // Dump one more timestep so we see the current values
-    main_time++;
-    tracer->dump(main_time);
-    tracer->close();
-#endif
-    {kratos_exit_call}
-    exit(1);
-  }}
-}}
-
 int main(int argc, char **argv) {{
   Verilated::commandArgs(argc, argv);
   V{circuit_name}* top = new V{circuit_name};
-  {kratos_start_call}
+  {start_code}
 #if VM_TRACE
   Verilated::traceEverOn(true);
   tracer = new VerilatedVcdC;
@@ -88,13 +69,15 @@ int main(int argc, char **argv) {{
 {main_body}
 
 #if VM_TRACE
+  tracer->dump(main_time);
   tracer->close();
 #endif
-  {kratos_exit_call}
+  {exit_code}
 
 #ifdef _VERILATED_COV_H_
     write_coverage();
 #endif
+  top->final();
 
 }}
 """  # nopep8
@@ -108,10 +91,12 @@ class VerilatorTarget(VerilogTarget):
     LOOP_VAR_TYPE = 'int'
 
     def __init__(self, circuit, directory="build/",
-                 flags=None, skip_compile=False, include_verilog_libraries=None,
+                 flags=None, skip_compile=None, include_verilog_libraries=None,
                  include_directories=None, magma_output="coreir-verilog",
                  circuit_name=None, magma_opts=None, skip_verilator=False,
-                 disp_type='on_error', coverage=False, use_kratos=False):
+                 disp_type='on_error', coverage=False, use_kratos=False,
+                 defines=None, parameters=None, ext_model_file=None,
+                 use_pysv=False):
         """
         Params:
             `include_verilog_libraries`: a list of verilog libraries to include
@@ -122,15 +107,27 @@ class VerilatorTarget(VerilogTarget):
             -I flag. From the the verilator docs:
                 -I<dir>                    Directory to search for includes
         """
+
         # Set defaults
         if include_verilog_libraries is None:
             include_verilog_libraries = []
         if magma_opts is None:
             magma_opts = {}
+        if skip_compile is None:
+            if ext_model_file is None:
+                skip_compile = False
+            else:
+                skip_compile = True
+        magma_opts.setdefault("verilator_compat", True)
 
         # Save settings
         self.disp_type = disp_type
         self.use_kratos = use_kratos
+        self.parameters = parameters if parameters is not None else {}
+        self.exit_code = ""
+
+        # Try to import kratos_runtime, if needed
+        # (it may be used in verilator_comp_cmd)
         if use_kratos:
             try:
                 import kratos_runtime
@@ -144,19 +141,30 @@ class VerilatorTarget(VerilogTarget):
                          include_verilog_libraries, magma_output, magma_opts,
                          coverage=coverage)
 
+        # Determine the path to the Verilog file being tested
+        if ext_model_file is not None:
+            verilog_filename = str(ext_model_file)
+        else:
+            verilog_filename = self.verilog_file.name
+
+        self.use_pysv = use_pysv
+
         # Compile the design using `verilator`, if not skip
         if not skip_verilator:
             driver_file = self.directory / Path(
                 f"{self.circuit_name}_driver.cpp")
             comp_cmd = verilator_comp_cmd(
                 top=self.circuit_name,
-                verilog_filename=self.verilog_file.name,
+                verilog_filename=verilog_filename,
                 include_verilog_libraries=self.include_verilog_libraries,
                 include_directories=include_directories,
                 driver_filename=driver_file.name,
                 verilator_flags=flags,
                 coverage=self.coverage,
-                use_kratos=use_kratos
+                use_kratos=use_kratos,
+                defines=defines,
+                parameters=parameters,
+                use_pysv=use_pysv
             )
             # shell=True since 'verilator' is actually a shell script
             subprocess_run(comp_cmd, cwd=self.directory, shell=True,
@@ -164,6 +172,59 @@ class VerilatorTarget(VerilogTarget):
 
         # Initialize variables
         self.verilator_version = verilator_version(disp_type=self.disp_type)
+
+    def _make_assert(self, got, expected, i, port, user_msg,
+                     below=None, above=None, style='hex'):
+        if self.use_kratos:
+            self.exit_code += "teardown_runtime();\n"
+        user_msg_str = ""
+        if user_msg:
+            arg_str = ""
+            if len(user_msg) > 1:
+                arg_str += f", {', '.join(user_msg[1:])}"
+            user_msg_str += f"printf(\"{user_msg[0]}\"{arg_str});"
+
+        # determine the condition to use
+        if above is not None:
+            if below is not None:
+                # must be in range
+                cond = f'(({above} <= {got}) && ({got} <= {below}))'  # noqa
+            else:
+                # must be above
+                cond = f'({above} <= {got})'
+        else:
+            if below is not None:
+                # must be below
+                cond = f'({got} <= {below})'
+            else:
+                # equality comparison
+                cond = f'({got} == {expected})'
+
+        # determine how the output should be formatted
+        if style == 'hex':
+            fmt = '"0x" << std::hex'
+        elif style == 'scientific':
+            fmt = 'std::scientific'
+        else:
+            raise Exception(f'Unknown style: ' + style)
+
+        return f'''\
+if (!({cond})) {{
+    std::cerr << std::endl;  // end the current line
+    std::cerr << "Got      : " << {fmt} << ({got}) << std::endl;
+    std::cerr << "Expected : " << {fmt} << ({expected}) << std::endl;
+    std::cerr << "i        : " << std::dec << {i} << std::endl;
+    std::cerr << "Port     : " << {port} << std::endl;
+    {user_msg_str}
+#if VM_TRACE
+    // Dump one more timestep so we see the current values
+    tracer->dump(main_time);
+    tracer->close();
+#endif
+    {self.exit_code}
+    exit(1);
+}}
+    '''
 
     def get_verilator_prefix(self):
         if self.verilator_version > 3.874:
@@ -175,8 +236,17 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(value.port, fault.WrappedVerilogInternalPort):
             path = value.port.path.replace(".", "->")
             return f"top->{self.get_verilator_prefix()}->{path}"
+        if isinstance(value.port, PortWrapper):
+            value_str = f"top->{value.port.select_path.verilator_path}"
+            name = value.port.port.name
         else:
-            return f"top->{verilator_name(value.port.name)}"
+            value_str = f"top->{verilator_name(value.port.name)}"
+            name = value.port.name
+        if (isinstance(name, m.ref.ArrayRef) and
+                issubclass(name.array.T, m.Digital)):
+            # Use mask to select bit from bits
+            value_str = f"({value_str} >> {name.index}) & 1"
+        return value_str
 
     def process_value(self, port, value):
         if isinstance(value, expression.Expression):
@@ -184,7 +254,13 @@ class VerilatorTarget(VerilogTarget):
         if isinstance(value, Bit):
             return int(value)
         if isinstance(value, (int, BitVector)) and value < 0:
-            return self.process_signed_values(port, value)
+            if isinstance(port, RealType):
+                # if the value is an int, but the port is a RealType,
+                # then we don't want to try to convert the value to
+                # an unsigned integer
+                return value
+            else:
+                return self.process_signed_values(port, value)
         if isinstance(value, (int, BitVector)):
             return value
         if isinstance(value, actions.Var):
@@ -201,6 +277,8 @@ class VerilatorTarget(VerilogTarget):
         # c type
         if isinstance(port, SelectPath):
             port = port[-1]
+        if isinstance(port, actions.Var):
+            port = port._type
         port_len = len(port)
         return BitVector[port_len](value).as_uint()
 
@@ -213,12 +291,27 @@ class VerilatorTarget(VerilogTarget):
             else:
                 op = value.op_str
             return f"({left} {op} {right})"
-        elif isinstance(value, PortWrapper):
-            return f"top->{value.select_path.verilator_path}"
-        elif isinstance(value, actions.Peek):
+        elif isinstance(value, expression.UnaryOp):
+            operand = self.compile_expression(value.operand)
+            op = value.op_str
+            return f"{op} ({operand})"
+        elif isinstance(value, (PortWrapper, actions.Peek)):
             return self.process_peek(value)
         elif isinstance(value, actions.Var):
             return value.name
+        elif isinstance(value, expression.FunctionCall):
+            if isinstance(value, expression.Integer):
+                assert len(value.args) == 1
+                return f"((int) {self.compile_expression(value.args[0])})"
+            args = ", ".join(self.compile_expression(x) for x in value.args)
+            func_str = value.func_str
+            if func_str in {"min", "max"}:
+                func_str = f"std::{func_str}"
+            return f"{func_str}({args})"
+        elif isinstance(value, int):
+            return str(value)
+        elif isinstance(value, expression.CallExpression):
+            return value.str(False, self.compile_expression, use_ptr=True)
         return value
 
     def process_bitwise_assign(self, port, name, value):
@@ -260,6 +353,8 @@ class VerilatorTarget(VerilogTarget):
                 # to use top->v instead of top->{circuit_name}
                 name += f"{prefix}->"
             name += action.port.verilator_path
+        elif isinstance(action.port, actions.Var):
+            name = action.port.name
         else:
             name = verilator_name(action.port.name)
 
@@ -284,7 +379,10 @@ class VerilatorTarget(VerilogTarget):
             value = action.value
             value = self.process_value(action.port, value)
             value = self.process_bitwise_assign(action.port, name, value)
-            result = [f"top->{name} = {value};"]
+            if isinstance(action.port, actions.Var):
+                result = [f"{name} = {value};"]
+            else:
+                result = [f"top->{name} = {value};"]
             # Hack to support verilator's semantics, need to set the register
             # mux values for expected behavior
             if is_reg_poke:
@@ -299,10 +397,10 @@ class VerilatorTarget(VerilogTarget):
                     result += self.make_poke(i, action)
             return result
 
-    def make_print(self, i, action):
+    def _make_print_args(self, ports):
         port_names = []
         prefix = self.get_verilator_prefix()
-        for port in action.ports:
+        for port in ports:
             if isinstance(port, fault.WrappedVerilogInternalPort):
                 path = port.path.replace(".", "->")
                 name = f"{prefix}->{path}"
@@ -314,10 +412,15 @@ class VerilatorTarget(VerilogTarget):
             else:
                 name = verilator_name(port.name)
             port_names.append(name)
-        ports = ", ".join(f"top->{name}" for name in port_names)
-        if ports:
-            ports = ", " + ports
-        return [f'printf("{action.format_str}"{ports});']
+        return tuple(f"top->{name}" for name in port_names)
+
+    def make_print(self, i, action):
+        ports = self._make_print_args(action.ports)
+        if len(ports) != 0:
+            ports_str = ", " + ", ".join(ports)
+        else:
+            ports_str = ""
+        return [f'printf("{action.format_str}"{ports_str});']
 
     def make_expect(self, i, action):
         # For verilator, if an expect is "AnyValue" we don't need to
@@ -342,6 +445,16 @@ class VerilatorTarget(VerilogTarget):
             value = self.process_peek(value)
         elif isinstance(value, PortWrapper):
             value = f"top->{prefix}->" + value.select_path.verilator_path
+
+        user_msg = ()
+        if action.msg is not None:
+            if isinstance(action.msg, str):
+                user_msg += (action.msg, )
+            else:
+                assert isinstance(action.msg, tuple)
+                user_msg += (action.msg[0], )
+                user_msg += self._make_print_args(action.msg[1:])
+
         if isinstance(action.value, BitVector) and \
                 action.value.num_bits > max_bits:
             asserts = []
@@ -350,8 +463,10 @@ class VerilatorTarget(VerilogTarget):
             for j in range(math.ceil(action.value.num_bits / slice_range)):
                 value = action.value[j * slice_range:min(
                     (j + 1) * slice_range, action.value.num_bits)]
-                asserts += [f"my_assert(top->{name}[{j}], {value}, "
-                            f"{i}, \"{debug_name}\");"]
+                asserts.append(self._make_assert(
+                    f"((unsigned int) top->{name}[{j}])",
+                    f"((unsigned int) {value})", i, f"\"{debug_name}\"",
+                    user_msg))
             return asserts
         else:
             value = self.process_value(action.port, value)
@@ -367,27 +482,50 @@ class VerilatorTarget(VerilogTarget):
                 port_len = 1
             else:
                 port_len = len(port)
-            mask = (1 << port_len) - 1
 
-            return [f"my_assert({port_value}, {value} & {mask}, "
-                    f"{i}, \"{debug_name}\");"]
+            # deal with real-valued expressions
+            if isinstance(port, RealType):
+                got = f"({port_value})"
+                expected = f"({value})"
+                style = 'scientific'
+            else:
+                mask = (1 << port_len) - 1
+                got = f"((unsigned int) {port_value})"
+                expected = f"(unsigned int) ({value} & {mask})"
+                style = 'hex'
+
+            return [
+                self._make_assert(
+                    got=got,
+                    expected=expected,
+                    i=i,
+                    port=f'"{debug_name}"',
+                    user_msg=user_msg,
+                    below=action.below,
+                    above=action.above,
+                    style=style
+                )
+            ]
 
     def make_eval(self, i, action):
-        return ["top->eval();", "main_time++;", "#if VM_TRACE",
-                "tracer->dump(main_time);", "#endif"]
+        return ["top->eval();", "#if VM_TRACE", "tracer->dump(main_time);",
+                "main_time++;", "#endif"]
 
     def make_step(self, i, action):
         name = verilator_name(action.clock.name)
         code = []
         code.append("top->eval();")
         for step in range(action.steps):
-            code.append(f"top->{name} ^= 1;")
-            code.append("top->eval();")
-            code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
+            code.append(f"top->{name} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time += 5;")
         return code
+
+    def make_join(self, i, action):
+        raise NotImplementedError("fork/join not implemented for Verilator")
 
     def make_file_open(self, i, action):
         # make sure the file mode is supported
@@ -411,6 +549,9 @@ class VerilatorTarget(VerilogTarget):
                 f'return 1;'
             ])
         ])
+
+    def make_call(self, i, action: actions.Call):
+        return super().make_call(i, action)
 
     def make_file_close(self, i, action):
         fd_var = self.fd_var(action.file)
@@ -466,9 +607,17 @@ class VerilatorTarget(VerilogTarget):
         ])
 
     def make_var(self, i, action):
-        if isinstance(action._type, AbstractBitVectorMeta) and \
-                action._type.size == 32:
-            return [f"unsigned int {action.name};"]
+        if isinstance(action._type, AbstractBitVectorMeta):
+            size = action._type.size
+            size_map = [(1, "uint8_t"), (2, "uint16_t"), (4, "uint32_t"),
+                        (8, "uint64_t")]
+            size_key = (size - 1) // 8 + 1
+            for s, t in size_map:
+                if size_key <= s:
+                    return [f"{t} {action.name};"]
+        elif isinstance(action._type, type):
+            return [f"{action._type.__name__} *{action.name};"]
+
         raise NotImplementedError(action._type)
 
     def make_file_scan_format(self, i, action):
@@ -515,6 +664,9 @@ if (!({expr_str})) {{
             '<sys/stat.h>',
         ]
 
+        if self.use_pysv:
+            includes += ['"pysv.hh"']
+
         # if we're using the GetValue feature, then we need to open/close a
         # file in which GetValue results will be written
         if any(isinstance(action, GetValue) for action in actions):
@@ -546,34 +698,44 @@ if (!({expr_str})) {{
         if self.use_kratos:
             includes_src += "\nvoid initialize_runtime();\n"
             includes_src += "void teardown_runtime();\n"
-            kratos_start_call = "initialize_runtime();"
-            kratos_exit_call = "teardown_runtime();"
+            start_code = "initialize_runtime();\n"
+            self.exit_code += "teardown_runtime();"
         else:
-            kratos_start_call = ""
-            kratos_exit_call = ""
+            start_code = ""
+
+        # need to use using namespace
+        if self.use_pysv:
+            start_code += "using namespace pysv;\n"
+            self.exit_code += "pysv_finalize();\n"
 
         src = src_tpl.format(
             includes=includes_src,
             main_body=main_body,
             circuit_name=self.circuit_name,
-            kratos_start_call=kratos_start_call,
-            kratos_exit_call=kratos_exit_call
+            start_code=start_code,
+            exit_code=self.exit_code
         )
 
         return src
 
-    def run(self, actions, verilator_includes=None, num_tests=0,
-            _circuit=None):
-        # Set defaults
+    def generate_test_bench(self, actions, verilator_includes=None,
+                            num_tests=0, _circuit=None):
+        # Set default
         if verilator_includes is None:
             verilator_includes = []
-
         # Write the verilator driver to file.
         src = self.generate_code(actions, verilator_includes, num_tests,
                                  _circuit)
         driver_file = self.directory / Path(f"{self.circuit_name}_driver.cpp")
         with open(driver_file, "w") as f:
             f.write(src)
+        return driver_file
+
+    def run(self, actions, verilator_includes=None, num_tests=0,
+            _circuit=None):
+
+        self.generate_test_bench(actions, verilator_includes, num_tests,
+                                 _circuit)
 
         # if use kratos, symbolic link the library to dest folder
         if self.use_kratos:
@@ -587,6 +749,18 @@ if (!({expr_str})) {{
             env = {"LD_LIBRARY_PATH": os.path.dirname(dst_path)}
         else:
             env = None
+
+        # codegen the c++ binding if needed
+        if len(self.pysv_funcs) > 0:
+            header = os.path.join(self.directory, "pysv.hh")
+            pysv.generate_cxx_binding(self.pysv_funcs, filename=header)
+            lib_path = pysv.compile_lib(self.pysv_funcs, os.path.join(self.directory, "obj_dir"))
+            ld_lib_path = os.path.realpath(os.path.dirname(lib_path))
+            if env is None:
+                env = {}
+            if "LD_LIBRARY_PATH" in env:
+                ld_lib_path = env["LD_LIBRARY_PATH"] + ":" + ld_lib_path
+            env["LD_LIBRARY_PATH"] = ld_lib_path
 
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
@@ -673,10 +847,10 @@ class SynchronousVerilatorTarget(VerilatorTarget):
     def make_step(self, i, action):
         code = []
         for _ in range(action.steps):
-            code.append(f"top->{self.clock} ^= 1;")
-            code.append("top->eval();")
-            code.append("main_time++;")
             code.append("#if VM_TRACE")
             code.append("tracer->dump(main_time);")
             code.append("#endif")
+            code.append(f"top->{self.clock} ^= 1;")
+            code.append("top->eval();")
+            code.append("main_time += 5;")
         return code

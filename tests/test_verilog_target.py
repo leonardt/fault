@@ -39,7 +39,7 @@ def run(circ, actions, Target, simulator, flags=None, disp_type='on_error'):
                             disp_type=disp_type)
         else:
             target = Target(circ, directory=f"{tempdir}/", simulator=simulator,
-                            disp_type=disp_type)
+                            disp_type=disp_type, magma_opts={"sv": True})
         if Target == fault.system_verilog_target.SystemVerilogTarget:
             target.run(actions)
         else:
