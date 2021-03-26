@@ -1,4 +1,4 @@
-from fault.actions import Poke
+from fault.actions import Poke, Var
 import heapq
 import math
 from functools import total_ordering
@@ -234,7 +234,9 @@ class ThreadPool():
                          and type(action.delay) == dict)
 
         # check whether this is a poke taking over a background port
+        # TODO if the port is a Var, just hope it's not taking over
         if (isinstance(action, Poke)
+            and not isinstance(action.port, Var)
             and action.port in self.active_ports):
             new_action_list += self.remove(action.port)
 
