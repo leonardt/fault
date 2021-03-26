@@ -283,7 +283,7 @@ def process_action_list(actions, clock_step_delay):
             else:
                 return a.delay
         else:
-            return clock_step_delay
+            return 0 # clock_step_delay
 
     background_pool = ThreadPool(0)
     new_action_list = []
@@ -294,7 +294,11 @@ def process_action_list(actions, clock_step_delay):
 
 def background_poke_target(cls):
     class BackgroundPokeTarget(cls):
-        def run(self, actions):
-            actions = process_action_list(actions, self.clock_step_delay)
-            super().run(actions)
+        def run(self, *args, **kwargs):
+            assert (len(args) > 0 and isinstance(args[0], list),
+                    'Expected first arg to "target.run" to be an action list')
+            actions = args[0]
+            new_actions = process_action_list(actions, self.clock_step_delay)
+            new_args = (new_actions, *args[1:])
+            super().run(*new_args, **kwargs)
     return BackgroundPokeTarget
