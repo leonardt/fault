@@ -322,16 +322,15 @@ class VerilogTarget(Target):
     def post_process_get_value_actions(self, all_actions):
         get_value_actions = [action for action in all_actions
                              if isinstance(action, actions.GetValue)]
-        
-        # sort out actions with parmams
-        get_value_actions_params   = [action for action in get_value_actions if action.params != None]
-        print(get_value_actions_params)
 
         if len(get_value_actions) > 0:
             with open(self.value_file.name, 'r') as f:
                 lines = f.readlines()
             for line, action in zip(lines, get_value_actions):
                 action.update_from_line(line)
+
+        # sort out actions with params
+        get_value_actions_params = [action for action in get_value_actions if action.params != None]
 
         def get_name(port):
             return str(port.name)

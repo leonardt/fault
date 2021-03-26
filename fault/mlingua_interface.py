@@ -17,28 +17,28 @@ def mlingua_target(cls):
                 self.add_decl('`get_timeunit', '')
                 self.includes.append('mLingua_pwl.vh')
                 
-            # sort out pokes
-            pokes = defaultdict(list)
-            time = 0
-            for a in actions:
-                if self.is_mlingua(a):
-                    p = a.port
-                    pokes[p].append((time, a))
-                # TODO am I missing other ways the time can advance? certainly flow control will be a problem
-                # Cast to float here is only to make it throw an exception earlier
-                delay_attr = getattr(a, 'delay', 0)
-                delay = 0 if delay_attr == None else float(delay_attr)
-                time += delay
+                # sort out pokes
+                pokes = defaultdict(list)
+                time = 0
+                for a in actions:
+                    if self.is_mlingua(a):
+                        p = a.port
+                        pokes[p].append((time, a))
+                    # TODO am I missing other ways the time can advance? certainly flow control will be a problem
+                    # Cast to float here is only to make it throw an exception earlier
+                    delay_attr = getattr(a, 'delay', 0)
+                    delay = 0 if delay_attr == None else float(delay_attr)
+                    time += delay
 
-            # update pokes
-            for poke_list in pokes.values():
-                # look at the value of the current and next point, replace value with 'pm.write(p0, slope, time)'
-                for i,(t,poke) in enumerate(poke_list):
-                    next_val = poke_list[i+1][1].value if i != len(poke_list)-1 else poke.value
-                    next_time = poke_list[i+1][0] if i != len(poke_list)-1 else 1
-                    assert next_time != t, f'Cannot have 2 PWL pokes at the same time, check {poke.port}'
-                    slope = (next_val - poke.value) / (next_time - t)
-                    poke.value = f'pm.write({poke.value}, {slope}, `get_time)'
+                # update pokes
+                for poke_list in pokes.values():
+                    # look at the value of the current and next point, replace value with 'pm.write(p0, slope, time)'
+                    for i,(t,poke) in enumerate(poke_list):
+                        next_val = poke_list[i+1][1].value if i != len(poke_list)-1 else poke.value
+                        next_time = poke_list[i+1][0] if i != len(poke_list)-1 else 1
+                        assert next_time != t, f'Cannot have 2 PWL pokes at the same time, check {poke.port}'
+                        slope = (next_val - poke.value) / (next_time - t)
+                        poke.value = f'pm.write({poke.value}, {slope}, `get_time)'
 
             super().run(actions)
 
