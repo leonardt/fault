@@ -184,10 +184,9 @@ def test_phase(
     tester.poke(dut.a[0], 1, delay = 0.2e-3)
     tester.poke(dut.a[1], 1, delay = 0.3e-3)
 
-    a = tester.read(dut.a[1], style='phase', params={'ref':dut.a[0]})
-    b = tester.read(dut.a[1], style='phase', params={'ref':dut.b[0]})
-    c = tester.read(dut.a[0], style='phase', params={'ref':dut.a[1]})
-
+    a = tester.get_value(dut.a[1], params={'style': 'phase', 'ref': dut.a[0]})
+    b = tester.get_value(dut.a[1], params={'style': 'phase', 'ref': dut.b[0]})
+    c = tester.get_value(dut.a[0], params={'style': 'phase', 'ref': dut.a[1]})
 
     # set options
     kwargs = dict(

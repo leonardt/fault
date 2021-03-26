@@ -4,7 +4,7 @@ import tempfile
 import pytest
 from pathlib import Path
 from .common import pytest_sim_params, TestBasicCircuit
-from fault.real_type import RealIn, RealOut, Real
+#from fault.real_type import RealIn, RealOut, Real
 
 def plot(xs, ys):
     import matplotlib.pyplot as plt
@@ -29,9 +29,9 @@ def test_system_verilog(target, simulator):
     
     circ = m.DeclareCircuit(
         'mlingua_add',
-        'a_val', RealIn,
-        'b_val', RealIn,
-        'c_val', RealOut,
+        'a_val', fault.RealIn,
+        'b_val', fault.RealIn,
+        'c_val', fault.RealOut,
     )
     
     #print(circ.a_val, type(circ.a_val))
