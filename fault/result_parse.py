@@ -166,7 +166,7 @@ def parse_vcd(filename, dut, interp='previous'):
     obj = VCDVCD(filename)
 
     def get_name_from_v(v):
-        name_vcd = v['references'][0].split('.')[-1]
+        name_vcd = v.references[0].split('.')[-1]
         name_fault = re.sub('\[[0-9]*:[0-9]*\]', '', name_vcd)
         return name_fault
     
@@ -195,7 +195,7 @@ def parse_vcd(filename, dut, interp='previous'):
             return int(val_str, 2)
 
     data = obj.get_data()
-    data = {get_name_from_v(v): v['tv'] for v in data.values()}
+    data = {get_name_from_v(v): v.tv for v in data.values()}
     end_time = obj.get_endtime()
 
     retval = {}

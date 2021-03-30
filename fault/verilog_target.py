@@ -336,6 +336,9 @@ class VerilogTarget(Target):
             return str(port.name)
         if len(get_value_actions_params) > 0:
             # TODO waveform_file is technically a property of systemverilog target only, so this is weird for verilator
+            err_msg = ('No waveform file found for domain_read. '
+                       + 'Did you compile Tester with "dump_waveforms=True"?')
+            assert self.waveform_file is not None, err_msg
             res = parse_vcd(self.waveform_file, self.circuit)
             for a in get_value_actions_params:
                 # the time has already been temporarily stored in a.value

@@ -5,9 +5,9 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    pytest_sim_params(metafunc, 'system-verilog')
+    #pytest_sim_params(metafunc, 'system-verilog')
     # TODO I don't think this works in verilator yet?
-    #pytest_sim_params(metafunc, 'system-verilog', 'verilator')
+    pytest_sim_params(metafunc, 'system-verilog', 'verilator')
 
 
 class MyAdder(m.Circuit):
@@ -49,6 +49,7 @@ def test_get_value_digital(target, simulator):
         kwargs['simulator'] = simulator
     elif target == 'verilator':
         kwargs['flags'] = ['-Wno-fatal']
+    kwargs['dump_waveforms'] = True
     tester.compile_and_run(**kwargs)
 
     # check the results
@@ -83,6 +84,7 @@ def test_real_val(target, simulator):
         ext_libs=[Path('tests/verilog/realadd.sv').resolve()],
         defines={f'__{simulator.upper()}__': None},
         ext_model_file=True,
+        dump_waveforms=True,
         #tmp_dir=True
     )
     
