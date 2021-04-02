@@ -723,9 +723,12 @@ class SystemVerilogTarget(VerilogTarget):
                 initial_body += [f'$vcdplusfile("{self.waveform_file}");',
                                  f'$vcdpluson();',
                                  f'$vcdplusmemon();']
-            if self.waveform_type == "fsdb":
+            elif self.waveform_type == "fsdb":
                 initial_body += [f'$fsdbDumpfile("{self.waveform_file}");',
                                  f'$fsdbDumpvars({self.fsdb_dumpvars_args});']
+            elif self.waveform_type == "vcd":
+                initial_body += [f"$dumpfile("{self.waveform_file}");",
+                                 f"$dumpvars;"]
         elif self.dump_waveforms and self.simulator in {"iverilog", "vivado"}:
             # https://iverilog.fandom.com/wiki/GTKWAVE
             initial_body += [f'$dumpfile("{self.waveform_file}");',
