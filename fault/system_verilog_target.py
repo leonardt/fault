@@ -250,8 +250,8 @@ class SystemVerilogTarget(VerilogTarget):
                 if self.waveform_type is None:
                     suffix = "vpd"
                 else:
-                    if self.waveform_type not in ["vpd", "fsdb"]:
-                        raise ValueError("Only 'vpd' and 'fsdb' supported for "
+                    if self.waveform_type not in ["vpd", "fsdb", "vcd"]:
+                        raise ValueError("Only 'vpd', 'fsdb', 'vcd' supported for "
                                          "vcs waveform type")
                     suffix = self.waveform_type
                 self.waveform_file = f"waveforms.{self.waveform_type}"
