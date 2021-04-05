@@ -363,5 +363,6 @@ class Foo(m.Circuit):
         read_array=m.In(m.Bits[8]),
         iter_req=m.In(m.Bits[2])) + m.ClockIO(has_resetn=True)
     f.cover(io.read_valid & (f.countones(io.read_array) == io.iter_req),
-            on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN))
+            on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN),
+            name="cover_name_C")
 ```
