@@ -305,6 +305,7 @@ output ready;
  clk, resetn
 )
 ```
+### Python
 ```python
 class Foo(m.Circuit):
     io = m.IO(valid=m.In(m.Bit), sop=m.In(m.Bit), eop=m.In(m.Bit),
@@ -349,12 +350,18 @@ class Foo(m.Circuit):
 ```
 
 ## Countones Example
+### Verilog
+```verilog
+`COVER(cover_name_C, read_valid && ($countones(read_array) == iter_req),
+       clk, rstn)
+```
+### Python
 ```python
 class Foo(m.Circuit):
     io = m.IO(
         read_valid=m.In(m.Bit),
         read_array=m.In(m.Bits[8]),
-        iter_req=m.In(m.Bits[2])) + m.ClockIO()
+        iter_req=m.In(m.Bits[2])) + m.ClockIO(has_resetn=True)
     f.cover(io.read_valid & (f.countones(io.read_array) == io.iter_req),
-            on=f.posedge(io.CLK))
+            on=f.posedge(io.CLK), disable_iff=f.not_(io.RESETN))
 ```
