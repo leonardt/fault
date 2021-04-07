@@ -234,6 +234,7 @@ def test_max(target, simulator):
 
 def test_rand():
     f = fault
+
     class Foo(m.Circuit):
         io = m.IO(
             read_valid=m.In(m.Bit),
