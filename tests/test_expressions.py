@@ -239,7 +239,9 @@ def test_rand():
         io = m.IO(
             read_valid=m.In(m.Bit),
             read_array=m.In(m.Bits[8]),
-            iter_req=m.In(m.Bits[2])) + m.ClockIO()
+            iter_req=m.In(m.Bits[2])
+        ) + m.ClockIO()
+
         f.cover(io.read_valid & (f.countones(io.read_array) == io.iter_req),
                 on=f.posedge(io.CLK))
 
