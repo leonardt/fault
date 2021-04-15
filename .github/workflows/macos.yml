@@ -39,7 +39,7 @@ jobs:
     - name: Pytest
       shell: bash -l {0}
       run: |
-        pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s
+        pytest --pycodestyle --cov-report=xml --cov=fault tests/ -v -r s -k test_verilator_coverage
     - name: Coverage
       shell: bash -l {0}
       run: |
