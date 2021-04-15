@@ -43,7 +43,7 @@ double sc_time_stamp () {{       // Called by $time in Verilog
 }}
 
 // function to write_coverage
-#ifdef VM_COVERAGE
+#if VM_COVERAGE
 void write_coverage() {{
      VerilatedCov::write("logs/coverage.dat");
 }}
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {{
 #endif
   {exit_code}
 
-#ifdef VM_COVERAGE
+#if _VERILATED_COV_H_
     write_coverage();
 #endif
   top->final();
