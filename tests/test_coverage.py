@@ -23,6 +23,7 @@ def test_verilator_coverage():
             directory=temp
         )
 
+        print(os.listdir(temp, "logs"))
         # make sure it generates a non empty file
         cov_file = os.path.join(temp, "logs", "coverage.dat")
         assert os.path.isfile(cov_file)
