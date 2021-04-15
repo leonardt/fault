@@ -74,7 +74,7 @@ int main(int argc, char **argv) {{
 #endif
   {exit_code}
 
-#if _VERILATED_COV_H_
+#if VM_COVERAGE
     write_coverage();
 #endif
   top->final();
