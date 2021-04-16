@@ -72,6 +72,7 @@ def test_waves(simulator, waveform_type, use_sva):
 def test_wait_until_sv():
     class Foo(m.Circuit):
         io = m.IO(valid=m.Out(m.Bit)) + m.ClockIO()
+        io.valid.undriven()
 
     tester = fault.SynchronousTester(Foo, Foo.CLK)
     tester.wait_until_high(tester.circuit.valid)

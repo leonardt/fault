@@ -7,6 +7,9 @@ class Expression:
     def __and__(self, other):
         return And(self, other)
 
+    def __rand__(self, other):
+        return And(self, other)
+
     def __eq__(self, other):
         return EQ(self, other)
 
@@ -28,20 +31,35 @@ class Expression:
     def __add__(self, other):
         return Add(self, other)
 
+    def __radd__(self, other):
+        return Add(otehr,self)
+
     def __invert__(self):
         return Invert(self)
 
     def __lshift__(self, other):
         return LShift(self, other)
 
+    def __rlshift__(self, other):
+        return LShift(other, self)
+
     def __rshift__(self, other):
         return RShift(self, other)
+
+    def __rrshift__(self, other):
+        return RShift(other, self)
 
     def __mod__(self, other):
         return Mod(self, other)
 
+    def __rmod__(self, other):
+        return Mod(otehr, self)
+
     def __mul__(self, other):
         return Mul(self, other)
+
+    def __rmul__(self, other):
+        return Mul(other, self)
 
     def __neg__(self):
         return Neg(self)
@@ -57,8 +75,14 @@ class Expression:
     def __sub__(self, other):
         return Sub(self, other)
 
+    def __rsub__(self, other):
+        return Sub(other, self)
+
     def __truediv__(self, other):
         return Div(self, other)
+
+    def __rtruediv__(self, other):
+        return Div(other, self)
 
     def __or__(self, other):
         if isinstance(other, Infix):
@@ -66,8 +90,14 @@ class Expression:
             return NotImplemented
         return Or(self, other)
 
+    def __ror__(self, other):
+        return Or(other, self)
+
     def __xor__(self, other):
         return XOr(self, other)
+
+    def __rxor__(self, other):
+        return XOr(other, self)
 
 
 class BinaryOp(Expression):

@@ -276,35 +276,35 @@ module Adder (
     output COUT
 );
 wire bit_const_0_None_out;
-wire [4:0] magma_Bits_5_add_inst0_out;
-wire [4:0] magma_Bits_5_add_inst1_out;
+wire [4:0] magma_UInt_5_add_inst0_out;
+wire [4:0] magma_UInt_5_add_inst1_out;
 corebit_const #(
     .value(1'b0)
 ) bit_const_0_None (
     .out(bit_const_0_None_out)
 );
-wire [4:0] magma_Bits_5_add_inst0_in0;
-assign magma_Bits_5_add_inst0_in0 = {bit_const_0_None_out,I0[3:0]};
-wire [4:0] magma_Bits_5_add_inst0_in1;
-assign magma_Bits_5_add_inst0_in1 = {bit_const_0_None_out,I1[3:0]};
+wire [4:0] magma_UInt_5_add_inst0_in0;
+assign magma_UInt_5_add_inst0_in0 = {bit_const_0_None_out,I0[3:0]};
+wire [4:0] magma_UInt_5_add_inst0_in1;
+assign magma_UInt_5_add_inst0_in1 = {bit_const_0_None_out,I1[3:0]};
 coreir_add #(
     .width(5)
-) magma_Bits_5_add_inst0 (
-    .in0(magma_Bits_5_add_inst0_in0),
-    .in1(magma_Bits_5_add_inst0_in1),
-    .out(magma_Bits_5_add_inst0_out)
+) magma_UInt_5_add_inst0 (
+    .in0(magma_UInt_5_add_inst0_in0),
+    .in1(magma_UInt_5_add_inst0_in1),
+    .out(magma_UInt_5_add_inst0_out)
 );
-wire [4:0] magma_Bits_5_add_inst1_in1;
-assign magma_Bits_5_add_inst1_in1 = {bit_const_0_None_out,bit_const_0_None_out,bit_const_0_None_out,bit_const_0_None_out,CIN};
+wire [4:0] magma_UInt_5_add_inst1_in1;
+assign magma_UInt_5_add_inst1_in1 = {bit_const_0_None_out,bit_const_0_None_out,bit_const_0_None_out,bit_const_0_None_out,CIN};
 coreir_add #(
     .width(5)
-) magma_Bits_5_add_inst1 (
-    .in0(magma_Bits_5_add_inst0_out),
-    .in1(magma_Bits_5_add_inst1_in1),
-    .out(magma_Bits_5_add_inst1_out)
+) magma_UInt_5_add_inst1 (
+    .in0(magma_UInt_5_add_inst0_out),
+    .in1(magma_UInt_5_add_inst1_in1),
+    .out(magma_UInt_5_add_inst1_out)
 );
-assign O = magma_Bits_5_add_inst1_out[3:0];
-assign COUT = magma_Bits_5_add_inst1_out[4];
+assign O = magma_UInt_5_add_inst1_out[3:0];
+assign COUT = magma_UInt_5_add_inst1_out[4];
 endmodule
 
 module DUT (
