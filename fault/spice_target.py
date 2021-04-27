@@ -4,7 +4,6 @@ from copy import copy
 import magma as m
 import fault
 import hwtypes
-import numpy as np
 from fault.target import Target
 from fault.spice import SpiceNetlist
 from fault.ms_types import RealInOut
@@ -252,16 +251,6 @@ class SpiceTarget(Target):
                 results = hspice_parse(raw_file)
             else:
                 raise NotImplementedError(self.simulator)
-
-            #import matplotlib.pyplot as plt
-            #print(results.keys())
-            #print('HELLO')
-            #in_ = results['in_']
-            #out = results['out']
-            #plt.plot(in_.x, in_.y, '-o')
-            #plt.plot(out.x, out.y, '-o')
-            #plt.grid()
-            #plt.show()
 
             # print results
             self.print_results(results=results, prints=comp.prints)
@@ -647,7 +636,6 @@ class SpiceTarget(Target):
             action.value = port_value
         elif type(action.params) == dict and 'style' in action.params:
             # requires some analysis of signal
-            #print(action.params)
             # get height of slice point based on spice config if not specified
             if 'height' not in action.params:
                 action.params['height'] = self.vsup * (self.vih_rel + self.vil_rel) / 2

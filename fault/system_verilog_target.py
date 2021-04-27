@@ -22,7 +22,6 @@ from fault.ms_types import RealType
 import os
 import pysv
 from numbers import Number
-import re
 
 
 src_tpl = """\
@@ -904,7 +903,7 @@ class SystemVerilogTarget(VerilogTarget):
             return
 
         # compile the simulation
-        completed_sim = subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
+        subprocess_run(sim_cmd, cwd=self.directory, env=self.sim_env,
                        err_str=sim_err_str, disp_type=self.disp_type)
 
         # run the simulation binary (if applicable)

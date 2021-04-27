@@ -335,7 +335,11 @@ class VerilogTarget(Target):
         def get_name(port):
             return str(port.name)
         if len(get_value_actions_params) > 0:
-            # TODO waveform_file is technically a property of systemverilog target only, so this is weird for verilator
+            # TODO waveform_file is technically a property of systemverilog target only
+            # I think we could make a small adjustment for Verilator but I haven't yet
+            if not hasattr(self, 'waveform_file'):
+                raise NotImplementedError('Domain Read not yet implemented'
+                                          + ' for targets without waveform_file')
             err_msg = ('No waveform file found for domain_read. '
                        + 'Did you compile Tester with "dump_waveforms=True"?')
             assert self.waveform_file is not None, err_msg

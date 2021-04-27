@@ -79,30 +79,6 @@ class Print(Action):
         return cls(self.format_str, *new_ports)
 
 
-class Read(Action):
-    def __init__(self, port, params=None):
-        super().__init__()
-        self.port = port
-        self.params = params
-
-    def __getattr__(self, name):
-        if name == 'value':
-            err_msg = f'value has not been set for {self}'
-            err_msg += ', did the simulation finish running yet?'
-            assert False, err_msg
-        else:
-            raise AttributeError
-
-    def __str__(self):
-        return f"Read({self.port.debug_name})"
-
-    def retarget(self, new_circuit, clock):
-        cls = type(self)
-        new_port = new_circuit.interface.ports[str(self.port.name)]
-        return cls(new_port)
-
-
-
 def is_inout(port):
     if isinstance(port, SelectPath):
         port = port[-1]
