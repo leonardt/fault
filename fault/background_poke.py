@@ -41,8 +41,13 @@ class Thread():
 
             def get_val(t):
                 cycle_location = ((t - self.start + self.epsilon) / period) % 1
+                edge_loc = (1-duty_cycle) if initial_value == 0 else duty_cycle
+                cycle_dt = min((-cycle_location-self.epsilon)%1,
+                               (edge_loc-cycle_location-self.epsilon)%1
+                               ) + self.epsilon
+                self.dt = cycle_dt * period
                 if initial_value == 0:
-                    return 1 if cycle_location > (1 - duty_cycle) else 0
+                    return 1 if cycle_location >= (1 - duty_cycle) else 0
                 else:
                     return 1 if cycle_location < duty_cycle else 0
 

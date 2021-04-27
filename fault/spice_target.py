@@ -10,7 +10,7 @@ from fault.ms_types import RealInOut
 from fault.result_parse import nut_parse, hspice_parse, psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
-from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval, Read
+from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval
 from fault.background_poke import background_poke_target
 from fault.select_path import SelectPath
 from .fault_errors import A2DError, ExpectError
@@ -306,10 +306,10 @@ class SpiceTarget(Target):
         # expand buses as needed
         _actions = []
         for action in actions:
-            if isinstance(action, (Poke, Expect, Read)) \
+            if isinstance(action, (Poke, Expect)) \
                and isinstance(action.port, m.Bits):
                 _actions += self.expand_bus(action)
-            elif (isinstance(action, (Poke, Expect, Read))
+            elif (isinstance(action, (Poke, Expect))
                   and isinstance(action.port.name, m.ref.ArrayRef)):
                 action.port = self.select_bit_from_bus(action.port)
                 _actions.append(action)
@@ -352,16 +352,6 @@ class SpiceTarget(Target):
                 # TODO: is this still necessary?
                 for port in action.ports:
                     saves.add(f'{port.name}')
-            # TODO read do we need this code about refs?
-            # elif isinstance(action, Read):
-            #     reads.append((t, action))
-            #     self.saves.add(f'{action.port.name}')
-            #     # phase could be relative to another signal
-            #     if 'ref' in action.params:
-            #         if isinstance(action.params['ref'].name, m.ref.ArrayRef):
-            #             ref = self.select_bit_from_bus(action.params['ref'])
-            #             action.params['ref'] = ref
-            #         self.saves.add(f'{action.params["ref"].name}')
             elif isinstance(action, GetValue):
                 gets.append((t, action))
             elif isinstance(action, Delay):

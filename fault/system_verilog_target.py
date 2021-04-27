@@ -425,7 +425,7 @@ class SystemVerilogTarget(VerilogTarget):
         return retval
 
     def make_delay(self, i, action):
-        return [f'$write("MAKING DELAY\\n"); #({action.time}*1s);']
+        return [f'#({action.time}*1s);']
 
     def _make_print_args(self, values):
         args = []
