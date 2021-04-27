@@ -143,7 +143,7 @@ def parse_vcd(filename, dut, interp='previous'):
         next = False
         for line in f:
             if next:
-                ts = line.strip().split()
+                ts = line.strip()
                 break
             if '$timescale' in line:
                 next = True
@@ -158,9 +158,16 @@ def parse_vcd(filename, dut, interp='previous'):
         'ms': 1e-3,
         's': 1e0
     }
-    if ts[1] not in scales:
-        assert False, f'Unrecognized timescale {ts[1]}'
-    timescale = float(ts[0]) * scales[ts[1]]
+    ts.replace(' ', '')
+    scale_val_found = 1
+    for scale_string, scale_val in scales.items():
+        if scale_string in ts:
+            ts = ts.replace(scale_string, '')
+            scale_val_found *= scale_val
+    timescale = float(ts) * scale_val_found
+    #if ts[-1] not in scales:
+    #    assert False, f'Unrecognized timescale {ts[-1]}'
+    #timescale = float(ts[0]) * scales[ts[1]]
 
     from vcdvcd import VCDVCD
     obj = VCDVCD(filename)
