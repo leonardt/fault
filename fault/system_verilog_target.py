@@ -14,7 +14,6 @@ from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
 from fault.background_poke import background_poke_target
-from fault.mlingua_interface import mlingua_target
 import fault
 import fault.expression as expression
 from fault.value import Value
@@ -49,7 +48,6 @@ endmodule
 """
 
 @background_poke_target
-@mlingua_target
 class SystemVerilogTarget(VerilogTarget):
 
     # Language properties of SystemVerilog used in generating code blocks
@@ -674,13 +672,7 @@ class SystemVerilogTarget(VerilogTarget):
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
             if issubclass(type_, RealType):
-                # TODO  in some cases with arrays the name does not match up as expected
-                # which is why I added the first half of the check in the if statement
-                if (hasattr(self.circuit, name)
-                    and getattr(getattr(self.circuit, name), 'representation', None) == 'mlingua'):
-                    t = "pwl"
-                else:
-                    t = "real"
+                t = "real"
             elif name in power_args.get("supply0s", []):
                 t = "supply0"
             elif name in power_args.get("supply1s", []):
