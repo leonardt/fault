@@ -3,12 +3,11 @@ import heapq
 import math
 from functools import total_ordering
 import copy
-from fault.target import Target
 from fault.actions import Delay
 
 
 @total_ordering
-class Thread():
+class Thread:
     # if sin wave dt is unspecified, use period/default_steps_per_cycle
     default_steps_per_cycle = 10
 
@@ -19,7 +18,7 @@ class Thread():
     epsilon = 1e-17
 
     def __init__(self, time, poke):
-        #print('creating thread for', poke, 'at time', time)
+        # print('creating thread for', poke, 'at time', time)
         self.poke = copy.copy(poke)
         self.poke.params = None
         self.poke.delay = None
@@ -27,9 +26,6 @@ class Thread():
         self.start = time
         self.next_update = time
         type_ = params.get('type', 'clock')
-
-        #print('type_ is', type_)
-        #print(params)
 
         # Each type must set a get_val(t) function and a dt
         if type_ == 'clock':
@@ -42,8 +38,8 @@ class Thread():
             def get_val(t):
                 cycle_location = ((t - self.start + self.epsilon) / period) % 1
                 edge_loc = (1-duty_cycle) if initial_value == 0 else duty_cycle
-                cycle_dt = min((-cycle_location-self.epsilon)%1,
-                               (edge_loc-cycle_location-self.epsilon)%1
+                cycle_dt = min((-cycle_location-self.epsilon) % 1,
+                               (edge_loc-cycle_location-self.epsilon) % 1
                                ) + self.epsilon
                 self.dt = cycle_dt * period
                 if initial_value == 0:
@@ -74,15 +70,15 @@ class Thread():
         elif type_ == 'ramp':
             start = params.get('start', 0)
             stop = params.get('stop', None)
-            rate = params.get('rate', 1) # volts per second
+            rate = params.get('rate', 1)  # volts per second
             etol = params.get('etol', 0.1)
             assert etol > 0, 'Ramp error tolerance must be positive'
             dt = abs(etol / rate)
 
             def get_val(t):
                 x = start + rate * (t - self.start)
-                if stop != None:
-                    if (rate>0 and x>stop) or (rate<0 and x<stop):
+                if stop is not None:
+                    if (rate > 0 and x > stop) or (rate < 0 and x < stop):
                         x = stop
                         self.dt = float('inf')
                 return x
@@ -100,20 +96,24 @@ class Thread():
             waits = waits + [float('inf')]
 
             self.future_count = 0
+
             def get_val(t):
                 if t + 2*self.epsilon > self.future_next:
-                    assert t - self.future_next < self.epsilon, 'Missed update in future background poke'
+                    msg = 'Missed update in future background poke'
+                    assert t - self.future_next < self.epsilon, msg
                     self.future_count += 1
                     self.future_next += waits[self.future_count]
                     self.dt = self.future_next - t
                 v = values[self.future_count]
+
+                # Presumably this was here for a reason ... but I don't remember
                 if abs(t-self.next_update) <= self.epsilon:
-                    if self.future_next - (self.next_update + self.dt) < -self.epsilon:
+                    if (self.future_next - (self.next_update + self.dt)
+                            < -self.epsilon):
                         pass
                 else:
                     if self.future_next - self.next_update < -self.epsilon:
                         pass
-                #assert self.next_update+self.dt <= self.future_next
                 return v
             self.get_val = get_val
             self.dt = waits[0]
@@ -121,18 +121,17 @@ class Thread():
         else:
             assert False, 'Unrecognized background_poke type '+str(type_)
 
-
-
     def step(self, t):
-        '''
+        """
         Returns a new Poke object with the correct value set for time t.
         Sets the port and value but NOT the delay.
-        '''
+        """
         # TODO don't poke at the same time twice
         missed_update_msg = 'Background Poke thread not updated in time'
         assert t <= self.next_update + self.epsilon, missed_update_msg
 
-        # must call get_val before calculating next_update because it can alter self.dt
+        # must call get_val before calculating next_update because it can
+        # alter self.dt
         value = self.get_val(t)
         if abs(t - self.next_update) < 2*self.epsilon:
             self.next_update = t + self.dt
@@ -149,18 +148,19 @@ class Thread():
         return self.next_update < other
 
 
-class ThreadPool():
+class ThreadPool:
     # if the next background update is within epsilon of the next manual
     # update, then the background one comes first
     # Which comes first is arbitrary, but this epsilon makes it consistent
-    epsilon = 1e-17 # 1e-18
+    epsilon = 1e-17
 
     def __init__(self, time):
         self.t = time
         self.background_threads = []
         self.active_ports = set()
 
-    def set_action_delay(self, action, delay):
+    @staticmethod
+    def set_action_delay(action, delay):
         if isinstance(action, Delay):
             action.time = delay
         else:
@@ -173,24 +173,23 @@ class ThreadPool():
             return self.background_threads[0].next_update
 
     def delay(self, t_delay):
-        '''
+        """
         Create a list of actions that need to happen during this delay.
         Returns (free_time, actions), where free_time is the delay that should
         happen before the first action in actions.
-        '''
-        #print('Thread pool is doing a delay of ', t_delay, 'at time', self.t)
+        """
         t = self.t
         t_end = self.t + t_delay
-        # note that free_time here is actually the free time until the next pool update,
-        # the actual time returned is until the next action and might be less than free_time
+        # note that free_time here is actually the free time until the next
+        # pool update, the actual time returned is until the next action and
+        # might be less than free_time
         free_time = self.get_next_update_time() - self.t
         if free_time > t_delay:
             self.t = t_end
-            return (t_delay, [])
+            return t_delay, []
         else:
             actions = []
-            t += free_time;
-            #print('entering while loop')
+            t += free_time
             while self.get_next_update_time() <= t_end + self.epsilon:
                 thread = heapq.heappop(self.background_threads)
                 action = thread.step(t)
@@ -199,17 +198,14 @@ class ThreadPool():
                 # we had to put the thread back on the heap in order to
                 # calculate the next update
                 next_thing_time = min(self.get_next_update_time(), t_end)
-                #print('\ncalculated next thing time', next_thing_time, 'at time', t)
                 delay = next_thing_time - t
                 self.set_action_delay(action, delay)
-                #print('also adding action', action, 'delay', action.delay)
                 t = next_thing_time
                 actions.append(action)
 
             # t_end has less floating point error than t
             self.t = t_end
-            #print('ending updates at time', t_end)
-            return (free_time, actions)
+            return free_time, actions
 
     def add(self, background_poke):
         error_msg = 'Cannot add existing background thread'
@@ -223,6 +219,10 @@ class ThreadPool():
         for thread in self.background_threads:
             if thread.poke.port is port:
                 offender = thread
+                break
+        else:
+            msg = 'background_poke internal error: Could not find remove port'
+            assert False, msg
         self.background_threads.remove(offender)
         heapq.heapify(self.background_threads)
         poke = offender.step(self.t)
@@ -241,8 +241,8 @@ class ThreadPool():
         # check whether this is a poke taking over a background port
         # TODO if the port is a Var, just hope it's not taking over
         if (isinstance(action, Poke)
-            and not isinstance(action.port, Var)
-            and action.port in self.active_ports):
+                and not isinstance(action.port, Var)
+                and action.port in self.active_ports):
             new_action_list += self.remove(action.port)
 
         # if the new port is background we must add it before doing delay
@@ -254,22 +254,14 @@ class ThreadPool():
 
         # now we add this (shortened) action back in
         if not is_background:
-            # TODO: we used to use copies of the action so we weren't editing
+            # NOTE: we used to use copies of the action so we weren't editing
             # the delay of an action owned by someone else. But with the new
-            # Read action it's important that the object doesn't change 
-            # because the user is holding a pointer to the old Read object
+            # GetValue action it's important that the object doesn't change
+            # because the user is holding a pointer to the old GetValue object
             self.set_action_delay(action, new_delay)
             new_action_list.append(action)
-            #new_action = copy.copy(action)
-            #new_action.delay = new_delay
-            #new_action_list.append(new_action)
 
         new_action_list += actions
-        #print('ended up with', len(new_action_list), 'new actions')
-        #print('delay of first', new_action_list[0].delay, 'last', new_action_list[-1].delay)
-        #if len(new_action_list) > 1:
-        #    for action in new_action_list:
-        #        print('\t', action, '\t', action.delay)
         return new_action_list
 
 
@@ -290,14 +282,17 @@ def process_action_list(actions, clock_step_delay):
             else:
                 return a.delay
         else:
-            return 0 # clock_step_delay
+            # TODO this case used to use clock_step_delay instead of 0
+            # I'm not sure exactly when it's appropriate to do that
+            return 0  # clock_step_delay
 
     background_pool = ThreadPool(0)
     new_action_list = []
-    for a in actions:
-        delay = get_delay(a)
-        new_action_list += background_pool.process(a, delay)
+    for action in actions:
+        delay = get_delay(action)
+        new_action_list += background_pool.process(action, delay)
     return new_action_list
+
 
 def background_poke_target(cls):
     class BackgroundPokeTarget(cls):

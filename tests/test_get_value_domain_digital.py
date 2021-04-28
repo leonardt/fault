@@ -31,7 +31,7 @@ def test_get_value_digital(target, simulator):
         tester.poke(MyAdder.a, a, delay=(.5/freq))
         tester.eval()
         
-    output.append(tester.get_value(MyAdder.b, params = {
+    output.append(tester.get_value(MyAdder.b, params={
         'style': 'frequency',
         'height': 3.5
     }))
@@ -39,14 +39,13 @@ def test_get_value_digital(target, simulator):
     # run the test
     kwargs = dict(
         target=target,
-        #tmp_dir=True
     )
     if target == 'system-verilog':
         # This is the only case right now, might do Verilator in the future
         kwargs['simulator'] = simulator
         kwargs['dump_waveforms'] = True
         # tmp_dir seems to break this
-        #kwargs['tmp_dir'] = True
+        # kwargs['tmp_dir'] = True
 
     tester.compile_and_run(**kwargs)
 
@@ -56,24 +55,24 @@ def test_get_value_digital(target, simulator):
 
 def test_real_val(target, simulator):
     # define the circuit
-    class realadd(m.Circuit):
+    class RealAdd(m.Circuit):
         io = m.IO(a_val=fault.RealIn, b_val=fault.RealIn, c_val=fault.RealOut)
 
     # define test content
     # output will toggle between 4 and 8
     stim = [1, 5, 1, 5, 1, 5]
-    tester = fault.Tester(realadd)
-    tester.poke(realadd.b_val, 3)
+    tester = fault.Tester(RealAdd)
+    tester.poke(RealAdd.b_val, 3)
     tester.eval()
 
     freq = 4e6
     for v in stim:
-        tester.poke(realadd.a_val, v, delay=1/(2*freq))
+        tester.poke(RealAdd.a_val, v, delay=1/(2*freq))
         # TODO this eval actually adds a 1ns delay,
         # which breaks this test at higher frequencies
         tester.eval()
 
-    res = tester.get_value(realadd.c_val, params={
+    res = tester.get_value(RealAdd.c_val, params={
         'style': 'frequency',
         'height': 6
     })
@@ -86,7 +85,6 @@ def test_real_val(target, simulator):
         defines={f'__{simulator.upper()}__': None},
         ext_model_file=True,
         dump_waveforms=True,
-        #tmp_dir=True
     )
     
     # check the results

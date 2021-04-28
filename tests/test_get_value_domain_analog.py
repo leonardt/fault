@@ -5,8 +5,8 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    #pytest_sim_params(metafunc, 'verilog-ams', 'spice')
     pytest_sim_params(metafunc, 'spice')
+
 
 def get_inv_tester(target, vsup):
     # declare circuit
@@ -30,7 +30,6 @@ def get_inv_tester(target, vsup):
     return dut, tester
 
     
-
 def test_edge(target, simulator, vsup=1.8):
     dut, tester = get_inv_tester(target, vsup)
 
@@ -54,13 +53,17 @@ def test_edge(target, simulator, vsup=1.8):
     # We add a significant cap load to delay the output slightly,
     # so we only catch the nearby edge when looking forwards
     # default is to look backwards and find rising edges
-    a = tester.get_value(dut.out, params={'style': 'edge', 'count':2})
+    a = tester.get_value(dut.out, params={'style': 'edge', 'count': 2})
     a_expect = [-2e-3, -4e-3]
-    b = tester.get_value(dut.out, params={'style': 'edge', 'count':2, 'rising':False})
+    b = tester.get_value(dut.out,
+                         params={'style': 'edge', 'count': 2, 'rising': False})
     b_expect = [-0.5e-3, -2.5e-3]
-    c = tester.get_value(dut.out, params={'style': 'edge', 'count':2, 'forward':True}) # seems to be counting in 0->1 transitions
+    c = tester.get_value(dut.out,
+                         params={'style': 'edge', 'count': 2, 'forward': True})
     c_expect = [0, 3e-3]
-    d = tester.get_value(dut.out, params={'style': 'edge', 'count':2, 'forward':True, 'rising':False})
+    d = tester.get_value(dut.out,
+                         params={'style': 'edge', 'count': 2, 'forward': True,
+                                 'rising': False})
     d_expect = [2e-3, 5e-3]
 
     tester.poke(dut.in_,    0, delay=2e-3)
@@ -77,7 +80,6 @@ def test_edge(target, simulator, vsup=1.8):
         model_paths=[Path('tests/spice/myinv.sp').resolve()],
         vsup=vsup,
         cap_loads={dut.out: 10e-9}
-        #tmp_dir=True
     )
     if target == 'verilog-ams':
         kwargs['use_spice'] = ['myinv']
@@ -90,7 +92,6 @@ def test_edge(target, simulator, vsup=1.8):
             if abs(x-y) > 5e-5:
                 return False
         return True
-
 
     print('Measured edge timings:')
     print(a.value)
@@ -128,16 +129,16 @@ def test_phase(target, simulator, vsup=1.5):
     # in[0] gets inverted, in[1] gets buffered
     # I want in[0] to be a 1kHz clock
     # I want in[1] to be a 1kHz clock but delayed by 0.2 ms, so 0.2 cycles
-    tester.poke(dut.a[0], 1, delay = 0.2e-3)
-    tester.poke(dut.a[1], 1, delay = 0.3e-3)
-    tester.poke(dut.a[0], 0, delay = 0.2e-3)
-    tester.poke(dut.a[1], 0, delay = 0.3e-3)
-    tester.poke(dut.a[0], 1, delay = 0.2e-3)
-    tester.poke(dut.a[1], 1, delay = 0.3e-3)
-    tester.poke(dut.a[0], 0, delay = 0.2e-3)
-    tester.poke(dut.a[1], 0, delay = 0.3e-3)
-    tester.poke(dut.a[0], 1, delay = 0.2e-3)
-    tester.poke(dut.a[1], 1, delay = 0.3e-3)
+    tester.poke(dut.a[0], 1, delay=0.2e-3)
+    tester.poke(dut.a[1], 1, delay=0.3e-3)
+    tester.poke(dut.a[0], 0, delay=0.2e-3)
+    tester.poke(dut.a[1], 0, delay=0.3e-3)
+    tester.poke(dut.a[0], 1, delay=0.2e-3)
+    tester.poke(dut.a[1], 1, delay=0.3e-3)
+    tester.poke(dut.a[0], 0, delay=0.2e-3)
+    tester.poke(dut.a[1], 0, delay=0.3e-3)
+    tester.poke(dut.a[0], 1, delay=0.2e-3)
+    tester.poke(dut.a[1], 1, delay=0.3e-3)
 
     a = tester.get_value(dut.a[1], params={'style': 'phase', 'ref': dut.a[0]})
     b = tester.get_value(dut.a[1], params={'style': 'phase', 'ref': dut.b[0]})
@@ -149,7 +150,6 @@ def test_phase(target, simulator, vsup=1.5):
         simulator=simulator,
         model_paths=[Path('tests/spice/mybus.sp').resolve()],
         vsup=vsup,
-        #tmp_dir=True
     )
     if target == 'verilog-ams':
         kwargs['use_spice'] = ['mybus']

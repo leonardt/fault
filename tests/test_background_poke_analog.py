@@ -1,9 +1,7 @@
 import magma as m
 import fault
-import tempfile
-import pytest
 from pathlib import Path
-from .common import pytest_sim_params, TestBasicCircuit
+from .common import pytest_sim_params
 import math
 
 
@@ -19,9 +17,8 @@ def pytest_generate_tests(metafunc):
     # without a concept of delay
     pytest_sim_params(metafunc, 'spice')
 
-# @pytest.mark.skip(reason='Turn this back on later')
-def test_sin_spice(target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
-                   vol_rel=0.1, voh_rel=0.9):
+
+def test_sin_spice(target, simulator, vsup=1.5):
     # declare circuit
     myinv = m.DeclareCircuit(
         'myinv',
@@ -55,7 +52,8 @@ def test_sin_spice(target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
     })
 
     def model(x):
-        return amp * math.sin(2 * math.pi * freq * x + math.radians(phase_d)) + offset
+        return (amp * math.sin(2 * math.pi * freq * x + math.radians(phase_d))
+                + offset)
 
     num_reads = 100
     xs = []
@@ -89,5 +87,6 @@ def test_sin_spice(target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
 
         assert abs(model(xs[k]) - ys[k]) <= amp * 0.25
 
-    #plot(xs, ys)
-    #plot(xs, [model(x) for x in xs])
+    # Debug plots
+    # plot(xs, ys)
+    # plot(xs, [model(x) for x in xs])

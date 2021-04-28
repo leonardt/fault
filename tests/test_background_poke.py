@@ -1,14 +1,13 @@
-import magma as m
 import fault
-from pathlib import Path
 from .common import pytest_sim_params, TestBasicCircuit
+
 
 def pytest_generate_tests(metafunc):
     # Not implemented for verilator because this doesn't make much sense
     # without a concept of delay
     pytest_sim_params(metafunc, 'system-verilog')
 
-#@pytest.mark.skip(reason='Not yet implemented')
+
 def test_clock_verilog(target, simulator):
     print('target, sim', target, simulator)
     circ = TestBasicCircuit
