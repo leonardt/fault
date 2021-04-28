@@ -29,25 +29,46 @@ def get_inv_tester(target, vsup):
     tester.poke(dut.vss, 0)
     return dut, tester
 
-def dont_test_inv_tf(
-    target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
-    vol_rel=0.1, voh_rel=0.9
-):
+    
 
-    # define the test
+def test_edge(target, simulator, vsup=1.8):
     dut, tester = get_inv_tester(target, vsup)
-    reads = []
-    for k in [.4, .5, .6]:
-        in_ = k * vsup
-        tester.poke(dut.in_, in_)
-        # We might not know the expected value now but will want to check later
-        read_object = tester.read(dut.out)
-        reads.append(read_object)
 
-    tester.poke(dut.in_, vsup, delay=1e-6)
-    tester.poke(dut.in_, 0, delay=42e-6)
+    tester.delay(10e-3)
 
-    edge = tester.read(dut.out, style = 'edge')
+    # Each horizontal line is 0.5ms (spaces don't count)
+    # Input Waveform:  _       _       _         _ _         _ _
+    #         ***_ _ _| |_ _ _| |_ _ _| |_ _ _ _|   |_ _ _ _|   |_ ***
+
+    # Output Waveform:
+    #            _ _ _   _ _ _   _ _ _   _ _ _ _     _ _ _ _     _
+    #         ***     |_|     |_|     |_|       |_ _|       |_ _|  ***
+    # get_value:                        ^
+    tester.poke(dut.in_,    0, delay=1.5e-3)
+    tester.poke(dut.in_, vsup, delay=0.5e-3)
+    tester.poke(dut.in_,    0, delay=1.5e-3)
+    tester.poke(dut.in_, vsup, delay=0.5e-3)
+    tester.poke(dut.in_,    0, delay=1.5e-3)
+    tester.poke(dut.in_, vsup, delay=0.5e-3)
+
+    # We add a significant cap load to delay the output slightly,
+    # so we only catch the nearby edge when looking forwards
+    # default is to look backwards and find rising edges
+    a = tester.get_value(dut.out, params={'style': 'edge', 'count':2})
+    a_expect = [-2e-3, -4e-3]
+    b = tester.get_value(dut.out, params={'style': 'edge', 'count':2, 'rising':False})
+    b_expect = [-0.5e-3, -2.5e-3]
+    c = tester.get_value(dut.out, params={'style': 'edge', 'count':2, 'forward':True}) # seems to be counting in 0->1 transitions
+    c_expect = [0, 3e-3]
+    d = tester.get_value(dut.out, params={'style': 'edge', 'count':2, 'forward':True, 'rising':False})
+    d_expect = [2e-3, 5e-3]
+
+    tester.poke(dut.in_,    0, delay=2e-3)
+    tester.poke(dut.in_, vsup, delay=1e-3)
+    tester.poke(dut.in_,    0, delay=2e-3)
+    tester.poke(dut.in_, vsup, delay=1e-3)
+    tester.poke(dut.in_,    0, delay=2e-3)
+    tester.poke(dut.in_, vsup, delay=1e-3)
 
     # set options
     kwargs = dict(
@@ -55,61 +76,7 @@ def dont_test_inv_tf(
         simulator=simulator,
         model_paths=[Path('tests/spice/myinv.sp').resolve()],
         vsup=vsup,
-        tmp_dir=True
-    )
-    if target == 'verilog-ams':
-        kwargs['use_spice'] = ['myinv']
-
-    # run the simulation
-    tester.compile_and_run(**kwargs)
-
-    # look at the results we decided to save earlier
-    print(reads)
-    results = [r.value for r in reads]
-    print(results)
-    a, b, c = results
-    # now we can save these to a file, post-process them, or use them
-    # for our own tests
-    assert b <= a, "Inverter tf is not always decreasing"
-    assert c <= b, "Inverter tf is not always decreasing"
-
-    print(edge.value)
-
-    
-
-def dont_test_edge(
-    target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
-    vol_rel=0.1, voh_rel=0.9
-):
-    dut, tester = get_inv_tester(target, vsup)
-    
-    tester.poke(dut.in_, 0, delay = 1.5e-3)
-    tester.poke(dut.in_, 1, delay = 0.5e-3)
-    tester.poke(dut.in_, 0, delay = 1.5e-3)
-    tester.poke(dut.in_, 1, delay = 0.5e-3)
-    tester.poke(dut.in_, 0, delay = 1.5e-3)
-    tester.poke(dut.in_, 1, delay = 0.5e-3)
-
-    a = tester.read(dut.out, style='edge', params={'count':2})
-    b = tester.read(dut.out, style='edge', params={'count':2, 'rising':False})
-    c = tester.read(dut.out, style='edge', params={'count':2, 'forward':True}) # seems to be counting in 0->1 transitions
-    d = tester.read(dut.out, style='edge', params={'count':2, 'forward':True, 'rising':False})
-
-    tester.poke(dut.in_, 0, delay = 0.5e-3)
-    tester.poke(dut.in_, 1, delay = 5e-3)
-    tester.poke(dut.in_, 0, delay = 5e-3)
-    tester.poke(dut.in_, 1, delay = 5e-3)
-    tester.poke(dut.in_, 0, delay = 5e-3)
-    tester.poke(dut.in_, 1, delay = 5e-3)
-
-    tester.read(dut.in_)
-
-    # set options
-    kwargs = dict(
-        target=target,
-        simulator=simulator,
-        model_paths=[Path('tests/spice/myinv.sp').resolve()],
-        vsup=vsup,
+        cap_loads={dut.out: 10e-9}
         #tmp_dir=True
     )
     if target == 'verilog-ams':
@@ -118,38 +85,26 @@ def dont_test_edge(
     # run the simulation
     tester.compile_and_run(**kwargs)
 
-
-
     def eq(xs, ys):
-        print('testing eq')
-        print(xs)
-        print(ys)
         for x, y in zip(xs, ys):
             if abs(x-y) > 5e-5:
                 return False
         return True
 
-    print(eq([1, 2, 3], [1, 2, 3-1e-11]))
-    print(eq([1, 2, 3], [1, 2, 3-2e-19]))
 
-    print('TESTING EDGE')
+    print('Measured edge timings:')
     print(a.value)
     print(b.value)
     print(c.value)
     print(d.value)
 
-    assert eq(a.value, [-0e-3, -2e-3])# TODO should this be [0, 2] ?
-    assert eq(b.value, [-0.5e-3, -2.5e-3])
-    assert eq(c.value, [5.5e-3, 15.5e-3])
-    assert eq(d.value, [0.5e-3, 10.5e-3])
-    
+    assert eq(a.value, a_expect)
+    assert eq(b.value, b_expect)
+    assert eq(c.value, c_expect)
+    assert eq(d.value, d_expect)
 
 
-
-def test_phase(
-    target, simulator, vsup=1.5, vil_rel=0.4, vih_rel=0.6,
-    vol_rel=0.1, voh_rel=0.9
-):
+def test_phase(target, simulator, vsup=1.5):
     # declare circuit
     mybus = m.DeclareCircuit(
         'mybus',
@@ -210,3 +165,4 @@ def test_phase(
     assert abs(a.value - 0.2) < 1e-2
     assert abs(b.value - 0.7) < 1e-2
     assert abs(c.value - 0.8) < 1e-2
+

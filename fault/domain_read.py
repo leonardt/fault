@@ -134,11 +134,12 @@ def find_edge_spice(x, y, t_start, height, forward=False, count=1, rising=True):
     if (rising ^ forward):
         y = [(-1 * z + 2 * height) for z in y]
     direction = 1 if forward else -1
+
     # we want to start on the far side of the interval containing t_start
     # to make sure we catch any edge near t_start
-    side = 'left' if forward else 'right'
-
-    start_index = np.searchsorted(x, t_start, side=side)
+    side = 'right' if forward else 'left'
+    bump = -1 if forward else 0
+    start_index = np.searchsorted(x, t_start, side=side) + bump
     if start_index == len(x):
         # happens when forward=False and the edge find is the end of the sim
         start_index -= 1

@@ -674,7 +674,6 @@ class SystemVerilogTarget(VerilogTarget):
                     issubclass(type_.T, m.Digital):
                 width_str = f" [{len(type_) - 1}:0]"
             if issubclass(type_, RealType):
-                print('name,type', name, type_)
                 # TODO  in some cases with arrays the name does not match up as expected
                 # which is why I added the first half of the check in the if statement
                 if (hasattr(self.circuit, name)

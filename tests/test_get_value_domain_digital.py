@@ -5,9 +5,11 @@ from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
-    #pytest_sim_params(metafunc, 'system-verilog')
-    # TODO I don't think this works in verilator yet?
-    pytest_sim_params(metafunc, 'system-verilog', 'verilator')
+    # Not implemented for verilator right now
+    # The difficulty is that we have the action print out the simulation time
+    # Later we use that time to know where to look in the waveform dump
+    # But verilator doesn't have the same concept of simulation time
+    pytest_sim_params(metafunc, 'system-verilog')
 
 
 class MyAdder(m.Circuit):
@@ -18,10 +20,6 @@ class MyAdder(m.Circuit):
 
 
 def test_get_value_digital(target, simulator):
-    # TODO get rid of this when we test on a system with things installed
-    #target = 'system-verilog'
-    simulator = 'ncsim'
-    
     # define test
     tester = fault.Tester(MyAdder)
 
@@ -37,8 +35,6 @@ def test_get_value_digital(target, simulator):
         'style': 'frequency',
         'height': 3.5
     }))
-        
-    
 
     # run the test
     kwargs = dict(
@@ -46,10 +42,12 @@ def test_get_value_digital(target, simulator):
         #tmp_dir=True
     )
     if target == 'system-verilog':
+        # This is the only case right now, might do Verilator in the future
         kwargs['simulator'] = simulator
-    elif target == 'verilator':
-        kwargs['flags'] = ['-Wno-fatal']
-    kwargs['dump_waveforms'] = True
+        kwargs['dump_waveforms'] = True
+        # tmp_dir seems to break this
+        #kwargs['tmp_dir'] = True
+
     tester.compile_and_run(**kwargs)
 
     # check the results
@@ -57,24 +55,27 @@ def test_get_value_digital(target, simulator):
 
 
 def test_real_val(target, simulator):
-    simulator = 'ncsim'
     # define the circuit
     class realadd(m.Circuit):
         io = m.IO(a_val=fault.RealIn, b_val=fault.RealIn, c_val=fault.RealOut)
 
     # define test content
+    # output will toggle between 4 and 8
     stim = [1, 5, 1, 5, 1, 5]
     tester = fault.Tester(realadd)
     tester.poke(realadd.b_val, 3)
     tester.eval()
 
+    freq = 4e6
     for v in stim:
-        tester.poke(realadd.a_val, v, delay=125e-9)
+        tester.poke(realadd.a_val, v, delay=1/(2*freq))
+        # TODO this eval actually adds a 1ns delay,
+        # which breaks this test at higher frequencies
         tester.eval()
 
-    res = tester.get_value(realadd.c_val, params = {
-        'style' : 'frequency',
-        'height' : 6
+    res = tester.get_value(realadd.c_val, params={
+        'style': 'frequency',
+        'height': 6
     })
 
     # run the test
@@ -88,4 +89,6 @@ def test_real_val(target, simulator):
         #tmp_dir=True
     )
     
-    print(res.value)
+    # check the results
+    print(freq/1.05, res.value, freq*1.05)
+    assert freq/1.05 < res.value < freq*1.05

@@ -629,7 +629,7 @@ class SpiceTarget(Target):
             # get height of slice point based on spice config if not specified
             if 'height' not in action.params:
                 action.params['height'] = self.vsup * (self.vih_rel + self.vil_rel) / 2
-            # some syles (e.g. phase) might need to reference another port,
+            # some styles (e.g. phase) might need to reference another port,
             # so passing in the name is not good enough
             get_value_domain(results, action, time, get_spice_name)
         else:
