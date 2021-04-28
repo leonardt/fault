@@ -9,7 +9,6 @@ def pytest_generate_tests(metafunc):
 
 
 def test_clock_verilog(target, simulator):
-    print('target, sim', target, simulator)
     circ = TestBasicCircuit
     tester = fault.Tester(circ)
     tester.zero_inputs()
@@ -18,11 +17,7 @@ def test_clock_verilog(target, simulator):
     tester.expect(circ.O, 1)
 
     # register clock
-    tester.poke(circ.I, 0, delay={
-        'freq': 1e9,
-        'duty_cycle': 0.75,
-        # take default initial_value of 0
-        })
+    tester.poke(circ.I, 0, delay={'freq': 1e9, 'duty_cycle': 0.75})
 
     # This delay would move the "expect"s off the edge.
     # Right now, the test ensures that an expect directly on the edge gets the
@@ -41,7 +36,7 @@ def test_clock_verilog(target, simulator):
             tester.delay(0.125e-9)
 
     tester.print("%08x", circ.O)
-    
+
     if target == "verilator":
         tester.compile_and_run(target, tmp_dir=True, flags=["-Wno-fatal"])
     else:

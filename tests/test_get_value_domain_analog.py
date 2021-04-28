@@ -29,7 +29,7 @@ def get_inv_tester(target, vsup):
     tester.poke(dut.vss, 0)
     return dut, tester
 
-    
+
 def test_edge(target, simulator, vsup=1.8):
     dut, tester = get_inv_tester(target, vsup)
 
@@ -43,11 +43,11 @@ def test_edge(target, simulator, vsup=1.8):
     #            _ _ _   _ _ _   _ _ _   _ _ _ _     _ _ _ _     _
     #         ***     |_|     |_|     |_|       |_ _|       |_ _|  ***
     # get_value:                        ^
-    tester.poke(dut.in_,    0, delay=1.5e-3)
+    tester.poke(dut.in_, 0, delay=1.5e-3)
     tester.poke(dut.in_, vsup, delay=0.5e-3)
-    tester.poke(dut.in_,    0, delay=1.5e-3)
+    tester.poke(dut.in_, 0, delay=1.5e-3)
     tester.poke(dut.in_, vsup, delay=0.5e-3)
-    tester.poke(dut.in_,    0, delay=1.5e-3)
+    tester.poke(dut.in_, 0, delay=1.5e-3)
     tester.poke(dut.in_, vsup, delay=0.5e-3)
 
     # We add a significant cap load to delay the output slightly,
@@ -66,11 +66,11 @@ def test_edge(target, simulator, vsup=1.8):
                                  'rising': False})
     d_expect = [2e-3, 5e-3]
 
-    tester.poke(dut.in_,    0, delay=2e-3)
+    tester.poke(dut.in_, 0, delay=2e-3)
     tester.poke(dut.in_, vsup, delay=1e-3)
-    tester.poke(dut.in_,    0, delay=2e-3)
+    tester.poke(dut.in_, 0, delay=2e-3)
     tester.poke(dut.in_, vsup, delay=1e-3)
-    tester.poke(dut.in_,    0, delay=2e-3)
+    tester.poke(dut.in_, 0, delay=2e-3)
     tester.poke(dut.in_, vsup, delay=1e-3)
 
     # set options
@@ -89,7 +89,7 @@ def test_edge(target, simulator, vsup=1.8):
 
     def eq(xs, ys):
         for x, y in zip(xs, ys):
-            if abs(x-y) > 5e-5:
+            if abs(x - y) > 5e-5:
                 return False
         return True
 
@@ -125,7 +125,7 @@ def test_phase(target, simulator, vsup=1.5):
     tester = fault.Tester(dut)
     tester.poke(dut.vdd, 1)
     tester.poke(dut.vss, 0)
-    
+
     # in[0] gets inverted, in[1] gets buffered
     # I want in[0] to be a 1kHz clock
     # I want in[1] to be a 1kHz clock but delayed by 0.2 ms, so 0.2 cycles
@@ -164,5 +164,3 @@ def test_phase(target, simulator, vsup=1.5):
 
     assert abs(a.value - 0.2) < 1e-2
     assert abs(b.value - 0.7) < 1e-2
-    assert abs(c.value - 0.8) < 1e-2
-

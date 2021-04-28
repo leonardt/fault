@@ -28,9 +28,9 @@ def test_get_value_digital(target, simulator):
     output = []
     freq = 20e6
     for a in stim:
-        tester.poke(MyAdder.a, a, delay=(.5/freq))
+        tester.poke(MyAdder.a, a, delay=(.5 / freq))
         tester.eval()
-        
+
     output.append(tester.get_value(MyAdder.b, params={
         'style': 'frequency',
         'height': 3.5
@@ -50,29 +50,29 @@ def test_get_value_digital(target, simulator):
     tester.compile_and_run(**kwargs)
 
     # check the results
-    assert freq/1.05 < output[0].value < freq*1.05
+    assert freq / 1.05 < output[0].value < freq * 1.05
 
 
 def test_real_val(target, simulator):
     # define the circuit
-    class RealAdd(m.Circuit):
+    class realadd(m.Circuit):
         io = m.IO(a_val=fault.RealIn, b_val=fault.RealIn, c_val=fault.RealOut)
 
     # define test content
     # output will toggle between 4 and 8
     stim = [1, 5, 1, 5, 1, 5]
-    tester = fault.Tester(RealAdd)
-    tester.poke(RealAdd.b_val, 3)
+    tester = fault.Tester(realadd)
+    tester.poke(realadd.b_val, 3)
     tester.eval()
 
     freq = 4e6
     for v in stim:
-        tester.poke(RealAdd.a_val, v, delay=1/(2*freq))
+        tester.poke(realadd.a_val, v, delay=1 / (2 * freq))
         # TODO this eval actually adds a 1ns delay,
         # which breaks this test at higher frequencies
         tester.eval()
 
-    res = tester.get_value(RealAdd.c_val, params={
+    res = tester.get_value(realadd.c_val, params={
         'style': 'frequency',
         'height': 6
     })
@@ -86,7 +86,7 @@ def test_real_val(target, simulator):
         ext_model_file=True,
         dump_waveforms=True,
     )
-    
+
     # check the results
-    print(freq/1.05, res.value, freq*1.05)
-    assert freq/1.05 < res.value < freq*1.05
+    print(freq / 1.05, res.value, freq * 1.05)
+    assert freq / 1.05 < res.value < freq * 1.05
