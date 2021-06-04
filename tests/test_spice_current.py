@@ -55,13 +55,15 @@ def test_get_value_analog(target, simulator):
 
     # check the results using Python assertions
     def model(a, b):
-        return (0, a*500)
+        return (b / 100, a*500)
+
     for (a, b), (c, d) in zip(stim, output):
         for expected, read in zip(model(a, b), (c, d)):
             lb = expected - 0.01
             ub = expected + 0.01
             print('Asserting', lb, read.value, ub)
             assert lb <= read.value <= ub
+
 
 if __name__ == '__main__':
     test_get_value_analog('spice', 'ngspice')

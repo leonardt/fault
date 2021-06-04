@@ -6,9 +6,11 @@
 
 .subckt mycurrenttest in_c in_v out_c out_v
 
-R1 in_v 0 100
+Vmeas in_v meas_node 0
+R1 meas_node 0 100
 * TODO mirror current
-R4 out_c 0 123
+F1 0 out_c Vmeas 1
+*R4 out_c 0 123
 
 R2 in_c 0 500
 R3 in_c out_v 10

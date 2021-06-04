@@ -463,6 +463,15 @@ class SpiceTarget(Target):
         for port, val in self.cap_loads.items():
             netlist.capacitor(f'{port.name}', '0', val)
 
+        # add a place to sink current outputs
+        for name, port in self.circuit.io.ports.items():
+            # NOTE: this finds current outputs, despite saying CurrentIn
+            if isinstance(port, fault.CurrentIn):
+                # TODO: is 1 Ohm good?
+                # RECALL we are measuring voltage here so 1 Ohm means volts=amps
+                # If we change this line we should change readout too
+                netlist.resistor(name, '0', '1')
+
         # define the switch model
         inout_sw_mod = 'inout_sw_mod'
         netlist.start_subckt(inout_sw_mod, 'sw_p', 'sw_n', 'ctl_p', 'ctl_n')
