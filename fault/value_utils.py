@@ -4,7 +4,7 @@ import magma as m
 from magma.protocol_type import MagmaProtocol
 from hwtypes import BitVector, Bit, FPVector
 from fault.value import AnyValue, UnknownValue, HiZ
-from fault.ms_types import RealType
+from fault.ms_types import RealType, CurrentType
 from fault.array import Array
 from fault.select_path import SelectPath
 from hwtypes.adt import Enum
@@ -20,6 +20,8 @@ def make_value(type_, value):
             raise TypeError("Expected const value when poking with instance of "
                             "MagmaProtocol")
     if issubclass(type_, RealType):
+        return make_real(value)
+    if issubclass(type_, CurrentType):
         return make_real(value)
     if issubclass(type_, magma.Digital):
         return make_bit(value)

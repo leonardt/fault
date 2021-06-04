@@ -321,7 +321,8 @@ class SpiceTarget(Target):
         for action in actions:
             if isinstance(action, Poke):
                 # add port to stimulus dictionary if needed
-                action_port_name = f'{action.port.name}'
+                # TODO rename this variable since it's no longer a name
+                action_port_name = action.port#f'{action.port.name}'
                 if action_port_name not in pwc_dict:
                     pwc_dict[action_port_name] = ([], [])
                 # determine the stimulus value, performing a digital
@@ -475,15 +476,23 @@ class SpiceTarget(Target):
         netlist.end_subckt()
 
         # write stimuli lines
-        for name, (pwl_v, pwl_s) in comp.pwls.items():
-            # instantiate switch between voltage source and DUT
-            vnet = f'__{name}_v'
-            snet = f'__{name}_s'
-            netlist.instantiate('inout_sw_mod', vnet, name, snet, '0')
+        for port, (pwl_v, pwl_s) in comp.pwls.items():
+            name = str(port.name)
+            if isinstance(port, fault.CurrentType):
+                # TODO assert pwl_s is always high
+                netlist.current('0', name, pwl=pwl_v)
+            elif isinstance(port, fault.RealType):
+                # instantiate switch between voltage source and DUT
+                vnet = f'__{name}_v'
+                snet = f'__{name}_s'
+                netlist.instantiate('inout_sw_mod', vnet, name, snet, '0')
 
-            # instantiate voltage source connected through switch
-            netlist.voltage(vnet, '0', pwl=pwl_v)
-            netlist.voltage(snet, '0', pwl=pwl_s)
+                # instantiate voltage source connected through switch
+                netlist.voltage(vnet, '0', pwl=pwl_v)
+                netlist.voltage(snet, '0', pwl=pwl_s)
+            else:
+                raise NotImplementedError(
+                    f'Port type for {port} not implemented in spice target')
 
         # specify initial conditions if needed
         ic = {}

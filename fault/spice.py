@@ -75,7 +75,8 @@ class SpiceNetlist(CodeGenerator):
         port_str = ' '.join(f'{port}' for port in ports)
         self.println(f'X{inst_name} {port_str} {name}')
 
-    def voltage(self, p, n, dc=None, pwl=None, inst_name=None):
+    def stimulus(self, letter, p, n, dc=None, pwl=None, inst_name=None):
+
         # set defaults
         if inst_name is None:
             inst_name = f'{next(self.inst_count)}'
@@ -84,7 +85,7 @@ class SpiceNetlist(CodeGenerator):
 
         # build up the line
         line = []
-        line += [f'V{inst_name}']
+        line += [f'{letter}{inst_name}']
         line += [f'{p}', f'{n}']
         if dc is not None:
             line += ['DC', f'{dc}']
@@ -94,6 +95,12 @@ class SpiceNetlist(CodeGenerator):
 
         # print the line
         self.println(' '.join(line))
+
+    def voltage(self, p, n, dc=None, pwl=None, inst_name=None):
+        self.stimulus('V', p, n, dc=dc, pwl=pwl, inst_name=inst_name)
+
+    def current(self, p, n, dc=None, pwl=None, inst_name=None):
+        self.stimulus('I', p, n, dc=dc, pwl=pwl, inst_name=inst_name)
 
     def capacitor(self, p, n, value, inst_name=None):
         # set defaults
