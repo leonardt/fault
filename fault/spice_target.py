@@ -213,6 +213,32 @@ class SpiceTarget(Target):
             else:
                 self.saves.add(f'{name}')
 
+    class PortDict:
+        '''
+        This exists because for ports, "a is b" does not imply "a == b".
+        I'm making the assumption here that the hash is the address, so hash
+        equality implies port equality.
+        I'm also assuming ports are unique, so pointer inequality implies port
+        inequality.
+        '''
+        def __init__(self):
+            self.d = {}
+
+        def myhash(self, item):
+            return str(item.name)
+
+        def __setitem__(self, key, value):
+            self.d[self.myhash(key)] = (key, value)
+
+        def __getitem__(self, item):
+            return self.d[self.myhash(item)][1]
+
+        def __contains__(self, item):
+            return self.myhash(item) in self.d
+
+        def items(self):
+            return (v for k, v in self.d.items())
+
     def run(self, actions):
 
         # compile the actions
@@ -295,7 +321,7 @@ class SpiceTarget(Target):
     def compile_actions(self, actions):
         # initialize
         t = 0
-        pwc_dict = {}
+        pwc_dict = self.PortDict() #{}
         checks = []
         prints = []
         gets = []
@@ -321,8 +347,11 @@ class SpiceTarget(Target):
         for action in actions:
             if isinstance(action, Poke):
                 # add port to stimulus dictionary if needed
-                # TODO rename this variable since it's no longer a name
-                action_port_name = action.port#f'{action.port.name}'
+                # TODO change name of this variable
+                action_port_name = action.port # f'{action.port.name}'
+                # keys need to be port objects because we ask about the type
+                # later, but we can't compare port object equality directly
+
                 if action_port_name not in pwc_dict:
                     pwc_dict[action_port_name] = ([], [])
                 # determine the stimulus value, performing a digital
@@ -363,7 +392,8 @@ class SpiceTarget(Target):
                 raise NotImplementedError(action)
 
         # refactor stimulus voltages to PWL
-        pwls = {}
+        pwls = self.PortDict()
+        # TODO change "name" to "port"
         for name, pwc in pwc_dict.items():
             pwls[name] = (
                 pwc_to_pwl(pwc=pwc[0], t_stop=t, t_tr=self.t_tr),
@@ -464,7 +494,7 @@ class SpiceTarget(Target):
             netlist.capacitor(f'{port.name}', '0', val)
 
         # add a place to sink current outputs
-        for name, port in self.circuit.io.ports.items():
+        for name, port in self.circuit.IO.ports.items():
             # NOTE: this finds current outputs, despite saying CurrentIn
             if isinstance(port, fault.CurrentIn):
                 # TODO: is 1 Ohm good?
@@ -485,12 +515,17 @@ class SpiceTarget(Target):
         netlist.end_subckt()
 
         # write stimuli lines
+        port_name_mapping = {}
+        for port in self.circuit.IO.ports.values():
+            pass
+
         for port, (pwl_v, pwl_s) in comp.pwls.items():
-            name = str(port.name)
+            name = f'{port.name}'
+            #port = self.circuit.IO.ports[name]
             if isinstance(port, fault.CurrentType):
                 # TODO assert pwl_s is always high
                 netlist.current('0', name, pwl=pwl_v)
-            elif isinstance(port, fault.RealType):
+            elif isinstance(port, (fault.RealType, m.Bit, type(m.Bit))):
                 # instantiate switch between voltage source and DUT
                 vnet = f'__{name}_v'
                 snet = f'__{name}_s'

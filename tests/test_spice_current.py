@@ -1,7 +1,7 @@
 import magma as m
 import fault
 from pathlib import Path
-#from .common import pytest_sim_params
+from .common import pytest_sim_params
 
 
 def pytest_generate_tests(metafunc):
