@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 import tempfile
 import pytest
 
@@ -155,3 +156,20 @@ def test_assert_final():
     with tempfile.TemporaryDirectory() as dir_:
         tester.compile_and_run("verilator", magma_opts={"inline": True},
                                flags=['--assert'], directory=dir_)
+
+
+@pytest.mark.parametrize('should_pass', [True, False])
+def test_assert_initial(should_pass):
+    class Foo(m.Circuit):
+        io = m.IO(O=m.Out(m.UInt[2]))
+        x = m.Bits[2](name="x")
+        x @= 2
+        io.O @= x
+        f.assert_initial(x == (2 if should_pass else 1))
+
+    tester = f.Tester(Foo)
+    tester.eval()
+    with pytest.raises(AssertionError) if not should_pass else nullcontext():
+        with tempfile.TemporaryDirectory() as dir_:
+            tester.compile_and_run("verilator", magma_opts={"inline": True},
+                                   flags=['--assert'], directory=dir_)
