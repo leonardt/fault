@@ -35,9 +35,11 @@ def _make_assert(type_, cond, success_msg=None, failure_msg=None,
         **format_args, type_=type_)
 
 
-def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     name=None, compile_guard=None):
-    """
+def _add_docstr(fn):
+    # The three assert_* variants share the same interface, so we use a simple
+    # decorator to reapply the docstring to each rather than repeating the
+    # string in each function
+    fn.__doc__ = """
     cond: m.Bit
     success_msg (optional): passed to $display on success
     failure_msg (optional): passed to else $<severity> on failure (strings are
@@ -51,25 +53,25 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                               macro variables used to guard the assertion with
                               verilog `ifdef statements
     """
+    return fn
+
+
+@_add_docstr
+def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
+                     name=None, compile_guard=None):
     _make_assert("initial", cond, success_msg, failure_msg, severity, name,
                  compile_guard)
 
 
+@_add_docstr
 def assert_final(cond, success_msg=None, failure_msg=None, severity="error",
                  name=None, compile_guard=None):
-    """
-    cond: m.Bit
-    success_msg (optional): passed to $display on success
-    failure_msg (optional): passed to else $<severity> on failure (strings are
-                            wrapped in quotes, integers are passed without
-                            quotes (for $fatal)), can also pass a tuple of the
-                            form  `("<display message>", *display_args)` to
-                            display debug information upon failure
-    severity (optional): "error", "fatal", or "warning"
-    name (optional): Adds `{name}: ` prefix to assertion
-    compile_guard (optional): a string or list of strings corresponding to
-                              macro variables used to guard the assertion with
-                              verilog `ifdef statements
-    """
     _make_assert("final", cond, success_msg, failure_msg, severity, name,
+                 compile_guard)
+
+
+@_add_docstr
+def assert_initial(cond, success_msg=None, failure_msg=None, severity="error",
+                   name=None, compile_guard=None):
+    _make_assert("initial", cond, success_msg, failure_msg, severity, name,
                  compile_guard)

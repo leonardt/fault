@@ -1,13 +1,14 @@
-# assert_immediate and assert_final
+# assert_immediate, assert_final, and assert_initial
 
 `fault` provides the ability to define immediate assertions using the
 `assert_immediate` function.  These assertions are expected to hold true
-throughout the entire simulation.  There is also an `assert_final` function
-that provides the same interface for assertions that are expected to hold true
-at the end of a simulation.
+throughout the entire simulation.  
 
+There are also the two variants:
+* `assert_final`: holds true at the end of simulation
+* `assert_initial`: holds true at the beginning of simulation
 
-Here is the interface:
+Here is the interface (`assert_final` and `assert_initial` share the same interface):
 ```python
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                      on=None, name=None):
