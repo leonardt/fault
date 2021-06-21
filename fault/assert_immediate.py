@@ -4,7 +4,7 @@ from fault.assert_utils import add_compile_guards
 
 
 def _make_assert(type_, cond, success_msg=None, failure_msg=None,
-                 severity="error", name=None, compile_guard=None):
+                 severity="error", name=None, compile_guard=None, delay=False):
     success_msg_str = ""
     if success_msg is not None:
         success_msg_str = f" $display(\"{success_msg}\");"
@@ -26,8 +26,12 @@ def _make_assert(type_, cond, success_msg=None, failure_msg=None,
                 f"Unexpected type for failure_msg={type(failure_msg)}")
         failure_msg_str = f" else ${severity}({failure_msg});"
     name_str = "" if name is None else f"{name}: "
+    delay_str = "" if not delay else "#1"
     assert_str = """\
-{type_} {name_str}assert ({cond}){success_msg_str}{failure_msg_str};\
+{type_} begin
+{delay_str}
+{name_str}assert ({cond}){success_msg_str}{failure_msg_str};\
+end
 """
     assert_str = add_compile_guards(compile_guard, assert_str)
     m.inline_verilog(
@@ -74,4 +78,4 @@ def assert_final(cond, success_msg=None, failure_msg=None, severity="error",
 def assert_initial(cond, success_msg=None, failure_msg=None, severity="error",
                    name=None, compile_guard=None):
     _make_assert("initial", cond, success_msg, failure_msg, severity, name,
-                 compile_guard)
+                 compile_guard, delay=True)
