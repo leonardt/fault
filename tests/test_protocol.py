@@ -37,14 +37,10 @@ class MWrapper(m.MagmaProtocol, metaclass=MWrapperMeta):
 WrappedBits8 = MWrapper[m.UInt[8]]
 
 
-def foo(x):
-    return x + 1
-
-
 @m.sequential2()
 class Foo:
     def __call__(self, val: WrappedBits8) -> m.UInt[8]:
-        return val.apply(foo)
+        return val.apply(lambda x: x + 1)
 
 
 def test_proto():
