@@ -63,7 +63,7 @@ def _add_docstr(fn):
 @_add_docstr
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                      name=None, compile_guard=None):
-    _make_assert("initial", cond, success_msg, failure_msg, severity, name,
+    _make_assert("always @(*)", cond, success_msg, failure_msg, severity, name,
                  compile_guard)
 
 

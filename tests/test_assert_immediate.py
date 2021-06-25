@@ -52,12 +52,12 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity,
             msg = "%Warning:"
         else:
             msg = "%Error:"
-        msg += " Foo.v:29: Assertion failed in TOP.Foo"
+        msg += " Foo.v:31: Assertion failed in TOP.Foo"
         if name is not None:
             msg += f".{name}"
         if severity == "error":
             msg += f": {failure_msg}"
-        assert msg in out
+        assert msg in out, out
 
     tester.clear()
     tester.circuit.I0 = 0
@@ -98,7 +98,7 @@ def test_immediate_assert_tuple_msg(capsys):
                                    flags=['--assert'], directory=dir_,
                                    disp_type="realtime")
     out, _ = capsys.readouterr()
-    msg = ("%Error: Foo.v:13: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
+    msg = ("%Error: Foo.v:15: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")
     assert msg in out, out
 
