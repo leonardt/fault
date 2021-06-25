@@ -5,7 +5,7 @@ import pytest
 import fault as f
 import magma as m
 from fault.verilator_utils import verilator_version
-from test_property import requires_ncsim
+from .test_property import requires_ncsim
 
 
 @pytest.mark.parametrize('success_msg', [None, "OK"])
