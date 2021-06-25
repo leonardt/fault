@@ -5,6 +5,7 @@ import pytest
 import fault as f
 import magma as m
 from fault.verilator_utils import verilator_version
+from test_property import requires_ncsim
 
 
 @pytest.mark.parametrize('success_msg', [None, "OK"])
@@ -158,6 +159,7 @@ def test_assert_final():
                                flags=['--assert'], directory=dir_)
 
 
+@requires_ncsim
 @pytest.mark.parametrize('should_pass', [True, False])
 def test_assert_initial(should_pass):
     class Foo(m.Circuit):
@@ -171,5 +173,5 @@ def test_assert_initial(should_pass):
     tester.eval()
     with pytest.raises(AssertionError) if not should_pass else nullcontext():
         with tempfile.TemporaryDirectory() as dir_:
-            tester.compile_and_run("system-verilog", simulator="iverilog",
+            tester.compile_and_run("system-verilog", simulator="ncsim",
                                    magma_opts={"inline": True}, directory=dir_)
