@@ -30,7 +30,7 @@ def _make_assert(type_, cond, success_msg=None, failure_msg=None,
     assert_str = """\
 {type_} begin
 {delay_str}
-{name_str}assert ({cond}){success_msg_str}{failure_msg_str};\
+{name_str}assert ({cond}){success_msg_str}{failure_msg_str};
 end
 """
     assert_str = add_compile_guards(compile_guard, assert_str)

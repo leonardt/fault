@@ -174,4 +174,5 @@ def test_assert_initial(should_pass):
     with pytest.raises(AssertionError) if not should_pass else nullcontext():
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   magma_opts={"inline": True}, directory=dir_)
+                                   magma_opts={"inline": True, "sv": True},
+                                   directory=dir_)
