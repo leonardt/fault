@@ -4,7 +4,8 @@ from fault.assert_utils import add_compile_guards
 
 
 def _make_assert(type_, cond, success_msg=None, failure_msg=None,
-                 severity="error", name=None, compile_guard=None, delay=False):
+                 severity="error", name=None, compile_guard=None, delay=False,
+                 inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     success_msg_str = ""
     if success_msg is not None:
         success_msg_str = f" $display(\"{success_msg}\");"
@@ -35,7 +36,7 @@ end
 """
     assert_str = add_compile_guards(compile_guard, assert_str)
     m.inline_verilog(
-        assert_str,
+        assert_str, inline_wire_prefix=inline_wire_prefix,
         **format_args, type_=type_)
 
 
@@ -62,20 +63,23 @@ def _add_docstr(fn):
 
 @_add_docstr
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     name=None, compile_guard=None):
+                     name=None, compile_guard=None,
+                     inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     _make_assert("always @(*)", cond, success_msg, failure_msg, severity, name,
-                 compile_guard)
+                 compile_guard, inline_wire_prefix)
 
 
 @_add_docstr
 def assert_final(cond, success_msg=None, failure_msg=None, severity="error",
-                 name=None, compile_guard=None):
+                 name=None, compile_guard=None,
+                 inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     _make_assert("final", cond, success_msg, failure_msg, severity, name,
-                 compile_guard)
+                 compile_guard, inline_wire_prefix)
 
 
 @_add_docstr
 def assert_initial(cond, success_msg=None, failure_msg=None, severity="error",
-                   name=None, compile_guard=None):
+                   name=None, compile_guard=None,
+                   inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     _make_assert("initial", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, delay=True)
+                 compile_guard, True, inline_wire_prefix)
