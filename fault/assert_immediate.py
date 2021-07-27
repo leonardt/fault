@@ -66,7 +66,7 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                      name=None, compile_guard=None,
                      inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     _make_assert("always @(*)", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, inline_wire_prefix)
+                 compile_guard, inline_wire_prefix=inline_wire_prefix)
 
 
 @_add_docstr
@@ -74,7 +74,7 @@ def assert_final(cond, success_msg=None, failure_msg=None, severity="error",
                  name=None, compile_guard=None,
                  inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     _make_assert("final", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, inline_wire_prefix)
+                 compile_guard, inline_wire_prefix=inline_wire_prefix)
 
 
 @_add_docstr
@@ -82,4 +82,5 @@ def assert_initial(cond, success_msg=None, failure_msg=None, severity="error",
                    name=None, compile_guard=None,
                    inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
     _make_assert("initial", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, True, inline_wire_prefix)
+                 compile_guard, delay=True,
+                 inline_wire_prefix=inline_wire_prefix)
