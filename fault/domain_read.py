@@ -15,6 +15,10 @@ def get_value_domain(results, action, time, get_name):
     except KeyError:
         res = results[get_name(action.port).lower()]
 
+    if not isinstance(res.t, np.ndarray):
+        res.t = np.array(res.t)
+        res.v = np.array(res.v)
+
     if isinstance(res, ResultInterp):
         res_style = 'pwc'
     elif isinstance(res, SpiceResult):

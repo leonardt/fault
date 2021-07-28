@@ -35,6 +35,11 @@ class Thread:
             duty_cycle = params.get('duty_cycle', 0.5)
             initial_value = params.get('initial_value', 0)
 
+            # had some trouble with epsilon being too small ... I think the
+            # issue is that the ThreadPool epsilon is in the time domain while
+            # this one is used in the cycle domain
+            self.epsilon *= freq
+
             def get_val(t):
                 cycle_location = ((t - self.start + self.epsilon) / period) % 1
                 edge_loc = (1-duty_cycle) if initial_value == 0 else duty_cycle
