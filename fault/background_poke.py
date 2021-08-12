@@ -40,17 +40,19 @@ class Thread:
             # this one is used in the cycle domain
             self.epsilon *= freq
 
+            # The way an edge gets dropped is if the time is 0.999 and we decide
+            # that's close enough to go to 1.5 next, but we also decide to
+            # output the value for the 0.5-1 range
             def get_val(t):
-                cycle_location = ((t - self.start + self.epsilon) / period) % 1
+                cycle_location = ((t - self.start) / period) % 1
                 edge_loc = (1-duty_cycle) if initial_value == 0 else duty_cycle
-                cycle_dt = min((-cycle_location-self.epsilon) % 1,
-                               (edge_loc-cycle_location-self.epsilon) % 1
-                               ) + self.epsilon
+                # if we're very close to the edge between regions, assume it
+                # was an attempt to hit the edge, and opt for later region
+                first_region = (cycle_location + self.epsilon) % 1 <= edge_loc
+                cycle_dt = ((edge_loc - cycle_location) % 1 if first_region
+                            else (-cycle_location) % 1)
                 self.dt = cycle_dt * period
-                if initial_value == 0:
-                    return 1 if cycle_location >= (1 - duty_cycle) else 0
-                else:
-                    return 1 if cycle_location < duty_cycle else 0
+                return (not first_region) ^ initial_value
 
             self.get_val = get_val
             self.dt = period/2
