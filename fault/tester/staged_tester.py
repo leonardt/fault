@@ -175,12 +175,12 @@ class Tester(TesterBase):
         """
         self.actions.append(actions.Delay(time=time))
 
-    def get_value(self, port):
+    def get_value(self, port, params=None):
         """
         Returns an object with a "value" property that will
         be filled after the simulation completes.
         """
-        action = actions.GetValue(port=port)
+        action = actions.GetValue(port=port, params=params)
         self.actions.append(action)
         return action
 

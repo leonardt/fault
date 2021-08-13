@@ -7,7 +7,8 @@ import fault.actions as actions
 from fault.util import flatten
 import os
 from fault.select_path import SelectPath
-
+from fault.result_parse import parse_vcd
+from fault.domain_read import get_value_domain
 
 class VerilogTarget(Target):
     """
@@ -321,11 +322,31 @@ class VerilogTarget(Target):
     def post_process_get_value_actions(self, all_actions):
         get_value_actions = [action for action in all_actions
                              if isinstance(action, actions.GetValue)]
+
         if len(get_value_actions) > 0:
             with open(self.value_file.name, 'r') as f:
                 lines = f.readlines()
             for line, action in zip(lines, get_value_actions):
                 action.update_from_line(line)
+
+        # sort out actions with params
+        get_value_actions_params = [action for action in get_value_actions if action.params != None]
+
+        def get_name(port):
+            return str(port.name)
+        if len(get_value_actions_params) > 0:
+            # TODO waveform_file is technically a property of systemverilog target only
+            # I think we could make a small adjustment for Verilator but I haven't yet
+            if not hasattr(self, 'waveform_file'):
+                raise NotImplementedError('Domain Read not yet implemented'
+                                          + ' for targets without waveform_file')
+            err_msg = ('No waveform file found for domain_read. '
+                       + 'Did you compile Tester with "dump_waveforms=True"?')
+            assert self.waveform_file is not None, err_msg
+            res = parse_vcd(self.waveform_file, self.circuit)
+            for a in get_value_actions_params:
+                # the time has already been temporarily stored in a.value
+                get_value_domain(res, a, a.value, get_name)
 
     @staticmethod
     def in_var(file):

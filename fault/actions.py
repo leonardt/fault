@@ -8,6 +8,7 @@ import fault
 import pysv
 from fault.select_path import SelectPath
 import fault.expression as expression
+from fault.domain_read import domain_read
 
 
 class Action(ABC):
@@ -96,10 +97,12 @@ def is_output(port):
         return not port.is_output()
 
 
+@domain_read
 class GetValue(Action):
-    def __init__(self, port):
+    def __init__(self, port, params):
         super().__init__()
         self.port = port
+        self.params = params
         self.value = None  # value to be assigned after simulation
 
     @property
