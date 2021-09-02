@@ -90,6 +90,7 @@ class Tester(TesterBase):
             self.monitors = []
         else:
             self.monitors = monitors
+        self.timeout_var_counter = 0
 
     def init_clock(self):
         if self.clock is not None:
@@ -428,23 +429,37 @@ class Tester(TesterBase):
         self.actions.append(var)
         return var
 
-    def wait_on(self, cond):
+    def assign(self, var, value):
+        self.actions.append(actions.Assign(var, value))
+
+    def wait_on(self, cond, timeout=None):
+        if timeout is not None:
+            timeout = int(timeout)
+            timeout_var = self.Var(
+                f"_fault_timeout_var_{self.timeout_var_counter}",
+                BitVector[timeout.bit_length()]
+            )
+            self.timeout_var_counter += 1
+            self.assign(timeout_var, 0)
         loop = self._while(cond)
         loop.step()
+        if timeout is not None:
+            loop.assert_(timeout_var < timeout)
+            loop.assign(timeout_var, timeout_var + 1)
 
-    def wait_until_low(self, signal):
-        self.wait_on(self.peek(signal) != 0)
+    def wait_until_low(self, signal, timeout=None):
+        self.wait_on(self.peek(signal) != 0, timeout)
 
-    def wait_until_high(self, signal):
-        self.wait_on(self.peek(signal) == 0)
+    def wait_until_high(self, signal, timeout=None):
+        self.wait_on(self.peek(signal) == 0, timeout)
 
-    def wait_until_negedge(self, signal):
-        self.wait_until_high(signal)
-        self.wait_until_low(signal)
+    def wait_until_negedge(self, signal, timeout=None):
+        self.wait_until_high(signal, timeout)
+        self.wait_until_low(signal, timeout)
 
-    def wait_until_posedge(self, signal, steps_per_iter=1):
-        self.wait_until_low(signal)
-        self.wait_until_high(signal)
+    def wait_until_posedge(self, signal, steps_per_iter=1, timeout=None):
+        self.wait_until_low(signal, timeout)
+        self.wait_until_high(signal, timeout)
 
 
 StagedTester = Tester
