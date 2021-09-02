@@ -99,7 +99,7 @@ def test_immediate_assert_tuple_msg(capsys):
                                    flags=['--assert'], directory=dir_,
                                    disp_type="realtime")
     out, _ = capsys.readouterr()
-    msg = ("%Error: Foo.v:15: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
+    msg = ("%Error: Foo.v:19: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")
     assert msg in out, out
 
