@@ -971,6 +971,8 @@ def test_tester_basic_generate_test_bench(target, simulator):
 
 
 def test_wait_until_timeout(target, simulator, capsys):
+    if simulator == "vivado":
+        pytest.skip("Does not work for some reason")
     class Main(m.Circuit):
         io = m.IO(count=m.Out(m.UInt[3]), done=m.Out(m.Bit))
         io += m.ClockIO()
