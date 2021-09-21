@@ -173,6 +173,8 @@ class VerilogTarget(Target):
             return self.make_get_value(i, action)
         elif isinstance(action, actions.Assert):
             return self.make_assert(i, action)
+        elif isinstance(action, actions.Assign):
+            return self.make_assign(i, action)
         raise NotImplementedError(action)
 
     @abstractmethod
@@ -283,6 +285,10 @@ class VerilogTarget(Target):
     @abstractmethod
     def make_assert(self, i, action):
         pass
+
+    def make_assign(self, i, action):
+        value = self.compile_expression(action.value)
+        return [f'{action.target.name} = {value};']
 
     def make_block(self, i, name, cond, actions, label=None):
         '''

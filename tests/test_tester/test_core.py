@@ -968,3 +968,32 @@ def test_tester_basic_generate_test_bench(target, simulator):
         tester.compile(target, **kwargs)
         tb_file = tester.generate_test_bench(target)
         assert os.path.exists(tb_file)
+
+
+def test_wait_until_timeout(target, simulator, capsys):
+    class Main(m.Circuit):
+        io = m.IO(count=m.Out(m.UInt[3]), done=m.Out(m.Bit))
+        io += m.ClockIO(has_reset=True)
+        count = m.Register(m.UInt[3], reset_type=m.Reset)()
+        count.RESET @= io.RESET
+        io.count @= count(count.O + 1)
+
+        tff = m.Register(m.Bit, has_enable=True, reset_type=m.Reset)()
+        tff.RESET @= io.RESET
+        tff.CE @= m.enable(count.O == 4)
+        io.done @= tff(tff.O ^ 1)
+
+    tester = fault.Tester(Main, Main.CLK)
+    tester.circuit.RESET = 1
+    tester.step(2)
+    tester.circuit.RESET = 0
+    tester.wait_until_high(tester.circuit.done, timeout=3)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
+        with pytest.raises(AssertionError):
+            tester.compile_and_run(**kwargs)
+        out = capsys.readouterr()[0]
+        assert "(_fault_timeout_var_0 < 3) failed" in out

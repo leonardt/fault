@@ -440,3 +440,15 @@ class Assert(Action):
 
     def retarget(self, new_circuit, clock):
         return Assert(self.expr)
+
+
+class Assign(Action):
+    def __init__(self, target, value):
+        self.target = target
+        self.value = value
+
+    def __str__(self):
+        return f"Assign({self.target}, {self.value})"
+
+    def retarget(self, new_circuit, clock):
+        return Assign(self.target, self.value)
