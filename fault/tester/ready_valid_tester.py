@@ -12,25 +12,35 @@ class ReadyValidTester:
             for key, value in sequences.items():
                 port = getattr(inst, key)
                 n = len(value)
+                # Counter to advance through sequence
                 count = m.Register(m.UInt[(n - 1).bit_length()],
                                    has_enable=True)()
-                # NOTE: Here we can add logic for random stalls
                 count.I @= count.O + 1
+
+                # Current sequence elem chosen by counter
                 curr = m.mux(value, count.O)
+
+                # Still sequence elements to process
                 not_done = (count.O != (n - 1))
 
+                # NOTE: Here we could add logic for random stalls
                 port_T = type(port)
                 if port_T.is_consumer():
+                    # Advance count when circuit is ready and we are valid (not
+                    # done with sequence)
                     count.CE @= not_done & port.ready
                     port.data @= curr
                     port.valid @= not_done
                 elif port_T.is_producer():
+                    # Advance count when circuit produces valid and we are
+                    # ready (not done with sequence)
                     count.CE @= not_done & port.valid
                     port.ready @= not_done
                     assert_immediate(~(not_done & port.valid) |
                                      (port.data == curr))
                 else:
                     raise NotImplementedError(port_T)
+                # Done when all counters reach final element
                 done = done & (count.O == (n - 1))
             io.done @= done
 
