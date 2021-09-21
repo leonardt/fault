@@ -16,17 +16,21 @@ class ReadyValidTester:
                                    has_enable=True)()
                 # NOTE: Here we can add logic for random stalls
                 count.I @= count.O + 1
-                port_T = type(port)
                 curr = m.mux(value, count.O)
+                not_done = (count.O != (n - 1))
+
+                port_T = type(port)
                 if port_T.is_consumer():
-                    count.CE @= (count.O != (n - 1)) & port.ready
+                    count.CE @= not_done & port.ready
                     port.data @= curr
-                    port.valid @= (count.O != (n - 1))
-                else:
-                    count.CE @= (count.O != (n - 1)) & port.valid
-                    port.ready @= (count.O != (n - 1))
-                    assert_immediate(~((count.O != (n - 1)) & port.valid) |
+                    port.valid @= not_done
+                elif port_T.is_producer():
+                    count.CE @= not_done & port.valid
+                    port.ready @= not_done
+                    assert_immediate(~(not_done & port.valid) |
                                      (port.data == curr))
+                else:
+                    raise NotImplementedError(port_T)
                 done = done & (count.O == (n - 1))
             io.done @= done
 
