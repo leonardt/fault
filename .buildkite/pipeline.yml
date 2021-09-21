@@ -2,7 +2,7 @@ steps:
   - command: |
       # tool setup
       source /cad/modules/tcl/init/bash
-      module load base vcs xcelium/19.03.003 hspice spectre verdi
+      module load base vcs xcelium/19.03.003 hspice spectre/18.10.314 verdi
 
       # create virtual environment
       python3.7 -m venv venv
