@@ -651,6 +651,24 @@ def test_tester_while(target, simulator):
                                    magma_opts={"sv": True})
 
 
+def test_tester_for(target, simulator):
+    circ = TestArrayCircuit
+    tester = fault.Tester(circ)
+    tester.zero_inputs()
+    tester.poke(circ.I, 0)
+    tester.eval()
+    loop = tester._for(8)
+    loop.poke(circ.I, loop.index)
+    loop.eval()
+    tester.expect(circ.O, loop.index)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        if target == "verilator":
+            tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
+        else:
+            tester.compile_and_run(target, directory=_dir, simulator=simulator,
+                                   magma_opts={"sv": True})
+
+
 def test_tester_while2(target, simulator):
     circ = TestArrayCircuit
     tester = fault.Tester(circ)

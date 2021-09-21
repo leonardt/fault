@@ -91,6 +91,7 @@ class Tester(TesterBase):
         else:
             self.monitors = monitors
         self.timeout_var_counter = 0
+        self.loop_var_counter = 0
 
     def init_clock(self):
         if self.clock is not None:
@@ -412,6 +413,32 @@ class Tester(TesterBase):
         """
         while_tester = self.LoopTester(self._circuit, self.clock,
                                        self.monitors)
+        self.actions.append(While(cond, while_tester.actions))
+        return while_tester
+
+    def _for(self, num_iter):
+        """
+        Simple `for i in range(num_iter)` loop
+
+        Use the `index` attribute of the returned tester to access the current
+        loop index
+        """
+        num_iter = int(num_iter)
+        loop_var = self.Var(
+            f"_fault_loop_var_{self.loop_var_counter}",
+            BitVector[num_iter.bit_length()]
+        )
+        self.loop_var_counter += 1
+        self.assign(loop_var, 0)
+        cond = loop_var < num_iter
+        while_tester = self.LoopTester(self._circuit, self.clock,
+                                       self.monitors)
+        # We insert the increment here instead of the end of the loop to
+        # simplify the logic (otherwise we have to finalize it at some later
+        # point)
+        while_tester.assign(loop_var, loop_var + 1)
+        # References to the loop index get the unincremented value
+        while_tester.index = (loop_var - 1)
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
