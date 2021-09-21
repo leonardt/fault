@@ -971,20 +971,22 @@ def test_tester_basic_generate_test_bench(target, simulator):
 
 
 def test_wait_until_timeout(target, simulator, capsys):
-    if simulator == "vivado":
-        pytest.skip("Does not work for some reason")
-
     class Main(m.Circuit):
         io = m.IO(count=m.Out(m.UInt[3]), done=m.Out(m.Bit))
-        io += m.ClockIO()
-        count = m.Register(m.UInt[3])()
+        io += m.ClockIO(has_reset=True)
+        count = m.Register(m.UInt[3], has_reset=True)()
+        count.RESET @= io.RESET
         io.count @= count(count.O + 1)
 
-        tff = m.Register(m.Bit, has_enable=True)()
+        tff = m.Register(m.Bit, has_enable=True, has_reset=True)()
+        tff.RESET @= io.RESET
         tff.CE @= m.enable(count.O == 4)
         io.done @= tff(tff.O ^ 1)
 
     tester = fault.Tester(Main, Main.CLK)
+    tester.circuit.RESET = 1
+    tester.step(2)
+    tester.circuit.RESET = 0
     tester.wait_until_high(tester.circuit.done, timeout=3)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
         kwargs = {"target": target, "directory": _dir}
