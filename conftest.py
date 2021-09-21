@@ -10,4 +10,5 @@ collect_ignore = ["src"]  # pip folder that contains dependencies like magma
 def magma_test():
     clear_cachedFunctions()
     magma.frontend.coreir_.ResetCoreIR()
+    magma.generator.reset_generator_cache()
     logging.getLogger().setLevel(logging.DEBUG)
