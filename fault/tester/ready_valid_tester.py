@@ -4,7 +4,7 @@ from fault.assert_immediate import assert_immediate
 
 
 class ReadyValidTester:
-    def __init__(self, circuit: m.Circuit, sequences: dict):
+    def __init__(self, circuit: m.circuit.CircuitKind, sequences: dict):
         class Wrapper(m.Circuit):
             io = m.IO(done=m.Out(m.Bit))
             inst = circuit()
