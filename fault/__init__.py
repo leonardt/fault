@@ -22,4 +22,4 @@ from fault.sva import sva
 from fault.assert_immediate import assert_immediate, assert_final, assert_initial
 from fault.expression import abs, min, max, signed, integer
 from fault.pysv import PysvMonitor, python_monitor
-from fault.tester.ready_valid_tester import ReadyValidTester
+from fault.ready_valid import run_ready_valid_test
