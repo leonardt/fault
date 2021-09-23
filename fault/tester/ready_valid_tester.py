@@ -25,13 +25,13 @@ class ReadyValidTester:
 
                 # NOTE: Here we could add logic for random stalls
                 port_T = type(port)
-                if port_T.is_consumer():
+                if m.is_consumer(port_T):
                     # Advance count when circuit is ready and we are valid (not
                     # done with sequence)
                     count.CE @= not_done & port.ready
                     port.data @= curr
                     port.valid @= not_done
-                elif port_T.is_producer():
+                elif m.is_producer(port_T):
                     # Advance count when circuit produces valid and we are
                     # ready (not done with sequence)
                     count.CE @= not_done & port.valid
