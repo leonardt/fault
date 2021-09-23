@@ -190,6 +190,16 @@ else_tester.circuit.I = 0
 tester.eval()
 ```
 
+The `tester._for(<num_iter>)` action provides a simple way to write a loop over
+a fixed number of iterations.  Use the attribute `index` to get access to the
+current iteration, for example:
+```python
+loop = tester._for(8)
+loop.poke(circ.I, loop.index)
+loop.eval()
+tester.expect(circ.O, loop.index)
+```
+
 ### What Python values can I use to poke/expect ports?
 Here are the supported Python values for poking the following port types:
 * `m.Bit` - `bool` (`True`/`False`) or `int` (`0`/`1`) or `hwtypes.Bit`
