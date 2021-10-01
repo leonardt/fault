@@ -29,10 +29,11 @@ def test_top():
         """
         Generate a structural adder
         """
-        AdderNDecl = DeclareAdder(N)
+        T = m.UInt[N]
 
-        class Adder(AdderNDecl):
-            io = AdderNDecl.io
+        class Adder(m.Circuit):
+            io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
+                      O=m.Out(T), COUT=m.Out(m.Bit))
             adders = [mantle.FullAdder() for _ in range(N)]
             adders = m.fold(adders, foldargs={"CIN": "COUT"})
             COUT, O = adders(I0=io.I0, I1=io.I1, CIN=io.CIN)
@@ -44,10 +45,11 @@ def test_top():
         """
         Generate a behavioral adder
         """
-        AdderNDecl = DeclareAdder(N)
+        T = m.UInt[N]
 
-        class Adder(AdderNDecl):
-            io = AdderNDecl.io
+        class Adder(m.Circuit):
+            io = m.IO(I0=m.In(T), I1=m.In(T), CIN=m.In(m.Bit),
+                      O=m.Out(T), COUT=m.Out(m.Bit))
             # Swap this line with the commented code in the following line
             # to induce a failure in the behavioral test
             O = io.I0.zext(1) + io.I1.zext(1) + m.bits(io.CIN, 1).zext(N)

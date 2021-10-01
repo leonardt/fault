@@ -90,6 +90,8 @@ class Tester(TesterBase):
             self.monitors = []
         else:
             self.monitors = monitors
+        self.timeout_var_counter = 0
+        self.loop_var_counter = 0
 
     def init_clock(self):
         if self.clock is not None:
@@ -414,6 +416,32 @@ class Tester(TesterBase):
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
+    def _for(self, num_iter):
+        """
+        Simple `for i in range(num_iter)` loop
+
+        Use the `index` attribute of the returned tester to access the current
+        loop index
+        """
+        num_iter = int(num_iter)
+        loop_var = self.Var(
+            f"_fault_loop_var_{self.loop_var_counter}",
+            BitVector[num_iter.bit_length()]
+        )
+        self.loop_var_counter += 1
+        self.assign(loop_var, 0)
+        cond = loop_var < num_iter
+        while_tester = self.LoopTester(self._circuit, self.clock,
+                                       self.monitors)
+        # We insert the increment here instead of the end of the loop to
+        # simplify the logic (otherwise we have to finalize it at some later
+        # point)
+        while_tester.assign(loop_var, loop_var + 1)
+        # References to the loop index get the unincremented value
+        while_tester.index = (loop_var - 1)
+        self.actions.append(While(cond, while_tester.actions))
+        return while_tester
+
     def _if(self, cond):
         if_tester = self.IfTester(self._circuit, self.clock, self.monitors)
         self.actions.append(If(cond, if_tester.actions,
@@ -428,23 +456,37 @@ class Tester(TesterBase):
         self.actions.append(var)
         return var
 
-    def wait_on(self, cond):
+    def assign(self, var, value):
+        self.actions.append(actions.Assign(var, value))
+
+    def wait_on(self, cond, timeout=None):
+        if timeout is not None:
+            timeout = int(timeout)
+            timeout_var = self.Var(
+                f"_fault_timeout_var_{self.timeout_var_counter}",
+                BitVector[timeout.bit_length()]
+            )
+            self.timeout_var_counter += 1
+            self.assign(timeout_var, 0)
         loop = self._while(cond)
         loop.step()
+        if timeout is not None:
+            loop.assert_(timeout_var < timeout)
+            loop.assign(timeout_var, timeout_var + 1)
 
-    def wait_until_low(self, signal):
-        self.wait_on(self.peek(signal) != 0)
+    def wait_until_low(self, signal, timeout=None):
+        self.wait_on(self.peek(signal) != 0, timeout)
 
-    def wait_until_high(self, signal):
-        self.wait_on(self.peek(signal) == 0)
+    def wait_until_high(self, signal, timeout=None):
+        self.wait_on(self.peek(signal) == 0, timeout)
 
-    def wait_until_negedge(self, signal):
-        self.wait_until_high(signal)
-        self.wait_until_low(signal)
+    def wait_until_negedge(self, signal, timeout=None):
+        self.wait_until_high(signal, timeout)
+        self.wait_until_low(signal, timeout)
 
-    def wait_until_posedge(self, signal, steps_per_iter=1):
-        self.wait_until_low(signal)
-        self.wait_until_high(signal)
+    def wait_until_posedge(self, signal, steps_per_iter=1, timeout=None):
+        self.wait_until_low(signal, timeout)
+        self.wait_until_high(signal, timeout)
 
 
 StagedTester = Tester
