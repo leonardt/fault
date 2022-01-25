@@ -35,6 +35,7 @@ jobs:
           pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
           pip install vcdvcd decorator kratos
+          pip install -e git+https://github.com/leonardt/magma.git@array2#egg=magma-lang
           pip install .
     - name: Pytest
       shell: bash -l {0}
