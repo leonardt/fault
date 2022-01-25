@@ -324,7 +324,12 @@ if (!({cond})) {{
         if isinstance(port.name, m.ref.ArrayRef) and \
                 issubclass(port.name.array.T, m.Digital):
             i = port.name.index
-            value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
+            if isinstance(i, int):
+                value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
+            else:
+                mask = f"(~(1UL << ({i.stop - i.start}) - 1) << {i.start})"
+                value = f"(top->{name} & {mask}) | ({value} << {i.start})"
+                print(value)
         return value
 
     def process_bitwise_expect(self, port, value):
