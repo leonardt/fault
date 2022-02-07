@@ -625,6 +625,9 @@ class SystemVerilogTarget(VerilogTarget):
             code.append(f"#{self.clock_step_delay} {name} ^= 1;")
         return code
 
+    def make_finish(self, i, action):
+        return ["$finish;"]
+
     def generate_recursive_port_code(self, name, type_, power_args):
         port_list = []
         if issubclass(type_, m.Array):

@@ -452,3 +452,11 @@ class Assign(Action):
 
     def retarget(self, new_circuit, clock):
         return Assign(self.target, self.value)
+
+
+class Finish(Action):
+    def __str__(self):
+        return "Finish()"
+
+    def retarget(self, new_circuit, clock):
+        return Finish()

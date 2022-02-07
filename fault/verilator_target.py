@@ -647,6 +647,9 @@ if (!({expr_str})) {{
 }}
     """.splitlines()
 
+    def make_finish(self, i, action):
+        return ["top->final(); exit(0);"]
+
     def generate_code(self, actions, verilator_includes, num_tests, circuit):
         if verilator_includes:
             # Include the top circuit by default
