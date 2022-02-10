@@ -1025,14 +1025,16 @@ def test_tester_array2_slice(target, simulator):
     tester = fault.Tester(Foo)
     expected = []
     val = BitVector.random(4)
-    tester.poke(Foo.I[:2], val[3:1:-1])
-    tester.poke(Foo.I[2:], val[2:-1:-1])
+    reversed = val[::-1]
+    tester.poke(Foo.I[:2], reversed[:2])
+    tester.poke(Foo.I[2:], reversed[2:])
     tester.eval()
     tester.expect(Foo.O[:2], val[:2])
     tester.expect(Foo.O[2:], val[2:])
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
+        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:

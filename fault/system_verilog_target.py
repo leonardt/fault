@@ -338,6 +338,7 @@ class SystemVerilogTarget(VerilogTarget):
         return [f'$fscanf({fd_var}, "{action._format}", {var_args});']
 
     def process_value(self, port, value):
+        print(value)
         if isinstance(value, Bit):
             value = f"1'b{int(value)}"
         elif isinstance(value, BitVector):
