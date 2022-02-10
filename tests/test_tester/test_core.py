@@ -1025,6 +1025,7 @@ def test_tester_array2_slice(target, simulator):
     tester = fault.Tester(Foo)
     expected = []
     val = BitVector.random(4)
+    val = BitVector[4](15)
     reversed = val[::-1]
     tester.poke(Foo.I[:2], reversed[:2])
     tester.poke(Foo.I[2:], reversed[2:])
