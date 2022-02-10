@@ -26,7 +26,7 @@ jobs:
           pip install mantle>=2.0.0  # for tests.common
           pip install vcdvcd decorator kratos
           pip install smt-switch pono
-          pip install -e git+https://github.com/leonardt/magma.git@array2#egg=magma-lang
+          pip install -e git+https://github.com/phanrahan/magma.git#egg=magma-lang
           pip install .
 
     - name: Pytest
