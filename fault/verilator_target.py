@@ -327,7 +327,7 @@ if (!({cond})) {{
             if isinstance(i, int):
                 value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
             else:
-                mask = f"~(~((1UL << ({i.stop} - {i.start})) - 1) << {i.start})"
+                mask = f"~(((1UL << ({i.stop} - {i.start})) - 1) << {i.start})"
                 value = f"(top->{name} & {mask}) | ({value} << {i.start})"
         return value
 
