@@ -310,7 +310,6 @@ def test_tester_128(target, simulator):
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
@@ -858,6 +857,7 @@ def test_poke_bitwise(target, simulator):
     tester.eval()
     tester.circuit.O[1:].expect(0b01)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
+        _dir = "build"
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
@@ -878,7 +878,6 @@ def test_poke_bitwise_nested(target, simulator):
     tester.circuit.O[1][1].expect(1)
     tester.assert_((tester.circuit.O[0] | tester.circuit.O[1]) == 0b11)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
         kwargs = {"target": target, "directory": _dir}
         if target == "system-verilog":
             kwargs["simulator"] = simulator
@@ -1050,7 +1049,6 @@ def test_tester_array2_slice(target, simulator):
     for i, exp in enumerate(expected):
         check(tester.actions[i], exp)
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir, flags=["-Wno-fatal"])
         else:
