@@ -24,7 +24,7 @@ jobs:
     - name: Install verilator
       shell: bash
       run: |
-          brew upgrade gmp mpfr libmpc
+          brew update
           brew install verilator icarus-verilog
           verilator --version
           iverilog -V
@@ -35,6 +35,7 @@ jobs:
           pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
           pip install vcdvcd decorator kratos
+          pip install -e git+https://github.com/phanrahan/magma.git#egg=magma-lang
           pip install .
     - name: Pytest
       shell: bash -l {0}
