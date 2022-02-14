@@ -47,7 +47,7 @@ steps:
       chmod +x Miniconda3-latest-Linux-x86_64.sh
       ./Miniconda3-latest-Linux-x86_64.sh -b -p $PWD/miniconda
       export PATH=$PWD/miniconda/bin:$PATH
-      conda install python==3.8
+      conda install python==3.8 -y -q
 
       # install python dependencies for testing
       pip install wheel
