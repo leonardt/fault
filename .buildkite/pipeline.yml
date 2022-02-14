@@ -44,7 +44,8 @@ steps:
       # source venv/bin/activate
       # create conda env
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-      bash Miniconda3-latest-Linux-x86_64.sh b -p $PWD/miniconda
+      chmod +x Miniconda3-latest-Linux-x86_64.sh
+      ./Miniconda3-latest-Linux-x86_64.sh b -p $PWD/miniconda
       export PATH=$PWD/miniconda/bin:$PATH
 
       # install python dependencies for testing
