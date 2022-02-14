@@ -16,7 +16,6 @@ steps:
       pip install DeCiDa scipy numpy
 
       # install fault
-      pip install -e git+https://github.com/phanrahan/magma.git#egg=magma-lang
       pip install -e .
 
       # install kratos runtime
@@ -61,7 +60,6 @@ steps:
       pip install cmake
 
       # install fault
-      pip install -e git+https://github.com/phanrahan/magma.git#egg=magma-lang
       pip install -e .
       
       # run tests
