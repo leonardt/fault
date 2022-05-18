@@ -936,7 +936,10 @@ class SystemVerilogTarget(VerilogTarget):
         if self.dump_waveforms:
             tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale ps']  # noqa
             tcl_cmds += [f'probe -create -all -vcd -depth all']
-        tcl_cmds += [f'run {self.num_cycles}ns']
+        run_str = "run"
+        if self.num_cycles is not None:
+            run_str += f' {self.num_cycles}ns'
+        tcl_cmds += [run_str]
         tcl_cmds += ['assertion -summary -final']
         tcl_cmds += [f'quit']
 
