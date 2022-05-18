@@ -286,9 +286,9 @@ corebit_const #(
     .out(bit_const_0_None_out)
 );
 wire [4:0] magma_UInt_5_add_inst0_in0;
-assign magma_UInt_5_add_inst0_in0 = {bit_const_0_None_out,I0[3:0]};
+assign magma_UInt_5_add_inst0_in0 = {bit_const_0_None_out,I0};
 wire [4:0] magma_UInt_5_add_inst0_in1;
-assign magma_UInt_5_add_inst0_in1 = {bit_const_0_None_out,I1[3:0]};
+assign magma_UInt_5_add_inst0_in1 = {bit_const_0_None_out,I1};
 coreir_add #(
     .width(5)
 ) magma_UInt_5_add_inst0 (

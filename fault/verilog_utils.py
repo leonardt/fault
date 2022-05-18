@@ -16,7 +16,12 @@ def verilog_name(name, disable_ndarray=False):
         array_name = verilog_name(name.array.name, disable_ndarray)
         if (issubclass(name.array.T, m.Digital) or
                 (is_nd_array(type(name.array)) and not disable_ndarray)):
-            return f"{array_name}[{name.index}]"
+            index = name.index
+            if isinstance(index, slice):
+                assert index.step in {None, 1}, "Unexpanded variable step slice"
+                index = f"{index.stop - 1}:{index.start}"
+            return f"{array_name}[{index}]"
+        assert isinstance(name.index, int)
         return f"{array_name}_{name.index}"
     if isinstance(name, m.ref.TupleRef):
         tuple_name = verilog_name(name.tuple.name, disable_ndarray)

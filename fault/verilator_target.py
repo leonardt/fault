@@ -243,7 +243,8 @@ if (!({cond})) {{
             value_str = f"top->{verilator_name(value.port.name)}"
             name = value.port.name
         if (isinstance(name, m.ref.ArrayRef) and
-                issubclass(name.array.T, m.Digital)):
+                issubclass(name.array.T, m.Digital)
+                and isinstance(name.index, int)):
             # Use mask to select bit from bits
             value_str = f"({value_str} >> {name.index}) & 1"
         return value_str
@@ -323,7 +324,11 @@ if (!({cond})) {{
         if isinstance(port.name, m.ref.ArrayRef) and \
                 issubclass(port.name.array.T, m.Digital):
             i = port.name.index
-            value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
+            if isinstance(i, int):
+                value = f"(top->{name} & ~(1UL << {i})) | ({value} << {i})"
+            else:
+                mask = f"~(((1UL << ({i.stop} - {i.start})) - 1) << {i.start})"
+                value = f"(top->{name} & {mask}) | ({value} << {i.start})"
         return value
 
     def process_bitwise_expect(self, port, value):
@@ -333,9 +338,13 @@ if (!({cond})) {{
             return value
         if isinstance(port.name, m.ref.ArrayRef) and \
                 issubclass(port.name.array.T, m.Digital):
-            # Extract bit
             i = port.name.index
-            value = f"({value} >> {i}) & 1"
+            if isinstance(i, int):
+                # Extract bit
+                value = f"({value} >> {i}) & 1"
+            else:
+                mask = f"((1 << ({i.stop - i.start})) - 1)"
+                value = f"({value} >> {i.start}) & {mask}"
         return value
 
     def make_poke(self, i, action):
