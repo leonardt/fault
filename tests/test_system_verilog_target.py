@@ -1,3 +1,4 @@
+import filecmp
 import os.path
 import shutil
 import tempfile
@@ -117,3 +118,23 @@ def test_num_cycles_none():
                            num_cycles=None)
     with open("build/Foo_cmd.tcl") as f:
         assert "run" == f.read().splitlines()[0]
+
+
+@pytest.mark.parametrize("use_packed_arrays", (False, True))
+def test_packed_arrays(use_packed_arrays):
+    name_ = f"test_system_verilog_target_packed_arrays_{use_packed_arrays}"
+
+    class _Foo(m.Circuit):
+        name = name_
+        T = m.Array[5, m.Array[12, m.Array[3, m.Bits[6]]]]
+        io = m.IO(I=m.In(T), O=m.Out(T))
+        io.O @= io.I
+
+    fault.Tester(_Foo).compile_and_run(
+        target="system-verilog",
+        simulator="vcs",
+        skip_compile=True,
+        skip_run=True,
+        use_packed_arrays=use_packed_arrays,
+    )
+    assert filecmp.cmp(f"gold/{name_}_tb.sv", f"build/{name_}_tb.sv")

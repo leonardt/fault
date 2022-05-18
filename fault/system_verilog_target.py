@@ -65,7 +65,8 @@ class SystemVerilogTarget(VerilogTarget):
                  disp_type='on_error', waveform_file=None, coverage=False,
                  use_kratos=False, use_sva=False, skip_run=False,
                  no_top_module=False, vivado_use_system_verilog=True,
-                 disable_ndarray=False, fsdb_dumpvars_args=""):
+                 disable_ndarray=False, fsdb_dumpvars_args="",
+                 use_packed_arrays=False):
         """
         circuit: a magma circuit
 
@@ -191,6 +192,7 @@ class SystemVerilogTarget(VerilogTarget):
         if disable_ndarray:
             magma_opts["disable_ndarray"] = True
         self.disable_ndarray = disable_ndarray
+        self.use_packed_arrays = use_packed_arrays
 
         # call the super constructor
         super().__init__(circuit, circuit_name, directory, skip_compile,
@@ -660,7 +662,11 @@ class SystemVerilogTarget(VerilogTarget):
                 type_ = type_.T
             inner_width = f"[{type_.N - 1}:0]"
             t = "reg" if type_.is_input() else "wire"
-            self.add_decl(f'{t} {inner_width}', f'{name} {outer_width}')
+            if self.use_packed_arrays:
+                decl = (f'{t} {outer_width} {inner_width}', f'{name}')
+            else:
+                decl = (f'{t} {inner_width}', f'{name} {outer_width}')
+            self.add_decl(*decl)
             return [f".{name}({name})"]
         elif is_array_of_non_bits or issubclass(type_, m.Tuple):
             return self.generate_recursive_port_code(name, type_, power_args)
