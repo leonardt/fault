@@ -24,7 +24,7 @@ jobs:
     - name: Install verilator
       shell: bash
       run: |
-          brew upgrade gmp mpfr libmpc
+          brew update
           brew install verilator icarus-verilog
           verilator --version
           iverilog -V

@@ -13,7 +13,7 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='3.0.56',
+    version='3.1.0',
     description=DESCRIPTION,
     scripts=[],
     packages=[
@@ -26,7 +26,7 @@ setup(
         "cosa",
         "z3-solver",
         "hwtypes",
-        "magma-lang>=2.0.73",
+        "magma-lang>=2.2.3",
         "pyyaml",
         "scipy",
         "numpy",
