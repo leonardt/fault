@@ -103,3 +103,17 @@ def test_unknown_value(target, simulator):
         # Expect is strict, so this should fail
         tester.circuit.O.expect(0)
         tester.compile_and_run(target, simulator=simulator)
+
+
+def test_num_cycles_none():
+    class Foo(m.Circuit):
+        io = m.IO(valid=m.Out(m.Bit)) + m.ClockIO()
+        io.valid.undriven()
+
+    tester = fault.SynchronousTester(Foo, Foo.CLK)
+    tester.wait_until_high(tester.circuit.valid)
+    tester.compile_and_run(target="system-verilog",
+                           simulator="xcelium", skip_run=True,
+                           num_cycles=None)
+    with open("build/Foo_cmd.tcl") as f:
+        assert "run" == f.read().splitlines()[0]

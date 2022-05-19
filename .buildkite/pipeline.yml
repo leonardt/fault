@@ -4,9 +4,12 @@ steps:
       source /cad/modules/tcl/init/bash
       module load base vcs xcelium/19.03.003 hspice spectre/18.10.314 verdi
 
-      # create virtual environment
-      python3.7 -m venv venv
-      source venv/bin/activate
+      # create conda env
+      wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+      chmod +x Miniconda3-latest-Linux-x86_64.sh
+      ./Miniconda3-latest-Linux-x86_64.sh -b -u -p $$PWD/miniconda
+      export PATH=$$PWD/miniconda/bin:$$PATH
+      conda install python==3.8 -y -q
 
       # install python dependencies for testing
       pip install "pytest<6"
@@ -38,14 +41,11 @@ steps:
       source /etc/environment
       echo $$PATH
 
-      # create virtual environment
-      # python3.7 -m venv venv
-      # source venv/bin/activate
       # create conda env
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
       chmod +x Miniconda3-latest-Linux-x86_64.sh
-      ./Miniconda3-latest-Linux-x86_64.sh -b -p $PWD/miniconda
-      export PATH=$PWD/miniconda/bin:$PATH
+      ./Miniconda3-latest-Linux-x86_64.sh -b -u -p $$PWD/miniconda
+      export PATH=$$PWD/miniconda/bin:$$PATH
       conda install python==3.8 -y -q
 
       # install python dependencies for testing

@@ -501,5 +501,7 @@ class Tester(TesterBase):
         self.wait_until_low(signal, timeout)
         self.wait_until_high(signal, timeout)
 
+    def finish(self):
+        self.actions.append(actions.Finish())
 
 StagedTester = Tester
