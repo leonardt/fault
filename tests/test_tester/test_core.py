@@ -1012,7 +1012,7 @@ def test_wait_until_timeout(target, simulator, capsys):
         with pytest.raises(AssertionError):
             tester.compile_and_run(**kwargs)
         out = capsys.readouterr()[0]
-        assert "(_fault_timeout_var_1 < 3) failed" in out
+        assert "(_fault_timeout_var_0 < 3) failed" in out
 
 
 def test_implicit_peek_error(target, simulator):
