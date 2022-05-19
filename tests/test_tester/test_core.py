@@ -1015,6 +1015,15 @@ def test_wait_until_timeout(target, simulator, capsys):
         assert "(_fault_timeout_var_0 < 3) failed" in out
 
 
+def test_implicit_peek_error(target, simulator):
+    circ = TestArrayCircuit
+    tester = fault.Tester(circ)
+    with pytest.raises(TypeError):
+        tester._if(circ.O)
+    with pytest.raises(TypeError):
+        tester._while(circ.O)
+
+
 def test_tester_finish(target, simulator, capsys):
     circ = TestBasicCircuit
     tester = fault.Tester(circ)

@@ -1,3 +1,4 @@
+import functools
 from .base import TesterBase
 from .utils import get_port_type
 from fault.tester.control import LoopIndex, add_control_structures
@@ -32,6 +33,16 @@ from fault.config import get_test_dir
 import tempfile
 import pysv
 from hwtypes import BitVector
+
+
+def _cond_type_check(fn):
+    @functools.wraps(fn)
+    def wrapper(self, cond):
+        if isinstance(cond, m.Type):
+            raise TypeError("Cannot use a magma value as condition "
+                            "expression, please call `peek`")
+        return fn(self, cond)
+    return wrapper
 
 
 @add_control_structures
@@ -405,6 +416,7 @@ class Tester(TesterBase):
     def file_write(self, file, value):
         self.actions.append(actions.FileWrite(file, value))
 
+    @_cond_type_check
     def _while(self, cond):
         """
         Returns a new tester to record actions inside the loop.  The created
@@ -442,6 +454,7 @@ class Tester(TesterBase):
         self.actions.append(While(cond, while_tester.actions))
         return while_tester
 
+    @_cond_type_check
     def _if(self, cond):
         if_tester = self.IfTester(self._circuit, self.clock, self.monitors)
         self.actions.append(If(cond, if_tester.actions,
