@@ -1015,6 +1015,22 @@ def test_wait_until_timeout(target, simulator, capsys):
         assert "(_fault_timeout_var_0 < 3) failed" in out
 
 
+def test_tester_finish(target, simulator, capsys):
+    circ = TestBasicCircuit
+    tester = fault.Tester(circ)
+    tester.poke(circ.I, 1)
+    tester.eval()
+    tester._if(tester.peek(circ.O) == 1).finish()
+    # Bad expect should not fail because of finish
+    tester.expect(circ.I, 0)
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        kwargs = {"target": target, "directory": _dir}
+        if target == "system-verilog":
+            kwargs["simulator"] = simulator
+            kwargs["magma_opts"] = {"sv": True}
+        tester.compile_and_run(**kwargs)
+
+
 def test_tester_array2_slice(target, simulator):
     class Foo(m.Circuit):
         io = m.IO(I=m.In(m.Bits[4]), O=m.Out(m.Bits[4]))
