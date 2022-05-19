@@ -43,7 +43,7 @@ def test_while_loop(target, simulator, n_cyc=3, n_bits=8):
 
     # wait for the loop to complete
     tester.poke(dut.rst, 0)
-    loop = tester._while(dut.n_done)
+    loop = tester._while(tester.peek(dut.n_done))
     debug_print(loop, dut)
     loop.step()
     loop.step()
