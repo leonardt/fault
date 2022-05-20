@@ -1,10 +1,31 @@
+import filecmp
+import functools
+import itertools
 import os.path
+import random
 import shutil
 import tempfile
 import magma as m
 import fault
 import pytest
 from .common import TestBasicClkCircuit, pytest_sim_params
+
+
+def _with_random_seed(seed):
+
+    def decorator(fn):
+
+        @functools.wraps(fn)
+        def wrapped(*args, **kwargs):
+            state = random.getstate()
+            random.seed(seed)
+            ret = fn(*args, **kwargs)
+            random.setstate(state)
+            return ret
+
+        return wrapped
+
+    return decorator
 
 
 def pytest_generate_tests(metafunc):
@@ -117,3 +138,57 @@ def test_num_cycles_none():
                            num_cycles=None)
     with open("build/Foo_cmd.tcl") as f:
         assert "run" == f.read().splitlines()[0]
+
+
+def _test_packed_arrays_stimulate_by_element(tester, dut):
+    NUM_POKES = 100
+    for _ in range(NUM_POKES):
+        i, j, k = map(random.randrange, (5, 12, 3))
+        val = random.randint(0, (1 << 6) - 1)
+        tester.poke(dut.I[i][j][k], val)
+        tester.eval()
+        tester.expect(dut.O[i][j][k], val)
+
+
+def _test_packed_arrays_stimulate_bulk(tester, dut):
+    NUM_POKES = 100
+    for _ in range(NUM_POKES):
+        i, j = map(random.randrange, (5, 12))
+        val = [random.randint(0, (1 << 6) - 1) for _ in range(3)]
+        tester.poke(dut.I[i][j], val)
+        tester.eval()
+        tester.expect(dut.O[i][j], val)
+
+
+@_with_random_seed(0)
+@pytest.mark.parametrize(
+    "use_packed_arrays,stimulator",
+    itertools.product(
+        (False, True),
+        (
+            _test_packed_arrays_stimulate_by_element,
+            _test_packed_arrays_stimulate_bulk,
+        )
+    )
+)
+def test_packed_arrays(use_packed_arrays, stimulator):
+    name_ = f"test_system_verilog_target_packed_arrays_{use_packed_arrays}"
+    name_ = f"{name_}_{stimulator.__name__}"
+
+    class _Foo(m.Circuit):
+        name = name_
+        T = m.Array[5, m.Array[12, m.Array[3, m.Bits[6]]]]
+        io = m.IO(I=m.In(T), O=m.Out(T))
+        io.O @= io.I
+
+    skip_run = not shutil.which("vcs")
+    tester = fault.Tester(_Foo)
+    stimulator(tester, _Foo)
+    tester.compile_and_run(
+        target="system-verilog",
+        simulator="vcs",
+        skip_compile=True,
+        skip_run=skip_run,
+        use_packed_arrays=use_packed_arrays,
+    )
+    assert filecmp.cmp(f"gold/{name_}_tb.sv", f"build/{name_}_tb.sv")
