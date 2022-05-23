@@ -1,14 +1,32 @@
 from typing import Mapping
 
 import magma as m
-from fault.tester.staged_tester import Tester
+from fault.tester.synchronous import SynchronousTester
 from fault.property import assert_, posedge
 
 
 def wrap_with_sequence(ckt, sequences):
     class Wrapper(m.Circuit):
-        io = m.IO(done=m.Out(m.Bit)) + m.ClockIO()
+        io = m.IO(_fault_rv_tester_done_=m.Out(m.Bit))
+
         inst = ckt()
+
+        # Lift non sequence ports normally, lift sequence ports as monitors
+        normal_lifted = []
+        monitors = []
+        for key, value in ckt.interface.items():
+            assert key != "_fault_rv_tester_done_", "Reserved port name"
+
+            if key not in sequences:
+                io += m.IO(**{key: value})
+                normal_lifted.append(key)
+            else:
+                io += m.IO(**{key: m.Out(value)})
+                monitors.append(key)
+
+        for key in normal_lifted:
+            m.wire(getattr(io, key), getattr(inst, key))
+
         done = m.Bit(1)
         for key, value in sequences.items():
             port = getattr(inst, key)
@@ -43,26 +61,62 @@ def wrap_with_sequence(ckt, sequences):
                 raise NotImplementedError(port_T)
             # Done when all counters reach final element
             done = done & (count.O == (n - 1))
-        io.done @= done
+        io._fault_rv_tester_done_ @= done
+
+        for key in monitors:
+            value = getattr(inst, key)
+            port = getattr(io, key)
+            if m.is_producer(value):
+                port.ready @= value.ready.value()
+                port.valid @= value.valid
+                port.data @= value.data
+            else:
+                port.ready @= value.ready
+                port.valid @= value.valid.value()
+                port.data @= value.data.value()
     return Wrapper
+
+
+def _add_verilator_flags(compile_and_run_kwargs):
+    # Need assert flag for verilator
+    if not compile_and_run_kwargs:
+        compile_and_run_kwargs = {"flags": ["-assert"]}
+    elif not compile_and_run_kwargs.get("flags"):
+        compile_and_run_kwargs["flags"] = ["-assert"]
+    elif "-assert" not in compile_and_run_kwargs["flags"]:
+        compile_and_run_kwargs["flags"].append("-assert")
+    return compile_and_run_kwargs
 
 
 def run_ready_valid_test(ckt: m.DefineCircuitKind, sequences: Mapping,
                          target, synthesizable: bool = True,
                          compile_and_run_args=[], compile_and_run_kwargs={}):
     if target == "verilator":
-        # Need assert flag for verilator
-        if not compile_and_run_kwargs:
-            compile_and_run_kwargs = {"flags": ["-assert"]}
-        elif not compile_and_run_kwargs.get("flags"):
-            compile_and_run_kwargs["flags"] = ["-assert"]
-        elif "-assert" not in compile_and_run_kwargs["flags"]:
-            compile_and_run_kwargs["flags"].append("-assert")
+        compile_and_run_kwargs = _add_verilator_flags(compile_and_run_kwargs)
     if synthesizable:
         wrapped = wrap_with_sequence(ckt, sequences)
-        tester = Tester(wrapped)
-        tester.wait_until_high(wrapped.done, timeout=1000)
+        tester = SynchronousTester(wrapped)
+        tester.wait_until_high(wrapped._fault_rv_tester_done_, timeout=1000)
         tester.compile_and_run(target, *compile_and_run_args,
                                **compile_and_run_kwargs, disp_type="realtime")
         return
     raise NotImplementedError()
+
+
+class ReadyValidTester(SynchronousTester):
+    def __init__(self, ckt: m.DefineCircuitKind, sequences: Mapping,
+                 *args, **kwargs):
+        self.wrapped = wrap_with_sequence(ckt, sequences)
+        super().__init__(self.wrapped, *args, **kwargs)
+
+    def finish_sequences(self, timeout=1000):
+        self.wait_until_high(self.wrapped._fault_rv_tester_done_,
+                             timeout=timeout)
+
+    def expect_sequences_finished(self):
+        self.expect(self.wrapped._fault_rv_tester_done_, 1)
+
+    def compile_and_run(self, target, *args, **kwargs):
+        if target == "verilator":
+            kwargs = _add_verilator_flags(kwargs)
+        super().compile_and_run(*args, **kwargs)

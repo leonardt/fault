@@ -488,10 +488,18 @@ class Tester(TesterBase):
             loop.assign(timeout_var, timeout_var + 1)
 
     def wait_until_low(self, signal, timeout=None):
-        self.wait_on(self.peek(signal) != 0, timeout)
+        if isinstance(signal, m.Type):
+            # TODO: Deprecate and require peek so it's consistent with other
+            # interfaces?
+            signal = self.peek(signal)
+        self.wait_on(signal != 0, timeout)
 
     def wait_until_high(self, signal, timeout=None):
-        self.wait_on(self.peek(signal) == 0, timeout)
+        if isinstance(signal, m.Type):
+            # TODO: Deprecate and require peek so it's consistent with other
+            # interfaces?
+            signal = self.peek(signal)
+        self.wait_on(signal == 0, timeout)
 
     def wait_until_negedge(self, signal, timeout=None):
         self.wait_until_high(signal, timeout)
