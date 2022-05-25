@@ -496,7 +496,7 @@ class Tester(TesterBase):
 
     def wait_until_high(self, signal, timeout=None):
         if isinstance(signal, m.Type):
-            # TODO: Deprecate and require peek so it's consistent with other
+            # TODO(leonardt): Deprecate and require peek so it's consistent with other
             # interfaces?
             signal = self.peek(signal)
         self.wait_on(signal == 0, timeout)
