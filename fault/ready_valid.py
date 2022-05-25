@@ -93,7 +93,8 @@ def run_ready_valid_test(ckt: m.DefineCircuitKind, sequences: Mapping,
                          target, synthesizable: bool = True,
                          compile_and_run_args=[], compile_and_run_kwargs={}):
     if target == "verilator":
-        compile_and_run_kwargs = _add_verilator_flags(compile_and_run_kwargs)
+        compile_and_run_kwargs = \
+            _add_verilator_assert_flag(compile_and_run_kwargs)
     if synthesizable:
         wrapped = wrap_with_sequence(ckt, sequences)
         tester = SynchronousTester(wrapped)
@@ -119,5 +120,5 @@ class ReadyValidTester(SynchronousTester):
 
     def compile_and_run(self, target, *args, **kwargs):
         if target == "verilator":
-            kwargs = _add_verilator_flags(kwargs)
+            kwargs = _add_verilator_assert_flag(kwargs)
         super().compile_and_run(*args, **kwargs)
