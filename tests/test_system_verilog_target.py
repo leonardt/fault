@@ -187,7 +187,7 @@ def test_packed_arrays(use_packed_arrays, stimulator):
     tester.compile_and_run(
         target="system-verilog",
         simulator="vcs",
-        skip_compile=True,
+        skip_compile=False,
         skip_run=skip_run,
         use_packed_arrays=use_packed_arrays,
     )
