@@ -77,15 +77,15 @@ def wrap_with_sequence(ckt, sequences):
     return Wrapper
 
 
-def _add_verilator_flags(compile_and_run_kwargs):
-    # Need assert flag for verilator
-    if not compile_and_run_kwargs:
-        compile_and_run_kwargs = {"flags": ["-assert"]}
-    elif not compile_and_run_kwargs.get("flags"):
-        compile_and_run_kwargs["flags"] = ["-assert"]
-    elif "-assert" not in compile_and_run_kwargs["flags"]:
-        compile_and_run_kwargs["flags"].append("-assert")
-    return compile_and_run_kwargs
+def _add_verilator_assert_flag(kwargs):
+    # We need to include "-assert"  flat to the verilator command.
+    if not kwargs:
+        kwargs = {"flags": ["-assert"]}
+    elif not kwargs.get("flags"):
+        kwargs["flags"] = ["-assert"]
+    elif "-assert" not in kwargs["flags"]:
+        kwargs["flags"].append("-assert")
+    return kwargs
 
 
 def run_ready_valid_test(ckt: m.DefineCircuitKind, sequences: Mapping,
