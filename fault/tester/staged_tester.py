@@ -512,4 +512,5 @@ class Tester(TesterBase):
     def finish(self):
         self.actions.append(actions.Finish())
 
+
 StagedTester = Tester
