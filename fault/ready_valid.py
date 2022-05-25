@@ -15,7 +15,8 @@ def wrap_with_sequence(ckt, sequences):
         normal_lifted = []
         monitors = []
         for key, value in ckt.interface.items():
-            assert key != "_fault_rv_tester_done_", "Reserved port name"
+            if key == "_fault_rv_tester_done_":
+                raise RuntimeError("Reserved port name used")
 
             if key not in sequences:
                 io += m.IO(**{key: value})
@@ -25,7 +26,7 @@ def wrap_with_sequence(ckt, sequences):
                 monitors.append(key)
 
         for key in normal_lifted:
-            m.wire(getattr(io, key), getattr(inst, key))
+            m.wire(io[key], getattr(inst, key))
 
         done = m.Bit(1)
         for key, value in sequences.items():
@@ -65,7 +66,7 @@ def wrap_with_sequence(ckt, sequences):
 
         for key in monitors:
             value = getattr(inst, key)
-            port = getattr(io, key)
+            port = io[key]
             if m.is_producer(value):
                 port.ready @= value.ready.value()
                 port.valid @= value.valid
