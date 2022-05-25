@@ -11,7 +11,7 @@ def wrap_with_sequence(ckt, sequences):
 
         inst = ckt()
 
-        # Lift non sequence ports normally, lift sequence ports as monitors
+        # We lift non sequence ports as is, and sequence ports as monitors.
         normal_lifted = []
         monitors = []
         for key, value in ckt.interface.items():
