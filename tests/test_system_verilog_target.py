@@ -181,12 +181,15 @@ def test_packed_arrays(use_packed_arrays, stimulator):
         io = m.IO(I=m.In(T), O=m.Out(T))
         io.O @= io.I
 
-    skip_run = not shutil.which("vcs")
+    # skip_run = not shutil.which("vcs")
+    # TODO: Enable run when MLIR is merged
+    skip_run = False
     tester = fault.Tester(_Foo)
     stimulator(tester, _Foo)
     tester.compile_and_run(
         target="system-verilog",
         simulator="vcs",
+        skip_compile=True,
         skip_run=skip_run,
         use_packed_arrays=use_packed_arrays,
     )
