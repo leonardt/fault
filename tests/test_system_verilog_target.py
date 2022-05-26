@@ -183,7 +183,7 @@ def test_packed_arrays(use_packed_arrays, stimulator):
 
     # skip_run = not shutil.which("vcs")
     # TODO: Enable run when MLIR is merged
-    skip_run = False
+    skip_run = True
     tester = fault.Tester(_Foo)
     stimulator(tester, _Foo)
     tester.compile_and_run(
