@@ -356,3 +356,89 @@ or for system verilog
 tester.compile("system-verilog", simulator="ncsim")
 tb_file = tester.generate_test_bench("system-verilog")
 ```
+
+### Using the ReadyValid Tester
+Fault provides a `ReadyValidTester` that provides a few convenient features for
+unit testing `ReadyValid` interfaces with sequences.
+
+Consider the following circuit:
+```python
+class Main2(m.Circuit):
+    io = m.IO(I=m.Consumer(m.ReadyValid[m.UInt[8]]),
+              O=m.Producer(m.ReadyValid[m.UInt[8]]),
+              inc=m.In(m.UInt[8]),
+              ) + m.ClockIO()
+    count = m.Register(m.UInt[2])()
+    count.I @= count.O + 1
+    enable = io.I.valid & (count.O == 3) & io.O.ready
+    io.I.ready @= enable
+    io.O.data @= m.Register(m.UInt[8], has_enable=True)()(io.I.data + io.inc,
+                                                          CE=enable)
+    io.O.valid @= enable
+```
+
+The output stream `O` is the input stream `I` incremented by the value of `inc`
+and delayed by 4 cycles.
+
+Here's a simple test that provides the input sequence `I` and expected output
+sequence `O`
+```python
+def test_lifted_ready_valid_sequence_simple():
+    I = [BitVector.random(8) for _ in range(8)] + [0]
+    O = [0] + [i + 2 for i in I[:-1]]
+    tester = f.ReadyValidTester(Main2, {"I": I, "O": O})
+    tester.circuit.inc = 2
+    tester.finish_sequences()
+    tester.compile_and_run("verilator", disp_type="realtime")
+
+```
+
+Notice that we provide the sequences as a dictionary mapping port name to
+sequence in the constructor.  Afterwards, we are free to `poke` values like in a normal tester, in this case provide `2` for `inc` which will satisfy the provided stream.
+
+**NOTE:** The user must explicitly use the `tester.circuit` peek/poke
+interface, or call `tester.poke(tester._circuit, value)` since the user circuit
+is wrapped internally (cannot call `tester.poke(Main2, value)`).
+
+The test finishes by calling `tester.finish_sequences()` which is a convenience
+API that waits for the provided sequences to finish.
+
+Here's a different version of the above test that should fail (changing the `inc` value mid test).
+```python
+
+
+def test_lifted_ready_valid_sequence_simple_fail():
+    I = [BitVector.random(8) for _ in range(8)] + [0]
+    O = [0] + [i + 2 for i in I[:-1]]
+    tester = f.ReadyValidTester(Main2, {"I": I, "O": O})
+    tester.circuit.inc = 2
+    # Should work for a few cycles
+    for i in range(9):
+        tester.advance_cycle()
+    # Bad inc should fail
+    tester.circuit.inc = 3
+    tester.finish_sequences()
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("verilator", disp_type="realtime")
+```
+
+Finally, here's a variant that changes the `inc` value over time to match the expected sequence.
+```python
+def test_lifted_ready_valid_sequence_changing_inc():
+    I = [BitVector.random(8) for _ in range(8)] + [0]
+    O = [0] + [I[i] + ((i + 1) % 2) for i in range(8)]
+    tester = f.ReadyValidTester(Main2, {"I": I, "O": O})
+    # Sequence expects inc to change over time
+    for i in range(8):
+        tester.circuit.inc = i % 2
+        tester.advance_cycle()
+        tester.wait_until_high(tester.circuit.O.ready & tester.circuit.O.valid)
+    # Advance one cycle to finish last handshake
+    tester.advance_cycle()
+    tester.expect_sequences_finished()
+    tester.compile_and_run("verilator", disp_type="realtime")
+```
+
+**NOTE:** At the end of the test, we call `expect_sequences_finished()` to
+assert that the sequences have all been processed, otherwise it's possible tha
+the test could pass without completing the sequences.
