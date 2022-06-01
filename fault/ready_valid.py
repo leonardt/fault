@@ -110,15 +110,20 @@ class ReadyValidTester(SynchronousTester):
                  *args, **kwargs):
         self.wrapped = wrap_with_sequence(ckt, sequences)
         super().__init__(self.wrapped, *args, **kwargs)
+        self._sequence_finish_expected = False
 
     def finish_sequences(self, timeout=1000):
         self.wait_until_high(self.wrapped._fault_rv_tester_done_,
                              timeout=timeout)
 
     def expect_sequences_finished(self):
-        self.expect(self.wrapped._fault_rv_tester_done_, 1)
+        self.expect(self.wrapped._fault_rv_tester_done_, 1,
+                    msg="ERROR: ReadyValidTester sequences not finished")
+        self._sequence_finish_expected = True
 
     def compile_and_run(self, target, *args, **kwargs):
         if target == "verilator":
             kwargs = _add_verilator_assert_flag(kwargs)
+        if not self._sequence_finish_expected:
+            self.expect_sequences_finished()
         super().compile_and_run(*args, **kwargs)
