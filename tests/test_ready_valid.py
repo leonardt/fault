@@ -91,3 +91,14 @@ def test_lifted_ready_valid_sequence_changing_inc():
     tester.advance_cycle()
     tester.expect_sequences_finished()
     tester.compile_and_run("verilator", disp_type="realtime")
+
+
+def test_default_expect_finished():
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
+    I = [BitVector.random(8) for _ in range(8)] + [0]
+    O = [0] + [i + 2 for i in I[:-1]]
+    tester = f.ReadyValidTester(Main2, {"I": I, "O": O})
+    tester.circuit.inc = 2
+    with pytest.raises(AssertionError):
+        tester.compile_and_run("verilator", disp_type="realtime")
