@@ -1,5 +1,6 @@
 import logging
 import magma as m
+from magma.clock import is_clock_or_nested_clock
 from abc import abstractmethod
 from ..wrapper import CircuitWrapper, PortWrapper
 from ..select_path import SelectPath
@@ -57,7 +58,7 @@ class TesterBase:
             next_clock = None
             if isinstance(port, m.Clock):
                 next_clock = port
-            elif isinstance(port, (m.Array, m.Tuple)):
+            elif is_clock_or_nested_clock(type(port)):
                 nested_clock = self._find_default_clock(port.ts)
                 if nested_clock is not None:
                     next_clock = nested_clock
