@@ -39,26 +39,8 @@ def get_short_lambda_body_text(lambda_func):
     min_length = len('lambda:_')  # shortest possible lambda expression
     while len(lambda_text) > min_length:
         try:
-            # What's annoying is that sometimes the junk even parses,
-            # but results in a *different* lambda. You'd probably have to
-            # be deliberately malicious to exploit it but here's one way:
-            #
-            #     bloop = lambda x: False, lambda x: True
-            #     get_short_lamnda_source(bloop[0])
-            #
-            # Ideally, we'd just keep shaving until we get the same code,
-            # but that most likely won't happen because we can't replicate
-            # the exact closure environment.
-            code = compile(lambda_body_text, '<unused filename>', 'eval')
-
-            # Thus the next best thing is to assume some divergence due
-            # to e.g. LOAD_GLOBAL in original code being LOAD_FAST in
-            # the one compiled above, or vice versa.
-            # But the resulting code should at least be the same *length*
-            # if otherwise the same operations are performed in it.
-            if len(code.co_code) == len(lambda_func.__code__.co_code):
-                # return lambda_text
-                return lambda_body_text
+            compile(lambda_body_text, '<unused filename>', 'eval')
+            return lambda_body_text
         except SyntaxError:
             pass
         lambda_text = lambda_text[:-1]
