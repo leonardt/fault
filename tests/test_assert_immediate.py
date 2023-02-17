@@ -178,3 +178,39 @@ def test_assert_initial(should_pass):
             tester.compile_and_run("system-verilog", simulator="ncsim",
                                    magma_opts={"inline": True, "sv": True},
                                    directory=dir_)
+
+
+def test_assert_when():
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
+
+    class Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bit),
+            I1=m.In(m.Bit),
+            S=m.In(m.Bit)
+        )
+        with m.when(io.S):
+            f.assert_immediate(~(io.I0 & io.I1))
+
+    tester = f.Tester(Foo)
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 1
+    tester.circuit.S = 1
+    tester.eval()
+    with pytest.raises(AssertionError):
+        with tempfile.TemporaryDirectory() as dir_:
+            tester.compile_and_run("verilator",
+                                   magma_output="mlir-verilog",
+                                   flags=['--assert'], directory="build",
+                                   disp_type="realtime")
+
+    tester.clear()
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 1
+    tester.eval()
+    with tempfile.TemporaryDirectory() as dir_:
+        tester.compile_and_run("verilator",
+                               magma_output="mlir-verilog",
+                               flags=['--assert'], directory=dir_,
+                               disp_type="realtime")
