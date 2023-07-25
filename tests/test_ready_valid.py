@@ -56,7 +56,8 @@ def test_lifted_ready_valid_sequence_simple():
     tester = f.ReadyValidTester(Main2, {"I": I, "O": O})
     tester.circuit.inc = 2
     tester.finish_sequences()
-    tester.compile_and_run("verilator", disp_type="realtime")
+    tester.compile_and_run("verilator", disp_type="realtime",
+                           flags=['-Wno-UNUSED'])
 
 
 def test_lifted_ready_valid_sequence_simple_fail():
