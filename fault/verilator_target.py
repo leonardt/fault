@@ -28,6 +28,15 @@ import pysv
 max_bits = 64 if platform.architecture()[0] == "64bit" else 32
 
 
+SYSTEM = platform.system()
+if SYSTEM == "Linux":
+    _LIBRARY_PATH_NAME = "LD_LIBRARY_PATH"
+elif SYSTEM == "Darwin":
+    _LIBRARY_PATH_NAME = "DYLD_LIBRARY_PATH"
+else:
+    raise NotImplementedError(SYSTEM)
+
+
 src_tpl = """\
 #include "math.h"
 {includes}
@@ -749,6 +758,8 @@ if (!({expr_str})) {{
         self.generate_test_bench(actions, verilator_includes, num_tests,
                                  _circuit)
 
+        lib_path = os.path.abspath(os.path.join(self.directory, "obj_dir"))
+        env = {_LIBRARY_PATH_NAME: os.path.dirname(lib_path)}
         # if use kratos, symbolic link the library to dest folder
         if self.use_kratos:
             from kratos_runtime import get_lib_path
@@ -757,10 +768,6 @@ if (!({expr_str})) {{
                                                     lib_name))
             if not os.path.isfile(dst_path):
                 os.symlink(get_lib_path(), dst_path)
-            # add ld library path
-            env = {"LD_LIBRARY_PATH": os.path.dirname(dst_path)}
-        else:
-            env = None
 
         # codegen the c++ binding if needed
         if len(self.pysv_funcs) > 0:
@@ -770,9 +777,9 @@ if (!({expr_str})) {{
             ld_lib_path = os.path.realpath(os.path.dirname(lib_path))
             if env is None:
                 env = {}
-            if "LD_LIBRARY_PATH" in env:
-                ld_lib_path = env["LD_LIBRARY_PATH"] + ":" + ld_lib_path
-            env["LD_LIBRARY_PATH"] = ld_lib_path
+            if _LIBRARY_PATH_NAME in env:
+                ld_lib_path = env[_LIBRARY_PATH_NAME] + ":" + ld_lib_path
+            env[_LIBRARY_PATH_NAME] = ld_lib_path
 
         # Run makefile created by verilator
         make_cmd = verilator_make_cmd(self.circuit_name)
