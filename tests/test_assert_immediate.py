@@ -96,8 +96,8 @@ def test_immediate_assert_tuple_msg(capsys):
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("verilator", magma_opts={"inline": True},
-                                   flags=['--assert'], directory=dir_,
-                                   disp_type="realtime")
+                                   flags=['--assert', '-Wno-UNUSED'],
+                                   directory=dir_, disp_type="realtime")
     out, _ = capsys.readouterr()
     msg = ("%Error: Foo.v:19: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")

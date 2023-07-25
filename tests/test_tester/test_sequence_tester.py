@@ -76,4 +76,4 @@ def test_simple_alu_sequence(circuit, driver, monitor, clock):
 
     tester = SequenceTester(circuit, driver, monitor, sequence, clock=clock)
 
-    tester.compile_and_run("verilator")
+    tester.compile_and_run("verilator", flags=['-Wno-UNUSED'])
