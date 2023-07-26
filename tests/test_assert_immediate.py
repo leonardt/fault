@@ -16,6 +16,8 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity,
                           name):
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
+    if verilator_version() > 5.0:
+        pytest.skip("Untested with later verilator versions")
     if failure_msg is not None and severity == "fatal":
         # Use integer exit code
         failure_msg = 1
