@@ -23,7 +23,7 @@ def pytest_generate_tests(metafunc):
 
 
 def check(got, expected):
-    assert type(got) == type(expected)
+    assert isinstance(got, type(expected))
     if isinstance(got, actions.PortAction):
         assert got.port is expected.port
         assert got.value == expected.value
