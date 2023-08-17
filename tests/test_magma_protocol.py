@@ -83,7 +83,7 @@ class SimpleMagmaProtocolMeta(m.MagmaProtocolMeta):
 
 
 class BrokenProtocol(m.MagmaProtocol, metaclass=SimpleMagmaProtocolMeta):
-    def __init__(self, val = None):
+    def __init__(self, val=None):
         if val is None:
             self._val = self.T()
         elif isinstance(val, self.T):
@@ -115,6 +115,7 @@ class FixedProtocol(BrokenProtocol):
         else:
             return len(self._get_magma_value_())
 
+
 def gen_DUT(T, BoxT, i, o):
     if i:
         i_t = BoxT[T]
@@ -140,14 +141,13 @@ def gen_DUT(T, BoxT, i, o):
     return DUT
 
 
-
 @pytest.mark.parametrize('T', [m.Bit, m.Bits[16]])
 @pytest.mark.parametrize('BoxT', [BrokenProtocol])
 @pytest.mark.parametrize('proto_in, proto_out', [
     (True, False),
     (False, True),
     (True, True),
-    ])
+])
 def test_protocol_as_input_and_output(T, BoxT, proto_in, proto_out):
     DUT = gen_DUT(T, BoxT, proto_in, proto_out)
     tester = fault.Tester(DUT)
