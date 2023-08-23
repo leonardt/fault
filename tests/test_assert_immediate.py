@@ -213,4 +213,5 @@ def test_assert_when():
         tester.compile_and_run("verilator",
                                magma_output="mlir-verilog",
                                flags=['--assert'], directory=dir_,
+                               skip_compile=True,
                                disp_type="realtime")
