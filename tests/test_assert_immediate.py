@@ -202,16 +202,15 @@ def test_assert_when():
         with pytest.raises(AssertionError):
             tester.compile_and_run("verilator",
                                    magma_output="mlir-verilog",
-                                   flags=['--assert'], directory="build",
+                                   flags=['--assert'], directory=dir_,
                                    disp_type="realtime")
 
         tester.clear()
         tester.circuit.I0 = 1
         tester.circuit.I1 = 1
         tester.eval()
-        with tempfile.TemporaryDirectory() as dir_:
-            tester.compile_and_run("verilator",
-                                   magma_output="mlir-verilog",
-                                   flags=['--assert'], directory=dir_,
-                                   skip_compile=True,
-                                   disp_type="realtime")
+        tester.compile_and_run("verilator",
+                               magma_output="mlir-verilog",
+                               flags=['--assert'], directory=dir_,
+                               skip_compile=True,
+                               disp_type="realtime")
