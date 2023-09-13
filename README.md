@@ -442,3 +442,4 @@ def test_lifted_ready_valid_sequence_changing_inc():
 **NOTE:** At the end of the test, we call `expect_sequences_finished()` to
 assert that the sequences have all been processed, otherwise it's possible tha
 the test could pass without completing the sequences.
+
