@@ -1,4 +1,5 @@
 import magma as m
+from magma.when import get_curr_block as get_curr_when_block, no_when
 from fault.property import Posedge
 from fault.assert_utils import add_compile_guards
 
@@ -66,6 +67,15 @@ def _add_docstr(fn):
 @_add_docstr
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
                      name=None, compile_guard=None, inline_wire_prefix=None):
+    if get_curr_when_block():
+        # guard condition by current active when using a boolean with default 0
+        # and assigned inside when
+        with no_when():
+            when_cond = m.Bit()
+            when_cond @= 0
+        when_cond @= 1
+        cond = ~when_cond | cond
+
     _make_assert("always @(*)", cond, success_msg, failure_msg, severity, name,
                  compile_guard, inline_wire_prefix=inline_wire_prefix)
 
