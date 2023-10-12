@@ -11,15 +11,16 @@ from fault.result_parse import nut_parse, hspice_parse, psf_parse
 from fault.subprocess_run import subprocess_run
 from fault.pwl import pwc_to_pwl
 from fault.actions import Poke, Expect, Delay, Print, GetValue, Eval
+from fault.background_poke import background_poke_target
 from fault.select_path import SelectPath
 from .fault_errors import A2DError, ExpectError
+from fault.domain_read import get_value_domain
 
 try:
     from decida.SimulatorNetlist import SimulatorNetlist
     import numpy as np
 except ModuleNotFoundError:
     print('Failed to import DeCiDa or Numpy for SpiceTarget.')
-
 
 class CompiledSpiceActions:
     def __init__(self, pwls, checks, prints, stop_time, saves, gets):
@@ -75,10 +76,11 @@ mc1 montecarlo variations={variations} savefamilyplots=yes numruns={numruns} {{
 '''
 
 
+@background_poke_target
 class SpiceTarget(Target):
     def __init__(self, circuit, directory="build/", simulator='ngspice',
                  vsup=1.0, rout=1, model_paths=None, sim_env=None,
-                 t_step=None, clock_step_delay=5, t_tr=0.2e-9, vil_rel=0.4,
+                 t_step=None, clock_step_delay=5e-9, t_tr=0.2e-9, vil_rel=0.4,
                  vih_rel=0.6, rz=1e9, conn_order='parse', bus_delim='<>',
                  bus_order='descend', flags=None, ic=None, cap_loads=None,
                  disp_type='on_error', mc_runs=0, mc_variations='all',
@@ -204,13 +206,41 @@ class SpiceTarget(Target):
         # set list of signals to save
         self.saves = set()
         for name, port in self.circuit.interface.ports.items():
-            if isinstance(port, m.BitsType):
+            if (isinstance(port, m.BitsType)
+                or isinstance(port, m.ArrayType)):
                 for k in range(len(port)):
                     self.saves.add(self.bit_from_bus(name, k))
             else:
                 self.saves.add(f'{name}')
 
+    class PortDict:
+        '''
+        This exists because for ports, "a is b" does not imply "a == b".
+        I'm making the assumption here that the hash is the address, so hash
+        equality implies port equality.
+        I'm also assuming ports are unique, so pointer inequality implies port
+        inequality.
+        '''
+        def __init__(self):
+            self.d = {}
+
+        def myhash(self, item):
+            return str(item.name)
+
+        def __setitem__(self, key, value):
+            self.d[self.myhash(key)] = (key, value)
+
+        def __getitem__(self, item):
+            return self.d[self.myhash(item)][1]
+
+        def __contains__(self, item):
+            return self.myhash(item) in self.d
+
+        def items(self):
+            return (v for k, v in self.d.items())
+
     def run(self, actions):
+
         # compile the actions
         comp = self.compile_actions(actions)
 
@@ -229,8 +259,13 @@ class SpiceTarget(Target):
 
         # run the simulation commands
         if not self.no_run:
-            subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
+            res = subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
                            disp_type=self.disp_type)
+            #print(res.stdout)
+            stderr = res.stderr.strip()
+            if stderr != '':
+                print('Stderr from spice simulator:')
+                print(stderr)
 
         # process the results
         for raw_file in raw_files:
@@ -286,10 +321,13 @@ class SpiceTarget(Target):
     def compile_actions(self, actions):
         # initialize
         t = 0
-        pwc_dict = {}
+        pwc_dict = self.PortDict() #{}
         checks = []
         prints = []
         gets = []
+
+        # TODO is this still necessary?
+        saves = set()
 
         # expand buses as needed
         _actions = []
@@ -297,6 +335,10 @@ class SpiceTarget(Target):
             if isinstance(action, (Poke, Expect)) \
                and isinstance(action.port, m.Bits):
                 _actions += self.expand_bus(action)
+            elif (isinstance(action, (Poke, Expect))
+                  and isinstance(action.port.name, m.ref.ArrayRef)):
+                action.port = self.select_bit_from_bus(action.port)
+                _actions.append(action)
             else:
                 _actions.append(action)
         actions = _actions
@@ -305,7 +347,11 @@ class SpiceTarget(Target):
         for action in actions:
             if isinstance(action, Poke):
                 # add port to stimulus dictionary if needed
-                action_port_name = f'{action.port.name}'
+                # TODO change name of this variable
+                action_port_name = action.port # f'{action.port.name}'
+                # keys need to be port objects because we ask about the type
+                # later, but we can't compare port object equality directly
+
                 if action_port_name not in pwc_dict:
                     pwc_dict[action_port_name] = ([], [])
                 # determine the stimulus value, performing a digital
@@ -325,13 +371,17 @@ class SpiceTarget(Target):
                 pwc_dict[action_port_name][1].append((t, stim_s))
                 # increment time if desired
                 if action.delay is None:
-                    t += self.clock_step_delay * 1e-9
+                    t += self.clock_step_delay
                 else:
                     t += action.delay
             elif isinstance(action, Expect):
                 checks.append((t, action))
             elif isinstance(action, Print):
                 prints.append((t, action))
+
+                # TODO: is this still necessary?
+                for port in action.ports:
+                    saves.add(f'{port.name}')
             elif isinstance(action, GetValue):
                 gets.append((t, action))
             elif isinstance(action, Delay):
@@ -342,7 +392,8 @@ class SpiceTarget(Target):
                 raise NotImplementedError(action)
 
         # refactor stimulus voltages to PWL
-        pwls = {}
+        pwls = self.PortDict()
+        # TODO change "name" to "port"
         for name, pwc in pwc_dict.items():
             pwls[name] = (
                 pwc_to_pwl(pwc=pwc[0], t_stop=t, t_tr=self.t_tr),
@@ -380,6 +431,17 @@ class SpiceTarget(Target):
             return f'{port}_{k}'
         else:
             raise Exception(f'Unknown bus delimeter: {self.bus_delim}')
+
+    def select_bit_from_bus(self, port):
+        # The default way magma deals with naming one pin of a bus
+        # does not match our spice convention. We need to get the
+        # name of the original bus and index it ourselves.
+        bus_name = port.name.array.name
+        bus_index = port.name.index
+        bit_name = self.bit_from_bus(bus_name, bus_index)
+        new_port = m.Bit(name=bit_name)
+        return new_port
+
 
     def get_alpha_ordered_ports(self):
         # get ports sorted in alphabetical order
@@ -431,6 +493,15 @@ class SpiceTarget(Target):
         for port, val in self.cap_loads.items():
             netlist.capacitor(f'{port.name}', '0', val)
 
+        # add a place to sink current outputs
+        for name, port in self.circuit.IO.ports.items():
+            # NOTE: this finds current outputs, despite saying CurrentIn
+            if isinstance(port, fault.CurrentIn):
+                # TODO: is 1 Ohm good?
+                # RECALL we are measuring voltage here so 1 Ohm means volts=amps
+                # If we change this line we should change readout too
+                netlist.resistor(name, '0', '1')
+
         # define the switch model
         inout_sw_mod = 'inout_sw_mod'
         netlist.start_subckt(inout_sw_mod, 'sw_p', 'sw_n', 'ctl_p', 'ctl_n')
@@ -444,15 +515,28 @@ class SpiceTarget(Target):
         netlist.end_subckt()
 
         # write stimuli lines
-        for name, (pwl_v, pwl_s) in comp.pwls.items():
-            # instantiate switch between voltage source and DUT
-            vnet = f'__{name}_v'
-            snet = f'__{name}_s'
-            netlist.instantiate('inout_sw_mod', vnet, name, snet, '0')
+        port_name_mapping = {}
+        for port in self.circuit.IO.ports.values():
+            pass
 
-            # instantiate voltage source connected through switch
-            netlist.voltage(vnet, '0', pwl=pwl_v)
-            netlist.voltage(snet, '0', pwl=pwl_s)
+        for port, (pwl_v, pwl_s) in comp.pwls.items():
+            name = f'{port.name}'
+            #port = self.circuit.IO.ports[name]
+            if isinstance(port, fault.CurrentType):
+                # TODO assert pwl_s is always high
+                netlist.current('0', name, pwl=pwl_v)
+            elif isinstance(port, (fault.RealType, m.Bit, type(m.Bit))):
+                # instantiate switch between voltage source and DUT
+                vnet = f'__{name}_v'
+                snet = f'__{name}_s'
+                netlist.instantiate('inout_sw_mod', vnet, name, snet, '0')
+
+                # instantiate voltage source connected through switch
+                netlist.voltage(vnet, '0', pwl=pwl_v)
+                netlist.voltage(snet, '0', pwl=pwl_s)
+            else:
+                raise NotImplementedError(
+                    f'Port type for {port} not implemented in spice target')
 
         # specify initial conditions if needed
         ic = {}
@@ -566,15 +650,43 @@ class SpiceTarget(Target):
         for print_ in prints:
             self.impl_print(results=results, time=print_[0], action=print_[1])
 
+    def process_reads(self, results, reads):
+        for time, read in reads:
+            res = results[f'{read.port.name}']
+
     def impl_all_gets(self, results, gets):
         for get in gets:
             self.impl_get(results=results, time=get[0], action=get[1])
 
     def impl_get(self, results, time, action):
-        # get port values
-        port_value = results[f'{action.port.name}'](time)
-        # write value back to action
-        action.value = port_value
+        # TODO: use this same function in more places?
+        def get_spice_name(p):
+            if isinstance(p.name, m.ref.ArrayRef):
+                return str(self.select_bit_from_bus(p))
+            else:
+                return f'{p.name}'
+
+        # grab the relevant info
+        try:
+            res = results[get_spice_name(action.port)]
+        except KeyError:
+            res = results[get_spice_name(action.port).lower()]
+        if action.params == None:
+            # straightforward read of voltage
+            # get port values
+            port_value = res(time)
+            # write value back to action
+            action.value = port_value
+        elif type(action.params) == dict and 'style' in action.params:
+            # requires some analysis of signal
+            # get height of slice point based on spice config if not specified
+            if 'height' not in action.params:
+                action.params['height'] = self.vsup * (self.vih_rel + self.vil_rel) / 2
+            # some styles (e.g. phase) might need to reference another port,
+            # so passing in the name is not good enough
+            get_value_domain(results, action, time, get_spice_name)
+        else:
+            raise NotImplementedError
 
     def ngspice_cmds(self, tb_file):
         # build up the command

@@ -61,4 +61,10 @@ def test_get_value_analog(target, simulator):
     for (a, b), c in zip(stim, output):
         lb = model(a, b) - 0.01
         ub = model(a, b) + 0.01
+        print('Asserting', lb, c.value, ub)
         assert lb <= c.value <= ub
+
+if __name__ == '__main__':
+    #test_get_value_analog('spice', 'ngspice')
+    #test_get_value_analog('spice', 'hspice')
+    test_get_value_analog('spice', 'spectre')

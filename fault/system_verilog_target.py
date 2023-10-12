@@ -13,6 +13,7 @@ import fault.value_utils as value_utils
 from fault.select_path import SelectPath
 from fault.wrapper import PortWrapper
 from fault.subprocess_run import subprocess_run
+from fault.background_poke import background_poke_target
 import fault
 import fault.expression as expression
 from fault.value import Value
@@ -23,6 +24,7 @@ from numbers import Number
 
 
 src_tpl = """\
+{includes}
 {timescale}
 module {top_module};
 {imports}
@@ -45,7 +47,7 @@ module {top_module};
 endmodule
 """
 
-
+@background_poke_target
 class SystemVerilogTarget(VerilogTarget):
 
     # Language properties of SystemVerilog used in generating code blocks
@@ -274,6 +276,8 @@ class SystemVerilogTarget(VerilogTarget):
                 raise ImportError("Cannot find kratos-runtime in the system. "
                                   "Please do \"pip install kratos-runtime\" "
                                   "to install.")
+
+        self.includes = []
         self.fsdb_dumpvars_args = fsdb_dumpvars_args
 
         # set up cadence tools command
@@ -748,6 +752,18 @@ class SystemVerilogTarget(VerilogTarget):
         if any(isinstance(action, GetValue) for action in actions):
             actions = [FileOpen(self.value_file)] + actions
             actions += [FileClose(self.value_file)]
+            
+            # check for reading in other domains
+            domain_read_ports = set()
+            for action in actions:
+                if not isinstance(action, GetValue):
+                    continue
+                if type(action.params) == dict and 'style' in action.params:
+                    domain_read_ports.add( action.port)
+            for port in domain_read_ports:
+                print('Interesting read on', port)
+                # TODO in the future, if not self.dump_waveforms, we need to dump this port anyway
+                pass
 
         # handle all of user-specified actions in the testbench
         for i, action in enumerate(actions):
@@ -772,12 +788,16 @@ class SystemVerilogTarget(VerilogTarget):
         declarations = '\n'.join(declarations)
 
         # format assignments
-        assigns = [f'{self.TAB}assign {lhs}={rhs};'
+        assigns = [f'{self.TAB}assign {lhs}' \
+                   f'={rhs};'
                    for lhs, rhs in self.assigns.values()]
         assigns = '\n'.join(assigns)
 
         # add timescale
         timescale = f'`timescale {self.timescale}'
+        
+        # add includes
+        includes = '\n'.join(f'`include "{f}"' for f in self.includes)
 
         clock_drivers = self.TAB + "\n{self.TAB}".join(self.clock_drivers)
 
@@ -789,6 +809,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         # fill out values in the testbench template
         src = src_tpl.format(
+            includes=includes,
             timescale=timescale,
             imports=imports,
             declarations=declarations,
@@ -892,6 +913,7 @@ class SystemVerilogTarget(VerilogTarget):
 
         # post-process GetValue actions
         self.post_process_get_value_actions(actions)
+
 
     def write_test_bench(self, actions, power_args):
         # determine the path of the testbench file
