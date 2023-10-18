@@ -85,4 +85,5 @@ def test_tester_magma_internal_signals_verilator(target):
         if target == "verilator":
             kwargs["magma_opts"] = {"verilator_debug": True,
                                     "verilator_compat": True}
+            kwargs["flags"] = ["-Wno-unused"]
         tester.compile_and_run(target, directory=_dir, **kwargs)

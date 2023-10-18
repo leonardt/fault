@@ -16,6 +16,8 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity,
                           name):
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
+    if verilator_version() > 5.0:
+        pytest.skip("Untested with later verilator versions")
     if failure_msg is not None and severity == "fatal":
         # Use integer exit code
         failure_msg = 1
@@ -96,10 +98,10 @@ def test_immediate_assert_tuple_msg(capsys):
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("verilator", magma_opts={"inline": True},
-                                   flags=['--assert'], directory=dir_,
-                                   disp_type="realtime")
+                                   flags=['--assert', '-Wno-UNUSED'],
+                                   directory=dir_, disp_type="realtime")
     out, _ = capsys.readouterr()
-    msg = ("%Error: Foo.v:19: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
+    msg = ("%Error: Foo.v:15: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")
     assert msg in out, out
 
@@ -176,3 +178,39 @@ def test_assert_initial(should_pass):
             tester.compile_and_run("system-verilog", simulator="ncsim",
                                    magma_opts={"inline": True, "sv": True},
                                    directory=dir_)
+
+
+def test_assert_when():
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
+
+    class Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bit),
+            I1=m.In(m.Bit),
+            S=m.In(m.Bit)
+        )
+        with m.when(io.S):
+            f.assert_immediate(~(io.I0 & io.I1))
+
+    tester = f.Tester(Foo)
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 1
+    tester.circuit.S = 1
+    tester.eval()
+    with tempfile.TemporaryDirectory() as dir_:
+        with pytest.raises(AssertionError):
+            tester.compile_and_run("verilator",
+                                   magma_output="mlir-verilog",
+                                   flags=['--assert'], directory=dir_,
+                                   disp_type="realtime")
+
+        tester.clear()
+        tester.circuit.I0 = 1
+        tester.circuit.I1 = 1
+        tester.eval()
+        tester.compile_and_run("verilator",
+                               magma_output="mlir-verilog",
+                               flags=['--assert'], directory=dir_,
+                               skip_compile=True,
+                               disp_type="realtime")
