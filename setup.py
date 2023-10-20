@@ -22,8 +22,6 @@ setup(
     ],
     install_requires=[
         "astor",
-        "coreir",
-        "cosa",
         "z3-solver",
         "hwtypes",
         "magma-lang>=2.2.3",
