@@ -607,9 +607,9 @@ def test_default_clock_function():
     tester.circuit.O.expect(0)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"output": "mlir-verilog",
-                                                      "drive_undriven": True,
-                                                      "terminate_unused": True})
+                           magma_output="mlir-verilog", flags=["-sv"],
+                           magma_opts={"drive_undriven": True,
+                                       "terminate_unused": True})
 
 
 @requires_ncsim
@@ -691,9 +691,9 @@ def test_not_onehot(use_sva):
     tester.step(2)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"output": "mlir-verilog",
-                                                      "drive_undriven": True,
-                                                      "terminate_unused": True})
+                           magma_output="mlir-verilog", flags=["-sv"],
+                           magma_opts={"drive_undriven": True,
+                                       "terminate_unused": True})
 
     tester.circuit.I = 0xFF
     tester.step(2)
@@ -702,9 +702,8 @@ def test_not_onehot(use_sva):
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"],
-                               magma_opts={"output": "mlir-verilog",
-                                           "drive_undriven": True,
+                               flags=["-sv"], magma_output="mlir-verilog",
+                               magma_opts={"drive_undriven": True,
                                            "terminate_unused": True})
 
 
@@ -759,9 +758,8 @@ def test_advanced_property_example_1(use_sva, should_pass):
     tester.step(2)
     try:
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"],
-                               magma_opts={"output": "mlir-verilog",
-                                           "drive_undriven": True,
+                               flags=["-sv"], magma_output="mlir-verilog",
+                               magma_opts={"drive_undriven": True,
                                            "terminate_unused": True})
         assert should_pass
     except AssertionError:
@@ -823,9 +821,8 @@ def test_advanced_property_example_2(use_sva, should_pass):
     tester.step(2)
     try:
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"],
-                               magma_opts={"output": "mlir-verilog",
-                                           "drive_undriven": True,
+                               flags=["-sv"], magma_output="mlir-verilog",
+                               magma_opts={"drive_undriven": True,
                                            "terminate_unused": True})
     except AssertionError:
         assert not should_pass
