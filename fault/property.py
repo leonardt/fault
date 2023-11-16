@@ -3,7 +3,7 @@ import magma as m
 from fault.sva import SVAProperty
 from fault.expression import Expression, UnaryOp, BinaryOp
 from fault.infix import Infix
-from fault.assert_utils import add_compile_guards
+from fault.assert_utils import add_compile_guards, prepend_when_cond
 
 
 class Property:
@@ -246,6 +246,8 @@ class _Compiler:
 
 
 def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
+    statement = prepend_when_cond(statement)
+
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
