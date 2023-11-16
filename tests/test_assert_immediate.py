@@ -46,7 +46,7 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity,
         assert failure_msg is None or severity in ["error", "fatal"]
     else:
         assert (
-            (severity == "warning") or 
+            (severity == "warning") or
             # If success msg but no failure msg, doesn't return error code.
             (failure_msg is None and success_msg is not None)
         )
@@ -134,9 +134,12 @@ def test_immediate_assert_compile_guard():
     # Should fail without macro defined
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
-            tester.compile_and_run("verilator", magma_output="mlir-verilog",
-                                   flags=['--assert', '-DASSERT_ON=1',
-                                   '-Wno-UNUSED'], directory=dir_)
+            tester.compile_and_run(
+                "verilator", 
+                magma_output="mlir-verilog",
+                flags=['--assert', '-DASSERT_ON=1', '-Wno-UNUSED'],
+                directory=dir_
+            )
 
 
 def test_assert_final():
