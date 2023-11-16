@@ -40,7 +40,7 @@ def test_basic_assert():
     tester.advance_cycle()
     tester.circuit.O.expect(0)
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
 
 @requires_ncsim
@@ -67,7 +67,7 @@ def test_basic_assert_fail(sva, capsys):
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -106,7 +106,7 @@ def test_variable_delay(sva, capsys):
     tester.circuit.read = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.write = 1
@@ -116,7 +116,7 @@ def test_variable_delay(sva, capsys):
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -130,7 +130,7 @@ def test_variable_delay(sva, capsys):
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -165,7 +165,7 @@ def test_repetition(sva, capsys):
     # Should fail if we don't see seq2
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out, out
     tester.circuit.write = 0
@@ -176,7 +176,7 @@ def test_repetition(sva, capsys):
     tester.advance_cycle()
     tester.circuit.write = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
 
 @requires_ncsim
@@ -209,7 +209,7 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
         # Should fail if we don't see seq2
         with pytest.raises(AssertionError):
             tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   flags=["-sv"], magma_opts={"inline": True})
+                                   flags=["-sv"], magma_output="mlir-verilog")
         out, _ = capsys.readouterr()
         assert "Assertion Main_tb.dut.__assert_1 has failed" in out
         # do repeated sequence i times
@@ -230,10 +230,10 @@ def test_repetition_or_more(sva, zero_or_one, capsys):
             with pytest.raises(AssertionError):
                 tester.compile_and_run("system-verilog", simulator="ncsim",
                                        flags=["-sv"],
-                                       magma_opts={"inline": True})
+                                       magma_output="mlir-verilog")
         else:
             tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   flags=["-sv"], magma_opts={"inline": True})
+                                   flags=["-sv"], magma_output="mlir-verilog")
 
 
 @requires_ncsim
@@ -268,12 +268,12 @@ def test_goto_repetition(sva, num_reps, capsys):
     tester.advance_cycle()
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
     tester.circuit.read = 0
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -300,14 +300,14 @@ def test_eventually(sva, capsys):
     # Read does not eventually go high
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
     tester.circuit.read = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
 
 @requires_ncsim
@@ -339,7 +339,7 @@ def test_throughout(sva, capsys):
     tester.circuit.b = 0
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.a = 0
@@ -354,7 +354,7 @@ def test_throughout(sva, capsys):
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -386,7 +386,7 @@ def test_until(sva, capsys):
     tester.advance_cycle()
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.a = 0
@@ -404,7 +404,7 @@ def test_until(sva, capsys):
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -437,7 +437,7 @@ def test_until_with(sva, capsys):
     tester.advance_cycle()
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.a = 0
@@ -455,7 +455,7 @@ def test_until_with(sva, capsys):
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -477,7 +477,7 @@ def test_inside(sva, capsys):
     tester.advance_cycle()
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.a = 2
@@ -485,7 +485,7 @@ def test_inside(sva, capsys):
 
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -508,7 +508,7 @@ def test_disable_if():
     tester.circuit.b = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.RESETN = 1
     tester.circuit.a = 1
@@ -518,7 +518,7 @@ def test_disable_if():
     tester.circuit.RESETN = 0
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
 
     tester = f.SynchronousTester(Main, Main.CLK)
     tester.circuit.RESETN = 1
@@ -529,7 +529,7 @@ def test_disable_if():
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
 
 
 @requires_ncsim
@@ -557,7 +557,7 @@ def test_ifdef_and_name(capsys, compile_guard):
     tester.advance_cycle()
     # Should not fail with no ASSERT_ON
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True})
+                           flags=["-sv"], magma_output="mlir-verilog")
     # Check that wire prefix is generated properly
     with open("build/Main.v", "r") as file_:
         assert "wire _FAULT_ASSERT_WIRE_0" in file_.read()
@@ -568,7 +568,7 @@ def test_ifdef_and_name(capsys, compile_guard):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"] +
                                [f"+define+{guard}" for guard in compile_guard],
-                               magma_opts={"inline": True})
+                               magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.foo has failed" in out
     assert "Assertion Main_tb.dut.bar has failed" in out
@@ -610,7 +610,7 @@ def test_default_clock_function():
     tester.circuit.O.expect(0)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True,
+                           flags=["-sv"], magma_opts={"output": "mlir-verilog",
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
 
@@ -627,7 +627,7 @@ def test_cover(capsys):
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True},
+                           flags=["-sv"], magma_output="mlir-verilog",
                            disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
@@ -641,7 +641,7 @@ def test_cover(capsys):
     tester.advance_cycle()
     tester.circuit.I = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True},
+                           flags=["-sv"], magma_output="mlir-verilog",
                            disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
@@ -668,7 +668,7 @@ def test_assume(capsys):
     # formal tools)
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               flags=["-sv"], magma_opts={"inline": True})
+                               flags=["-sv"], magma_output="mlir-verilog")
 
 
 @requires_ncsim
@@ -694,7 +694,7 @@ def test_not_onehot(use_sva):
     tester.step(2)
 
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True,
+                           flags=["-sv"], magma_opts={"output": "mlir-verilog",
                                                       "drive_undriven": True,
                                                       "terminate_unused": True})
 
@@ -706,7 +706,7 @@ def test_not_onehot(use_sva):
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"],
-                               magma_opts={"inline": True,
+                               magma_opts={"output": "mlir-verilog",
                                            "drive_undriven": True,
                                            "terminate_unused": True})
 
@@ -763,7 +763,7 @@ def test_advanced_property_example_1(use_sva, should_pass):
     try:
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"],
-                               magma_opts={"inline": True,
+                               magma_opts={"output": "mlir-verilog",
                                            "drive_undriven": True,
                                            "terminate_unused": True})
         assert should_pass
@@ -827,7 +827,7 @@ def test_advanced_property_example_2(use_sva, should_pass):
     try:
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"],
-                               magma_opts={"inline": True,
+                               magma_opts={"output": "mlir-verilog",
                                            "drive_undriven": True,
                                            "terminate_unused": True})
     except AssertionError:
