@@ -11,8 +11,8 @@ from hwtypes import BitVector
 
 def requires_ncsim(test_fn):
     def wrapper(test_fn, *args, **kwargs):
-        if not shutil.which("ncsim"):
-            return pytest.skip("need ncsim for SVA test")
+        # if not shutil.which("ncsim"):
+        #     return pytest.skip("need ncsim for SVA test")
         return test_fn(*args, **kwargs)
     return decorator.decorator(wrapper, test_fn)
 
@@ -702,6 +702,8 @@ def test_assume(capsys):
     # formal tools)
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
+                               magma_opts={"sv": True,
+                                           "disable_initial_blocks": True},
                                flags=["-sv"], magma_output="mlir-verilog")
 
 
