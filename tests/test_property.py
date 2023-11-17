@@ -40,7 +40,9 @@ def test_basic_assert():
     tester.advance_cycle()
     tester.circuit.O.expect(0)
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           magma_opts={"sv": True}, flags=["-sv"],
+                           magma_opts={"sv": True,
+                                       "disable_initial_blocks": True},
+                           flags=["-sv"],
                            magma_output="mlir-verilog")
 
 
@@ -68,7 +70,9 @@ def test_basic_assert_fail(sva, capsys):
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                               magma_opts={"sv": True}, flags=["-sv"],
+                               magma_opts={"sv": True,
+                                           "disable_initial_blocks": True},
+                               flags=["-sv"],
                                magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
@@ -635,6 +639,7 @@ def test_default_clock_function():
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            magma_output="mlir-verilog", flags=["-sv"],
                            magma_opts={"drive_undriven": True,
+                                       "disable_initial_blocks": True,
                                        "sv": True,
                                        "terminate_unused": True,
                                        "flatten_all_tuples": True})
@@ -653,6 +658,8 @@ def test_cover(capsys):
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_output="mlir-verilog",
+                           magma_opts={"sv": True,
+                                       "disable_initial_blocks": True},
                            disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
@@ -667,8 +674,9 @@ def test_cover(capsys):
     tester.circuit.I = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_output="mlir-verilog",
-                           magma_opts={"sv": True}, disp_type="realtime",
-                           coverage=True)
+                           magma_opts={"sv": True,
+                                       "disable_initial_blocks": True},
+                           disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
     # covered
@@ -791,6 +799,7 @@ def test_advanced_property_example_1(use_sva, should_pass):
         tester.compile_and_run("system-verilog", simulator="ncsim",
                                flags=["-sv"], magma_output="mlir-verilog",
                                magma_opts={"drive_undriven": True,
+                                           "disable_initial_blocks": True,
                                            "sv": True,
                                            "terminate_unused": True})
         assert should_pass
@@ -857,6 +866,7 @@ def test_advanced_property_example_2(use_sva, should_pass):
                                flags=["-sv"], magma_output="mlir-verilog",
                                magma_opts={"drive_undriven": True,
                                            "sv": True,
+                                           "disable_initial_blocks": True,
                                            "terminate_unused": True})
     except AssertionError:
         assert not should_pass
