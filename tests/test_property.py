@@ -836,7 +836,7 @@ def test_advanced_property_example_2(use_sva, should_pass):
             )
         else:
             f.assert_(
-                f.not_(~(io.valid & io.ready.value() & io.eop))
+                f.not_(f.sequence(~(io.valid & io.ready.value() & io.eop)))
                 | f.throughout |
                 ((io.valid & io.ready.value() & io.sop) | f.goto[2]),
                 name="eop_must_happen_btn_two_sop_A",
