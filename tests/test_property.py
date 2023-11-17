@@ -609,7 +609,8 @@ def test_default_clock_function():
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            magma_output="mlir-verilog", flags=["-sv"],
                            magma_opts={"drive_undriven": True,
-                                       "terminate_unused": True})
+                                       "terminate_unused": True,
+                                       "flatten_all_tuples": True})
 
 
 @requires_ncsim
@@ -776,9 +777,9 @@ def test_advanced_property_example_2(use_sva, should_pass):
         io.ready @= 1
         if use_sva:
             f.assert_(
-                f.sva(f.not_(~(io.valid & io.ready.value() & io.eop)),
+                # Note: need sequences to wrap parens
+                f.sva(f.not_(f.sequence(~(io.valid & io.ready.value() & io.eop))),
                       "throughout",
-                      # Note: need sequence here to wrap parens
                       f.sequence(f.sva((io.valid & io.ready.value() & io.sop),
                                        "[-> 2]"))),
                 name="eop_must_happen_btn_two_sop_A",
