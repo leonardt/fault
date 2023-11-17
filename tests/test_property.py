@@ -40,7 +40,8 @@ def test_basic_assert():
     tester.advance_cycle()
     tester.circuit.O.expect(0)
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_output="mlir-verilog")
+                           magma_opts={"sv": True}, flags=["-sv"],
+                           magma_output="mlir-verilog")
 
 
 @requires_ncsim
