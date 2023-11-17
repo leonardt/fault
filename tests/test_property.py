@@ -134,8 +134,8 @@ def test_variable_delay(sva, capsys):
     tester.advance_cycle()
     with pytest.raises(AssertionError):
         tester.compile_and_run("system-verilog", simulator="ncsim",
-                           magma_opts={"sv": True}, flags=["-sv"],
-                           magma_output="mlir-verilog")
+                               magma_opts={"sv": True}, flags=["-sv"],
+                               magma_output="mlir-verilog")
     out, _ = capsys.readouterr()
     assert "Assertion Main_tb.dut.__assert_1 has failed" in out
 
@@ -809,7 +809,8 @@ def test_advanced_property_example_2(use_sva, should_pass):
         if use_sva:
             f.assert_(
                 # Note: need sequences to wrap parens
-                f.sva(f.not_(f.sequence(~(io.valid & io.ready.value() & io.eop))),
+                f.sva(f.not_(f.sequence(~(io.valid & io.ready.value() &
+                                          io.eop))),
                       "throughout",
                       f.sequence(f.sva((io.valid & io.ready.value() & io.sop),
                                        "[-> 2]"))),
