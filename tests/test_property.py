@@ -1,18 +1,15 @@
-import shutil
 import random
-import os
 
 import pytest
 import decorator
 import fault as f
 import magma as m
-from hwtypes import BitVector
 
 
 def requires_ncsim(test_fn):
     def wrapper(test_fn, *args, **kwargs):
-        if not shutil.which("ncsim"):
-            return pytest.skip("need ncsim for SVA test")
+        # if not shutil.which("ncsim"):
+        #     return pytest.skip("need ncsim for SVA test")
         return test_fn(*args, **kwargs)
     return decorator.decorator(wrapper, test_fn)
 
@@ -823,9 +820,7 @@ def test_advanced_property_example_2(use_sva, should_pass):
             f.assert_(
                 f.sva(
                     f.not_(
-                        f.sva(
-                            f.sequence(~(io.valid & io.ready.value() & io.eop))
-                        )
+                        ~(io.valid & io.ready.value() & io.eop)
                     ),
                     "throughout",
                     # Note: need sequences to wrap parens

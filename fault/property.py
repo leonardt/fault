@@ -155,7 +155,7 @@ class _Compiler:
 
     def _compile(self, value):
         if isinstance(value, PropertyUnaryOp):
-            return f"{value.op_str} {self._compile(value.arg)}"
+            return f"{value.op_str} ({self._compile(value.arg)})"
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
