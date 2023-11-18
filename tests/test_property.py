@@ -299,8 +299,10 @@ def test_eventually(sva, capsys):
     class Main(m.Circuit):
         io = m.IO(write=m.In(m.Bit), read=m.In(m.Bit)) + m.ClockIO()
         if sva:
-            f.assert_(f.sva(io.write == 1, f"|-> s_eventually", io.read == 1),
-                      on=f.posedge(io.CLK))
+            f.assert_(
+                f.sva(io.write == 1, "|-> s_eventually", io.read == 1),
+                on=f.posedge(io.CLK)
+            )
         else:
             f.assert_((io.write == 1) | f.implies | f.eventually |
                       (io.read == 1), on=f.posedge(io.CLK))
@@ -819,11 +821,14 @@ def test_advanced_property_example_2(use_sva, should_pass):
         io.ready @= 1
         if use_sva:
             f.assert_(
-                f.sva(f.sequence(f.not_(~(io.valid & io.ready.value() & io.eop))),
-                      "throughout",
-                      # Note: need sequences to wrap parens
-                      f.sequence(f.sva((io.valid & io.ready.value() & io.sop),
-                                       "[-> 2]"))),
+                f.sva(
+                    f.sequence(
+                        f.not_(~(io.valid & io.ready.value() & io.eop))
+                    ),
+                    "throughout",
+                    # Note: need sequences to wrap parens
+                    f.sequence(f.sva((io.valid & io.ready.value() & io.sop),
+                                     "[-> 2]"))),
                 name="eop_must_happen_btn_two_sop_A",
                 on=f.posedge(io.CLK),
                 disable_iff=f.not_(io.RESETN)
