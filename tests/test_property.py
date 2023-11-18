@@ -822,9 +822,11 @@ def test_advanced_property_example_2(use_sva, should_pass):
         if use_sva:
             f.assert_(
                 f.sva(
-                    f.sequence(f.sva(
-                        f.not_(~(io.valid & io.ready.value() & io.eop))
-                    )),
+                    f.not_(
+                        f.sva(
+                            f.sequence(~(io.valid & io.ready.value() & io.eop))
+                        )
+                    ),
                     "throughout",
                     # Note: need sequences to wrap parens
                     f.sequence(f.sva((io.valid & io.ready.value() & io.sop),
