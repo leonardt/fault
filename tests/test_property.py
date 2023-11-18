@@ -8,8 +8,8 @@ import magma as m
 
 def requires_ncsim(test_fn):
     def wrapper(test_fn, *args, **kwargs):
-        # if not shutil.which("ncsim"):
-        #     return pytest.skip("need ncsim for SVA test")
+        if not shutil.which("ncsim"):
+            return pytest.skip("need ncsim for SVA test")
         return test_fn(*args, **kwargs)
     return decorator.decorator(wrapper, test_fn)
 
