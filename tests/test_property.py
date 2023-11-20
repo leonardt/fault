@@ -9,8 +9,8 @@ import magma as m
 
 def requires_ncsim(test_fn):
     def wrapper(test_fn, *args, **kwargs):
-        # if not shutil.which("ncsim"):
-        #     return pytest.skip("need ncsim for SVA test")
+        if not shutil.which("ncsim"):
+            return pytest.skip("need ncsim for SVA test")
         return test_fn(*args, **kwargs)
     return decorator.decorator(wrapper, test_fn)
 
@@ -333,11 +333,11 @@ def test_throughout(sva, capsys):
     class Main(m.Circuit):
         io = m.IO(a=m.In(m.Bit), b=m.In(m.Bit), c=m.In(m.Bit)) + m.ClockIO()
         if sva:
-            seq = f.sva(io.b, "throughout", "! (", io.c, "[-> 1])")
+            seq = f.sva(io.b, "throughout", "!", io.c, "[-> 1]")
             f.assert_(f.sva(f.rose(io.a), "|->", seq),
                       on=f.posedge(io.CLK))
         else:
-            seq = io.b | f.throughout | f.not_(io.c | f.goto[1])
+            seq = io.b | f.throughout | f.not_(io.c) | f.goto[1]
             f.assert_(f.rose(io.a) | f.implies | seq,
                       on=f.posedge(io.CLK))
 
