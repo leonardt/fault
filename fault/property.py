@@ -200,7 +200,7 @@ class _Compiler:
             property_str = ""
             for arg in value.args:
                 if isinstance(arg, str):
-                    property_str += f" ({arg}) "
+                    property_str += f" {arg} "
                 elif isinstance(arg, (SVAProperty, Sequence, FunctionCall,
                                       PropertyUnaryOp, Expression)):
                     property_str += f" {self._compile(arg)} "
