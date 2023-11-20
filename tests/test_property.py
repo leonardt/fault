@@ -337,7 +337,7 @@ def test_throughout(sva, capsys):
             f.assert_(f.sva(f.rose(io.a), "|->", seq),
                       on=f.posedge(io.CLK))
         else:
-            seq = io.b | f.throughout | f.not_(io.c) | f.goto[1]
+            seq = io.b | f.throughout | (f.not_(io.c) | f.goto[1])
             f.assert_(f.rose(io.a) | f.implies | seq,
                       on=f.posedge(io.CLK))
 
