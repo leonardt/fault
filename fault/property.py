@@ -318,7 +318,7 @@ fell = Function("$fell")
 stable = Function("$stable")
 
 
-class PropertyUnaryOp:
+class PropertyUnaryOp(Expression):
     pass
 
 
@@ -327,6 +327,11 @@ class Not(PropertyUnaryOp):
 
     def __init__(self, arg):
         self.arg = arg
+
+    def __or__(self, other):
+        if isinstance(other, Property):
+            return other.__ror__(self)
+        return super().__or__(self)
 
 
 def not_(arg):
