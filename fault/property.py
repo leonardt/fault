@@ -155,7 +155,7 @@ class _Compiler:
 
     def _compile(self, value):
         if isinstance(value, PropertyUnaryOp):
-            return f"{value.op_str} {self._compile(value.arg)}"
+            return f"({value.op_str} ({self._compile(value.arg)}))"
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
@@ -321,6 +321,11 @@ class Not(PropertyUnaryOp):
 
     def __init__(self, arg):
         self.arg = arg
+
+    def __or__(self, other):
+        if isinstance(other, Property):
+            return other.__ror__(self)
+        return super().__or__(other)
 
 
 def not_(arg):
