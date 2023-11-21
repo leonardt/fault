@@ -5,10 +5,7 @@ from fault.assert_utils import add_compile_guards
 
 
 def _make_assert(type_, cond, success_msg=None, failure_msg=None,
-                 severity="error", name=None, compile_guard=None, delay=False,
-                 inline_wire_prefix=None):
-    if inline_wire_prefix is None:
-        inline_wire_prefix = "_FAULT_ASSERT_WIRE_"
+                 severity="error", name=None, compile_guard=None, delay=False):
     success_msg_str = ""
     if success_msg is not None:
         success_msg_str = f" $display(\"{success_msg}\");"
@@ -38,9 +35,7 @@ def _make_assert(type_, cond, success_msg=None, failure_msg=None,
 end
 """
     assert_str = add_compile_guards(compile_guard, assert_str)
-    m.inline_verilog(
-        assert_str, inline_wire_prefix=inline_wire_prefix,
-        **format_args, type_=type_)
+    m.inline_verilog2(assert_str, **format_args, type_=type_)
 
 
 def _add_docstr(fn):
@@ -66,7 +61,7 @@ def _add_docstr(fn):
 
 @_add_docstr
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     name=None, compile_guard=None, inline_wire_prefix=None):
+                     name=None, compile_guard=None):
     if get_curr_when_block():
         # guard condition by current active when using a boolean with default 0
         # and assigned inside when
@@ -77,19 +72,18 @@ def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
         cond = ~when_cond | cond
 
     _make_assert("always @(*)", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, inline_wire_prefix=inline_wire_prefix)
+                 compile_guard)
 
 
 @_add_docstr
 def assert_final(cond, success_msg=None, failure_msg=None, severity="error",
-                 name=None, compile_guard=None, inline_wire_prefix=None):
+                 name=None, compile_guard=None):
     _make_assert("final", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, inline_wire_prefix=inline_wire_prefix)
+                 compile_guard)
 
 
 @_add_docstr
 def assert_initial(cond, success_msg=None, failure_msg=None, severity="error",
-                   name=None, compile_guard=None, inline_wire_prefix=None):
+                   name=None, compile_guard=None):
     _make_assert("initial", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, delay=True,
-                 inline_wire_prefix=inline_wire_prefix)
+                 compile_guard, delay=True)

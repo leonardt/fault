@@ -1,4 +1,3 @@
-import tempfile
 from hwtypes import BitVector
 import magma as m
 import fault as f
@@ -23,9 +22,14 @@ def test_basic_ready_valid_sequence():
         pytest.skip("Untested with earlier verilator versions")
     I = [BitVector.random(8) for _ in range(8)] + [0]
     O = [0] + [i + 1 for i in I[:-1]]
-    f.run_ready_valid_test(Main, {"I": I, "O": O}, "verilator",
-                           compile_and_run_kwargs={"tmp_dir": True,
-                                                   "flags": ['-Wno-UNUSED']})
+    f.run_ready_valid_test(
+        Main,
+        {"I": I, "O": O},
+        "verilator",
+        compile_and_run_kwargs={'magma_output': 'mlir-verilog',
+                                'tmp_dir': True,
+                                'magma_opts': {'flatten_all_tuples': True}}
+    )
 
 
 def test_basic_ready_valid_sequence_fail():
@@ -35,10 +39,12 @@ def test_basic_ready_valid_sequence_fail():
     O = [0] + [i - 1 for i in I[:-1]]
     with pytest.raises(AssertionError):
         f.run_ready_valid_test(
-            Main, {"I": I, "O": O},
+            Main,
+            {"I": I, "O": O},
             "verilator",
-            compile_and_run_kwargs={"tmp_dir": True,
-                                    "flags": ['-Wno-UNUSED']}
+            compile_and_run_kwargs={'magma_output': 'mlir-verilog',
+                                    'tmp_dir': True,
+                                    'magma_opts': {'flatten_all_tuples': True}}
         )
 
 
@@ -64,9 +70,11 @@ def test_lifted_ready_valid_sequence_simple():
     tester = f.ReadyValidTester(Main2, {"I": I, "O": O})
     tester.circuit.inc = 2
     tester.finish_sequences()
-    with tempfile.TemporaryDirectory(dir=".") as _dir:
-        tester.compile_and_run("verilator", disp_type="realtime",
-                               flags=['-Wno-UNUSED'], directory=_dir)
+    tester.compile_and_run("verilator", disp_type="realtime",
+                           flags=['-Wno-UNUSED'],
+                           magma_output="mlir-verilog",
+                           magma_opts={"flatten_all_tuples": True},
+                           tmp_dir=True)
 
 
 def test_lifted_ready_valid_sequence_simple_fail():
@@ -83,9 +91,10 @@ def test_lifted_ready_valid_sequence_simple_fail():
     tester.circuit.inc = 3
     tester.finish_sequences()
     with pytest.raises(AssertionError):
-        with tempfile.TemporaryDirectory(dir=".") as _dir:
-            tester.compile_and_run("verilator", disp_type="realtime",
-                                   directory=_dir)
+        tester.compile_and_run("verilator", disp_type="realtime",
+                               magma_output="mlir-verilog",
+                               magma_opts={"flatten_all_tuples": True},
+                               tmp_dir=True)
 
 
 def test_lifted_ready_valid_sequence_changing_inc():
@@ -102,6 +111,8 @@ def test_lifted_ready_valid_sequence_changing_inc():
     # Advance one cycle to finish last handshake
     tester.advance_cycle()
     tester.expect_sequences_finished()
-    with tempfile.TemporaryDirectory(dir=".") as _dir:
-        tester.compile_and_run("verilator", disp_type="realtime",
-                               flags=['-Wno-UNUSED'], directory=_dir)
+    tester.compile_and_run("verilator", disp_type="realtime",
+                           flags=['-Wno-UNUSED'],
+                           magma_output="mlir-verilog",
+                           magma_opts={"flatten_all_tuples": True},
+                           tmp_dir=True)
