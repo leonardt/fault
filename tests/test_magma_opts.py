@@ -1,3 +1,4 @@
+import tempfile
 import magma as m
 import fault as f
 
@@ -12,4 +13,7 @@ def test_verilog_prefix():
     tester.eval()
     tester.circuit.O.expect(4)
 
-    tester.compile_and_run("verilator", magma_opts={"verilog_prefix": "bar_"})
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
+        tester.compile_and_run("verilator",
+                               magma_opts={"verilog_prefix": "bar_"},
+                               directory=tempdir)

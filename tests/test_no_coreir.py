@@ -1,8 +1,8 @@
+import tempfile
+
 import hwtypes as ht
 import fault as f
 import magma as m
-
-import pytest
 
 
 def test_fault_no_coreir():
@@ -15,4 +15,6 @@ def test_fault_no_coreir():
     tester.eval()
     tester.circuit.O.expect(I & 0xFF)
 
-    tester.compile_and_run("verilator", magma_output="mlir-verilog")
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
+        tester.compile_and_run("verilator", magma_output="mlir-verilog",
+                               directory=tempdir)

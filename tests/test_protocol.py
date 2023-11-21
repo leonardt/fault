@@ -1,3 +1,4 @@
+import tempfile
 
 import magma as m
 import fault
@@ -48,4 +49,6 @@ def test_proto():
     tester.circuit.val = 1
     tester.eval()
     tester.circuit.O.expect(2)
-    tester.compile_and_run("verilator", flags=['-Wno-unused'])
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
+        tester.compile_and_run("verilator", flags=['-Wno-unused'],
+                               directory=tempdir)

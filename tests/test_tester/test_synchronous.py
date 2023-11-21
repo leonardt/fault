@@ -1,4 +1,6 @@
+import tempfile
 import pytest
+
 from fault import SynchronousTester
 import magma as m
 from hwtypes import BitVector
@@ -30,7 +32,8 @@ def test_synchronous_basic(target, simulator):
         tester.advance_cycle()
 
     if target == "verilator":
-        tester.compile_and_run("verilator")
+        with tempfile.TemporaryDirectory(dir=".") as tempdir:
+            tester.compile_and_run("verilator", directory=tempdir)
     else:
         tester.compile_and_run(target, simulator=simulator,
                                magma_opts={"sv": True})

@@ -24,7 +24,7 @@ def run_tester(tester, target, simulator):
         # "disp_type": "realtime",
         "simulator": simulator,
         "magma_opts": {"sv": True},
-        "tmp_dir": False
+        "tmp_dir": True
     }
 
     if target == "verilator":
