@@ -1,18 +1,10 @@
 import magma as m
-from magma.bit import Bit
-from magma.when import get_curr_block as get_curr_when_block, no_when
-from fault.assert_utils import add_compile_guards
+from fault.assert_utils import add_compile_guards, get_when_cond
 
 
 def _make_assert(type_, cond, success_msg=None, failure_msg=None,
                  severity="error", name=None, compile_guard=None, delay=False):
-    if get_curr_when_block():
-        # guard condition by current active when using a boolean with default 0
-        # and assigned inside when
-        with no_when():
-            when_cond = Bit()
-            when_cond @= 0
-        when_cond @= 1
+    if (when_cond := get_when_cond()) is not None:
         cond = ~when_cond | cond
 
     success_msg_str = ""
