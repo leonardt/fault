@@ -59,7 +59,6 @@ def test_call_interface_clock(target, simulator, caplog):
         tester.step(2)
         tester(3, 2).expect(ops[i](BitVector[16](3), BitVector[16](2)))
     with tempfile.TemporaryDirectory(dir=".") as _dir:
-        _dir = "build"
         if target == "verilator":
             tester.compile_and_run(target, directory=_dir,
                                    flags=["-Wno-unused"])
