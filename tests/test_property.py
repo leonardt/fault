@@ -903,12 +903,12 @@ def test_cover_when(capsys):
                            coverage=True)
 
     out, _ = capsys.readouterr()
-    # not covered
     assert """\
   Disabled Finish Failed   Assertion Name
          0      0      0   Main_tb.dut.__cover1
-  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 1\
-""" in out
+         0      1      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out, out
     tester.clear()
     tester.circuit.I = 1
     tester.advance_cycle()
@@ -919,12 +919,12 @@ def test_cover_when(capsys):
                            coverage=True)
 
     out, _ = capsys.readouterr()
-    # covered
     assert """\
   Disabled Finish Failed   Assertion Name
          0      1      0   Main_tb.dut.__cover1
-  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 0\
-""" in out
+         0      0      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out, out
     tester.circuit.S = 1
     tester.circuit.I = 1
     tester.advance_cycle()
@@ -935,12 +935,12 @@ def test_cover_when(capsys):
                            disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
-    # not covered
     assert """\
   Disabled Finish Failed   Assertion Name
          0      1      0   Main_tb.dut.__cover1
-  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 0\
-""" in out
+         0      1      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 0\
+""" in out, out
     tester.clear()
     tester.circuit.I = 1
     tester.advance_cycle()
@@ -958,6 +958,7 @@ def test_cover_when(capsys):
     # covered
     assert """\
   Disabled Finish Failed   Assertion Name
-         0      0      0   Main_tb.dut.__cover1
-  Total Assertions = 1,  Failing Assertions = 0,  Unchecked Assertions = 1\
-""" in out
+         0      1      0   Main_tb.dut.__cover1
+         0      0      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out, out
