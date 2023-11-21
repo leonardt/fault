@@ -246,7 +246,6 @@ class _Compiler:
 
 
 def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
-
     if (when_cond := get_when_cond()) is not None:
         prop = when_cond | implies | prop
 
