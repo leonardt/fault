@@ -910,20 +910,21 @@ def test_cover_when(capsys):
   Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
 """ in out, out
     tester.clear()
+    tester.circuit.S = 0
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.circuit.I = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            magma_output="mlir-verilog", flags=["-sv"],
-                           skip_compile=True, magma_opts={"sv": True},
-                           disp_type="realtime", coverage=True)
+                           skip_compile=True, disp_type="realtime",
+                           coverage=True)
 
     out, _ = capsys.readouterr()
     assert """\
   Disabled Finish Failed   Assertion Name
-         0      1      0   Main_tb.dut.__cover1
+         0      0      0   Main_tb.dut.__cover1
          0      0      0   Main_tb.dut.__cover2
-  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 2\
 """ in out, out
     tester.circuit.S = 1
     tester.circuit.I = 1
@@ -931,18 +932,18 @@ def test_cover_when(capsys):
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"sv": True},
-                           skip_compile=True, disp_type="realtime",
-                           coverage=True)
+                           flags=["-sv"], skip_compile=True,
+                           disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
     assert """\
   Disabled Finish Failed   Assertion Name
-         0      1      0   Main_tb.dut.__cover1
-         0      1      0   Main_tb.dut.__cover2
-  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 0\
+         0      0      0   Main_tb.dut.__cover1
+         0      0      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 2\
 """ in out, out
     tester.clear()
+    tester.circuit.S = 1
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.circuit.I = 0
