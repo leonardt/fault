@@ -137,7 +137,7 @@ def test_immediate_assert_compile_guard():
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run(
-                "verilator", 
+                "verilator",
                 magma_output="mlir-verilog",
                 flags=['--assert', '-DASSERT_ON=1', '-Wno-UNUSED'],
                 directory=dir_
