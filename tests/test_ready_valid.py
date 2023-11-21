@@ -27,6 +27,7 @@ def test_basic_ready_valid_sequence():
         {"I": I, "O": O},
         "verilator",
         compile_and_run_kwargs={'magma_output': 'mlir-verilog',
+                                'tmp_dir': True,
                                 'magma_opts': {'flatten_all_tuples': True}}
     )
 
@@ -42,6 +43,7 @@ def test_basic_ready_valid_sequence_fail():
             {"I": I, "O": O},
             "verilator",
             compile_and_run_kwargs={'magma_output': 'mlir-verilog',
+                                    'tmp_dir': True,
                                     'magma_opts': {'flatten_all_tuples': True}}
         )
 
@@ -71,7 +73,8 @@ def test_lifted_ready_valid_sequence_simple():
     tester.compile_and_run("verilator", disp_type="realtime",
                            flags=['-Wno-UNUSED'],
                            magma_output="mlir-verilog",
-                           magma_opts={"flatten_all_tuples": True})
+                           magma_opts={"flatten_all_tuples": True},
+                           tmp_dir=True)
 
 
 def test_lifted_ready_valid_sequence_simple_fail():
@@ -90,7 +93,8 @@ def test_lifted_ready_valid_sequence_simple_fail():
     with pytest.raises(AssertionError):
         tester.compile_and_run("verilator", disp_type="realtime",
                                magma_output="mlir-verilog",
-                               magma_opts={"flatten_all_tuples": True})
+                               magma_opts={"flatten_all_tuples": True},
+                               tmp_dir=True)
 
 
 def test_lifted_ready_valid_sequence_changing_inc():
@@ -110,4 +114,5 @@ def test_lifted_ready_valid_sequence_changing_inc():
     tester.compile_and_run("verilator", disp_type="realtime",
                            flags=['-Wno-UNUSED'],
                            magma_output="mlir-verilog",
-                           magma_opts={"flatten_all_tuples": True})
+                           magma_opts={"flatten_all_tuples": True},
+                           tmp_dir=True)

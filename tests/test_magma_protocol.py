@@ -1,3 +1,4 @@
+import tempfile
 from typing import Optional
 import magma as m
 import fault
@@ -45,4 +46,6 @@ def test_foo_type_magma_protocol():
     tester.circuit.O.expect(BitVector[8](0xDE << 2) |
                             (BitVector[8](0xDE) << 1)[0] |
                             BitVector[8](0xDE)[0])
-    tester.compile_and_run("verilator")
+
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        tester.compile_and_run("verilator", directory=_dir)

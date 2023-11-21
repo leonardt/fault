@@ -58,10 +58,11 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity,
             "error": "%Error:",
         }[severity]
         msg += " Foo.v:9: "
-        # TODO: verilator 5.016 needs this
-        # if severity == "error":
-        #     msg += "Assertion failed in "
-        msg += "Assertion failed in "
+        if verilator_version() >= 5.016:
+            if severity == "error":
+                msg += "Assertion failed in "
+        else:
+            msg += "Assertion failed in "
         msg += "TOP.Foo"
         if name is not None:
             msg += f".{name}"
