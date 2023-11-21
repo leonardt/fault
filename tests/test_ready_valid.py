@@ -33,9 +33,13 @@ def test_basic_ready_valid_sequence_fail():
         pytest.skip("Untested with earlier verilator versions")
     I = [BitVector.random(8) for _ in range(8)] + [0]
     O = [0] + [i - 1 for i in I[:-1]]
-    f.run_ready_valid_test(Main, {"I": I, "O": O}, "verilator",
-                           compile_and_run_kwargs={"tmp_dir": True,
-                                                   "flags": ['-Wno-UNUSED']})
+    with pytest.raises(AssertionError):
+        f.run_ready_valid_test(
+            Main, {"I": I, "O": O},
+            "verilator",
+            compile_and_run_kwargs={"tmp_dir": True,
+                                    "flags": ['-Wno-UNUSED']}
+        )
 
 
 class Main2(m.Circuit):
