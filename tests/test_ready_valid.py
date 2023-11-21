@@ -23,8 +23,8 @@ def test_basic_ready_valid_sequence():
     I = [BitVector.random(8) for _ in range(8)] + [0]
     O = [0] + [i + 1 for i in I[:-1]]
     f.run_ready_valid_test(
-        Main, 
-        {"I": I, "O": O}, 
+        Main,
+        {"I": I, "O": O},
         "verilator",
         compile_and_run_kwargs={'magma_output': 'mlir-verilog',
                                 'magma_opts': {'flatten_all_tuples': True}}
@@ -38,8 +38,8 @@ def test_basic_ready_valid_sequence_fail():
     O = [0] + [i - 1 for i in I[:-1]]
     with pytest.raises(AssertionError):
         f.run_ready_valid_test(
-            Main, 
-            {"I": I, "O": O}, 
+            Main,
+            {"I": I, "O": O},
             "verilator",
             compile_and_run_kwargs={'magma_output': 'mlir-verilog',
                                     'magma_opts': {'flatten_all_tuples': True}}
