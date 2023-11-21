@@ -1,3 +1,4 @@
+from magma.bit import Bit
 from magma.when import get_curr_block as get_curr_when_block, no_when
 
 
@@ -24,7 +25,7 @@ def prepend_when_cond(cond):
         # guard condition by current active when using a boolean with default 0
         # and assigned inside when
         with no_when():
-            when_cond = m.Bit()
+            when_cond = Bit()
             when_cond @= 0
         when_cond @= 1
         cond = ~when_cond | cond
