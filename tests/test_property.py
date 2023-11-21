@@ -894,8 +894,9 @@ def test_cover_when(capsys):
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True},
-                           disp_type="realtime", coverage=True)
+                           magma_output="mlir-verilog", flags=["-sv"],
+                           magma_opts={"sv": True}, disp_type="realtime",
+                           coverage=True)
 
     out, _ = capsys.readouterr()
     # not covered
@@ -909,8 +910,9 @@ def test_cover_when(capsys):
     tester.advance_cycle()
     tester.circuit.I = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True},
-                           disp_type="realtime", coverage=True)
+                           magma_output="mlir-verilog", flags=["-sv"],
+                           magma_opts={"sv": True}, disp_type="realtime",
+                           coverage=True)
 
     out, _ = capsys.readouterr()
     # covered
@@ -925,7 +927,7 @@ def test_cover_when(capsys):
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True},
+                           flags=["-sv"], magma_opts={"sv": True},
                            disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
@@ -940,8 +942,9 @@ def test_cover_when(capsys):
     tester.advance_cycle()
     tester.circuit.I = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
-                           flags=["-sv"], magma_opts={"inline": True},
-                           disp_type="realtime", coverage=True)
+                           magma_output="mlir-verilog", flags=["-sv"],
+                           magma_opts={"sv": True}, disp_type="realtime",
+                           coverage=True)
 
     out, _ = capsys.readouterr()
     # covered
