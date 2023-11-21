@@ -915,8 +915,8 @@ def test_cover_when(capsys):
     tester.circuit.I = 0
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            magma_output="mlir-verilog", flags=["-sv"],
-                           magma_opts={"sv": True}, disp_type="realtime",
-                           coverage=True)
+                           skip_compile=True, magma_opts={"sv": True},
+                           disp_type="realtime", coverage=True)
 
     out, _ = capsys.readouterr()
     assert """\
@@ -932,7 +932,8 @@ def test_cover_when(capsys):
     tester.advance_cycle()
     tester.compile_and_run("system-verilog", simulator="ncsim",
                            flags=["-sv"], magma_opts={"sv": True},
-                           disp_type="realtime", coverage=True)
+                           skip_compile=True, disp_type="realtime",
+                           coverage=True)
 
     out, _ = capsys.readouterr()
     assert """\
@@ -949,8 +950,7 @@ def test_cover_when(capsys):
                            simulator="ncsim",
                            magma_output="mlir-verilog",
                            flags=["-sv"],
-                           magma_opts={"sv": True,
-                                       "disable_initial_blocks": True},
+                           skip_compile=True,
                            disp_type="realtime",
                            coverage=True)
 
