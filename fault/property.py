@@ -246,7 +246,7 @@ class _Compiler:
 
 
 def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
-    statement = prepend_when_cond(statement)
+    prop = prepend_when_cond(prop)
 
     format_args = {}
     _compiler = _Compiler(format_args)
