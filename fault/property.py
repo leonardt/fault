@@ -1,9 +1,11 @@
 import magma as m
+from magma.bit import Bit
+from magma.when import get_curr_block as get_curr_when_block, no_when
 
 from fault.sva import SVAProperty
 from fault.expression import Expression, UnaryOp, BinaryOp
 from fault.infix import Infix
-from fault.assert_utils import add_compile_guards, prepend_when_cond
+from fault.assert_utils import add_compile_guards
 
 
 class Property:
@@ -246,7 +248,14 @@ class _Compiler:
 
 
 def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
-    prop = prepend_when_cond(prop)
+    if get_curr_when_block():
+        # guard condition by current active when using a boolean with default 0
+        # and assigned inside when
+        with no_when():
+            when_cond = Bit()
+            when_cond @= 0
+        when_cond @= 1
+        prop = when_cond | implies | prop
 
     format_args = {}
     _compiler = _Compiler(format_args)
