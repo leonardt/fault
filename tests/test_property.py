@@ -884,7 +884,7 @@ def test_cover_when(capsys):
         io = m.IO(I=m.In(m.Bit), S=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
         io.O @= m.Register(T=m.Bit)()(io.I)
         with m.when(io.S):
-            f.cover(io.I | f.delay[1] | ~io.I, on=f.posedge(io.CLK))
+            f.cover(io.I | f.delay[1] | f.not_(io.I), on=f.posedge(io.CLK))
         with m.otherwise():
             f.cover(io.I | f.delay[1] | io.I, on=f.posedge(io.CLK))
     tester = f.SynchronousTester(Main, Main.CLK)
@@ -928,6 +928,7 @@ def test_cover_when(capsys):
          0      0      0   Main_tb.dut.__cover2
   Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 2\
 """ in out, out
+    tester.clear()
     tester.circuit.S = 1
     tester.circuit.I = 1
     tester.advance_cycle()
