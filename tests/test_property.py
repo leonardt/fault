@@ -951,6 +951,7 @@ def test_cover_when(capsys):
     tester.circuit.I = 1
     tester.advance_cycle()
     tester.circuit.I = 0
+    tester.advance_cycle()
     tester.compile_and_run("system-verilog",
                            simulator="ncsim",
                            magma_output="mlir-verilog",
