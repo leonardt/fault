@@ -878,7 +878,6 @@ def test_advanced_property_example_2(use_sva, should_pass):
         assert should_pass
 
 
-@requires_ncsim
 def test_cover_when(capsys):
     class Main(m.Circuit):
         io = m.IO(
