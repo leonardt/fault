@@ -881,10 +881,12 @@ def test_advanced_property_example_2(use_sva, should_pass):
 @requires_ncsim
 def test_cover_when(capsys):
     class Main(m.Circuit):
-        io = m.IO(I=m.In(m.Bit), S=m.In(m.Bit), O=m.Out(m.Bit)) + m.ClockIO()
+        io = m.IO(
+            I=m.In(m.Bit), J=m.In(m.Bit), S=m.In(m.Bit), O=m.Out(m.Bit)
+        ) + m.ClockIO()
         io.O @= m.Register(T=m.Bit)()(io.I)
         with m.when(io.S):
-            f.cover(io.I | f.delay[1] | f.not_(io.I), on=f.posedge(io.CLK))
+            f.cover(io.I | f.delay[1] | io.J, on=f.posedge(io.CLK))
         with m.otherwise():
             f.cover(io.I | f.delay[1] | io.I, on=f.posedge(io.CLK))
     tester = f.SynchronousTester(Main, Main.CLK)
@@ -951,7 +953,7 @@ def test_cover_when(capsys):
     tester.circuit.S = 1
     tester.circuit.I = 1
     tester.advance_cycle()
-    tester.circuit.I = 0
+    tester.circuit.J = 1
     tester.advance_cycle()
     tester.compile_and_run("system-verilog",
                            simulator="ncsim",
