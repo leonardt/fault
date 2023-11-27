@@ -189,7 +189,9 @@ class _Compiler:
         if isinstance(value, Property):
             rhs_str = ""
             if value.rhs is not None:
-                rhs_str = f"({self._compile(value.rhs)})"
+                rhs_str = f"{self._compile(value.rhs)}"
+                if not isinstance(value, Inside):
+                    rhs_str = f"({rhs_str})"
             return (f"{self._compile(value.lhs)} {value.op_str} "
                     f"{rhs_str}")
         if isinstance(value, m.Type):
