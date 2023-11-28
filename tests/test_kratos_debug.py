@@ -10,6 +10,8 @@ import operator
 import hwtypes
 
 
+pytest.skip("kratos_runtime archived", allow_module_level=True)
+
 has_runtime = fault.util.has_kratos_runtime()
 
 

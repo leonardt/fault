@@ -16,60 +16,67 @@ def test_immediate_assert(capsys, failure_msg, success_msg, severity,
                           name):
     if verilator_version() < 4.0:
         pytest.skip("Untested with earlier verilator versions")
-    if verilator_version() > 5.0:
-        pytest.skip("Untested with later verilator versions")
     if failure_msg is not None and severity == "fatal":
-        # Use integer exit code
-        failure_msg = 1
+        # Verilator won't report failure msg for fatal
+        failure_msg = None
 
     class Foo(m.Circuit):
         io = m.IO(
             I0=m.In(m.Bit),
-            I1=m.In(m.Bit)
-        ) + m.ClockIO()
-        io.CLK.unused()
+            I1=m.In(m.Bit),
+            O=m.Out(m.Bit)
+        )
+        io.O @= io.I0 ^ io.I1
         f.assert_immediate(~(io.I0 & io.I1),
                            success_msg=success_msg,
                            failure_msg=failure_msg,
                            severity=severity,
                            name=name)
 
-    tester = f.Tester(Foo, Foo.CLK)
+    tester = f.Tester(Foo)
     tester.circuit.I0 = 1
     tester.circuit.I1 = 1
-    tester.step(2)
+    tester.eval()
     try:
         with tempfile.TemporaryDirectory() as dir_:
-            tester.compile_and_run("verilator", magma_opts={"inline": True},
+            tester.compile_and_run("verilator", magma_output="mlir-verilog",
                                    flags=['--assert'], directory=dir_,
                                    disp_type="realtime")
     except AssertionError:
         assert failure_msg is None or severity in ["error", "fatal"]
     else:
-        # warning doesn't trigger exit code/failure (but only if there's a
-        # failure_msg, otherwise severity is ignored)
-        assert severity == "warning"
+        assert (
+            (severity == "warning") or
+            # If success msg but no failure msg, doesn't return error code.
+            (failure_msg is None and success_msg is not None)
+        )
     out, _ = capsys.readouterr()
     if failure_msg is not None:
-        if severity == "warning":
-            msg = "%Warning:"
+        msg = {
+            "warning": "%Warning:",
+            "fatal": "%Fatal:",
+            "error": "%Error:",
+        }[severity]
+        msg += " Foo.v:9: "
+        if verilator_version() >= 5.016:
+            if severity == "error":
+                msg += "Assertion failed in "
         else:
-            msg = "%Error:"
-        msg += " Foo.v:31: Assertion failed in TOP.Foo"
+            msg += "Assertion failed in "
+        msg += "TOP.Foo"
         if name is not None:
             msg += f".{name}"
-        if severity == "error":
+        if failure_msg is not None:
             msg += f": {failure_msg}"
         assert msg in out, out
 
     tester.clear()
     tester.circuit.I0 = 0
     tester.circuit.I1 = 1
-    tester.step(2)
+    tester.eval()
     with tempfile.TemporaryDirectory() as dir_:
         tester.compile_and_run("verilator",
-                               magma_opts={"inline": True,
-                                           "verilator_compat": True},
+                               magma_output="mlir-verilog",
                                flags=['--assert'], directory=dir_,
                                disp_type="realtime")
     out, _ = capsys.readouterr()
@@ -97,11 +104,11 @@ def test_immediate_assert_tuple_msg(capsys):
     tester.eval()
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
-            tester.compile_and_run("verilator", magma_opts={"inline": True},
+            tester.compile_and_run("verilator", magma_output="mlir-verilog",
                                    flags=['--assert', '-Wno-UNUSED'],
                                    directory=dir_, disp_type="realtime")
     out, _ = capsys.readouterr()
-    msg = ("%Error: Foo.v:15: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
+    msg = ("%Error: Foo.v:8: Assertion failed in TOP.Foo: io.I0 -> 1 != 0 <-"
            " io.I1")
     assert msg in out, out
 
@@ -124,15 +131,18 @@ def test_immediate_assert_compile_guard():
     tester.step(2)
     # Should pass without macro defined
     with tempfile.TemporaryDirectory() as dir_:
-        tester.compile_and_run("verilator", magma_opts={"inline": True},
+        tester.compile_and_run("verilator", magma_output="mlir-verilog",
                                flags=['--assert', '-Wno-UNUSED'],
                                directory=dir_, disp_type="realtime")
     # Should fail without macro defined
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
-            tester.compile_and_run("verilator", magma_opts={"inline": True},
-                                   flags=['--assert', '-DASSERT_ON=1',
-                                   '-Wno-UNUSED'], directory=dir_)
+            tester.compile_and_run(
+                "verilator",
+                magma_output="mlir-verilog",
+                flags=['--assert', '-DASSERT_ON=1', '-Wno-UNUSED'],
+                directory=dir_
+            )
 
 
 def test_assert_final():
@@ -152,12 +162,12 @@ def test_assert_final():
     with pytest.raises(AssertionError):
         with tempfile.TemporaryDirectory() as dir_:
             dir_ = "build"
-            tester.compile_and_run("verilator", magma_opts={"inline": True},
+            tester.compile_and_run("verilator", magma_output="mlir-verilog",
                                    flags=['--assert'], directory=dir_)
     tester.step(2)
     # Should pass since count is 3
     with tempfile.TemporaryDirectory() as dir_:
-        tester.compile_and_run("verilator", magma_opts={"inline": True},
+        tester.compile_and_run("verilator", magma_output="mlir-verilog",
                                flags=['--assert'], directory=dir_)
 
 
@@ -176,5 +186,42 @@ def test_assert_initial(should_pass):
     with pytest.raises(AssertionError) if not should_pass else nullcontext():
         with tempfile.TemporaryDirectory() as dir_:
             tester.compile_and_run("system-verilog", simulator="ncsim",
-                                   magma_opts={"inline": True, "sv": True},
+                                   magma_output="mlir-verilog",
+                                   magma_opts={"sv": True},
                                    directory=dir_)
+
+
+def test_assert_when():
+    if verilator_version() < 4.0:
+        pytest.skip("Untested with earlier verilator versions")
+
+    class Foo(m.Circuit):
+        io = m.IO(
+            I0=m.In(m.Bit),
+            I1=m.In(m.Bit),
+            S=m.In(m.Bit)
+        )
+        with m.when(io.S):
+            f.assert_immediate(~(io.I0 & io.I1))
+
+    tester = f.Tester(Foo)
+    tester.circuit.I0 = 1
+    tester.circuit.I1 = 1
+    tester.circuit.S = 1
+    tester.eval()
+    with tempfile.TemporaryDirectory() as dir_:
+        with pytest.raises(AssertionError):
+            tester.compile_and_run("verilator",
+                                   magma_output="mlir-verilog",
+                                   flags=['--assert'], directory=dir_,
+                                   disp_type="realtime")
+
+        tester.clear()
+        tester.circuit.I0 = 1
+        tester.circuit.I1 = 1
+        tester.eval()
+        tester.compile_and_run("verilator",
+                               magma_output="mlir-verilog",
+                               flags=['--assert'], directory=dir_,
+                               skip_compile=True,
+                               disp_type="realtime")

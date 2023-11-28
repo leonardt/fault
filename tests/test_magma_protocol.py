@@ -49,7 +49,9 @@ def test_foo_type_magma_protocol():
     tester.circuit.O.expect(BitVector[8](0xDE << 2) |
                             (BitVector[8](0xDE) << 1)[0] |
                             BitVector[8](0xDE)[0])
-    tester.compile_and_run("verilator")
+
+    with tempfile.TemporaryDirectory(dir=".") as _dir:
+        tester.compile_and_run("verilator", directory=_dir)
 
 
 class SimpleMagmaProtocolMeta(m.MagmaProtocolMeta):
@@ -156,4 +158,4 @@ def test_protocol_as_input_and_output(T, BoxT, proto_in, proto_out):
     tester.eval()
     tester.circuit.O.expect(T(0))
     with tempfile.TemporaryDirectory(dir=".") as tempdir:
-        tester.compile_and_run("verilator", directory="tempdir")
+        tester.compile_and_run("verilator", directory=tempdir)

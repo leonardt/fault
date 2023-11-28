@@ -1,13 +1,12 @@
 import magma as m
-from fault.property import Posedge
-from fault.assert_utils import add_compile_guards
+from fault.assert_utils import add_compile_guards, get_when_cond
 
 
 def _make_assert(type_, cond, success_msg=None, failure_msg=None,
-                 severity="error", name=None, compile_guard=None, delay=False,
-                 inline_wire_prefix=None):
-    if inline_wire_prefix is None:
-        inline_wire_prefix = "_FAULT_ASSERT_WIRE_"
+                 severity="error", name=None, compile_guard=None, delay=False):
+    if (when_cond := get_when_cond()) is not None:
+        cond = ~when_cond | cond
+
     success_msg_str = ""
     if success_msg is not None:
         success_msg_str = f" $display(\"{success_msg}\");"
@@ -37,9 +36,7 @@ def _make_assert(type_, cond, success_msg=None, failure_msg=None,
 end
 """
     assert_str = add_compile_guards(compile_guard, assert_str)
-    m.inline_verilog(
-        assert_str, inline_wire_prefix=inline_wire_prefix,
-        **format_args, type_=type_)
+    m.inline_verilog2(assert_str, **format_args, type_=type_)
 
 
 def _add_docstr(fn):
@@ -65,21 +62,20 @@ def _add_docstr(fn):
 
 @_add_docstr
 def assert_immediate(cond, success_msg=None, failure_msg=None, severity="error",
-                     name=None, compile_guard=None, inline_wire_prefix=None):
+                     name=None, compile_guard=None):
     _make_assert("always @(*)", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, inline_wire_prefix=inline_wire_prefix)
+                 compile_guard)
 
 
 @_add_docstr
 def assert_final(cond, success_msg=None, failure_msg=None, severity="error",
-                 name=None, compile_guard=None, inline_wire_prefix=None):
+                 name=None, compile_guard=None):
     _make_assert("final", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, inline_wire_prefix=inline_wire_prefix)
+                 compile_guard)
 
 
 @_add_docstr
 def assert_initial(cond, success_msg=None, failure_msg=None, severity="error",
-                   name=None, compile_guard=None, inline_wire_prefix=None):
+                   name=None, compile_guard=None):
     _make_assert("initial", cond, success_msg, failure_msg, severity, name,
-                 compile_guard, delay=True,
-                 inline_wire_prefix=inline_wire_prefix)
+                 compile_guard, delay=True)

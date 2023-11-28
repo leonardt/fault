@@ -3,7 +3,7 @@ import magma as m
 from fault.sva import SVAProperty
 from fault.expression import Expression, UnaryOp, BinaryOp
 from fault.infix import Infix
-from fault.assert_utils import add_compile_guards
+from fault.assert_utils import add_compile_guards, get_when_cond
 
 
 class Property:
@@ -155,7 +155,7 @@ class _Compiler:
 
     def _compile(self, value):
         if isinstance(value, PropertyUnaryOp):
-            return f"{value.op_str} {self._compile(value.arg)}"
+            return f"({value.op_str} ({self._compile(value.arg)}))"
         # TODO: Refactor getitem properties to share code
         if isinstance(value, Delay):
             result = ""
@@ -221,6 +221,8 @@ class _Compiler:
             # Double escape on curly braces since this will run through format
             # inside inline_verilog logic
             return f"{{{{{contents}}}}}"
+        if isinstance(value, bool):
+            return f"1'b{int(value)}"
         if isinstance(value, int):
             return str(value)
         if isinstance(value, BinaryOp):
@@ -245,8 +247,10 @@ class _Compiler:
         return compiled
 
 
-def _make_statement(statement, prop, on, disable_iff, compile_guard, name,
-                    inline_wire_prefix):
+def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
+    if (when_cond := get_when_cond()) is not None:
+        prop = when_cond | implies | prop
+
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
@@ -260,26 +264,19 @@ def _make_statement(statement, prop, on, disable_iff, compile_guard, name,
             raise TypeError("Expected string for name")
         prop_str = f"{name}: {prop_str}"
     prop_str = add_compile_guards(compile_guard, prop_str)
-    m.inline_verilog(prop_str, inline_wire_prefix=inline_wire_prefix,
-                     **format_args)
+    m.inline_verilog2(prop_str, **format_args)
 
 
-def assert_(prop, on, disable_iff=None, compile_guard=None, name=None,
-            inline_wire_prefix="_FAULT_ASSERT_WIRE_"):
-    _make_statement("assert", prop, on, disable_iff, compile_guard, name,
-                    inline_wire_prefix)
+def assert_(prop, on, disable_iff=None, compile_guard=None, name=None):
+    _make_statement("assert", prop, on, disable_iff, compile_guard, name)
 
 
-def cover(prop, on, disable_iff=None, compile_guard=None, name=None,
-          inline_wire_prefix="_FAULT_COVER_WIRE_"):
-    _make_statement("cover", prop, on, disable_iff, compile_guard, name,
-                    inline_wire_prefix)
+def cover(prop, on, disable_iff=None, compile_guard=None, name=None):
+    _make_statement("cover", prop, on, disable_iff, compile_guard, name)
 
 
-def assume(prop, on, disable_iff=None, compile_guard=None, name=None,
-           inline_wire_prefix="_FAULT_ASSUME_WIRE_"):
-    _make_statement("assume", prop, on, disable_iff, compile_guard, name,
-                    inline_wire_prefix)
+def assume(prop, on, disable_iff=None, compile_guard=None, name=None):
+    _make_statement("assume", prop, on, disable_iff, compile_guard, name)
 
 
 class Sequence:
@@ -327,6 +324,11 @@ class Not(PropertyUnaryOp):
 
     def __init__(self, arg):
         self.arg = arg
+
+    def __or__(self, other):
+        if isinstance(other, Property):
+            return other.__ror__(self)
+        return super().__or__(other)
 
 
 def not_(arg):

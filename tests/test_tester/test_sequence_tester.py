@@ -1,3 +1,4 @@
+import tempfile
 import pytest
 
 import magma as m
@@ -76,4 +77,6 @@ def test_simple_alu_sequence(circuit, driver, monitor, clock):
 
     tester = SequenceTester(circuit, driver, monitor, sequence, clock=clock)
 
-    tester.compile_and_run("verilator", flags=['-Wno-UNUSED'])
+    with tempfile.TemporaryDirectory(dir=".") as tempdir:
+        tester.compile_and_run("verilator", flags=['-Wno-UNUSED'],
+                               directory=tempdir)
