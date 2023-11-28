@@ -231,7 +231,7 @@ class _Compiler:
             # inside inline_verilog logic
             return f"{{{{{contents}}}}}"
         if isinstance(value, bool):
-            return f"1b{int(value)})"
+            return f"1'b{int(value)})"
         if isinstance(value, int):
             return str(value)
         if isinstance(value, BinaryOp):
