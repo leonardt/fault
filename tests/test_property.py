@@ -953,9 +953,9 @@ def test_cover_when(capsys):
     tester.clear()
     tester.circuit.CLK = 0
     tester.circuit.S = 1
-    tester.circuit.I = 0
-    tester.advance_cycle()
     tester.circuit.I = 1
+    tester.advance_cycle()
+    tester.circuit.I = 0
     tester.advance_cycle()
     tester.compile_and_run("system-verilog",
                            simulator="ncsim",
