@@ -966,3 +966,51 @@ def test_cover_when(capsys):
          0      0      0   Main_tb.dut.__cover2
   Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
 """ in out, out
+
+
+@requires_ncsim
+def test_cover_when_true(capsys):
+    class Main(m.Circuit):
+        io = m.IO(
+            I=m.In(m.Bit), J=m.In(m.Bit), S=m.In(m.Bit), O=m.Out(m.Bit)
+        ) + m.ClockIO()
+        io.O @= m.Register(T=m.Bit)()(io.I)
+        with m.when(io.S):
+            f.cover(True, on=f.posedge(io.CLK))
+        with m.otherwise():
+            f.cover(True, on=f.posedge(io.CLK))
+    tester = f.SynchronousTester(Main, Main.CLK)
+    tester.circuit.S = 0
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog",
+                           simulator="ncsim",
+                           magma_output="mlir-verilog",
+                           flags=["-sv"],
+                           magma_opts={"sv": True,
+                                       "disable_initial_blocks": True},
+                           disp_type="realtime",
+                           coverage=True)
+
+    out, _ = capsys.readouterr()
+    assert """\
+  Disabled Finish Failed   Assertion Name
+         0      0      0   Main_tb.dut.__cover1
+         0      1      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out, out
+    tester.clear()
+    tester.circuit.S = 1
+    tester.advance_cycle()
+    tester.compile_and_run("system-verilog", simulator="ncsim",
+                           flags=["-sv"], skip_compile=True,
+                           magma_opts={"sv": True,
+                                       "disable_initial_blocks": True},
+                           disp_type="realtime", coverage=True)
+
+    out, _ = capsys.readouterr()
+    assert """\
+  Disabled Finish Failed   Assertion Name
+         0      1      0   Main_tb.dut.__cover1
+         0      0      0   Main_tb.dut.__cover2
+  Total Assertions = 2,  Failing Assertions = 0,  Unchecked Assertions = 1\
+""" in out, out
