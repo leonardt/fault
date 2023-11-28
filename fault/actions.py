@@ -9,6 +9,8 @@ import pysv
 from fault.select_path import SelectPath
 import fault.expression as expression
 
+import magma as m
+
 
 class Action(ABC):
     @abstractmethod
@@ -25,8 +27,8 @@ class Action(ABC):
 class PortAction(Action):
     def __init__(self, port, value):
         super().__init__()
-        self.port = port
-        self.value = value
+        self.port = m.protocol_type.magma_value(port)
+        self.value = m.protocol_type.magma_value(value)
 
     def __str__(self):
         type_name = type(self).__name__

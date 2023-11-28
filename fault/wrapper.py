@@ -61,7 +61,7 @@ class CircuitWrapper(Wrapper):
 
 class PortWrapper(expression.Expression):
     def __init__(self, port, parent):
-        self.port = port
+        self.port = m.protocol_type.magma_value(port)
         self.parent = parent
         self.init_done = True
 
