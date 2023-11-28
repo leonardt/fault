@@ -3,7 +3,7 @@ import magma as m
 from fault.sva import SVAProperty
 from fault.expression import Expression, UnaryOp, BinaryOp
 from fault.infix import Infix
-from fault.assert_utils import add_compile_guards
+from fault.assert_utils import add_compile_guards, get_when_cond
 
 
 class Property:
@@ -221,6 +221,8 @@ class _Compiler:
             # Double escape on curly braces since this will run through format
             # inside inline_verilog logic
             return f"{{{{{contents}}}}}"
+        if isinstance(value, bool):
+            return f"1'b{int(value)}"
         if isinstance(value, int):
             return str(value)
         if isinstance(value, BinaryOp):
@@ -246,6 +248,9 @@ class _Compiler:
 
 
 def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
+    if (when_cond := get_when_cond()) is not None:
+        prop = when_cond | implies | prop
+
     format_args = {}
     _compiler = _Compiler(format_args)
     prop = _compiler.compile(prop)
