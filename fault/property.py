@@ -74,15 +74,6 @@ def inside(lhs, rhs):
     return Inside(lhs, rhs)
 
 
-class And(Property):
-    op_str = "&&"
-
-
-@Infix
-def and_(lhs, rhs):
-    return And(lhs, rhs)
-
-
 class GetItemProperty(Property):
     def __init__(self, num_cycles):
         if isinstance(num_cycles, slice):
@@ -258,7 +249,7 @@ class _Compiler:
 
 def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
     if (when_cond := get_when_cond()) is not None:
-        prop = when_cond | and_ | prop
+        prop = when_cond | implies | prop
 
     format_args = {}
     _compiler = _Compiler(format_args)
