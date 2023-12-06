@@ -5,7 +5,7 @@ import mantle
 import fault
 
 
-class Queue(m.Generator2):
+class Queue(m.Generator):
     def __init__(self, T, entries, with_bug=False):
         assert entries >= 0
         self.io = m.IO(

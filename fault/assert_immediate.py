@@ -36,7 +36,7 @@ def _make_assert(type_, cond, success_msg=None, failure_msg=None,
 end
 """
     assert_str = add_compile_guards(compile_guard, assert_str)
-    m.inline_verilog2(assert_str, **format_args, type_=type_)
+    m.inline_verilog(assert_str, **format_args, type_=type_)
 
 
 def _add_docstr(fn):
