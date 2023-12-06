@@ -31,6 +31,7 @@ jobs:
     - name: Install Python packages
       shell: bash -l {0}
       run: |
+          pip install importlib_resources
           pip install "pytest<6"
           pip install pytest-cov pytest-pycodestyle
           pip install mantle>=2.0.0  # for tests.common
