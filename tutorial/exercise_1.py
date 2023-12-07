@@ -1,12 +1,11 @@
 import magma as m
-import mantle
 
 
 class ConfigReg(m.Circuit):
     io = m.IO(D=m.In(m.Bits[2]), Q=m.Out(m.Bits[2])) + \
         m.ClockIO(has_ce=True)
 
-    reg = mantle.Register(2, has_ce=True, name="config_reg")
+    reg = m.Register(m.Bits[2], has_enable=True)(name="config_reg")
     io.Q <= reg(io.D, CE=io.CE)
 
 
@@ -19,5 +18,5 @@ class SimpleALU(m.Circuit):
               ) + m.ClockIO()
 
     opcode = ConfigReg(name="opcode_reg")(io.config_data, CE=io.config_en)
-    io.c <= mantle.mux(
+    io.c <= m.mux(
         [io.a + io.b, io.a - io.b, io.a * io.b, io.b - io.a], opcode)

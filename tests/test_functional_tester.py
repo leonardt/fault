@@ -2,7 +2,6 @@ import fault
 from hwtypes import BitVector
 from fault.functional_tester import FunctionalTester
 import magma as m
-import mantle
 import tempfile
 import pytest
 
@@ -24,7 +23,7 @@ def test_configuration():
                   config_en=m.In(m.Enable), O=m.Out(m.Bits[32])
                   ) + m.ClockIO()
 
-        reg = mantle.Register(32, has_ce=True)
+        reg = m.Register(m.Bits[32], has_enable=True)()
 
         reg(io.config_data,
             CE=(io.config_addr == m.bits(1, 32)) & m.bit(io.config_en))

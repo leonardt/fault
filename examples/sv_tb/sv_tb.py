@@ -1,24 +1,26 @@
 import random
 
 import magma as m
-import mantle
 import fault
 
 
-class Queue(m.Generator2):
-    def __init__(self, T, entries, with_bug=False):
-        assert entries >= 0
+class Queue(m.Generator):
+    def __init__(self, T, num_bits, with_bug=False):
+        assert num_bits >= 0
         self.io = m.IO(
             # Flipped since enq/deq is from perspective of the client
             enq=m.DeqIO[T],
             deq=m.EnqIO[T]
         ) + m.ClockIO()
 
-        ram = m.Memory(entries, T)()
-        enq_ptr = mantle.CounterModM(entries, entries.bit_length(),
-                                     has_ce=True, cout=False)
-        deq_ptr = mantle.CounterModM(entries, entries.bit_length(),
-                                     has_ce=True, cout=False)
+        ram = m.Memory(2 ** num_bits, T)()
+        _Pointer = m.mantle.Counter(
+            (2 ** (num_bits + 1)),
+            has_enable=True,
+            has_cout=False
+        )
+        enq_ptr = _Pointer()
+        deq_ptr = _Pointer()
         maybe_full = m.Register(init=False, has_enable=True)()
 
         ptr_match = enq_ptr.O == deq_ptr.O
@@ -50,7 +52,7 @@ class Queue(m.Generator2):
 
 def test_queue(with_bug):
     T = m.Bits[8]
-    Queue4x8 = Queue(T, 4, with_bug=with_bug)
+    Queue4x8 = Queue(T, 2, with_bug=with_bug)
 
     class Monitor(m.Circuit):
         io = m.IO(
@@ -111,8 +113,11 @@ end""")
         tester.circuit.deq.ready = random.randint(0, 1)
         tester.advance_cycle()
     try:
-        tester.compile_and_run("verilator", flags=["--assert"],
-                               magma_opts={"inline": True})
+        tester.compile_and_run(
+            "verilator",
+            flags=["--assert"],
+            magma_output="mlir-verilog"
+        )
         assert not with_bug
     except AssertionError:
         assert with_bug

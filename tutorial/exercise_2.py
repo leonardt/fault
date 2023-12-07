@@ -1,5 +1,4 @@
 import magma as m
-import mantle
 import fault
 from reset_tester import ResetTester
 
@@ -18,11 +17,11 @@ class ROM(m.Circuit):
         CLK=m.In(m.Clock)
     )
 
-    regs = [mantle.Register(data_width, init=int(init[i]))
+    regs = [m.Register(m.Bits[data_width], init=int(init[i]))()
             for i in range(1 << addr_width)]
     for reg in regs:
         reg.I <= reg.O
-    io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+    io.RDATA <= m.mux([reg.O for reg in regs], io.RADDR)
 
 
 class RAM(m.Circuit):
@@ -36,10 +35,10 @@ class RAM(m.Circuit):
         RESET=m.In(m.Reset)
     )
 
-    regs = [mantle.Register(data_width, init=int(init[i]), has_ce=True,
-                            has_reset=True)
+    regs = [m.Register(m.Bits[data_width], init=int(init[i]), has_enable=True,
+                       reset_type=m.Reset)
             for i in range(1 << addr_width)]
     for i, reg in enumerate(regs):
         reg.I <= io.WDATA
         reg.CE <= (io.WADDR == m.bits(i, addr_width)) & io.WE
-    io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+    io.RDATA <= m.mux([reg.O for reg in regs], io.RADDR)

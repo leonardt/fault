@@ -24,7 +24,7 @@ setup(
         "astor",
         "z3-solver",
         "hwtypes",
-        "magma-lang>=2.2.3",
+        "magma-lang>=3.0.0",
         "pyyaml",
         "scipy",
         "numpy",

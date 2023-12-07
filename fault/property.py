@@ -264,7 +264,7 @@ def _make_statement(statement, prop, on, disable_iff, compile_guard, name):
             raise TypeError("Expected string for name")
         prop_str = f"{name}: {prop_str}"
     prop_str = add_compile_guards(compile_guard, prop_str)
-    m.inline_verilog2(prop_str, **format_args)
+    m.inline_verilog(prop_str, **format_args)
 
 
 def assert_(prop, on, disable_iff=None, compile_guard=None, name=None):

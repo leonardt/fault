@@ -2,7 +2,7 @@ from fault import PythonTester
 from ..common import AndCircuit, SimpleALU, TestTupleCircuit, \
     TestNestedArraysCircuit, TestNestedArrayTupleCircuit
 from hwtypes import BitVector
-from mantle import DefineCounter
+import magma as m
 
 
 def test_interactive_basic(capsys):
@@ -38,7 +38,7 @@ def test_interactive_clock():
 
 
 def test_counter():
-    Counter4 = DefineCounter(4)
+    Counter4 = m.mantle.Counter(2**4)
     tester = PythonTester(Counter4, Counter4.CLK)
     tester.CLK = 0
     tester.wait_until_high(Counter4.O[3])

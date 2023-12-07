@@ -33,7 +33,8 @@ def test_synchronous_basic(target, simulator):
 
     if target == "verilator":
         with tempfile.TemporaryDirectory(dir=".") as tempdir:
-            tester.compile_and_run("verilator", directory=tempdir)
+            tester.compile_and_run("verilator", directory=tempdir,
+                                   magma_output="mlir-verilog")
     else:
         tester.compile_and_run(target, simulator=simulator,
                                magma_opts={"sv": True})
