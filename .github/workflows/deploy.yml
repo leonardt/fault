@@ -54,4 +54,4 @@ jobs:
       run: |
           source .travis/deploy.sh
       env:
-        PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
