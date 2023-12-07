@@ -2,7 +2,6 @@ import fault
 from hwtypes import BitVector
 from fault.functional_tester import FunctionalTester
 import magma as m
-# import mantle
 import tempfile
 import pytest
 
