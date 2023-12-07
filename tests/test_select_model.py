@@ -3,7 +3,7 @@ Tests support for selecting different implementations of a DUT (or
 subcomponents of a DUT)
 """
 import magma as m
-import mantle
+# import mantle
 import fault
 import hwtypes as ht
 import os

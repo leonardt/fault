@@ -1,5 +1,5 @@
 import fault
-import mantle
+# import mantle
 import magma as m
 from .common import pytest_sim_params
 

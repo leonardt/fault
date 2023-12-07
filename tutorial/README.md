@@ -191,7 +191,7 @@ Here's an example:
 
 ```python
 import magma as m
-import mantle
+# import mantle
 import fault
 
 
@@ -307,7 +307,7 @@ Suppose you had the following definition of a simple, configurable ALU in magma
 (source: [fault/tutorial/exercise_1.py](./exercise_1.py)):
 ```python
 import magma as m
-import mantle
+# import mantle
 
 
 class ConfigReg(m.Circuit):
@@ -405,7 +405,7 @@ Suppose you have the following two memory modules defined in magma (source:
 [fault/tutorial/exercise_2.py](./exercise_2.py)):
 ```python
 import magma as m
-import mantle
+# import mantle
 import fault
 
 

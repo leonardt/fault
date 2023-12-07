@@ -1,5 +1,5 @@
 import magma as m
-import mantle
+# import mantle
 import operator
 import fault
 import pytest

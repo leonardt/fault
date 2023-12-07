@@ -45,7 +45,7 @@ Check out the [fault tutorial](https://github.com/leonardt/fault/tree/master/tut
 Here is a simple ALU defined in magma.
 ```python
 import magma as m
-import mantle
+# import mantle
 
 
 class ConfigReg(m.Circuit):

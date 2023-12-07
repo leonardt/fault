@@ -1,5 +1,5 @@
 import magma as m
-import mantle
+# import mantle
 import fault
 from reset_tester import ResetTester
 
