@@ -104,11 +104,11 @@ to PATH in your /Users/yourusername/.bash_profile ? [yes|no]
 ```
 
 ### Using pip
-The simplest way to get started for this tutorial is to install fault, magma,
-and mantle using `pip`.
+The simplest way to get started for this tutorial is to install fault, and
+magma using `pip`.
 
 ```
-pip install fault magma-lang mantle
+pip install fault magma-lang
 ```
 
 ### From source
@@ -120,8 +120,6 @@ git clone https://github.com/leonardt/fault
 cd fault && pip install -e . && cd ..
 git clone https://github.com/phanrahan/magma
 cd magma && pip install -e . && cd ..
-git clone https://github.com/phanrahan/mantle
-cd mantle && pip install -e . && cd ..
 ```
 
 ## CoreIR
@@ -175,11 +173,9 @@ import fault
 
 
 class Passthrough(m.Circuit):
-    IO = ["I", m.In(m.Bit), "O", m.Out(m.Bit)]
+    io = m.IO(I=m.In(m.Bit), O=m.Out(m.Bit))
 
-    @classmethod
-    def definition(io):
-        io.O <= io.I
+    io.O @= io.I
 
 
 passthrough_tester = fault.Tester(Passthrough)
@@ -191,19 +187,16 @@ Here's an example:
 
 ```python
 import magma as m
-# import mantle
 import fault
 
 
 class TFF(m.Circuit):
-    IO = ["O", m.Out(m.Bit), "CLK", m.In(m.Clock)]
+    io = m.IO(O=m.Out(m.Bit), CLK=m.In(m.Clock))
 
-    @classmethod
-    def definition(io):
-        reg = mantle.Register(None, name="tff_reg")
-        reg.CLK <= io.CLK
-        reg.I <= ~reg.O
-        io.O <= reg.O
+    reg = m.Register(m.Bit)(name="tff_reg")
+    reg.CLK @= io.CLK
+    reg.I @= ~reg.O
+    io.O @= reg.O
 
 
 tff_tester = fault.Tester(TFF, clock=TFF.CLK)
@@ -232,7 +225,7 @@ passthrough_tester.circuit.I = 1
 ```
 
 The `poke` (`setattr`) pattern supports poking internal instances of the
-`mantle.Register` circuit using the `value` attribute. This can be done at
+`m.Register` circuit using the `value` attribute. This can be done at
 arbitrary depths in the instance hierarchy.  An instance can be referred to as
 an attribute of the top level `circuit` attribute or as an attribute of a
 nested instance. Here's an example using the `tff_tester`:
@@ -307,32 +300,32 @@ Suppose you had the following definition of a simple, configurable ALU in magma
 (source: [fault/tutorial/exercise_1.py](./exercise_1.py)):
 ```python
 import magma as m
-# import mantle
 
 
 class ConfigReg(m.Circuit):
     IO = ["D", m.In(m.Bits[2]), "Q", m.Out(m.Bits[2])] + \
         m.ClockInterface(has_ce=True)
+    io = m.IO(
+        D=m.In(m.Bits[2]),
+        Q=m.Out(m.Bits[2]),
+    ) + m.ClockIO()
 
-    @classmethod
-    def definition(io):
-        reg = mantle.Register(2, has_ce=True, name="config_reg")
-        io.Q <= reg(io.D, CE=io.CE)
+    reg = m.Register(m.Bits[2], has_enable=True)(name="config_reg")
+    io.Q @= reg(io.D, CE=io.CE)
 
 
 class SimpleALU(m.Circuit):
-    IO = ["a", m.In(m.UInt[16]),
-          "b", m.In(m.UInt[16]),
-          "c", m.Out(m.UInt[16]),
-          "config_data", m.In(m.Bits[2]),
-          "config_en", m.In(m.Enable),
-          ] + m.ClockInterface()
+    io = m.IO(
+        a=m.In(m.UInt[16]),
+        b=m.In(m.UInt[16]),
+        c=m.Out(m.UInt[16]),
+        config_data=m.In(m.Bits[2]),
+        config_en=m.In(m.Enable)
+    ) + m.ClockIO()
 
-    @classmethod
-    def definition(io):
-        opcode = ConfigReg(name="opcode_reg")(io.config_data, CE=io.config_en)
-        io.c <= mantle.mux(
-            [io.a + io.b, io.a - io.b, io.a * io.b, io.b - io.a], opcode)
+    opcode = ConfigReg(name="opcode_reg")(io.config_data, CE=io.config_en)
+    io.c @= m.mux(
+        [io.a + io.b, io.a - io.b, io.a * io.b, io.b - io.a], opcode)
 ```
 
 Study the implementation so you understand how it works (ask for help if you
@@ -405,7 +398,6 @@ Suppose you have the following two memory modules defined in magma (source:
 [fault/tutorial/exercise_2.py](./exercise_2.py)):
 ```python
 import magma as m
-# import mantle
 import fault
 
 
@@ -417,41 +409,37 @@ init = [fault.random.random_bv(data_width) for _ in range(1 << addr_width)]
 
 
 class ROM(m.Circuit):
-    IO = [
-        "RADDR", m.In(m.Bits[addr_width]),
-        "RDATA", m.Out(m.Bits[data_width]),
-        "CLK", m.In(m.Clock)
-    ]
+    io = m.IO(
+        RADDR=m.In(m.Bits[addr_width]),
+        RDATA=m.Out(m.BIts[data_width]),
+        CLK=m.In(m.Clock)
+    )
 
-    @classmethod
-    def definition(io):
-        regs = [mantle.Register(data_width, init=int(init[i]))
-                for i in range(1 << addr_width)]
-        for reg in regs:
-            reg.I <= reg.O
-        io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+    regs = [m.Register(m.Bits[data_width], init=int(init[i]))()
+            for i in range(1 << addr_width)]
+    for reg in regs:
+        reg.I @= reg.O
+    io.RDATA @= m.mux([reg.O for reg in regs], io.RADDR)
 
 
 class RAM(m.Circuit):
-    IO = [
-        "RADDR", m.In(m.Bits[addr_width]),
-        "RDATA", m.Out(m.Bits[data_width]),
-        "WADDR", m.In(m.Bits[addr_width]),
-        "WDATA", m.In(m.Bits[data_width]),
-        "WE", m.In(m.Bit),
-        "CLK", m.In(m.Clock),
-        "RESET", m.In(m.Reset)
-    ]
+    io = m.IO(
+        RADDR=m.In(m.Bits[addr_width]),
+        RDATA=m.Out(m.BIts[data_width]),
+        WADDR=m.In(m.Bits[addr_width]),
+        WDATA=m.In(m.BIts[data_width]),
+        WE=m.In(m.Bit),
+        CLK=m.In(m.Clock),
+        RESET=m.In(m.Reset),
+    )
 
-    @classmethod
-    def definition(io):
-        regs = [mantle.Register(data_width, init=int(init[i]), has_ce=True,
-                                has_reset=True)
-                for i in range(1 << addr_width)]
-        for i, reg in enumerate(regs):
-            reg.I <= io.WDATA
-            reg.CE <= (io.WADDR == m.bits(i, addr_width)) & io.WE
-        io.RDATA <= mantle.mux([reg.O for reg in regs], io.RADDR)
+    regs = [m.Register(m.Bits[data_width], init=int(init[i]),
+                       has_enable=True, reset_type=m.Reset)
+            for i in range(1 << addr_width)]
+    for i, reg in enumerate(regs):
+        reg.I @= io.WDATA
+        reg.CE @= (io.WADDR == m.bits(i, addr_width)) & io.WE
+    io.RDATA @= m.mux([reg.O for reg in regs], io.RADDR)
 ```
 
 First, define a subclass `ReadTester` of `fault.Tester` that provides an
