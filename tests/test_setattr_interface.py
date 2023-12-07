@@ -65,6 +65,7 @@ Q=3\
     assert expected == actual, "Print of internal register value did not work"
 
 
+@pytest.mark.skip("Unsupported for MLIR")
 def test_tester_poke_internal_register(target, simulator, capsys):
     if target == "python":
         pytest.skip("Wrapped verilog not supported by Python simulator")
