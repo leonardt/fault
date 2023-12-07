@@ -8,7 +8,6 @@ import pytest
 
 import fault
 import magma as m
-# import mantle
 import hwtypes
 
 
