@@ -13,7 +13,7 @@ A Python package for testing hardware (part of the magma ecosystem)\
 
 setup(
     name='fault',
-    version='3.4.0',
+    version='4.0.0',
     description=DESCRIPTION,
     scripts=[],
     packages=[
