@@ -1,6 +1,5 @@
 import shutil
 import magma as m
-# import mantle
 
 
 def pytest_sim_params(metafunc, *args, exclude=None):
